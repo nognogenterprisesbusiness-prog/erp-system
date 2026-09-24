@@ -1,0 +1,14 @@
+import Link from "next/link";
+import { archiveAssetCategoryAction } from "@/app/(workspace)/equipment/actions";
+import { AssetCategoryForm } from "@/components/assets/asset-category-form";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { requireManager } from "@/lib/auth";
+import { getAssetCategories } from "@/lib/data/assets";
+import type { AssetKind } from "@/types/database";
+export default async function AssetCategoriesPage({ searchParams }: { searchParams: Promise<{ kind?: string; edit?: string }> }) { await requireManager(); const params = await searchParams; const kind: AssetKind = params.kind === "vehicle" ? "vehicle" : "equipment"; const categories = await getAssetCategories(kind); const editing = params.edit ? categories.find((item) => item.id === params.edit) : undefined; return <>
+  <PageHeader eyebrow="Asset reference data" title="Classifications" description="Equipment categories and vehicle types are stored in PostgreSQL and remain configurable." action={<Button variant="outline" asChild><Link href={kind === "equipment" ? "/equipment" : "/vehicles"}>Back to {kind}</Link></Button>} />
+  <div className="mt-7 flex gap-1 border-b border-slate-200"><Link href="/equipment/categories?kind=equipment" className={`px-4 py-3 text-sm font-semibold ${kind === "equipment" ? "border-b-2 border-cyan-600 text-cyan-800" : "text-slate-500"}`}>Equipment categories</Link><Link href="/equipment/categories?kind=vehicle" className={`px-4 py-3 text-sm font-semibold ${kind === "vehicle" ? "border-b-2 border-cyan-600 text-cyan-800" : "text-slate-500"}`}>Vehicle types</Link></div>
+  <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white"><AssetCategoryForm kind={kind} category={editing} />{categories.length === 0 ? <EmptyState kind="items" title="No classifications yet" /> : <div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-50 text-[10px] uppercase tracking-[0.12em] text-slate-400"><tr><th className="px-5 py-3">Name</th><th className="px-4 py-3">Description</th><th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-100">{categories.map((item) => <tr key={item.id}><td className="px-5 py-4 text-sm font-semibold">{item.name}</td><td className="px-4 py-4 text-xs text-slate-500">{item.description || "No description"}</td><td className="px-5 py-4"><div className="flex justify-end gap-2"><Button variant="ghost" size="sm" asChild><Link href={`/equipment/categories?kind=${kind}&edit=${item.id}`}>Edit</Link></Button><form action={archiveAssetCategoryAction}><input type="hidden" name="id" value={item.id} /><input type="hidden" name="assetKind" value={kind} /><Button variant="ghost" size="sm" type="submit">Archive</Button></form></div></td></tr>)}</tbody></table></div>}</div>
+  </>; }

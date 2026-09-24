@@ -1,0 +1,12 @@
+import Link from "next/link";
+import { ArchiveSupplierCategoryForm, SupplierCategoryForm } from "@/components/suppliers/supplier-category-form";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { requireManager } from "@/lib/auth";
+import { getSupplierCategories } from "@/lib/data/suppliers";
+
+export default async function SupplierCategoriesPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
+  await requireManager(); const params = await searchParams; const categories = await getSupplierCategories(false); const editing = params.edit ? categories.find((item) => item.id === params.edit) : undefined;
+  return <><PageHeader eyebrow="Supplier reference data" title="Supplier categories" description="Maintain supplier types as database reference data rather than hardcoded options." action={<Button variant="outline" asChild><Link href="/suppliers">Back to suppliers</Link></Button>} /><div className="mt-7 overflow-hidden rounded-xl border border-slate-200 bg-white"><SupplierCategoryForm category={editing} />{!categories.length ? <EmptyState kind="items" title="No supplier categories yet" /> : <div className="divide-y divide-slate-100">{categories.map((item) => <div key={item.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><p className="text-sm font-semibold">{item.name}</p><p className="mt-1 text-xs text-slate-500">{item.description || "No description"}</p></div><div className="flex flex-wrap gap-2"><Button variant="ghost" size="sm" asChild><Link href={`/suppliers/categories?edit=${item.id}`}>Edit</Link></Button><ArchiveSupplierCategoryForm categoryId={item.id} /></div></div>)}</div>}</div></>;
+}

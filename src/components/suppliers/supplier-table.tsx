@@ -1,0 +1,11 @@
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { DataTableShell } from "@/components/ui/data-table-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { tableHeadClass } from "@/components/ui/table-sort-heading";
+import type { SupplierListView } from "@/lib/data/suppliers";
+
+export function SupplierTable({ suppliers, count }: { suppliers: SupplierListView[]; count: number }) {
+  if (!suppliers.length) return <DataTableShell empty={<EmptyState kind="results" title="No suppliers found" description="Adjust the filters or register the first supplier." />}>{null}</DataTableShell>;
+  return <><DataTableShell><table className="w-full min-w-[880px] text-left"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Code</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Category</th><th className="px-4 py-3">Contact</th><th className="px-4 py-3">Location</th><th className="px-4 py-3 text-right">Materials</th><th className="px-5 py-3 text-right">Status</th></tr></thead><tbody className="divide-y divide-slate-100">{suppliers.map((supplier) => <tr key={supplier.id} className="hover:bg-slate-50/70"><td className="px-5 py-4 text-xs font-semibold text-slate-600">{supplier.code}</td><td className="px-4 py-4"><Link href={`/suppliers/${supplier.id}`} className="text-sm font-semibold hover:text-cyan-700">{supplier.supplier_name}</Link><p className="mt-0.5 text-xs text-slate-400">{supplier.business_name}</p></td><td className="px-4 py-4 text-sm text-slate-600">{supplier.categoryName}</td><td className="px-4 py-4"><p className="text-sm text-slate-700">{supplier.contact_person}</p><p className="text-xs text-slate-400">{supplier.contact_number}</p></td><td className="px-4 py-4 text-sm text-slate-600">{supplier.city}, {supplier.province}</td><td className="px-4 py-4 text-right text-sm tabular-nums">{supplier.catalogCount}</td><td className="px-5 py-4 text-right"><Badge variant={supplier.archived_at ? "neutral" : supplier.status === "active" ? "active" : "review"}>{supplier.archived_at ? "archived" : supplier.status}</Badge></td></tr>)}</tbody></table></DataTableShell><p className="mt-3 text-sm text-slate-500">{count} supplier record{count === 1 ? "" : "s"}</p></>;
+}

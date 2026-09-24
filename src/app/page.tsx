@@ -1,17 +1,31 @@
-export default function Home() {
+import Image from "next/image";
+
+import { LoginForm } from "@/components/auth/login-form";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+
+export default function LoginPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
-      <div className="max-w-xl space-y-4">
-        <span className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium text-neutral-600">
-          Ready for Development
-        </span>
-        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
-          Nognog Enterprises
-        </h1>
-        <p className="text-sm text-neutral-500 sm:text-base">
-          Design-Build Houses &amp; Public Works · Cebu, Philippines
-        </p>
-      </div>
+    <main className="flex min-h-svh items-center justify-center bg-[#f5f6f8] px-5 py-10">
+      <div className="absolute right-5 top-5"><ThemeToggle /></div>
+      <section className="w-full max-w-[400px]" aria-labelledby="login-title">
+        <div className="mb-10 flex items-center justify-center gap-3">
+          <Image src="/logo-nognog.webp" alt="Nognog Enterprises" width={48} height={48} priority />
+          <div>
+            <p className="text-sm font-bold tracking-[0.12em] text-[#061228]">NOGNOG</p>
+            <p className="text-[9px] font-semibold tracking-[0.28em] text-cyan-700">ENTERPRISES</p>
+          </div>
+        </div>
+
+        <div className="mb-8 text-center">
+          <h1 id="login-title" className="text-3xl font-semibold tracking-[-0.035em] text-[#07152d]">Welcome back</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Sign in to access your construction workspace.</p>
+        </div>
+
+        <LoginForm />
+
+
+        <p className="mt-8 text-center text-xs text-slate-400">Authorized Nognog Enterprises personnel only.</p>
+      </section>
     </main>
   );
 }

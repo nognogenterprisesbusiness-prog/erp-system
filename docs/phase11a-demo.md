@@ -1,0 +1,35 @@
+# Phase 11A — isolated web demo foundation
+
+The responsive web app is the only supported client. The Phase 11 instruction to add Expo SQLite conflicts with the approved web-first scope, so no native app or native demo database was added.
+
+## Environment selection
+
+Set both `APP_MODE` and `NEXT_PUBLIC_APP_MODE` to the same explicit value:
+
+- `production`: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- `staging`: `NEXT_PUBLIC_STAGING_SUPABASE_URL` and `NEXT_PUBLIC_STAGING_SUPABASE_PUBLISHABLE_KEY`, from a separate Supabase project. Staging never falls back to production values.
+- `local-demo`: no Supabase settings are needed. Requests outside `/demo` redirect there, and the Supabase client rejects use.
+
+For a local PowerShell preview, set `APP_MODE=local-demo` and `NEXT_PUBLIC_APP_MODE=local-demo` in the shell, then run `npm run dev`. The `/demo` route is disabled by default in production mode (verified as HTTP 404); a local-demo deployment redirects `/` to `/demo` (verified as HTTP 307).
+
+The public `/demo` route can also be enabled alongside production or staging with `ENABLE_LOCAL_DEMO=true`. Do this only intentionally. The demo route bypasses the global Supabase-auth proxy and sends a restrictive **production-build** CSP, including `connect-src 'none'`, to block browser network connections. Local `next dev` permits same-origin/WebSocket connections and eval required by Next's development tooling; those allowances are not present in production builds. The demo must not import production server actions, Supabase clients, Storage, Realtime, email, payments, or webhooks. The demo route and database are separate from authenticated business routes. Build/deploy each mode with its matching public environment variables; `NEXT_PUBLIC_*` values are included at build time.
+
+## Local data
+
+Dexie stores demo records in the browser's IndexedDB database `nognog_erp_demo`, data schema version 2. The seed contains only fictional users, project/site and warehouse assignments, projects/sites, warehouses, materials/opening balances and movements, equipment, employees, suppliers, one report, and two sample notices. Stores for attendance, purchase orders and project expenses are still present without claiming their workflows are complete. Demo IDs use the `demo-` prefix.
+
+The seed runs only if the database has no schema marker and no business records. Additive updates give existing demo databases fictional notices and upgrade version-one records to version two without clearing them. Version-one request records remain read-only because they lack site and dispatch history. An incomplete or unsupported local database fails visibly; it never falls back to Supabase. `/demo` opens the workspace directly and reuses the production shell while keeping its data layer separate. The role picker is in the blue demo strip; data tools are in Settings, with quick-search shortcuts, notifications and a clickable profile in the regular header. The search dropdown indexes permitted pages, actions, help guides and local records; it does not navigate to a full search-results page. A local "Logout" pauses the demo session in this tab; it is not Supabase sign-out or an authentication boundary. Role choice persists. Role switching changes visible sections and filters local records for demonstration only and is not production authorization evidence.
+
+Export produces versioned JSON. Import enforces a 2 MB cap, strict field validation, demo-only IDs, uniqueness, and cross-record references before atomically replacing local tables. Reset requires confirmation in the UI and atomically restores the seed, including transaction and notification stores. Both operate only on the named browser database.
+
+## Verification and limits
+
+Run `npm run test:demo`, `npm run typecheck`, `npm run lint`, and `npm run build`. The automated suite covers seed-once, database reopen, role persistence, export/import, reset, malformed/foreign-ID rejection, incomplete-database failure, and no Supabase configuration fallback. The `/demo` workspace was checked in the browser with no Supabase environment variables; top-bar role switching survived refresh and navigation. The demo response's restrictive CSP was confirmed via HTTP headers and the browser had no console errors. A separate production/staging smoke test with actual isolated Supabase projects remains necessary. Browser restart, network-request capture, and reset/import UI walkthrough should be repeated in the target pilot browser before signing off all 11A acceptance criteria.
+
+The overview uses two generated, fictional construction photos (`public/demo-residential.webp` and `public/demo-commercial.webp`) as illustrative thumbnails, not actual project evidence. The artwork was generated with the built-in image tool using prompts for a Cebu residential subdivision and a Mandaue commercial construction site, then converted to compact WebP files. The overview's four figures derive from local records, and recent activity is drawn from local report/stock entries. Search indexes the local demo records; the notification bell can mark the selected role's notices read.
+
+The isolated demo has local create flows for projects with a first site, warehouses, materials and stock-in, equipment, employees, suppliers, daily reports, and preview personas; managers can also upload compressed employee portraits and assign project/warehouse access to personas. The reusable Radix-based picker replaces native select controls throughout the demo, including dialogs. These workflows read and write only the versioned local demo database and can be removed with the `/demo` route, demo components and `src/lib/demo` without changing live persistence.
+
+The version-two demo additionally previews a material lifecycle: assigned project roles submit a request for one site, a manager approves or rejects it, authorized warehouse staff dispatch approved stock, assigned project staff receive it, then record actual consumption. The local warehouse/site balances and movement ledger update atomically with operation IDs to prevent duplicate stock and cost on retry. The Inventory table shows warehouse and project-site balances and exports filtered rows. The **illustrative demo-only defaults** are manager approval, partial approval, an approved fixed peso unit-price snapshot, and project cost posted only on consumption. These defaults were approved for preview, not as live ERP policies. The demo does not send email, order supplies, or post to Supabase.
+
+The demo is **not** feature-complete parity with the connected ERP. Warehouse-to-warehouse transfers, purchase-order receiving, attendance/payroll, actual project costing policy, audit/QR flows and business-triggered notifications remain outside this local preview slice. Non-manager daily-report creation is not yet simulated. The local role selector is intentionally not authentication: a visitor can switch personas and inspect their own browser's IndexedDB. Phase 11C–G and real database/RLS QA remain gated. Do not treat local role simulation or unit tests as proof of production security.

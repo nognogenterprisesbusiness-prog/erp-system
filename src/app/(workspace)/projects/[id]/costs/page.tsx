@@ -1,0 +1,39 @@
+import { randomUUID } from "node:crypto";
+import Link from "next/link";
+import { uuidSchema } from "@nognog/domain";
+import { notFound } from "next/navigation";
+import { ProjectCostForms, ReverseCostForm } from "@/components/projects/project-cost-forms";
+import { Button } from "@/components/ui/button";
+import { DataTableShell } from "@/components/ui/data-table-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { tableHeadClass } from "@/components/ui/table-sort-heading";
+import { requireFinanceViewer } from "@/lib/auth";
+import { getProjectCostData } from "@/lib/data/project-costs";
+
+const money = (amount: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(amount);
+
+export default async function ProjectCostsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ posted?: string }> }) {
+  const user = await requireFinanceViewer();
+  const id = (await params).id;
+  if (!uuidSchema.safeParse(id).success) notFound();
+  const data = await getProjectCostData(id, user.canManage);
+  const summary = data.summary;
+  const posted = (await searchParams).posted;
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  return <>
+    <PageHeader title="Project costs & billing" description={`${summary.project_code} · ${summary.project_name}`} action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}/attendance`}>Attendance</Link></Button><Button variant="outline" asChild><Link href="/billing">Billing</Link></Button><Button variant="outline" asChild><Link href={`/projects/${id}`}>Back to project</Link></Button></div>} />
+    {posted && ["rate", "equipment", "expense", "budget", "reversal"].includes(posted) && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{posted === "reversal" ? "Cost reversed with an audit record." : "Project record posted."}</p>}
+    <section className="mt-7 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="grid gap-4 border-b border-slate-100 p-5 sm:grid-cols-4"><div><p className="text-xs text-slate-500">Approved budget</p><p className="mt-1 text-xl font-semibold text-slate-900">{money(summary.approved_budget)}</p></div><div><p className="text-xs text-slate-500">Total posted cost</p><p className="mt-1 text-xl font-semibold text-slate-900">{money(summary.total_cost)}</p></div><div><p className="text-xs text-slate-500">Issued invoices</p><p className="mt-1 text-xl font-semibold text-slate-900">{money(summary.invoiced_amount)}</p></div><div><p className="text-xs text-slate-500">Client payments</p><p className="mt-1 text-xl font-semibold text-slate-900">{money(summary.cash_received)}</p></div></div>
+      <div className="grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:items-center"><div><h2 className="text-sm font-semibold text-slate-900">Management billed margin</h2><p className="mt-1 text-xs leading-5 text-slate-500">Issued invoices minus posted material, labor, equipment and additional costs. This is not a recognized-revenue or tax P&amp;L.</p></div><p className={`text-2xl font-semibold ${summary.billed_margin < 0 ? "text-red-700" : "text-slate-900"}`}>{money(summary.billed_margin)}</p></div>
+      <div className="grid gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 text-sm sm:grid-cols-4">{[["Materials", summary.material_cost], ["Labor", summary.labor_cost], ["Equipment", summary.equipment_cost], ["Other expenses", summary.additional_cost]].map(([label, amount]) => <div key={String(label)}><span className="text-slate-500">{label}</span><p className="font-semibold text-slate-800">{money(Number(amount))}</p></div>)}</div>
+    </section>
+    {user.canManage && <ProjectCostForms projectId={id} assets={data.assets} keys={{ rate: randomUUID(), usage: randomUUID(), expense: randomUUID(), budget: randomUUID() }} today={today} />}
+    <div className="mt-8 grid gap-7 xl:grid-cols-2">
+      <section><h2 className="text-lg font-semibold text-slate-900">Equipment use</h2><DataTableShell empty={data.equipment.length === 0 ? <EmptyState compact title="No equipment use posted" /> : undefined} footer={<span className="text-xs text-slate-500">Showing up to 50 recent entries</span>}><table className="w-full min-w-[480px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Equipment</th><th className="px-4 py-3">Date / hours</th><th className="px-4 py-3 text-right">Cost</th><th className="px-5 py-3">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{data.equipment.map((entry) => <tr key={entry.id}><td className="px-5 py-4"><p className="font-medium text-slate-800">{entry.asset_code} · {entry.asset_name}</p><p className="mt-1 text-xs text-slate-500">{entry.work_note}</p></td><td className="px-4 py-4">{entry.use_date}<span className="block text-xs text-slate-500">{entry.hours_used} h</span></td><td className="px-4 py-4 text-right">{entry.reversal ? "—" : money(entry.cost_total)}</td><td className="px-5 py-4">{entry.reversal ? <span className="text-xs text-slate-500">Reversed</span> : user.canManage ? <details><summary className="cursor-pointer text-xs font-medium text-cyan-700">Correct</summary><div className="mt-3 w-56"><ReverseCostForm projectId={id} kind="equipment" entryId={entry.id} idempotencyKey={randomUUID()} /></div></details> : "—"}</td></tr>)}</tbody></table></DataTableShell></section>
+      <section><h2 className="text-lg font-semibold text-slate-900">Additional expenses</h2><DataTableShell empty={data.expenses.length === 0 ? <EmptyState compact title="No additional expenses posted" /> : undefined} footer={<span className="text-xs text-slate-500">Showing up to 50 recent entries</span>}><table className="w-full min-w-[480px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Reference</th><th className="px-4 py-3">Date / category</th><th className="px-4 py-3 text-right">Amount</th><th className="px-5 py-3">Action</th></tr></thead><tbody className="divide-y divide-slate-100">{data.expenses.map((entry) => <tr key={entry.id}><td className="px-5 py-4"><p className="font-medium text-slate-800">{entry.external_reference}</p><p className="mt-1 text-xs text-slate-500">{entry.description}</p></td><td className="px-4 py-4">{entry.expense_date}<span className="block text-xs capitalize text-slate-500">{entry.category}</span></td><td className="px-4 py-4 text-right">{entry.reversal ? "—" : money(entry.amount)}</td><td className="px-5 py-4">{entry.reversal ? <span className="text-xs text-slate-500">Reversed</span> : user.canManage ? <details><summary className="cursor-pointer text-xs font-medium text-cyan-700">Correct</summary><div className="mt-3 w-56"><ReverseCostForm projectId={id} kind="expense" entryId={entry.id} idempotencyKey={randomUUID()} /></div></details> : "—"}</td></tr>)}</tbody></table></DataTableShell></section>
+    </div>
+    <details className="mt-7 rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Budget change history ({data.budgetChanges.length})</summary><div className="mt-4 divide-y divide-slate-100">{data.budgetChanges.length ? data.budgetChanges.map((item) => <div key={item.id} className="flex justify-between gap-4 py-3 text-sm"><span className="text-slate-600">{item.reason}<span className="ml-2 text-xs text-slate-400">{item.approved_at.slice(0, 10)}</span></span><span className="font-medium">{item.change_amount > 0 ? "+" : ""}{money(item.change_amount)}</span></div>) : <p className="text-xs text-slate-500">No approved changes.</p>}</div></details>
+  </>;
+}

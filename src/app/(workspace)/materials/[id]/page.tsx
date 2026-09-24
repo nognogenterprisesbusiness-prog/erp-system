@@ -1,0 +1,19 @@
+import Link from "next/link";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { DataTableShell } from "@/components/ui/data-table-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { EntityQrSection } from "@/components/qr/entity-qr-section";
+import { requireUser } from "@/lib/auth";
+import { getMaterial } from "@/lib/data/inventory";
+import { archiveMaterialAction } from "../actions";
+import { recordPhotoUrl } from "@/lib/media/record-photo-url";
+export default async function MaterialPage({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; const [user, data] = await Promise.all([requireUser(), getMaterial(id)]); const { material, category, unit, balances } = data; return <>
+  <PageHeader eyebrow={material.code} title={material.name} description={material.description || "Material master record"} action={user.canManage && <div className="flex gap-2"><Button variant="outline" asChild><Link href={`/materials/${id}/edit`}>Edit</Link></Button><form action={archiveMaterialAction}><input type="hidden" name="id" value={id} /><Button variant="outline" type="submit">Archive</Button></form></div>} />
+  {material.photo_path && <div className="relative mt-7 h-56 max-w-xl overflow-hidden rounded-xl bg-slate-100"><Image src={recordPhotoUrl("materials", id)} alt={`${material.name} photo`} fill sizes="(max-width: 640px) 100vw, 576px" unoptimized className="object-cover" /></div>}
+  <dl className="mt-7 grid gap-x-8 gap-y-5 border-y border-slate-200 bg-white px-5 py-6 sm:grid-cols-2 lg:grid-cols-4"><div><dt className="text-xs text-slate-400">Category</dt><dd className="mt-1 text-sm font-semibold">{category?.name ?? "Unavailable"}</dd></div><div><dt className="text-xs text-slate-400">Base unit</dt><dd className="mt-1 text-sm font-semibold">{unit ? `${unit.name} (${unit.symbol})` : "Unavailable"}</dd></div><div><dt className="text-xs text-slate-400">Minimum stock</dt><dd className="mt-1 text-sm font-semibold tabular-nums">{material.minimum_stock_level} {unit?.symbol}</dd></div><div><dt className="text-xs text-slate-400">Type / status</dt><dd className="mt-1 text-sm font-semibold capitalize">{material.material_kind} · {material.is_active ? "Active" : "Inactive"}</dd></div></dl>
+  <EntityQrSection entityType="material" entityId={id} canManage={user.canManage} />
+  <div className="mt-8"><h2 className="font-semibold">Stock by location</h2><p className="mt-1 text-xs text-slate-500">Available equals on hand minus reserved.</p></div>
+  <DataTableShell empty={balances.length === 0 ? <EmptyState kind="items" title="No stock posted yet" description="Post a stock-in entry to start tracking this material." /> : undefined}><table className="w-full min-w-[620px] text-left"><thead className="bg-slate-50 text-[10px] uppercase tracking-[0.12em] text-slate-400"><tr><th className="px-5 py-3">Location</th><th className="px-4 py-3 text-right">On hand</th><th className="px-4 py-3 text-right">Reserved</th><th className="px-5 py-3 text-right">Available</th></tr></thead><tbody className="divide-y divide-slate-100">{balances.map((item) => <tr key={item.id}><td className="px-5 py-4"><p className="text-sm font-semibold">{item.location?.name ?? "Unavailable location"}</p><p className="text-[11px] text-slate-400">{item.location?.detail}</p></td><td className="px-4 py-4 text-right text-sm tabular-nums">{item.quantity_on_hand} {unit?.symbol}</td><td className="px-4 py-4 text-right text-sm tabular-nums">{item.reserved_quantity} {unit?.symbol}</td><td className="px-5 py-4 text-right text-sm font-semibold tabular-nums">{item.available_quantity} {unit?.symbol}</td></tr>)}</tbody></table></DataTableShell>
+  </>; }

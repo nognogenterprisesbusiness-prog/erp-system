@@ -1,0 +1,119 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { decideMaterialRequestSchema, dispatchRequestLineSchema, receiveRequestTransferSchema, submitMaterialRequestSchema } from "@nognog/domain";
+import type { ActionResult } from "@nognog/domain";
+import { requireUser } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+
+export type RequestActionState = ActionResult<{ id: string }>;
+const failure = (message: string, fieldErrors?: Record<string, string[]>): RequestActionState => ({ ok: false, message, fieldErrors });
+const value = (form: FormData, key: string) => String(form.get(key) ?? "");
+
+function requestError(error: { code?: string; message: string }): string {
+  if (error.code === "42501") return "You do not have access to perform this request action.";
+  if (error.code === "23505") return "This form was already used for a different request. Refresh and try again.";
+  if (error.message.includes("already decided")) return "This request has already been decided. Refresh to see its current status.";
+  if (error.message.includes("warehouse is unavailable")) return "The project, site, or warehouse is no longer available.";
+  return "The material request could not be saved. Review its details and try again.";
+}
+
+export async function submitMaterialRequestAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
+  const user = await requireUser();
+  if (!user.canManage && !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)))
+    return failure("You do not have permission to request materials.");
+  const rawLines = value(form, "lines");
+  if (rawLines.length > 8_000) return failure("Too many request lines.");
+  let lines: unknown;
+  try { lines = JSON.parse(rawLines); } catch { return failure("Review the requested materials."); }
+  const parsed = submitMaterialRequestSchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), projectId: value(form, "projectId"),
+    siteId: value(form, "siteId"), warehouseId: value(form, "warehouseId"),
+    requiredDate: value(form, "requiredDate"), purpose: value(form, "purpose"), lines,
+  });
+  if (!parsed.success) return failure("Review the material request details.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("submit_material_request", {
+    p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId,
+    p_project_site_id: input.siteId, p_source_warehouse_id: input.warehouseId,
+    p_required_date: input.requiredDate, p_purpose: input.purpose, p_lines: input.lines,
+  });
+  if (error) return failure(requestError(error));
+  revalidatePath("/requests");
+  redirect(`/requests/${data}`);
+}
+
+export async function decideMaterialRequestAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
+  const user = await requireUser();
+  if (!user.canManage && !user.roles.includes("project_manager")) return failure("Manager approval is required.");
+  const rawDecisions = value(form, "decisions");
+  if (rawDecisions.length > 8_000) return failure("Too many approval lines.");
+  let decisions: unknown;
+  try { decisions = JSON.parse(rawDecisions); } catch { return failure("Review approved quantities."); }
+  const parsed = decideMaterialRequestSchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), requestId: value(form, "requestId"),
+    decisions, reason: value(form, "reason"),
+  });
+  if (!parsed.success) return failure("Review the approval details.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("decide_material_request", {
+    p_idempotency_key: input.idempotencyKey, p_request_id: input.requestId,
+    p_decisions: input.decisions, p_reason: input.reason || null,
+  });
+  if (error) return failure(requestError(error));
+  revalidatePath("/requests");
+  revalidatePath(`/requests/${data}`);
+  redirect(`/requests/${data}?decided=1`);
+}
+
+function fulfillmentError(error: { code?: string; message: string }): string {
+  if (error.code === "42501") return "You are not authorized for this warehouse or project.";
+  if (error.code === "23505") return "This form was already used for another movement. Refresh before trying again.";
+  if (error.message.includes("insufficient available stock")) return "The warehouse does not have enough available stock.";
+  if (error.message.includes("exceeds remaining approved")) return "The quantity exceeds the approved amount still awaiting dispatch.";
+  if (error.message.includes("exceeds remaining in-transit")) return "The quantity exceeds what is still in transit.";
+  if (error.message.includes("inactive")) return "The project, site, or warehouse is no longer active.";
+  return "The movement could not be posted. Refresh the page and review the quantities.";
+}
+
+export async function dispatchRequestLineAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
+  const user = await requireUser();
+  if (!user.canOperateInventory) return failure("Only assigned warehouse staff or administrators can dispatch stock.");
+  const parsed = dispatchRequestLineSchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), requestLineId: value(form, "requestLineId"),
+    quantity: value(form, "quantity"), transactionDate: value(form, "transactionDate"), remarks: value(form, "remarks"),
+  });
+  if (!parsed.success) return failure("Review the dispatch details.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("dispatch_approved_request_line", {
+    p_idempotency_key: input.idempotencyKey, p_request_line_id: input.requestLineId,
+    p_quantity: input.quantity, p_transaction_date: input.transactionDate, p_remarks: input.remarks || null,
+  });
+  if (error) return failure(fulfillmentError(error));
+  revalidatePath("/requests/queue"); revalidatePath("/requests"); revalidatePath("/inventory/transfers"); revalidatePath("/inventory");
+  redirect("/requests/queue?dispatched=1");
+}
+
+export async function receiveRequestTransferAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
+  const user = await requireUser();
+  if (!user.canManage && !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)))
+    return failure("Only assigned project staff can confirm receipt.");
+  const parsed = receiveRequestTransferSchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), transferItemId: value(form, "transferItemId"), requestId: value(form, "requestId"),
+    quantity: value(form, "quantity"), transactionDate: value(form, "transactionDate"), remarks: value(form, "remarks"),
+  });
+  if (!parsed.success) return failure("Review the receipt details.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("receive_request_transfer", {
+    p_idempotency_key: input.idempotencyKey, p_transfer_item_id: input.transferItemId,
+    p_quantity: input.quantity, p_transaction_date: input.transactionDate, p_remarks: input.remarks || null,
+  });
+  if (error) return failure(fulfillmentError(error));
+  revalidatePath("/requests"); revalidatePath(`/requests/${input.requestId}`); revalidatePath("/inventory/transfers"); revalidatePath("/inventory");
+  redirect(`/requests/${input.requestId}?received=1`);
+}

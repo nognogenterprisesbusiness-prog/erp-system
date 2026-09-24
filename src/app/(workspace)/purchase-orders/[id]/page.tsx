@@ -1,0 +1,34 @@
+import { randomUUID } from "node:crypto";
+import Link from "next/link";
+import { uuidSchema } from "@nognog/domain";
+import { notFound } from "next/navigation";
+import { CancelPurchaseOrderForm, ReceivePurchaseLineForm } from "@/components/purchase-orders/purchase-order-forms";
+import { Button } from "@/components/ui/button";
+import { DataTableShell } from "@/components/ui/data-table-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { tableHeadClass } from "@/components/ui/table-sort-heading";
+import { requireProcurementViewer } from "@/lib/auth";
+import { getPurchaseOrder } from "@/lib/data/purchase-orders";
+
+const money = (amount: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(amount);
+
+export default async function PurchaseOrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ posted?: string }> }) {
+  const user = await requireProcurementViewer();
+  const id = (await params).id;
+  if (!uuidSchema.safeParse(id).success) notFound();
+  const { order, lines, receipts } = await getPurchaseOrder(id);
+  const posted = (await searchParams).posted;
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  return <>
+    <PageHeader title={order.po_number} description={`${order.supplier_name} · ${order.warehouse_code} · ${order.warehouse_name}`} action={<Button variant="outline" asChild><Link href="/purchase-orders">Back to orders</Link></Button>} />
+    {posted && ["receipt", "cancelled"].includes(posted) && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{posted === "receipt" ? "The receipt and valued warehouse stock were posted together." : "Purchase order cancelled."}</p>}
+    <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600"><p className="font-medium text-slate-900">{order.purpose}</p><p className="mt-2">Ordered {order.ordered_on} · Expected {order.expected_on} · <span className="capitalize">{order.status.replaceAll("_", " ")}</span></p>{order.cancellation_reason && <p className="mt-2">Cancellation: {order.cancellation_reason}</p>}</section>
+    <h2 className="mt-8 text-lg font-semibold text-slate-900">Order lines</h2>
+    <DataTableShell footer={<span className="text-xs text-slate-500">{lines.length} material{lines.length === 1 ? "" : "s"}</span>}><table className="w-full min-w-[690px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Code</th><th className="px-4 py-3">Material</th><th className="px-4 py-3 text-right">Ordered</th><th className="px-4 py-3 text-right">Received</th><th className="px-5 py-3 text-right">PO unit price</th></tr></thead><tbody className="divide-y divide-slate-100">{lines.map((line) => <tr key={line.id}><td className="px-5 py-4 font-medium text-slate-800">{line.material_code}</td><td className="px-4 py-4">{line.material_name}</td><td className="px-4 py-4 text-right">{line.ordered_quantity} {line.unit_symbol}</td><td className="px-4 py-4 text-right">{line.received_quantity} {line.unit_symbol}</td><td className="px-5 py-4 text-right">{money(line.unit_price)}</td></tr>)}</tbody></table></DataTableShell>
+    {user.canManage && ["issued", "partially_received"].includes(order.status) && <section className="mt-8"><h2 className="text-lg font-semibold text-slate-900">Receive a delivery</h2><p className="mt-1 text-xs text-slate-500">Partial receipts are allowed. The posted goods cost updates weighted-average warehouse value.</p><div className="mt-4 grid gap-4">{lines.filter((line) => line.ordered_quantity > line.received_quantity).map((line) => <details key={line.id} className="rounded-xl border border-slate-200 bg-white p-4"><summary className="cursor-pointer text-sm font-medium text-slate-800">{line.material_code} · {line.material_name} · {line.ordered_quantity - line.received_quantity} {line.unit_symbol} remaining</summary><div className="mt-4"><ReceivePurchaseLineForm orderId={id} lineId={line.id} remaining={line.ordered_quantity - line.received_quantity} unitPrice={line.unit_price} unitSymbol={line.unit_symbol} idempotencyKey={randomUUID()} today={today} /></div></details>)}</div></section>}
+    <h2 className="mt-8 text-lg font-semibold text-slate-900">Receipt history</h2>
+    <DataTableShell empty={receipts.length === 0 ? <EmptyState compact title="No deliveries recorded" description="Post a delivery from an outstanding order line." /> : undefined} footer={<span className="text-xs text-slate-500">{receipts.length} receipt{receipts.length === 1 ? "" : "s"}</span>}><table className="w-full min-w-[650px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Delivery reference</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Quantity</th><th className="px-4 py-3 text-right">Goods cost</th><th className="px-5 py-3">Variance</th></tr></thead><tbody className="divide-y divide-slate-100">{receipts.map((receipt) => <tr key={receipt.id}><td className="px-5 py-4 font-medium text-slate-800">{receipt.delivery_reference}</td><td className="px-4 py-4">{receipt.received_on}</td><td className="px-4 py-4 text-right">{receipt.quantity}</td><td className="px-4 py-4 text-right">{money(receipt.goods_total_cost)}</td><td className="px-5 py-4 text-xs text-slate-500">{receipt.cost_variance_reason ?? "—"}</td></tr>)}</tbody></table></DataTableShell>
+    {user.canManage && order.status === "issued" && <details className="mt-6 max-w-md rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-medium text-slate-700">Cancel order</summary><div className="mt-4"><CancelPurchaseOrderForm orderId={id} /></div></details>}
+  </>;
+}
