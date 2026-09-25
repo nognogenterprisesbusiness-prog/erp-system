@@ -109,11 +109,11 @@ returns table (
   warehouse_id uuid, warehouse_name text,
   material_code text, material_name text,
   approved_quantity numeric, dispatched_quantity numeric,
-  available_quantity numeric, unit_symbol text, total_count bigint
+  available_quantity numeric, reserved_quantity numeric, unit_symbol text, total_count bigint
 ) language sql stable security definer set search_path = '' as $$
   select l.id, r.id, r.request_number, p.code, p.name, s.name,
     w.id, w.name, m.code, m.name, l.approved_quantity,
-    sent.quantity, coalesce(b.available_quantity, 0), u.symbol, count(*) over ()
+    sent.quantity, coalesce(b.available_quantity, 0), coalesce(res.remaining_quantity, 0), u.symbol, count(*) over ()
   from public.material_requests r
   join public.material_request_lines l on l.request_id = r.id and l.approved_quantity > 0
   join public.projects p on p.id = r.project_id
@@ -123,6 +123,7 @@ returns table (
   join public.units_of_measure u on u.id = l.unit_of_measure_id
   join public.inventory_locations il on il.warehouse_id = r.source_warehouse_id
   left join public.inventory_balances b on b.material_id = l.material_id and b.inventory_location_id = il.id
+  left join public.material_request_reservations res on res.request_line_id = l.id
   cross join lateral (
     select coalesce(sum(ti.dispatched_quantity), 0) as quantity
     from public.material_request_dispatches d
@@ -152,7 +153,9 @@ declare
   v_line public.material_request_lines%rowtype;
   v_request public.material_requests%rowtype;
   v_sent numeric;
-  v_available numeric;
+  v_on_hand numeric;
+  v_reserved numeric;
+  v_reservation public.material_request_reservations%rowtype;
   v_source uuid;
   v_destination uuid;
   v_transfer_id uuid := gen_random_uuid();
@@ -197,9 +200,17 @@ begin
   select id into v_source from public.inventory_locations where warehouse_id = v_request.source_warehouse_id;
   select id into v_destination from public.inventory_locations where project_site_id = v_request.project_site_id;
   if v_source is null or v_destination is null then raise exception 'inventory location is missing' using errcode = 'P0002'; end if;
-  select available_quantity into v_available from public.inventory_balances
+  select * into v_reservation from public.material_request_reservations
+    where request_line_id = v_line.id for update;
+  if v_reservation.id is null or v_reservation.status <> 'active'
+    or v_reservation.remaining_quantity < p_quantity then
+    raise exception 'dispatch exceeds remaining reserved quantity' using errcode = '22023';
+  end if;
+  select quantity_on_hand, reserved_quantity into v_on_hand, v_reserved from public.inventory_balances
     where material_id = v_line.material_id and inventory_location_id = v_source for update;
-  if coalesce(v_available, 0) < p_quantity then raise exception 'insufficient available stock' using errcode = 'P0001'; end if;
+  if coalesce(v_on_hand, 0) < p_quantity or coalesce(v_reserved, 0) < p_quantity then
+    raise exception 'reserved stock is unavailable' using errcode = 'P0001';
+  end if;
   -- A retry that waited on the request-line lock must not post another movement.
   v_existing := private.existing_request_fulfillment_command(p_idempotency_key, 'dispatch_approved_request_line', v_actor, v_hash);
   if v_existing is not null then return v_existing; end if;
@@ -210,8 +221,15 @@ begin
   returning transfer_number into v_transfer_number;
   insert into public.inventory_transfer_items (id, transfer_id, material_id, unit_of_measure_id, dispatched_quantity)
     values (v_item_id, v_transfer_id, v_line.material_id, v_line.unit_of_measure_id, p_quantity);
-  update public.inventory_balances set quantity_on_hand = quantity_on_hand - p_quantity, updated_at = now()
+  update public.inventory_balances set quantity_on_hand = quantity_on_hand - p_quantity,
+    reserved_quantity = reserved_quantity - p_quantity, updated_at = now()
     where material_id = v_line.material_id and inventory_location_id = v_source;
+  update public.material_request_reservations
+    set remaining_quantity = remaining_quantity - p_quantity,
+      status = case when remaining_quantity = p_quantity then 'fulfilled' else 'active' end
+    where id = v_reservation.id;
+  insert into public.material_request_reservation_events (reservation_id, event_type, quantity, actor_id)
+    values (v_reservation.id, 'dispatched', p_quantity, v_actor);
   insert into public.inventory_transactions (id, material_id, quantity, unit_of_measure_id,
     source_location_id, destination_location_id, transaction_type, transfer_id, transfer_item_id,
     transfer_phase, reference_document, project_id, responsible_user_id, transaction_date, remarks)
@@ -221,6 +239,11 @@ begin
   insert into public.material_request_dispatches (request_line_id, transfer_item_id) values (v_line.id, v_item_id);
   insert into public.material_request_fulfillment_events (request_line_id, transfer_item_id, event_type, quantity, actor_id)
     values (v_line.id, v_item_id, 'dispatched', p_quantity, v_actor);
+  perform private.enqueue_notification_event(
+    'material-request-dispatch-' || v_item_id, 'MATERIAL_REQUEST', 'Materials dispatched',
+    'Reserved materials were dispatched to the project site.', 'material_request', v_request.id,
+    v_request.project_id, null, 'normal', '{}'::public.app_role[], array[v_request.requested_by], null
+  );
   insert into public.material_request_fulfillment_receipts (idempotency_key, actor_id, command_name, payload_hash, result_id)
     values (p_idempotency_key, v_actor, 'dispatch_approved_request_line', v_hash, v_transfer_id);
   return v_transfer_id;

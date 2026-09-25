@@ -11,6 +11,16 @@ The responsive web interface hides unauthorized mutations for usability. Supabas
 
 Inactive profiles fail role and assignment checks. Ending an assignment preserves history and removes future scoped access. Project records are archived, never hard-deleted through the application API.
 
+## Material request submission (unapplied connected rule)
+
+| Actor | Submit request | Review/approve |
+|---|---|---|
+| Assigned Project Manager / Engineer / Foreman | Yes, for an active assigned project and site | Assigned Project Manager may approve |
+| Super Admin / Owner / Admin | No; requests originate with site staff | May review and approve |
+| Warehouse Staff / Accounting / Worker | No | No |
+
+The connected server action and an unapplied insert trigger both enforce the submitter rule; the demo transaction enforces the same role boundary. Verify direct RPC denial in isolated staging before enabling live requests.
+
 ## Phase 4A asset registry
 
 | Role | Asset registry scope | Registry mutation |
@@ -63,6 +73,18 @@ Submitted reports and their snapshots are read-only. Later review and correction
 | Other active users | No registry or label-management access | Material catalog records; assets only at accessible locations; warehouses and sites only within authorized assignments |
 
 Resolution returns identifying metadata only. It does not grant stock, equipment, or project mutation rights. Inactive or replaced identifiers do not resolve. Browser camera scanning and inventory/asset transaction integration are not part of Phase 9A.
+
+## Project planning, progress and physical counts (unapplied)
+
+| Actor | Material plan | Dated progress | Physical count |
+|---|---|---|---|
+| Owner/Admin | Read and save across projects | Record against an approved daily report | Count any valued location; approve or reject shortages |
+| Assigned Project Manager | Read and save assigned projects | Record against an approved report for the assigned project | Count assigned project sites; cannot approve |
+| Assigned Engineer/Foreman | Read assigned project plan/progress | Read only | Count assigned project sites; cannot approve |
+| Assigned Warehouse Staff | No project planning access | No project progress access | Count assigned warehouse stock; cannot approve |
+| Accounting | Profitability RPC and export | No direct progress mutation | No count mutation |
+
+The SQL commands re-check assignment, status, verified valuation and count snapshots. A stock-count shortage reduces only unreserved on-hand through a valued ledger movement; approved site losses appear separately in management profitability. These policies still require real-role staging verification before use.
 
 ## Phase 10A notifications
 

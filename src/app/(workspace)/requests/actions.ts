@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { decideMaterialRequestSchema, dispatchRequestLineSchema, receiveRequestTransferSchema, submitMaterialRequestSchema } from "@nognog/domain";
+import { cancelMaterialRequestSchema, decideMaterialRequestSchema, dispatchRequestLineSchema, receiveRequestTransferSchema, submitMaterialRequestSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -16,12 +16,36 @@ function requestError(error: { code?: string; message: string }): string {
   if (error.code === "23505") return "This form was already used for a different request. Refresh and try again.";
   if (error.message.includes("already decided")) return "This request has already been decided. Refresh to see its current status.";
   if (error.message.includes("warehouse is unavailable")) return "The project, site, or warehouse is no longer available.";
+  if (error.message.includes("insufficient available stock to reserve")) return "The warehouse cannot reserve the approved quantity. Reduce it or replenish stock, then try again.";
   return "The material request could not be saved. Review its details and try again.";
+}
+
+export async function cancelMaterialRequestAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
+  await requireUser();
+  const parsed = cancelMaterialRequestSchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), requestId: value(form, "requestId"), reason: value(form, "reason"),
+  });
+  if (!parsed.success) return failure("Enter a cancellation reason of 3 to 500 characters.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("cancel_material_request", {
+    p_idempotency_key: input.idempotencyKey, p_request_id: input.requestId, p_reason: input.reason,
+  });
+  if (error) {
+    if (error.code === "42501") return failure("Only the requester or an administrator can cancel this request.");
+    if (error.message.includes("dispatched")) return failure("This request already has a dispatch and cannot be cancelled.");
+    return failure(requestError(error));
+  }
+  revalidatePath("/requests");
+  revalidatePath("/requests/queue");
+  revalidatePath("/inventory");
+  revalidatePath(`/requests/${data}`);
+  redirect(`/requests/${data}?cancelled=1`);
 }
 
 export async function submitMaterialRequestAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
   const user = await requireUser();
-  if (!user.canManage && !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)))
+  if (user.canManage || !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)))
     return failure("You do not have permission to request materials.");
   const rawLines = value(form, "lines");
   if (rawLines.length > 8_000) return failure("Too many request lines.");
@@ -66,6 +90,8 @@ export async function decideMaterialRequestAction(_: RequestActionState, form: F
   if (error) return failure(requestError(error));
   revalidatePath("/requests");
   revalidatePath(`/requests/${data}`);
+  revalidatePath("/requests/queue");
+  revalidatePath("/inventory");
   redirect(`/requests/${data}?decided=1`);
 }
 
@@ -73,6 +99,7 @@ function fulfillmentError(error: { code?: string; message: string }): string {
   if (error.code === "42501") return "You are not authorized for this warehouse or project.";
   if (error.code === "23505") return "This form was already used for another movement. Refresh before trying again.";
   if (error.message.includes("insufficient available stock")) return "The warehouse does not have enough available stock.";
+  if (error.message.includes("reserved stock is unavailable") || error.message.includes("reserved quantity")) return "The reserved quantity is no longer available. Refresh the queue.";
   if (error.message.includes("exceeds remaining approved")) return "The quantity exceeds the approved amount still awaiting dispatch.";
   if (error.message.includes("exceeds remaining in-transit")) return "The quantity exceeds what is still in transit.";
   if (error.message.includes("inactive")) return "The project, site, or warehouse is no longer active.";

@@ -77,13 +77,21 @@ export async function getSupplier(id: string) {
   const supabase = await createClient();
   const { data: supplier, error } = await supabase.from("suppliers").select("*").eq("id", id).single();
   if (error || !supplier) notFound();
-  const [categoryResult, catalogResult, eventResult, references] = await Promise.all([
+  const [categoryResult, catalogResult, eventResult, purchaseResult, references] = await Promise.all([
     supabase.from("supplier_categories").select("*").eq("id", supplier.category_id).single(),
     supabase.from("supplier_materials").select("*").eq("supplier_id", id).order("updated_at", { ascending: false }),
     supabase.from("supplier_events").select("*").eq("supplier_id", id).order("occurred_at", { ascending: false }).limit(100),
+    supabase.from("purchase_orders").select("id,po_number,warehouse_name,ordered_on,expected_on,status", { count: "exact" }).eq("supplier_id", id).order("ordered_on", { ascending: false }).limit(25),
     getSupplierReferences(),
   ]);
-  if (categoryResult.error || catalogResult.error || eventResult.error) throw new Error("Unable to load the supplier record.");
+  if (categoryResult.error || catalogResult.error || eventResult.error || purchaseResult.error) throw new Error("Unable to load the supplier record.");
+  const purchaseIds = (purchaseResult.data ?? []).map((order) => order.id);
+  const receiptResult = purchaseIds.length
+    ? await supabase.from("purchase_order_receipts").select("purchase_order_id").in("purchase_order_id", purchaseIds)
+    : { data: [], error: null };
+  if (receiptResult.error) throw new Error("Unable to load supplier purchase receipts.");
+  const receiptCounts = new Map<string, number>();
+  for (const receipt of receiptResult.data ?? []) receiptCounts.set(receipt.purchase_order_id, (receiptCounts.get(receipt.purchase_order_id) ?? 0) + 1);
   const catalog = catalogResult.data ?? [];
   const catalogIds = catalog.map((item) => item.id);
   const { data: prices, error: priceError } = catalogIds.length
@@ -108,6 +116,8 @@ export async function getSupplier(id: string) {
     })),
     events: (eventResult.data ?? []).map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user" })),
     priceActors: actorMap,
+    purchaseOrders: (purchaseResult.data ?? []).map((order) => ({ ...order, receiptCount: receiptCounts.get(order.id) ?? 0 })),
+    purchaseOrderCount: purchaseResult.count ?? 0,
     references,
   };
 }

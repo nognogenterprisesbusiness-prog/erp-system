@@ -5,6 +5,7 @@ import { createDemoSeed } from "./seed";
 import {
   DEMO_SCHEMA_VERSION,
   demoEquipmentInputSchema,
+  demoEquipmentRequestInputSchema,
   demoEmployeePhotoSchema,
   demoMaterialInputSchema,
   demoSchemas,
@@ -13,9 +14,13 @@ import {
   demoProfileInputSchema,
   demoWarehouseInputSchema,
   demoProjectInputSchema,
+  demoMaterialPlanInputSchema,
   demoSupplierInputSchema,
+  demoSupplierPriceInputSchema,
   demoDailyReportInputSchema,
   demoEmployeeInputSchema,
+  demoEmployeeAssignmentInputSchema,
+  demoAttendanceInputSchema,
   demoRequestInputSchema,
   demoRequestDecisionSchema,
   demoRequestMovementInputSchema,
@@ -29,15 +34,19 @@ import {
   validateDemoSnapshot,
   type DemoData,
   type DemoEquipmentInput,
+  type DemoEquipmentRequestInput,
   type DemoMaterialInput,
   type DemoSnapshot,
   type DemoStockInInput,
   type DemoUserInput,
   type DemoWarehouseInput,
   type DemoProjectInput,
+  type DemoMaterialPlanInput,
   type DemoSupplierInput,
   type DemoDailyReportInput,
   type DemoEmployeeInput,
+  type DemoEmployeeAssignmentInput,
+  type DemoAttendanceInput,
   type DemoRequestInput,
   type DemoRequestDecision,
   type DemoRequestMovementInput,
@@ -52,6 +61,7 @@ type SavedSnapshotRow = { key: "primary"; savedAt: string; selectedUserId: strin
 const notificationSeedKey = "demoNotificationSeedV2";
 const employeePhotoSeedKey = "demoEmployeePhotoSeedV1";
 const employeeContactSeedKey = "demoEmployeeContactsV1";
+const employeeWageSeedKey = "demoEmployeeWagesV1";
 const projectPhotoSeedKey = "demoProjectPhotosV1";
 const warehousePhotoSeedKey = "demoWarehousePhotosV1";
 const reportPhotoSeedKey = "demoDailyReportPhotosV1";
@@ -59,6 +69,13 @@ const materialPhotoSeedKey = "demoMaterialPhotosV1";
 const automaticQrSeedKey = "demoAutomaticQrV1";
 const equipmentSkuSeedKey = "demoEquipmentSkuV1";
 const userContactSeedKey = "demoUserContactV2";
+const workerSeedKey = "demoWorkerPersonaV1";
+const supplierPriceSeedKey = "demoSupplierPricesV1";
+const materialPlanSeedKey = "demoMaterialPlanV1";
+const projectFinanceSeedKey = "demoProjectFinanceV1";
+const projectScheduleSeedKey = "demoProjectScheduleV1";
+const reportProgressSeedKey = "demoReportProgressV1";
+const attendanceAssignmentSeedKey = "demoAttendanceAssignmentsV1";
 
 export class DemoDatabase extends Dexie {
   meta!: Table<MetaRow, string>;
@@ -95,6 +112,10 @@ export class DemoDatabase extends Dexie {
     });
     this.version(4).stores({ auditLogs: "id,createdAt,actorId,entity,action" });
     this.version(5).stores({ qrCodes: "id,identifier,[entityType+entityId],createdAt" });
+    this.version(6).stores({ equipmentRequests: "id,assetId,projectId,status,createdAt" });
+    this.version(7).stores({ supplierPrices: "id,supplierId,materialId,[supplierId+materialId],effectiveOn" });
+    this.version(8).stores({ projectMaterialPlans: "id,projectId,siteId,warehouseId,materialId,[siteId+materialId]" });
+    this.version(9).stores({ employeeAssignments: "id,employeeId,projectId,siteId,[employeeId+projectId]", attendanceReversals: "id,attendanceId" });
   }
 }
 
@@ -165,6 +186,22 @@ export async function initializeDemo(db: DemoDatabase): Promise<void> {
         await db.meta.put({ key: "schemaVersion", value: DEMO_SCHEMA_VERSION });
         version.value = DEMO_SCHEMA_VERSION;
       }
+      if (version.value === 4) {
+        await db.meta.put({ key: "schemaVersion", value: DEMO_SCHEMA_VERSION });
+        version.value = DEMO_SCHEMA_VERSION;
+      }
+      if (version.value === 5) {
+        await db.meta.put({ key: "schemaVersion", value: DEMO_SCHEMA_VERSION });
+        version.value = DEMO_SCHEMA_VERSION;
+      }
+      if (version.value === 6) {
+        await db.meta.put({ key: "schemaVersion", value: DEMO_SCHEMA_VERSION });
+        version.value = DEMO_SCHEMA_VERSION;
+      }
+      if (version.value === 7) {
+        await db.meta.put({ key: "schemaVersion", value: DEMO_SCHEMA_VERSION });
+        version.value = DEMO_SCHEMA_VERSION;
+      }
       if (version.value !== DEMO_SCHEMA_VERSION) throw new Error("Demo data uses an unsupported schema version. Export it before updating.");
       if (!(await db.meta.get(notificationSeedKey))) {
         const notifications = demoTable(db, "notifications");
@@ -191,6 +228,14 @@ export async function initializeDemo(db: DemoDatabase): Promise<void> {
         }
         await db.meta.put({ key: employeeContactSeedKey, value: 1 });
       }
+      if (!(await db.meta.get(employeeWageSeedKey))) {
+        const employees = demoTable(db, "employees");
+        for (const sample of createDemoSeed().tables.employees) {
+          const current = await employees.get(sample.id);
+          if (current && current.dailyWageCentavos === undefined && sample.dailyWageCentavos !== undefined) await employees.update(current.id, { dailyWageCentavos: sample.dailyWageCentavos });
+        }
+        await db.meta.put({ key: employeeWageSeedKey, value: 1 });
+      }
       if (!(await db.meta.get(projectPhotoSeedKey))) {
         const projects = demoTable(db, "projects");
         for (const sample of createDemoSeed().tables.projects) {
@@ -198,6 +243,28 @@ export async function initializeDemo(db: DemoDatabase): Promise<void> {
           if (current && !current.photo) await projects.update(sample.id, { photo: sample.photo });
         }
         await db.meta.put({ key: projectPhotoSeedKey, value: 1 });
+      }
+      if (!(await db.meta.get(projectFinanceSeedKey))) {
+        const projects = demoTable(db, "projects");
+        for (const sample of createDemoSeed().tables.projects) {
+          const current = await projects.get(sample.id);
+          if (current) await projects.update(current.id, {
+            initialBudgetCentavos: current.initialBudgetCentavos ?? sample.initialBudgetCentavos,
+            contractValueCentavos: current.contractValueCentavos ?? sample.contractValueCentavos,
+          });
+        }
+        await db.meta.put({ key: projectFinanceSeedKey, value: 1 });
+      }
+      if (!(await db.meta.get(projectScheduleSeedKey))) {
+        const projects = demoTable(db, "projects");
+        for (const sample of createDemoSeed().tables.projects) {
+          const current = await projects.get(sample.id);
+          if (current) await projects.update(current.id, {
+            startDate: current.startDate ?? sample.startDate,
+            targetCompletionDate: current.targetCompletionDate ?? sample.targetCompletionDate,
+          });
+        }
+        await db.meta.put({ key: projectScheduleSeedKey, value: 1 });
       }
       if (!(await db.meta.get(warehousePhotoSeedKey))) {
         const warehouses = demoTable(db, "warehouses");
@@ -214,6 +281,14 @@ export async function initializeDemo(db: DemoDatabase): Promise<void> {
           if (current && !current.photo) await reports.update(sample.id, { photo: sample.photo });
         }
         await db.meta.put({ key: reportPhotoSeedKey, value: 1 });
+      }
+      if (!(await db.meta.get(reportProgressSeedKey))) {
+        const reports = demoTable(db, "dailyReports");
+        for (const sample of createDemoSeed().tables.dailyReports) {
+          const current = await reports.get(sample.id);
+          if (current && current.progressPercent === undefined) await reports.update(current.id, { progressPercent: sample.progressPercent });
+        }
+        await db.meta.put({ key: reportProgressSeedKey, value: 1 });
       }
       if (!(await db.meta.get(materialPhotoSeedKey))) {
         const materials = demoTable(db, "materials");
@@ -243,6 +318,38 @@ export async function initializeDemo(db: DemoDatabase): Promise<void> {
         }
         await db.meta.put({ key: userContactSeedKey, value: 1 });
       }
+      if (!(await db.meta.get(workerSeedKey))) {
+        const sample = createDemoSeed();
+        const worker = sample.tables.users.find((user) => user.id === "demo-user-worker");
+        if (worker && !(await demoTable(db, "users").get(worker.id)) && !(await demoTable(db, "users").toArray()).some((user) => user.email?.toLowerCase() === worker.email?.toLowerCase())) await demoTable(db, "users").put(worker);
+        const notice = sample.tables.notifications.find((item) => item.id === "demo-notification-worker");
+        if (notice && await demoTable(db, "users").get(notice.userId) && !(await demoTable(db, "notifications").get(notice.id))) await demoTable(db, "notifications").put(notice);
+        const mason = await demoTable(db, "employees").get("demo-employee-mason");
+        if (mason && !mason.userId && await demoTable(db, "users").get("demo-user-worker")) await demoTable(db, "employees").update(mason.id, { userId: "demo-user-worker" });
+        const attendance = sample.tables.attendance.find((item) => item.id === "demo-attendance-mason");
+        if (attendance && mason && await demoTable(db, "projects").get(attendance.projectId) && !(await demoTable(db, "attendance").get(attendance.id))) await demoTable(db, "attendance").put(attendance);
+        await db.meta.put({ key: workerSeedKey, value: 1 });
+      }
+      if (!(await db.meta.get(supplierPriceSeedKey))) {
+        for (const sample of createDemoSeed().tables.supplierPrices) {
+          if (await demoTable(db, "suppliers").get(sample.supplierId) && await demoTable(db, "materials").get(sample.materialId) && await demoTable(db, "users").get(sample.recordedBy) && !(await demoTable(db, "supplierPrices").get(sample.id))) await demoTable(db, "supplierPrices").put(sample);
+        }
+        await db.meta.put({ key: supplierPriceSeedKey, value: 1 });
+      }
+      if (!(await db.meta.get(materialPlanSeedKey))) {
+        for (const sample of createDemoSeed().tables.projectMaterialPlans) {
+          const existing = await demoTable(db, "projectMaterialPlans").where("[siteId+materialId]").equals([sample.siteId, sample.materialId]).first();
+          if (!existing && await demoTable(db, "projects").get(sample.projectId) && await demoTable(db, "sites").get(sample.siteId) && await demoTable(db, "warehouses").get(sample.warehouseId) && await demoTable(db, "materials").get(sample.materialId)) await demoTable(db, "projectMaterialPlans").put(sample);
+        }
+        await db.meta.put({ key: materialPlanSeedKey, value: 1 });
+      }
+      if (!(await db.meta.get(attendanceAssignmentSeedKey))) {
+        const assignments = demoTable(db, "employeeAssignments");
+        for (const sample of createDemoSeed().tables.employeeAssignments) {
+          if (await demoTable(db, "employees").get(sample.employeeId) && await demoTable(db, "projects").get(sample.projectId) && await demoTable(db, "sites").get(sample.siteId) && !(await assignments.get(sample.id))) await assignments.put(sample);
+        }
+        await db.meta.put({ key: attendanceAssignmentSeedKey, value: 1 });
+      }
       return;
     }
     const counts = await Promise.all(demoTableNames.map((name) => demoTable(db, name).count()));
@@ -256,12 +363,19 @@ export async function initializeDemo(db: DemoDatabase): Promise<void> {
     await db.meta.put({ key: employeePhotoSeedKey, value: 1 });
     await db.meta.put({ key: employeeContactSeedKey, value: 1 });
     await db.meta.put({ key: projectPhotoSeedKey, value: 1 });
+    await db.meta.put({ key: projectFinanceSeedKey, value: 1 });
+    await db.meta.put({ key: projectScheduleSeedKey, value: 1 });
     await db.meta.put({ key: warehousePhotoSeedKey, value: 1 });
     await db.meta.put({ key: reportPhotoSeedKey, value: 1 });
+    await db.meta.put({ key: reportProgressSeedKey, value: 1 });
     await db.meta.put({ key: materialPhotoSeedKey, value: 1 });
     await db.meta.put({ key: automaticQrSeedKey, value: 1 });
     await db.meta.put({ key: equipmentSkuSeedKey, value: 1 });
     await db.meta.put({ key: userContactSeedKey, value: 1 });
+    await db.meta.put({ key: workerSeedKey, value: 1 });
+    await db.meta.put({ key: supplierPriceSeedKey, value: 1 });
+    await db.meta.put({ key: materialPlanSeedKey, value: 1 });
+    await db.meta.put({ key: attendanceAssignmentSeedKey, value: 1 });
   });
 }
 
@@ -422,6 +536,7 @@ export async function registerDemoWarehouse(db: DemoDatabase, input: DemoWarehou
 
 export async function registerDemoProject(db: DemoDatabase, input: DemoProjectInput): Promise<void> {
   const parsed = demoProjectInputSchema.parse(input);
+  if (parsed.startDate && parsed.targetCompletionDate && parsed.targetCompletionDate < parsed.startDate) throw new Error("Target completion cannot be before the start date.");
   const code = parsed.code.toUpperCase();
   await initializeDemo(db);
   const projects = demoTable(db, "projects");
@@ -431,11 +546,47 @@ export async function registerDemoProject(db: DemoDatabase, input: DemoProjectIn
     if (!isDemoManager(actor.role)) throw new Error("This demo role cannot make that change.");
     if ((await projects.toArray()).some((project) => project.code.toLowerCase() === code.toLowerCase())) throw new Error("A project with this code already exists.");
     const projectId = `demo-project-${crypto.randomUUID()}`;
-    await projects.add(demoSchemas.projects.parse({ id: projectId, code, name: parsed.name, status: parsed.status, location: parsed.location, municipalityCode: parsed.municipalityCode, address: parsed.address, photo: parsed.photo }));
+    await projects.add(demoSchemas.projects.parse({ id: projectId, code, name: parsed.name, status: parsed.status, location: parsed.location, municipalityCode: parsed.municipalityCode, address: parsed.address, startDate: parsed.startDate, targetCompletionDate: parsed.targetCompletionDate, photo: parsed.photo, contractValueCentavos: parsed.contractValueCentavos, initialBudgetCentavos: parsed.initialBudgetCentavos }));
     const site = demoSchemas.sites.parse({ id: `demo-site-${crypto.randomUUID()}`, projectId, name: parsed.siteName });
     await sites.add(site);
     await ensureDemoQr(db, "project_site", site.id, actor.id);
     await appendDemoAudit(db, actor.id, "projects", projectId, "create", `Added ${code} · ${parsed.name}`);
+  });
+}
+
+export async function saveDemoMaterialPlan(db: DemoDatabase, input: DemoMaterialPlanInput): Promise<void> {
+  const parsed = demoMaterialPlanInputSchema.parse(input);
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    const assignedManager = actor.role === "project_manager" && Boolean(await demoTable(db, "projectAssignments").where("[userId+projectId]").equals([actor.id, parsed.projectId]).first());
+    if (!isDemoManager(actor.role) && !assignedManager) throw new Error("Only an administrator or assigned project manager can manage a material plan.");
+    const project = await demoTable(db, "projects").get(parsed.projectId);
+    const site = await demoTable(db, "sites").get(parsed.siteId);
+    if (!project || project.status !== "active" || !site || site.projectId !== project.id) throw new Error("Choose an active project and its site.");
+    if (!(await demoTable(db, "warehouses").get(parsed.warehouseId)) || !(await demoTable(db, "materials").get(parsed.materialId))) throw new Error("Choose an existing warehouse and material.");
+    const plans = demoTable(db, "projectMaterialPlans");
+    const current = parsed.id ? await plans.get(parsed.id) : undefined;
+    if (parsed.id && (!current || current.projectId !== project.id)) throw new Error("Material plan entry is unavailable.");
+    const duplicate = await plans.where("[siteId+materialId]").equals([parsed.siteId, parsed.materialId]).first();
+    if (duplicate && duplicate.id !== parsed.id) throw new Error("This material is already planned for that site. Edit its quantity or source warehouse instead.");
+    const saved = demoSchemas.projectMaterialPlans.parse({ ...parsed, id: parsed.id ?? `demo-plan-${crypto.randomUUID()}` });
+    await plans.put(saved);
+    await appendDemoAudit(db, actor.id, "projectMaterialPlans", saved.id, current ? "update" : "create", `${current ? "Updated" : "Planned"} ${saved.plannedQuantity} units for project`);
+  });
+}
+
+export async function deleteDemoMaterialPlan(db: DemoDatabase, planId: string): Promise<void> {
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    const plans = demoTable(db, "projectMaterialPlans");
+    const plan = await plans.get(planId);
+    if (!plan) throw new Error("Material plan entry is unavailable.");
+    const assignedManager = actor.role === "project_manager" && Boolean(await demoTable(db, "projectAssignments").where("[userId+projectId]").equals([actor.id, plan.projectId]).first());
+    if (!isDemoManager(actor.role) && !assignedManager) throw new Error("Only an administrator or assigned project manager can manage a material plan.");
+    await plans.delete(planId);
+    await appendDemoAudit(db, actor.id, "projectMaterialPlans", planId, "delete", "Removed planned material entry");
   });
 }
 
@@ -450,6 +601,21 @@ export async function registerDemoSupplier(db: DemoDatabase, input: DemoSupplier
     const created = demoSchemas.suppliers.parse({ id: `demo-supplier-${crypto.randomUUID()}`, ...parsed });
     await suppliers.add(created);
     await appendDemoAudit(db, actor.id, "suppliers", created.id, "create", `Added ${created.name}`);
+  });
+}
+
+export async function recordDemoSupplierPrice(db: DemoDatabase, input: unknown): Promise<void> {
+  const parsed = demoSupplierPriceInputSchema.parse(input);
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    if (!isDemoManager(actor.role)) throw new Error("Only a manager can record supplier prices.");
+    if (!(await demoTable(db, "suppliers").get(parsed.supplierId)) || !(await demoTable(db, "materials").get(parsed.materialId))) throw new Error("Choose an existing supplier and material.");
+    const history = await demoTable(db, "supplierPrices").where("[supplierId+materialId]").equals([parsed.supplierId, parsed.materialId]).toArray();
+    if (history.some((price) => price.effectiveOn === parsed.effectiveOn)) throw new Error("A price already exists for this supplier, material and date.");
+    const record = demoSchemas.supplierPrices.parse({ id: `demo-price-${crypto.randomUUID()}`, ...parsed, recordedBy: actor.id, createdAt: new Date().toISOString() });
+    await demoTable(db, "supplierPrices").add(record);
+    await appendDemoAudit(db, actor.id, "supplierPrices", record.id, "create", `Recorded supplier price for ${parsed.effectiveOn}`);
   });
 }
 
@@ -489,6 +655,7 @@ export async function updateDemoRecord(db: DemoDatabase, kind: DemoEditableKind,
     const next = demoSchemas[kind].parse({ ...current, ...changes, id: recordId });
     if (kind === "projects") {
       const project = next as DemoData["projects"][number];
+      if (project.startDate && project.targetCompletionDate && project.targetCompletionDate < project.startDate) throw new Error("Target completion cannot be before the start date.");
       if ((await demoTable(db, "projects").toArray()).some((row) => row.id !== recordId && row.code.toLowerCase() === project.code.toLowerCase())) throw new Error("A project with this code already exists.");
     }
     if (kind === "warehouses") {
@@ -500,6 +667,7 @@ export async function updateDemoRecord(db: DemoDatabase, kind: DemoEditableKind,
       }
     }
     if (kind === "materials") {
+      if (await demoTable(db, "supplierPrices").where("materialId").equals(recordId).first()) throw new Error("This material has supplier price history and cannot be deleted.");
       const material = next as DemoData["materials"][number];
       const old = current as DemoData["materials"][number];
       if ((await demoTable(db, "materials").toArray()).some((row) => row.id !== recordId && row.code.toLowerCase() === material.code.toLowerCase())) throw new Error("A material with this SKU already exists.");
@@ -507,6 +675,7 @@ export async function updateDemoRecord(db: DemoDatabase, kind: DemoEditableKind,
     }
     if (kind === "equipment") {
       const asset = next as DemoData["equipment"][number];
+      if ((current as DemoData["equipment"][number]).status === "assigned" || asset.status === "assigned") throw new Error("Return checked-out equipment before editing its registry record.");
       if ((await demoTable(db, "equipment").toArray()).some((row) => row.id !== recordId && row.code.toLowerCase() === asset.code.toLowerCase())) throw new Error("Equipment with this code already exists.");
       const locations = [...(await demoTable(db, "warehouses").toArray()).map((row) => row.name), ...(await demoTable(db, "sites").toArray()).map((row) => row.name)];
       if (!locations.includes(asset.location)) throw new Error("Choose an existing warehouse or site.");
@@ -515,9 +684,13 @@ export async function updateDemoRecord(db: DemoDatabase, kind: DemoEditableKind,
       const supplier = next as DemoData["suppliers"][number];
       if ((await demoTable(db, "suppliers").toArray()).some((row) => row.id !== recordId && row.name.toLowerCase() === supplier.name.toLowerCase())) throw new Error("This supplier already exists.");
       }
-      if (kind === "employees") {
+    if (kind === "employees") {
         const employee = next as DemoData["employees"][number];
         if ((await demoTable(db, "employees").toArray()).some((row) => row.id !== recordId && row.name.toLowerCase() === employee.name.toLowerCase())) throw new Error("An employee with this name already exists.");
+        if (employee.userId) {
+          const linked = await demoTable(db, "users").get(employee.userId);
+          if (linked?.role !== "worker" || (await demoTable(db, "employees").toArray()).some((row) => row.id !== recordId && row.userId === employee.userId)) throw new Error("Choose an unlinked worker account.");
+        }
       }
     if (kind === "dailyReports") {
       const report = next as DemoData["dailyReports"][number];
@@ -544,8 +717,11 @@ export async function deleteDemoRecord(db: DemoDatabase, kind: DemoEditableKind,
         await demoTable(db, "materialRequests").where("projectId").equals(recordId).first()
         || await demoTable(db, "dailyReports").where("projectId").equals(recordId).first()
         || await demoTable(db, "projectAssignments").where("projectId").equals(recordId).first()
+        || await demoTable(db, "equipmentRequests").where("projectId").equals(recordId).first()
         || await demoTable(db, "attendance").where("projectId").equals(recordId).first()
+        || await demoTable(db, "employeeAssignments").where("projectId").equals(recordId).first()
         || await demoTable(db, "projectExpenses").where("projectId").equals(recordId).first()
+        || await demoTable(db, "projectMaterialPlans").where("projectId").equals(recordId).first()
         || (await demoTable(db, "siteBalances").toArray()).some((row) => siteIds.has(row.siteId))
         || (await demoTable(db, "equipment").toArray()).some((row) => sites.some((site) => site.name === row.location))
       );
@@ -561,19 +737,23 @@ export async function deleteDemoRecord(db: DemoDatabase, kind: DemoEditableKind,
         || (await demoTable(db, "materialRequests").toArray()).some((row) => !row.legacy && row.warehouseId === recordId)
         || (await demoTable(db, "requestMovements").toArray()).some((row) => row.warehouseId === recordId)
         || (await demoTable(db, "equipment").toArray()).some((row) => row.location === warehouse.name)) throw new Error("This warehouse has stock, assignments, assets or movement history and cannot be deleted.");
+      if (await demoTable(db, "projectMaterialPlans").where("warehouseId").equals(recordId).first()) throw new Error("This warehouse is used by a project material plan and cannot be deleted.");
+      if ((await demoTable(db, "equipmentRequests").toArray()).some((row) => row.sourceLocationType === "warehouse" && row.sourceLocationId === recordId)) throw new Error("This warehouse has equipment handover history and cannot be deleted.");
     }
     if (kind === "materials") {
       if (await demoTable(db, "transactions").where("materialId").equals(recordId).first()
         || (await demoTable(db, "materialRequests").toArray()).some((row) => row.materialId === recordId)
         || (await demoTable(db, "requestMovements").toArray()).some((row) => row.materialId === recordId)) throw new Error("This material has stock or request history and cannot be deleted.");
+      if (await demoTable(db, "projectMaterialPlans").where("materialId").equals(recordId).first()) throw new Error("This material is used by a project plan and cannot be deleted.");
       const balances = (await demoTable(db, "balances").toArray()).filter((row) => row.materialId === recordId);
       const siteBalances = (await demoTable(db, "siteBalances").toArray()).filter((row) => row.materialId === recordId);
       if ([...balances, ...siteBalances].some((row) => row.quantity !== 0)) throw new Error("This material still has stock and cannot be deleted.");
       await demoTable(db, "balances").bulkDelete(balances.map((row) => row.id));
       await demoTable(db, "siteBalances").bulkDelete(siteBalances.map((row) => row.id));
     }
-      if (kind === "suppliers" && await demoTable(db, "purchaseOrders").where("supplierId").equals(recordId).first()) throw new Error("This supplier has purchase history and cannot be deleted.");
-      if (kind === "employees" && await demoTable(db, "attendance").where("employeeId").equals(recordId).first()) throw new Error("This employee has attendance history and cannot be deleted.");
+      if (kind === "suppliers" && (await demoTable(db, "purchaseOrders").where("supplierId").equals(recordId).first() || await demoTable(db, "supplierPrices").where("supplierId").equals(recordId).first())) throw new Error("This supplier has price or purchase history and cannot be deleted.");
+      if (kind === "employees" && (await demoTable(db, "attendance").where("employeeId").equals(recordId).first() || await demoTable(db, "employeeAssignments").where("employeeId").equals(recordId).first())) throw new Error("This employee has project assignments or attendance history and cannot be deleted.");
+    if (kind === "equipment" && await demoTable(db, "equipmentRequests").where("assetId").equals(recordId).first()) throw new Error("This equipment has request or custody history and cannot be deleted.");
     await table.delete(recordId);
     if (qrType) await demoTable(db, "qrCodes").where("[entityType+entityId]").equals([qrType, recordId]).delete();
     await appendDemoAudit(db, actor.id, kind, recordId, "delete", `Deleted ${demoRecordLabel(kind, current)}`);
@@ -587,9 +767,86 @@ export async function registerDemoEmployee(db: DemoDatabase, input: DemoEmployee
   await db.transaction("rw", employees, demoTable(db, "users"), db.auditLogs, db.meta, async () => {
     const actor = await selectedDemoActor(db);
     if (!isDemoManager(actor.role)) throw new Error("This demo role cannot make that change.");
+    if (parsed.userId) {
+      const linked = await demoTable(db, "users").get(parsed.userId);
+      if (linked?.role !== "worker" || (await employees.toArray()).some((row) => row.userId === parsed.userId)) throw new Error("Choose an unlinked worker account.");
+    }
     const created = demoSchemas.employees.parse({ id: `demo-employee-${crypto.randomUUID()}`, ...parsed });
     await employees.add(created);
     await appendDemoAudit(db, actor.id, "employees", created.id, "create", `Added ${created.name}`);
+  });
+}
+
+export async function assignDemoEmployee(db: DemoDatabase, input: DemoEmployeeAssignmentInput): Promise<void> {
+  const parsed = demoEmployeeAssignmentInputSchema.parse(input);
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    if (!isDemoManager(actor.role)) throw new Error("Only a manager can assign an employee in the demo.");
+    const employee = await demoTable(db, "employees").get(parsed.employeeId);
+    const project = await demoTable(db, "projects").get(parsed.projectId);
+    const site = await demoTable(db, "sites").get(parsed.siteId);
+    if (!employee || !project || project.status !== "active" || site?.projectId !== project.id || project.startDate && parsed.startDate < project.startDate) throw new Error("Choose an active project site and a start date within its schedule.");
+    if (parsed.endDate && parsed.endDate < parsed.startDate) throw new Error("Assignment end date must follow its start date.");
+    const existing = await demoTable(db, "employeeAssignments").where("[employeeId+projectId]").equals([employee.id, project.id]).toArray();
+    if (existing.some((row) => row.siteId === site.id && (row.endDate ?? "9999-12-31") >= parsed.startDate && (parsed.endDate ?? "9999-12-31") >= row.startDate)) throw new Error("This employee already has an assignment at this site for these dates.");
+    const assignment = demoSchemas.employeeAssignments.parse({ id: `demo-employee-assignment-${crypto.randomUUID()}`, ...parsed });
+    await demoTable(db, "employeeAssignments").add(assignment);
+    await appendDemoAudit(db, actor.id, "employee assignments", assignment.id, "assign", `Assigned ${employee.name} to ${site.name}`);
+  });
+}
+
+export async function endDemoEmployeeAssignment(db: DemoDatabase, assignmentId: string, endDate: string): Promise<void> {
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    if (!isDemoManager(actor.role)) throw new Error("Only a manager can end an employee assignment.");
+    const assignments = demoTable(db, "employeeAssignments");
+    const assignment = await assignments.get(assignmentId);
+    if (!assignment || assignment.endDate) throw new Error("This assignment is unavailable or already ended.");
+    if (!demoEmployeeAssignmentInputSchema.shape.startDate.safeParse(endDate).success || endDate < assignment.startDate) throw new Error("Choose an end date on or after the assignment start.");
+    if ((await demoTable(db, "attendance").where("employeeId").equals(assignment.employeeId).toArray()).some((row) => row.assignmentId === assignment.id && row.date > endDate)) throw new Error("Attendance exists after this date; choose a later end date.");
+    await assignments.update(assignment.id, { endDate });
+    await appendDemoAudit(db, actor.id, "employee assignments", assignment.id, "update", `Ended assignment on ${endDate}`);
+  });
+}
+
+export async function postDemoAttendance(db: DemoDatabase, input: DemoAttendanceInput): Promise<void> {
+  const parsed = demoAttendanceInputSchema.parse(input);
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    if (!isDemoManager(actor.role)) throw new Error("Only a manager can post attendance and labor cost.");
+    const assignment = await demoTable(db, "employeeAssignments").get(parsed.assignmentId);
+    const employee = assignment && await demoTable(db, "employees").get(assignment.employeeId);
+    const project = assignment && await demoTable(db, "projects").get(assignment.projectId);
+    if (!assignment || !employee || !project || project.status !== "active" || parsed.date < assignment.startDate || assignment.endDate && parsed.date > assignment.endDate) throw new Error("Choose an employee assigned to an active project on this date.");
+    if (parsed.status === "present" ? parsed.hoursWorked <= 0 || parsed.hoursWorked > 24 || parsed.paidDayBasisPoints <= 0 || !employee.dailyWageCentavos : parsed.hoursWorked !== 0 || parsed.paidDayBasisPoints !== 0) throw new Error("Present entries need hours and an approved daily wage; absent entries must have zero hours and cost.");
+    if (Math.abs(parsed.hoursWorked * 100 - Math.round(parsed.hoursWorked * 100)) > 0.000001) throw new Error("Use at most two decimal places for hours.");
+    const entries = await demoTable(db, "attendance").where("employeeId").equals(employee.id).toArray();
+    const reversed = new Set((await demoTable(db, "attendanceReversals").toArray()).map((row) => row.attendanceId));
+    if (entries.some((row) => row.projectId === project.id && row.date === parsed.date && !reversed.has(row.id))) throw new Error("This employee already has attendance for the project and date. Reverse that entry before replacing it.");
+    const workedCentiHours = entries.filter((row) => row.date === parsed.date && !reversed.has(row.id)).reduce((sum, row) => sum + Math.round((row.hoursWorked ?? 0) * 100), 0);
+    if (workedCentiHours + Math.round(parsed.hoursWorked * 100) > 2400) throw new Error("An employee cannot have more than 24 recorded hours across projects on one date.");
+    const rateSnapshotCentavos = parsed.status === "present" ? employee.dailyWageCentavos : undefined;
+    const costCentavos = rateSnapshotCentavos === undefined ? 0 : Number((BigInt(rateSnapshotCentavos) * BigInt(parsed.paidDayBasisPoints) + BigInt(5000)) / BigInt(10000));
+    const entry = demoSchemas.attendance.parse({ id: `demo-attendance-${crypto.randomUUID()}`, employeeId: employee.id, projectId: project.id, siteId: assignment.siteId, assignmentId: assignment.id, date: parsed.date, status: parsed.status, hoursWorked: parsed.hoursWorked, paidDayBasisPoints: parsed.paidDayBasisPoints, rateSnapshotCentavos, costCentavos, note: parsed.note, recordedBy: actor.id, createdAt: new Date().toISOString() });
+    await demoTable(db, "attendance").add(entry);
+    await appendDemoAudit(db, actor.id, "attendance", entry.id, "create", `Posted ${employee.name} ${entry.status} at ${project.name} on ${entry.date}`);
+  });
+}
+
+export async function reverseDemoAttendance(db: DemoDatabase, attendanceId: string, reason: string): Promise<void> {
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    if (!isDemoManager(actor.role)) throw new Error("Only a manager can reverse attendance.");
+    const entry = await demoTable(db, "attendance").get(attendanceId);
+    if (!entry) throw new Error("Attendance entry is unavailable.");
+    if (await demoTable(db, "attendanceReversals").where("attendanceId").equals(attendanceId).first()) throw new Error("This attendance entry is already reversed.");
+    const reversal = demoSchemas.attendanceReversals.parse({ id: `demo-attendance-reversal-${crypto.randomUUID()}`, attendanceId, reason, actorId: actor.id, createdAt: new Date().toISOString() });
+    await demoTable(db, "attendanceReversals").add(reversal);
+    await appendDemoAudit(db, actor.id, "attendance", entry.id, "reverse", `Reversed attendance on ${entry.date}: ${reversal.reason}`);
   });
 }
 
@@ -620,6 +877,7 @@ export async function recordDemoStockIn(db: DemoDatabase, input: DemoStockInInpu
 
 export async function registerDemoEquipment(db: DemoDatabase, input: DemoEquipmentInput): Promise<void> {
   const parsed = demoEquipmentInputSchema.parse(input);
+  if (parsed.status === "assigned") throw new Error("Equipment custody must be assigned through a request.");
   const code = parsed.code.toUpperCase();
   await initializeDemo(db);
   await db.transaction("rw", db.tables, async () => {
@@ -631,6 +889,97 @@ export async function registerDemoEquipment(db: DemoDatabase, input: DemoEquipme
     await equipment.add(created);
     await ensureDemoQr(db, "equipment", created.id, actor.id);
     await appendDemoAudit(db, actor.id, "equipment", created.id, "create", `Added ${code} · ${created.name}`);
+  });
+}
+
+function demoEquipmentSource(tables: {
+  warehouses: DemoData["warehouses"];
+  sites: DemoData["sites"];
+}, assetLocation: string, projectId: string, siteId: string) {
+  const site = tables.sites.find((row) => row.id === siteId && row.projectId === projectId && row.name === assetLocation);
+  if (site) return { sourceLocationId: site.id, sourceLocationType: "site" as const };
+  const warehouse = tables.warehouses.find((row) => row.name === assetLocation);
+  return warehouse ? { sourceLocationId: warehouse.id, sourceLocationType: "warehouse" as const } : null;
+}
+
+export async function submitDemoEquipmentRequest(db: DemoDatabase, input: DemoEquipmentRequestInput): Promise<void> {
+  const parsed = demoEquipmentRequestInputSchema.parse(input);
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    if (isDemoManager(actor.role) || !["project_manager", "engineer", "foreman"].includes(actor.role)) throw new Error("Only assigned project staff can request equipment.");
+    await requireProjectAccess(db, actor, parsed.projectId);
+    const project = await demoTable(db, "projects").get(parsed.projectId);
+    const site = await demoTable(db, "sites").get(parsed.siteId);
+    const asset = await demoTable(db, "equipment").get(parsed.assetId);
+    const today = new Date().toISOString().slice(0, 10);
+    if (!project || project.status !== "active" || !site || site.projectId !== project.id) throw new Error("Choose an active project and its site.");
+    if (!asset || asset.status !== "available") throw new Error("Equipment is not available.");
+    if (!demoEquipmentSource({ warehouses: await demoTable(db, "warehouses").toArray(), sites: await demoTable(db, "sites").toArray() }, asset.location, project.id, site.id)) throw new Error("Equipment must be at this site or a warehouse.");
+    if (parsed.neededOn < today || parsed.neededOn > new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10)) throw new Error("Choose a current or upcoming need date.");
+    const requests = demoTable(db, "equipmentRequests");
+    if ((await requests.where("assetId").equals(asset.id).toArray()).some((row) => row.status === "submitted" && row.projectId === project.id && row.siteId === site.id && row.requestedBy === actor.id)) throw new Error("You already have a pending request for this equipment and site.");
+    const created = demoSchemas.equipmentRequests.parse({ id: `demo-equipment-request-${crypto.randomUUID()}`, ...parsed, requestedBy: actor.id, status: "submitted", createdAt: new Date().toISOString() });
+    await requests.add(created);
+    await appendDemoAudit(db, actor.id, "equipmentRequests", created.id, "submit", `Requested ${asset.code} for ${project.code}`);
+  });
+}
+
+export async function decideDemoEquipmentRequest(db: DemoDatabase, requestId: string, approve: boolean, note: string): Promise<void> {
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    if (!isDemoManager(actor.role)) throw new Error("Only an admin can decide equipment requests.");
+    const requests = demoTable(db, "equipmentRequests");
+    const request = await requests.get(requestId);
+    if (!request || !["submitted", "approved"].includes(request.status) || (approve && request.status !== "submitted")) throw new Error("This request is no longer pending or approved for withdrawal.");
+    const trimmedNote = note.trim();
+    if (trimmedNote.length > 500 || (!approve && trimmedNote.length < 3)) throw new Error("Enter a rejection reason of at least three characters.");
+    const asset = await demoTable(db, "equipment").get(request.assetId);
+    if (!asset || (approve && asset.status !== "available")) throw new Error("Equipment is no longer available.");
+    const source = demoEquipmentSource({ warehouses: await demoTable(db, "warehouses").toArray(), sites: await demoTable(db, "sites").toArray() }, asset.location, request.projectId, request.siteId);
+    if (approve && (!source || (await requests.where("assetId").equals(asset.id).toArray()).some((row) => row.id !== request.id && ["approved", "checked_out"].includes(row.status)))) throw new Error("Equipment is already reserved or its location changed.");
+    await requests.put(demoSchemas.equipmentRequests.parse({ ...request, status: approve ? "approved" : "rejected", decidedBy: actor.id, decidedAt: new Date().toISOString(), decisionNote: trimmedNote || undefined, ...(approve ? source : { sourceLocationId: undefined, sourceLocationType: undefined }) }));
+    await appendDemoAudit(db, actor.id, "equipmentRequests", request.id, approve ? "approve" : "reject", `${approve ? "Approved" : request.status === "approved" ? "Withdrew approval for" : "Rejected"} ${asset.code}`);
+  });
+}
+
+export async function checkoutDemoEquipmentRequest(db: DemoDatabase, requestId: string): Promise<void> {
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    if (!isDemoManager(actor.role)) throw new Error("Only an admin can check out equipment.");
+    const requests = demoTable(db, "equipmentRequests");
+    const request = await requests.get(requestId);
+    if (!request || request.status !== "approved" || !request.sourceLocationId || !request.sourceLocationType) throw new Error("This request is not approved for handover.");
+    const site = await demoTable(db, "sites").get(request.siteId);
+    const project = await demoTable(db, "projects").get(request.projectId);
+    const asset = await demoTable(db, "equipment").get(request.assetId);
+    const source = request.sourceLocationType === "warehouse" ? await demoTable(db, "warehouses").get(request.sourceLocationId) : await demoTable(db, "sites").get(request.sourceLocationId);
+    if (!site || site.projectId !== request.projectId || !project || project.status !== "active" || !source || !asset || asset.status !== "available" || asset.location !== source.name) throw new Error("Equipment custody changed; review the request.");
+    await demoTable(db, "equipment").update(asset.id, { status: "assigned", location: site.name });
+    await requests.put(demoSchemas.equipmentRequests.parse({ ...request, status: "checked_out", checkedOutBy: actor.id, checkedOutAt: new Date().toISOString() }));
+    await appendDemoAudit(db, actor.id, "equipmentRequests", request.id, "dispatch", `Checked out ${asset.code} to ${site.name}`);
+  });
+}
+
+export async function returnDemoEquipmentRequest(db: DemoDatabase, requestId: string, needsMaintenance: boolean, note: string): Promise<void> {
+  await initializeDemo(db);
+  await db.transaction("rw", db.tables, async () => {
+    const actor = await selectedDemoActor(db);
+    if (!isDemoManager(actor.role)) throw new Error("Only an admin can record equipment returns.");
+    const requests = demoTable(db, "equipmentRequests");
+    const request = await requests.get(requestId);
+    if (!request || request.status !== "checked_out" || !request.sourceLocationId || !request.sourceLocationType) throw new Error("This equipment is not checked out.");
+    const trimmedNote = note.trim();
+    if (trimmedNote.length < 3 || trimmedNote.length > 500) throw new Error("Record the return condition in 3–500 characters.");
+    const site = await demoTable(db, "sites").get(request.siteId);
+    const asset = await demoTable(db, "equipment").get(request.assetId);
+    const source = request.sourceLocationType === "warehouse" ? await demoTable(db, "warehouses").get(request.sourceLocationId) : await demoTable(db, "sites").get(request.sourceLocationId);
+    if (!asset || asset.status !== "assigned" || !site || asset.location !== site.name || !source) throw new Error("Equipment custody does not match this request.");
+    await demoTable(db, "equipment").update(asset.id, { status: needsMaintenance ? "under_maintenance" : "available", location: source.name });
+    await requests.put(demoSchemas.equipmentRequests.parse({ ...request, status: "returned", returnedBy: actor.id, returnedAt: new Date().toISOString(), returnNote: trimmedNote, needsMaintenance }));
+    await appendDemoAudit(db, actor.id, "equipmentRequests", request.id, "receipt", `Returned ${asset.code}${needsMaintenance ? " for maintenance" : ""}`);
   });
 }
 
@@ -653,6 +1002,7 @@ export async function submitDemoMaterialRequest(db: DemoDatabase, input: DemoReq
   await initializeDemo(db);
   await db.transaction("rw", db.tables, async () => {
     const actor = await selectedDemoActor(db);
+    if (isDemoManager(actor.role) || !["project_manager", "engineer", "foreman"].includes(actor.role)) throw new Error("Only assigned project staff can submit material requests.");
     await requireProjectAccess(db, actor, parsed.projectId);
     const site = await demoTable(db, "sites").get(parsed.siteId);
     if (!site || site.projectId !== parsed.projectId) throw new Error("Choose a site belonging to this project.");

@@ -9,6 +9,7 @@ export function notificationHref(notification: Pick<NotificationRow, "entity_typ
   if (!notification.entity_id && notification.entity_type !== "system") return null;
   switch (notification.entity_type) {
     case "material": return `/materials/${notification.entity_id}`;
+    case "material_request": return `/requests/${notification.entity_id}`;
     case "equipment": return `/equipment/${notification.entity_id}`;
     case "vehicle": return `/vehicles/${notification.entity_id}`;
     case "warehouse": return `/warehouses/${notification.entity_id}`;

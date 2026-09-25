@@ -15,11 +15,12 @@ type Choices = Awaited<ReturnType<typeof getPurchaseOrderChoices>>;
 type Line = { key: number; supplierMaterialId: string; quantity: string };
 const initialState: PurchaseActionState = { message: "" };
 
-export function IssuePurchaseOrderForm({ choices, idempotencyKey, today }: { choices: Choices; idempotencyKey: string; today: string }) {
+export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initialMaterialId, initialWarehouseId, initialQuantity }: { choices: Choices; idempotencyKey: string; today: string; initialMaterialId?: string; initialWarehouseId?: string; initialQuantity?: string }) {
   const [state, action, pending] = useActionState(issuePurchaseOrderAction, initialState);
-  const [supplierId, setSupplierId] = useState(choices.suppliers[0]?.id ?? "");
-  const [warehouseId, setWarehouseId] = useState(choices.warehouses[0]?.id ?? "");
-  const [lines, setLines] = useState<Line[]>([{ key: 0, supplierMaterialId: "", quantity: "" }]);
+  const initialCatalogItem = choices.catalog.find((item) => item.materialId === initialMaterialId);
+  const [supplierId, setSupplierId] = useState(initialCatalogItem?.supplierId ?? choices.suppliers[0]?.id ?? "");
+  const [warehouseId, setWarehouseId] = useState(initialWarehouseId ?? choices.warehouses[0]?.id ?? "");
+  const [lines, setLines] = useState<Line[]>([{ key: 0, supplierMaterialId: initialCatalogItem?.id ?? "", quantity: initialQuantity ?? "" }]);
   const [nextKey, setNextKey] = useState(1);
   const catalog = choices.catalog.filter((item) => item.supplierId === supplierId);
   const error = (field: string) => state.fieldErrors?.[field]?.[0];

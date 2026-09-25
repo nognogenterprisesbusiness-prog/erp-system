@@ -22,3 +22,11 @@ export const dailyReportInputSchema = z.object({
 });
 
 export type DailyReportInput = z.infer<typeof dailyReportInputSchema>;
+
+export const dailyReportReviewSchema = z.object({
+  reportId: uuidSchema,
+  action: z.enum(["approve", "return"]),
+  note: z.string().trim().max(500),
+}).superRefine((value, context) => {
+  if (value.action === "return" && value.note.length < 3) context.addIssue({ code: "custom", path: ["note"], message: "Explain the correction needed" });
+});

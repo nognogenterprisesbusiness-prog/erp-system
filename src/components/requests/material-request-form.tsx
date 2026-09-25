@@ -15,13 +15,13 @@ type Choices = Awaited<ReturnType<typeof getMaterialRequestChoices>>;
 type Line = { key: string; materialId: string; quantity: string };
 const initialState: RequestActionState = { ok: false, message: "" };
 
-export function MaterialRequestForm({ choices }: { choices: Choices }) {
+export function MaterialRequestForm({ choices, initialMaterialId = "", initialProjectId, initialSiteId, initialWarehouseId, initialQuantity, initialDate }: { choices: Choices; initialMaterialId?: string; initialProjectId?: string; initialSiteId?: string; initialWarehouseId?: string; initialQuantity?: string; initialDate?: string }) {
   const [state, action, pending] = useActionState(submitMaterialRequestAction, initialState);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
-  const [projectId, setProjectId] = useState(choices.projects[0]?.id ?? "");
-  const [siteId, setSiteId] = useState("");
-  const [warehouseId, setWarehouseId] = useState("");
-  const [lines, setLines] = useState<Line[]>(() => [{ key: crypto.randomUUID(), materialId: "", quantity: "" }]);
+  const [projectId, setProjectId] = useState(initialProjectId ?? choices.projects[0]?.id ?? "");
+  const [siteId, setSiteId] = useState(initialSiteId ?? "");
+  const [warehouseId, setWarehouseId] = useState(initialWarehouseId ?? "");
+  const [lines, setLines] = useState<Line[]>(() => [{ key: crypto.randomUUID(), materialId: initialMaterialId, quantity: initialQuantity ?? "" }]);
   const sites = choices.sites.filter((item) => item.project_id === projectId);
   const warehouses = choices.warehouses.filter((item) => item.project_id === projectId);
   const selectedSite = sites.some((item) => item.id === siteId) ? siteId : sites[0]?.id ?? "";
@@ -47,14 +47,14 @@ export function MaterialRequestForm({ choices }: { choices: Choices }) {
         <SelectPicker label="Source warehouse" value={selectedWarehouse} onValueChange={setWarehouseId} options={warehouses.map((item) => ({ value: item.warehouse_id, label: `${item.code} · ${item.name}` }))} placeholder="Select warehouse" />
       </FormField>
       <FormField label="Needed by" htmlFor="requiredDate" error={error("requiredDate")}>
-        <input className={fieldControlClass} id="requiredDate" name="requiredDate" type="date" defaultValue={todayInManila()} required />
+        <input className={fieldControlClass} id="requiredDate" name="requiredDate" type="date" defaultValue={initialDate ?? todayInManila()} required />
       </FormField>
       <FormField label="Purpose" htmlFor="purpose" className="md:col-span-2" error={error("purpose")}>
         <textarea className={`${fieldControlClass} h-auto py-3`} id="purpose" name="purpose" rows={2} maxLength={500} required />
       </FormField>
     </div>
     <div className="mt-7 flex items-center justify-between gap-3 border-t border-slate-100 pt-6">
-      <div><h2 className="text-base font-semibold text-slate-900">Materials</h2><p className="mt-1 text-xs text-slate-500">Use one line per SKU. Approval does not change stock.</p></div>
+      <div><h2 className="text-base font-semibold text-slate-900">Materials</h2><p className="mt-1 text-xs text-slate-500">Use one line per SKU. Approval reserves available stock; dispatch moves it.</p></div>
       <Button type="button" variant="outline" size="sm" disabled={lines.length >= 20 || pending} onClick={() => setLines((current) => [...current, { key: crypto.randomUUID(), materialId: "", quantity: "" }])}>
         <HugeiconsIcon icon={PlusSignIcon} size={16} />Add line
       </Button>

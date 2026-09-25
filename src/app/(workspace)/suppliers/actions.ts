@@ -11,6 +11,7 @@ import {
   uuidSchema,
 } from "@nognog/domain";
 import { requireManager } from "@/lib/auth";
+import { prepareRecordPhoto, saveRecordPhoto } from "@/lib/media/record-photo";
 import { createClient } from "@/lib/supabase/server";
 
 export type SupplierActionState =
@@ -62,6 +63,9 @@ export async function saveSupplierAction(_: SupplierActionState, form: FormData)
     remarks: value(form, "remarks"),
   });
   if (!parsed.success) return failure("Review the highlighted supplier details.", parsed.error.flatten().fieldErrors);
+  let photo: Buffer | undefined;
+  try { photo = await prepareRecordPhoto(form.get("photo")); }
+  catch (cause) { return failure(cause instanceof Error ? cause.message : "The supplier photo could not be processed."); }
   const input = parsed.data;
   const { data, error } = await supabase.rpc("save_supplier", {
     p_id: input.id ?? null, p_code: input.code, p_supplier_name: input.supplierName, p_business_name: input.businessName,
@@ -70,6 +74,13 @@ export async function saveSupplierAction(_: SupplierActionState, form: FormData)
     p_tax_identification_number: input.taxIdentificationNumber, p_payment_terms: input.paymentTerms, p_status: input.status, p_remarks: input.remarks || "",
   });
   if (error) return failure(friendlySupplierError(error));
+  if (photo) {
+    try { await saveRecordPhoto("suppliers", data, photo); }
+    catch (cause) {
+      revalidateSuppliers(data);
+      return { ok: true, data: { id: data }, message: cause instanceof Error ? cause.message : "Supplier saved, but the photo could not be attached. Open the supplier to retry." };
+    }
+  }
   revalidateSuppliers(data);
   redirect(`/suppliers/${data}`);
 }

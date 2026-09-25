@@ -1,4 +1,4 @@
-create type public.material_request_status as enum ('submitted', 'approved', 'partially_approved', 'rejected');
+create type public.material_request_status as enum ('submitted', 'approved', 'partially_approved', 'rejected', 'cancelled');
 
 create sequence public.material_request_number_seq;
 
@@ -42,6 +42,37 @@ create table public.material_request_lines (
 );
 create index material_request_lines_material_idx on public.material_request_lines (material_id, request_id);
 
+create table public.material_request_reservations (
+  id uuid primary key default gen_random_uuid(),
+  request_line_id uuid not null unique references public.material_request_lines(id) on delete restrict,
+  material_id uuid not null references public.materials(id) on delete restrict,
+  inventory_location_id uuid not null references public.inventory_locations(id) on delete restrict,
+  original_quantity numeric(20,4) not null check (original_quantity > 0),
+  remaining_quantity numeric(20,4) not null check (remaining_quantity >= 0 and remaining_quantity <= original_quantity),
+  status text not null default 'active' check (status in ('active', 'fulfilled', 'released')),
+  reserved_by uuid not null references public.profiles(id) on delete restrict,
+  reserved_at timestamptz not null default now(),
+  released_at timestamptz,
+  constraint material_request_reservation_state check (
+    (status = 'active' and remaining_quantity > 0 and released_at is null)
+    or (status = 'fulfilled' and remaining_quantity = 0 and released_at is null)
+    or (status = 'released' and remaining_quantity = 0 and released_at is not null)
+  )
+);
+create index material_request_reservations_location_idx on public.material_request_reservations
+  (inventory_location_id, material_id) where status = 'active';
+
+create table public.material_request_reservation_events (
+  id uuid primary key default gen_random_uuid(),
+  reservation_id uuid not null references public.material_request_reservations(id) on delete restrict,
+  event_type text not null check (event_type in ('reserved', 'dispatched', 'released')),
+  quantity numeric(20,4) not null check (quantity > 0),
+  actor_id uuid not null references public.profiles(id) on delete restrict,
+  occurred_at timestamptz not null default now()
+);
+create index material_request_reservation_events_reservation_idx on public.material_request_reservation_events
+  (reservation_id, occurred_at);
+
 create table public.material_request_events (
   id uuid primary key default gen_random_uuid(),
   request_id uuid not null references public.material_requests(id) on delete restrict,
@@ -53,6 +84,14 @@ create table public.material_request_events (
 create index material_request_events_request_idx on public.material_request_events (request_id, occurred_at);
 
 create table public.material_request_decision_receipts (
+  idempotency_key uuid primary key,
+  request_id uuid not null references public.material_requests(id) on delete restrict,
+  actor_id uuid not null references public.profiles(id) on delete restrict,
+  payload_hash text not null,
+  created_at timestamptz not null default now()
+);
+
+create table public.material_request_cancellation_receipts (
   idempotency_key uuid primary key,
   request_id uuid not null references public.material_requests(id) on delete restrict,
   actor_id uuid not null references public.profiles(id) on delete restrict,
@@ -167,6 +206,12 @@ begin
   end loop;
   insert into public.material_request_events (request_id, event_type, actor_id)
     values (v_request_id, 'submitted', v_actor);
+  perform private.enqueue_notification_event(
+    'material-request-submitted-' || v_request_id, 'MATERIAL_REQUEST', 'Material request submitted',
+    'A project material request is ready for review.', 'material_request', v_request_id,
+    p_project_id, null, 'normal', array['super_admin','owner','admin','project_manager']::public.app_role[],
+    '{}'::uuid[], null
+  );
   return v_request_id;
 end; $$;
 
@@ -181,6 +226,9 @@ declare
   v_line public.material_request_lines%rowtype;
   v_decision jsonb;
   v_qty numeric;
+  v_location_id uuid;
+  v_reservation_id uuid;
+  v_available numeric;
   v_approved_count integer := 0;
   v_full_count integer := 0;
   v_status public.material_request_status;
@@ -218,7 +266,10 @@ begin
   if (select count(*) from jsonb_object_keys(p_decisions)) <> (select count(*) from public.material_request_lines where request_id = p_request_id) then
     raise exception 'decision must cover every line' using errcode = '22023';
   end if;
-  for v_line in select * from public.material_request_lines where request_id = p_request_id order by id for update loop
+  select id into v_location_id from public.inventory_locations
+    where warehouse_id = v_request.source_warehouse_id;
+  if v_location_id is null then raise exception 'source warehouse location is missing' using errcode = 'P0002'; end if;
+  for v_line in select * from public.material_request_lines where request_id = p_request_id order by material_id for update loop
     v_decision := p_decisions -> v_line.id::text;
     if v_decision is null or jsonb_typeof(v_decision) <> 'string'
        or (v_decision #>> '{}') !~ '^[0-9]{1,10}(\.[0-9]{1,4})?$' then
@@ -226,6 +277,21 @@ begin
     end if;
     v_qty := (v_decision #>> '{}')::numeric;
     if v_qty > v_line.requested_quantity then raise exception 'approved quantity exceeds request' using errcode = '22023'; end if;
+    if v_qty > 0 then
+      select available_quantity into v_available from public.inventory_balances
+        where material_id = v_line.material_id and inventory_location_id = v_location_id for update;
+      if coalesce(v_available, 0) < v_qty then
+        raise exception 'insufficient available stock to reserve for material %', v_line.material_id using errcode = 'P0001';
+      end if;
+      update public.inventory_balances set reserved_quantity = reserved_quantity + v_qty, updated_at = now()
+        where material_id = v_line.material_id and inventory_location_id = v_location_id;
+      insert into public.material_request_reservations
+        (request_line_id, material_id, inventory_location_id, original_quantity, remaining_quantity, reserved_by)
+        values (v_line.id, v_line.material_id, v_location_id, v_qty, v_qty, v_actor)
+        returning id into v_reservation_id;
+      insert into public.material_request_reservation_events (reservation_id, event_type, quantity, actor_id)
+        values (v_reservation_id, 'reserved', v_qty, v_actor);
+    end if;
     if v_qty > 0 then v_approved_count := v_approved_count + 1; end if;
     if v_qty = v_line.requested_quantity then v_full_count := v_full_count + 1; end if;
     update public.material_request_lines set approved_quantity = v_qty where id = v_line.id;
@@ -240,7 +306,87 @@ begin
     decision_reason = nullif(trim(coalesce(p_reason,'')),'') where id = p_request_id;
   insert into public.material_request_events (request_id, event_type, actor_id, details)
     values (p_request_id, v_status, v_actor, jsonb_build_object('approvedQuantities', p_decisions, 'reason', p_reason));
+  perform private.enqueue_notification_event(
+    'material-request-decided-' || p_request_id, 'MATERIAL_REQUEST', 'Material request decided',
+    'Your material request was ' || replace(v_status::text, '_', ' ') || '.',
+    'material_request', p_request_id, v_request.project_id, null, 'normal',
+    '{}'::public.app_role[], array[v_request.requested_by], null
+  );
   insert into public.material_request_decision_receipts (idempotency_key, request_id, actor_id, payload_hash)
+    values (p_idempotency_key, p_request_id, v_actor, v_hash);
+  return p_request_id;
+end; $$;
+
+create or replace function public.cancel_material_request(
+  p_idempotency_key uuid, p_request_id uuid, p_reason text
+) returns uuid language plpgsql security definer set search_path = '' as $$
+declare
+  v_actor uuid := auth.uid();
+  v_request public.material_requests%rowtype;
+  v_receipt public.material_request_cancellation_receipts%rowtype;
+  v_reservation public.material_request_reservations%rowtype;
+  v_hash text;
+begin
+  if v_actor is null or p_idempotency_key is null or p_request_id is null then
+    raise exception 'authentication, request and idempotency key are required' using errcode = '28000';
+  end if;
+  if char_length(trim(coalesce(p_reason, ''))) not between 3 and 500 then
+    raise exception 'cancellation reason must be 3 to 500 characters' using errcode = '22023';
+  end if;
+  v_hash := md5(jsonb_build_object('request', p_request_id, 'reason', trim(p_reason))::text);
+  select * into v_request from public.material_requests where id = p_request_id for update;
+  if not found then raise exception 'request not found' using errcode = 'P0002'; end if;
+  if not exists (select 1 from public.profiles where id = v_actor and is_active and not onboarding_required)
+     or (v_request.requested_by <> v_actor and not private.can_manage_inventory()) then
+    raise exception 'requester or administrator access required' using errcode = '42501';
+  end if;
+  select * into v_receipt from public.material_request_cancellation_receipts where idempotency_key = p_idempotency_key;
+  if found then
+    if v_receipt.actor_id <> v_actor or v_receipt.request_id <> p_request_id or v_receipt.payload_hash <> v_hash then
+      raise exception 'idempotency key was used for another cancellation' using errcode = '23505';
+    end if;
+    return p_request_id;
+  end if;
+  if v_request.status not in ('submitted', 'approved', 'partially_approved') then
+    raise exception 'request cannot be cancelled' using errcode = '22023';
+  end if;
+  for v_reservation in
+    select res.* from public.material_request_lines l
+    join public.material_request_reservations res on res.request_line_id = l.id
+    where l.request_id = p_request_id order by res.material_id for update of res
+  loop
+    if exists (select 1 from public.material_request_dispatches d
+      where d.request_line_id = v_reservation.request_line_id) then
+      raise exception 'dispatched request cannot be cancelled' using errcode = '22023';
+    end if;
+    if v_reservation.remaining_quantity > 0 then
+      update public.inventory_balances
+        set reserved_quantity = reserved_quantity - v_reservation.remaining_quantity, updated_at = now()
+        where material_id = v_reservation.material_id and inventory_location_id = v_reservation.inventory_location_id
+          and reserved_quantity >= v_reservation.remaining_quantity;
+      if not found then raise exception 'reservation balance is inconsistent' using errcode = '23514'; end if;
+      update public.material_request_reservations
+        set remaining_quantity = 0, status = 'released', released_at = now()
+        where id = v_reservation.id;
+      insert into public.material_request_reservation_events (reservation_id, event_type, quantity, actor_id)
+        values (v_reservation.id, 'released', v_reservation.remaining_quantity, v_actor);
+    end if;
+  end loop;
+  if exists (select 1 from public.material_request_dispatches d
+    join public.material_request_lines l on l.id = d.request_line_id where l.request_id = p_request_id) then
+    raise exception 'dispatched request cannot be cancelled' using errcode = '22023';
+  end if;
+  update public.material_requests set status = 'cancelled', decided_by = coalesce(decided_by, v_actor),
+    decided_at = coalesce(decided_at, now()), decision_reason = trim(p_reason) where id = p_request_id;
+  insert into public.material_request_events (request_id, event_type, actor_id, details)
+    values (p_request_id, 'cancelled', v_actor, jsonb_build_object('reason', trim(p_reason)));
+  perform private.enqueue_notification_event(
+    'material-request-cancelled-' || p_request_id, 'MATERIAL_REQUEST', 'Material request cancelled',
+    'A project material request was cancelled before dispatch.', 'material_request', p_request_id,
+    v_request.project_id, null, 'normal',
+    array['super_admin','owner','admin','project_manager']::public.app_role[], '{}'::uuid[], null
+  );
+  insert into public.material_request_cancellation_receipts (idempotency_key, request_id, actor_id, payload_hash)
     values (p_idempotency_key, p_request_id, v_actor, v_hash);
   return p_request_id;
 end; $$;
@@ -278,9 +424,15 @@ alter table public.material_requests enable row level security;
 alter table public.material_request_lines enable row level security;
 alter table public.material_request_events enable row level security;
 alter table public.material_request_decision_receipts enable row level security;
+alter table public.material_request_reservations enable row level security;
+alter table public.material_request_reservation_events enable row level security;
+alter table public.material_request_cancellation_receipts enable row level security;
 revoke all on public.material_requests, public.material_request_lines, public.material_request_events,
-  public.material_request_decision_receipts from anon, authenticated;
-grant select on public.material_requests, public.material_request_lines, public.material_request_events to authenticated;
+  public.material_request_decision_receipts, public.material_request_reservations,
+  public.material_request_reservation_events,
+  public.material_request_cancellation_receipts from anon, authenticated;
+grant select on public.material_requests, public.material_request_lines, public.material_request_events,
+  public.material_request_reservations, public.material_request_reservation_events to authenticated;
 create policy material_requests_select_scoped on public.material_requests for select to authenticated using (
   private.can_view_material_request_project(project_id)
 );
@@ -288,6 +440,13 @@ create policy material_request_lines_select_scoped on public.material_request_li
   using (private.can_view_material_request(request_id));
 create policy material_request_events_select_scoped on public.material_request_events for select to authenticated
   using (private.can_view_material_request(request_id));
+create policy material_request_reservations_select_scoped on public.material_request_reservations for select to authenticated
+  using (exists (select 1 from public.material_request_lines l where l.id = request_line_id
+    and private.can_view_material_request(l.request_id)));
+create policy material_request_reservation_events_select_scoped on public.material_request_reservation_events for select to authenticated
+  using (exists (select 1 from public.material_request_reservations res
+    join public.material_request_lines l on l.id = res.request_line_id
+    where res.id = reservation_id and private.can_view_material_request(l.request_id)));
 revoke execute on function private.can_view_material_request(uuid) from public, anon, authenticated;
 grant execute on function private.can_view_material_request(uuid) to authenticated;
 revoke execute on function private.can_view_material_request_project(uuid) from public, anon, authenticated;
@@ -295,6 +454,6 @@ grant execute on function private.can_view_material_request_project(uuid) to aut
 revoke execute on function public.get_requestable_warehouses() from public, anon;
 grant execute on function public.get_requestable_warehouses() to authenticated;
 revoke execute on function public.submit_material_request(uuid,uuid,uuid,uuid,date,text,jsonb),
-  public.decide_material_request(uuid,uuid,jsonb,text) from public, anon;
+  public.decide_material_request(uuid,uuid,jsonb,text), public.cancel_material_request(uuid,uuid,text) from public, anon;
 grant execute on function public.submit_material_request(uuid,uuid,uuid,uuid,date,text,jsonb),
-  public.decide_material_request(uuid,uuid,jsonb,text) to authenticated;
+  public.decide_material_request(uuid,uuid,jsonb,text), public.cancel_material_request(uuid,uuid,text) to authenticated;

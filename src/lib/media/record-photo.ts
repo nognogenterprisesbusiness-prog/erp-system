@@ -31,6 +31,7 @@ export async function saveRecordPhoto(kind: RecordPhotoKind, id: string, bytes: 
     ? await supabase.from("projects").update({ photo_path: path }).eq("id", id)
     : kind === "warehouses" ? await supabase.from("warehouses").update({ photo_path: path }).eq("id", id)
     : kind === "daily-reports" ? await supabase.rpc("attach_daily_report_photo", { p_report_id: id })
+    : kind === "suppliers" ? await supabase.rpc("attach_supplier_photo", { p_supplier_id: id })
     : await supabase.rpc("attach_material_photo", { p_material_id: id });
   if (result.error) throw new Error("The record was saved, but its photo could not be attached.");
 }

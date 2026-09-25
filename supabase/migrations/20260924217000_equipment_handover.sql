@@ -59,6 +59,30 @@ end; $$;
 create trigger warehouses_guard_asset_deactivation before update of status on public.warehouses
   for each row execute function private.guard_warehouse_asset_deactivation();
 revoke execute on function private.guard_warehouse_asset_deactivation() from public, anon, authenticated;
+
+-- Registry edits and new assets must not put custody back into an inactive warehouse.
+-- The row lock serializes this check with a concurrent warehouse deactivation.
+create function private.guard_active_asset_warehouse()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare v_warehouse_id uuid; v_status public.warehouse_status;
+begin
+  if new.archived_at is not null then return new; end if;
+  select il.warehouse_id into v_warehouse_id
+  from public.asset_locations al
+  join public.inventory_locations il on il.id = al.inventory_location_id
+  where al.id = new.current_location_id;
+  if v_warehouse_id is not null then
+    select status into v_status from public.warehouses where id = v_warehouse_id for share;
+    if v_status is distinct from 'active' then
+      raise exception 'An active asset cannot be placed in an inactive warehouse' using errcode = '22023';
+    end if;
+  end if;
+  return new;
+end; $$;
+create trigger assets_guard_active_warehouse
+  before insert or update of current_location_id, archived_at on public.assets
+  for each row execute function private.guard_active_asset_warehouse();
+revoke execute on function private.guard_active_asset_warehouse() from public, anon, authenticated;
 create index equipment_requests_project_status_idx on public.equipment_requests (project_id, status, created_at desc);
 create index equipment_requests_requester_idx on public.equipment_requests (requested_by, created_at desc);
 create unique index equipment_requests_one_custody_per_asset on public.equipment_requests (asset_id)
@@ -92,10 +116,13 @@ language sql stable security definer set search_path = '' as $$
   left join public.warehouses w on w.id = pw.warehouse_id and w.status = 'active'
   left join public.project_sites ps on ps.id = il.project_site_id and ps.project_id = p_project_id
   where (select auth.uid()) is not null
-    and private.has_any_role(array['super_admin','owner','admin','project_manager','engineer','foreman']::public.app_role[])
+    and not private.can_manage_assets()
+    and private.has_any_role(array['project_manager','engineer','foreman']::public.app_role[])
     and private.can_access_project(p_project_id)
     and a.asset_kind = 'equipment' and a.archived_at is null and a.status = 'available'
     and al.archived_at is null and (w.id is not null or ps.id = target.id)
+    and not exists (select 1 from public.equipment_requests er
+      where er.asset_id = a.id and er.status in ('approved', 'checked_out'))
   order by a.code limit 300
 $$;
 
@@ -167,7 +194,8 @@ create function public.submit_equipment_request(
 ) returns uuid language plpgsql security definer set search_path = '' as $$
 declare v_actor uuid := (select auth.uid()); v_asset public.assets; v_id uuid;
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin','project_manager','engineer','foreman']::public.app_role[])
+  if v_actor is null or private.can_manage_assets()
+    or not private.has_any_role(array['project_manager','engineer','foreman']::public.app_role[])
     or not private.can_access_project(p_project_id) then
     raise exception 'Not authorized for this project' using errcode = '42501';
   end if;
@@ -207,7 +235,10 @@ begin
     raise exception 'A rejection reason is required' using errcode = '22023';
   end if;
   select * into v_request from public.equipment_requests where id = p_id for update;
-  if v_request.id is null or v_request.status <> 'submitted' then raise exception 'Request is not pending' using errcode = '22023'; end if;
+  if v_request.id is null or v_request.status not in ('submitted', 'approved')
+    or (p_approve and v_request.status <> 'submitted') then
+    raise exception 'Request is not pending or approved for withdrawal' using errcode = '22023';
+  end if;
   if p_approve then
     select * into v_asset from public.assets where id = v_request.asset_id for update;
     if v_asset.status <> 'available' or v_asset.archived_at is not null
@@ -219,7 +250,7 @@ begin
       where id = p_id;
   else
     update public.equipment_requests set status = 'rejected', decided_by = v_actor,
-      decided_at = now(), decision_note = trim(p_note) where id = p_id;
+      decided_at = now(), decision_note = trim(p_note), source_location_id = null where id = p_id;
   end if;
 end; $$;
 

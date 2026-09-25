@@ -4,7 +4,7 @@ const validId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export async function GET(_: Request, { params }: { params: Promise<{ kind: string; id: string }> }) {
   const { kind, id } = await params;
-  if ((kind !== "projects" && kind !== "warehouses" && kind !== "daily-reports" && kind !== "materials") || !validId.test(id)) return new Response(null, { status: 404 });
+  if ((kind !== "projects" && kind !== "warehouses" && kind !== "daily-reports" && kind !== "materials" && kind !== "suppliers") || !validId.test(id)) return new Response(null, { status: 404 });
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   if (!claims?.claims?.sub) return new Response(null, { status: 401 });
@@ -12,6 +12,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ kind: stri
     ? await supabase.from("projects").select("photo_path").eq("id", id).is("archived_at", null).maybeSingle()
     : kind === "warehouses" ? await supabase.from("warehouses").select("photo_path").eq("id", id).maybeSingle()
     : kind === "daily-reports" ? await supabase.from("daily_reports").select("photo_path").eq("id", id).maybeSingle()
+    : kind === "suppliers" ? await supabase.from("suppliers").select("photo_path").eq("id", id).maybeSingle()
     : await supabase.from("materials").select("photo_path").eq("id", id).is("archived_at", null).maybeSingle();
   if (!result.data?.photo_path) return new Response(null, { status: 404 });
   const path = `${kind}/${id}/cover.webp`;

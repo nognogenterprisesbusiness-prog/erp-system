@@ -12,8 +12,8 @@ type Site = { id: string; name: string; projectId: string | null };
 type Balance = { material_id: string; inventory_location_id: string; available_quantity: number };
 const initialState: InventoryActionState = { ok: false, message: "" };
 
-export function SiteConsumptionForm({ projects, materials, units, sites, balances }: {
-  projects: { id: string; code: string; name: string }[]; materials: Option[]; units: Unit[]; sites: Site[]; balances: Balance[];
+export function SiteConsumptionForm({ projects, materials, units, sites, balances, initialMaterialId = "" }: {
+  projects: { id: string; code: string; name: string }[]; materials: Option[]; units: Unit[]; sites: Site[]; balances: Balance[]; initialMaterialId?: string;
 }) {
   const [state, action, pending] = useActionState(consumeSiteMaterialAction, initialState);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
@@ -39,7 +39,7 @@ export function SiteConsumptionForm({ projects, materials, units, sites, balance
         </select>
       </FormField>
       <FormField label="Project site" htmlFor="siteLocationId" error={error("siteLocationId")}>
-        <select id="siteLocationId" name="siteLocationId" value={siteId} onChange={(event) => { setSiteId(event.target.value); setMaterialId(""); }} className={fieldControlClass} required>
+        <select id="siteLocationId" name="siteLocationId" value={siteId} onChange={(event) => { const nextSite = event.target.value; setSiteId(nextSite); setMaterialId(balances.some((balance) => balance.inventory_location_id === nextSite && balance.material_id === initialMaterialId && balance.available_quantity > 0) ? initialMaterialId : ""); }} className={fieldControlClass} required>
           <option value="" disabled>Select site</option>{projectSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
         </select>
       </FormField>

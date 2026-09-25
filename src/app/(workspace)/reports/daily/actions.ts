@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { dailyReportInputSchema } from "@nognog/domain";
+import { dailyReportInputSchema, dailyReportReviewSchema, projectProgressInputSchema, uuidSchema } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { prepareRecordPhoto, saveRecordPhoto } from "@/lib/media/record-photo";
@@ -56,4 +56,43 @@ export async function saveDailyReportAction(_: DailyReportActionState, form: For
   revalidatePath(`/reports/daily/${data}`);
   revalidatePath(`/projects/${input.projectId}/reports`);
   redirect(`/reports/daily/${data}`);
+}
+
+export async function reviewDailyReportAction(_: DailyReportActionState, form: FormData): Promise<DailyReportActionState> {
+  await requireUser();
+  const parsed = dailyReportReviewSchema.safeParse({ reportId: value(form, "reportId"), action: value(form, "action"), note: value(form, "note") });
+  if (!parsed.success) return { ok: false, message: "Review the decision and note.", fieldErrors: parsed.error.flatten().fieldErrors };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("review_daily_report", {
+    p_report_id: parsed.data.reportId, p_action: parsed.data.action, p_note: parsed.data.note,
+  });
+  if (error) return { ok: false, message: error.code === "42501" ? "An independent project manager must review this report." : error.code === "55000" ? "This report is no longer awaiting review." : "The review could not be saved. Please try again." };
+  revalidatePath(`/reports/daily/${parsed.data.reportId}`);
+  revalidatePath("/reports/daily");
+  return { ok: true, message: parsed.data.action === "approve" ? "Report approved." : "Report returned for correction." };
+}
+
+export async function startDailyReportCorrectionAction(_: DailyReportActionState, form: FormData): Promise<DailyReportActionState> {
+  await requireUser();
+  const id = value(form, "reportId");
+  if (!uuidSchema.safeParse(id).success) return { ok: false, message: "Invalid report ID." };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("start_daily_report_correction", { p_report_id: id });
+  if (error) return { ok: false, message: error.code === "42501" ? "Only the report preparer can correct it." : "The report could not be reopened for correction." };
+  revalidatePath(`/reports/daily/${id}`);
+  redirect(`/reports/daily/${id}/edit`);
+}
+
+export async function recordProjectProgressAction(_: DailyReportActionState, form: FormData): Promise<DailyReportActionState> {
+  const user = await requireUser();
+  if (!user.canManage && !user.roles.includes("project_manager")) return { ok: false, message: "Only an administrator or assigned project manager can record progress." };
+  const parsed = projectProgressInputSchema.safeParse({ reportId: value(form, "reportId"), percent: value(form, "percent"), summary: value(form, "summary") });
+  if (!parsed.success) return { ok: false, message: "Review the progress details.", fieldErrors: parsed.error.flatten().fieldErrors };
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("record_project_progress", {
+    p_report_id: parsed.data.reportId, p_percent: parsed.data.percent, p_summary: parsed.data.summary,
+  });
+  if (error) return { ok: false, message: error.code === "42501" ? "You cannot record progress for this project." : error.code === "23505" ? "Progress is already recorded for this report." : "Progress could not be recorded. Use an approved daily report." };
+  revalidatePath(`/reports/daily/${parsed.data.reportId}`);
+  return { ok: true, message: "Project progress recorded." };
 }

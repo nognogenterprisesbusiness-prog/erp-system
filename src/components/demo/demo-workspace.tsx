@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Audit01Icon, Building03Icon, ClipboardListIcon, ClipboardPenIcon, DashboardSquare01Icon, DeliveryTruck01Icon, ExcavatorIcon, HelpCircleIcon, Logout01Icon, QrCodeIcon, Settings02Icon, Store02Icon, UserGroupIcon, WarehouseIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Audit01Icon, Building03Icon, Calendar03Icon, DashboardSquare01Icon, DeliveryTruck01Icon, ExcavatorIcon, FilePenLineIcon, HandshakeIcon, HelpCircleIcon, Logout01Icon, QrCodeIcon, Settings02Icon, Store02Icon, UserGroupIcon, WarehouseIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { AppShell } from "@/components/layout/app-shell";
@@ -10,15 +10,18 @@ import { HistoryLink } from "@/components/layout/history-link";
 import { Button } from "@/components/ui/button";
 import { DialogHeading } from "@/components/ui/dialog-heading";
 import { SelectPicker } from "@/components/ui/select-picker";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { exportDemo, getDemoDatabase, getSavedSnapshotInfo, importDemo, markDemoNotificationRead, markDemoNotificationsUnread, readDemo, resetDemo, restoreDemoSnapshot, saveDemoSnapshot, selectDemoUser } from "@/lib/demo/database";
 import { demoRoleViews, isDemoView, type DemoView } from "@/lib/demo/navigation";
 import { demoRoles } from "@/lib/demo/schema";
 import { visibleDemoProjectIds, visibleDemoWarehouseIds } from "@/lib/demo/visibility";
 import { DemoBanner } from "./demo-banner";
 import { DemoAuditLogs } from "./demo-audit-logs";
+import { DemoAttendance } from "./demo-attendance";
 import { DemoDashboard } from "./demo-dashboard";
 import { DemoDataset } from "./demo-dataset";
 import { DemoEmployees } from "./demo-employees";
+import { DemoEquipmentRequests } from "./demo-equipment-requests";
 import { DemoHelp } from "./demo-help";
 import { DemoNotificationBell } from "./demo-notification-bell";
 import { DemoProjects } from "./demo-projects";
@@ -35,11 +38,13 @@ const views = [
   { id: "projects", label: "Projects", icon: Building03Icon },
   { id: "warehouses", label: "Warehouses", icon: WarehouseIcon },
   { id: "inventory", label: "Inventory", icon: DeliveryTruck01Icon },
-  { id: "requests", label: "Material requests", icon: ClipboardListIcon },
+  { id: "requests", label: "Material requests", icon: AssignmentsIcon },
   { id: "equipment", label: "Equipment", icon: ExcavatorIcon },
+  { id: "equipment-requests", label: "Equipment handovers", icon: HandshakeIcon },
   { id: "workforce", label: "Employees", icon: UserGroupIcon },
+  { id: "attendance", label: "Attendance", icon: Calendar03Icon },
   { id: "suppliers", label: "Suppliers", icon: Store02Icon },
-  { id: "reports", label: "Daily reports", icon: ClipboardPenIcon },
+  { id: "reports", label: "Daily reports", icon: FilePenLineIcon },
   { id: "qr", label: "QR codes", icon: QrCodeIcon },
   { id: "users", label: "Users", icon: UserGroupIcon },
   { id: "audit", label: "Audit logs", icon: Audit01Icon },
@@ -86,9 +91,9 @@ export function DemoWorkspace({ canExitToLive }: { canExitToLive: boolean }) {
   const tables = data?.snapshot.tables;
   const warehouseIds = tables && user ? visibleDemoWarehouseIds(tables, user.role, user.id) : new Set<string>();
   const projectIds = tables && user ? visibleDemoProjectIds(tables, user.role, user.id) : new Set<string>();
-  const locationOptions = currentView === "inventory" || currentView === "warehouses" ? [
+  const locationOptions = currentView === "inventory" ? [
     ...(tables?.warehouses.filter((item) => warehouseIds.has(item.id)).map((item) => ({ value: item.id, label: item.name })) ?? []),
-    ...(currentView === "inventory" && user && ["admin", "owner", "super_admin"].includes(user.role) ? tables?.sites.filter((site) => projectIds.has(site.projectId)).map((site) => ({ value: site.id, label: `${site.name} · Site` })) ?? [] : []),
+    ...(user && ["admin", "owner", "super_admin"].includes(user.role) ? tables?.sites.filter((site) => projectIds.has(site.projectId)).map((site) => ({ value: site.id, label: `${site.name} · Site` })) ?? [] : []),
   ] : [];
   const requestedLocation = searchParams.get("location") ?? "";
   const defaultStockLocation = locationOptions.find((item) => tables?.balances.some((balance) => balance.warehouseId === item.value))?.value ?? locationOptions.find((item) => tables?.siteBalances.some((balance) => balance.siteId === item.value))?.value;
@@ -221,26 +226,27 @@ export function DemoWorkspace({ canExitToLive }: { canExitToLive: boolean }) {
       activeHref={activeHref}
       navigationMode="history"
       avatar={user?.photo}
-      headerContext={locationOptions.length ? <SelectPicker label="Stock location" value={selectedLocation} onValueChange={changeLocation} options={locationOptions} className="h-9 bg-slate-50 text-sm font-medium" /> : undefined}
       headerSearch={<DemoQuickSearch tables={data?.snapshot.tables} role={user?.role ?? "worker"} userId={user?.id} initialQuery={requestedView === "search" ? query : ""} />}
       headerActions={<DemoNotificationBell notifications={data?.snapshot.tables.notifications.filter((item) => item.userId === data.selectedUserId) ?? []} onRead={(id) => void readNotification(id)} onMarkAllUnread={() => void unreadNotifications()} />}
       profileActions={<><HistoryLink href="/demo?view=settings" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"><HugeiconsIcon icon={Settings02Icon} size={16} />Settings</HistoryLink><button type="button" onClick={leaveDemo} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"><HugeiconsIcon icon={Logout01Icon} size={16} />Logout</button></>}
     >
-      <div className={currentView === "settings" || currentView === "help" ? "mx-auto mb-7 max-w-3xl" : "mb-7"}><h1 className="text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">{currentView === "overview" ? "Dashboard" : currentView === "settings" ? "Settings" : currentView === "help" ? "Help centre" : views.find((item) => item.id === currentView)?.label}</h1>{currentView === "overview" || currentView === "help" ? <p className="mt-1 text-sm text-slate-500">{currentView === "overview" ? `Welcome back, ${user?.name ?? "user"}.` : "Step-by-step guides for common workflows"}</p> : null}</div>
+      {!(currentView === "projects" && searchParams.has("project")) && <div className={currentView === "settings" || currentView === "help" ? "mx-auto mb-7 max-w-3xl" : "mb-7"}><h1 className="text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">{currentView === "overview" ? "Dashboard" : currentView === "settings" ? "Settings" : currentView === "help" ? "Help centre" : views.find((item) => item.id === currentView)?.label}</h1>{currentView === "overview" || currentView === "help" ? <p className="mt-1 text-sm text-slate-500">{currentView === "overview" ? `Welcome back, ${user?.name ?? "user"}.` : "Step-by-step guides for common workflows"}</p> : null}</div>}
       {error ? <p role="alert" className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
       {message ? <p role="status" className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p> : null}
-      {!data && !error ? <div className="animate-pulse" aria-busy="true" aria-label="Opening demo workspace"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-32 rounded-2xl border border-slate-200 bg-white" />)}</div><div className="mt-5 grid gap-5 xl:grid-cols-2"><div className="h-72 rounded-2xl border border-slate-200 bg-white" /><div className="h-72 rounded-2xl border border-slate-200 bg-white" /></div></div> : null}
+      {!data && !error ? <PageSkeleton variant={currentView === "overview" ? "dashboard" : "table"} showHeading={false} /> : null}
       {data && currentView === "overview" ? <DemoDashboard tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} /> : null}
       {data && user && currentView === "settings" ? <DemoSettings key={`${user.id}:${user.name}:${user.email ?? ""}:${user.phone ?? ""}`} user={user} onProfileSaved={async () => { await refreshDemo("Profile updated."); }} savedAt={savedAt} busy={busy} canExitToLive={canExitToLive} onSave={() => void saveSnapshot()} onRestore={() => restoreDialog.current?.showModal()} onExport={() => void downloadExport()} onImport={(file) => void uploadImport(file)} onReset={() => resetDialog.current?.showModal()} /> : null}
       {data && currentView === "help" ? <DemoHelp topic={searchParams.get("topic")} role={user?.role ?? "admin"} /> : null}
       {data && currentView === "audit" ? <DemoAuditLogs tables={data.snapshot.tables} /> : null}
-      {data && currentView === "qr" ? <DemoQrCodes tables={data.snapshot.tables} onChanged={refreshDemo} /> : null}
-      {data && currentView === "warehouses" ? <DemoWarehouses tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} selectedWarehouseId={selectedLocation} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
-      {data && (currentView === "inventory" || currentView === "equipment") ? <DemoRegistry key={`${currentView}:${searchParams.get("action") ?? ""}`} kind={currentView} tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} selectedLocationId={selectedLocation} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
+      {data && currentView === "qr" ? <DemoQrCodes tables={data.snapshot.tables} /> : null}
+      {data && currentView === "warehouses" ? <DemoWarehouses tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
+      {data && (currentView === "inventory" || currentView === "equipment") ? <DemoRegistry key={`${currentView}:${searchParams.get("action") ?? ""}`} kind={currentView} tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} selectedLocationId={selectedLocation} locationOptions={locationOptions} onLocationChange={changeLocation} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
+      {data && currentView === "equipment-requests" ? <DemoEquipmentRequests key={data.selectedUserId} tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} onChanged={refreshDemo} /> : null}
       {data && currentView === "requests" ? <DemoRequests key={`${data.selectedUserId}:${searchParams.get("action") ?? ""}`} tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
-      {data && currentView === "users" ? <DemoUsers tables={data.snapshot.tables} selectedUserId={data.selectedUserId} onChanged={refreshDemo} /> : null}
-      {data && currentView === "workforce" ? <DemoEmployees employees={data.snapshot.tables.employees} role={user?.role ?? "admin"} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
-      {data && currentView === "projects" ? <DemoProjects tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
+      {data && currentView === "users" ? <DemoUsers tables={data.snapshot.tables} selectedUserId={data.selectedUserId} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
+      {data && currentView === "workforce" ? <DemoEmployees employees={data.snapshot.tables.employees} users={data.snapshot.tables.users} role={user?.role ?? "admin"} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
+      {data && currentView === "attendance" ? <DemoAttendance tables={data.snapshot.tables} role={user?.role ?? "admin"} action={searchParams.get("action")} projectId={searchParams.get("project")} onChanged={refreshDemo} /> : null}
+      {data && currentView === "projects" ? <DemoProjects tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} action={searchParams.get("action")} projectId={searchParams.get("project")} tab={searchParams.get("tab")} onChanged={refreshDemo} /> : null}
       {data && (currentView === "suppliers" || currentView === "reports") ? <DemoDataset kind={currentView} tables={data.snapshot.tables} role={user?.role ?? "admin"} userId={data.selectedUserId} action={searchParams.get("action")} onChanged={refreshDemo} /> : null}
     </AppShell>
     <dialog ref={resetDialog} className="m-auto w-[min(100%-2rem,440px)] rounded-xl border border-slate-200 bg-white p-6 text-[#07152d] shadow-2xl backdrop:bg-slate-900/40" aria-labelledby="demo-reset-title">

@@ -27,7 +27,7 @@ create table public.notification_outbox (
   type_code text not null references public.notification_types(code) on delete restrict,
   title text not null check (char_length(trim(title)) between 3 and 160),
   message text not null check (char_length(trim(message)) between 3 and 500),
-  entity_type text not null check (entity_type in ('material', 'equipment', 'vehicle', 'warehouse', 'project', 'project_site', 'daily_report', 'inventory_transaction', 'supplier', 'qr_code', 'system')),
+  entity_type text not null check (entity_type in ('material', 'material_request', 'equipment', 'vehicle', 'warehouse', 'project', 'project_site', 'daily_report', 'inventory_transaction', 'supplier', 'qr_code', 'system')),
   entity_id uuid,
   project_id uuid references public.projects(id) on delete restrict,
   warehouse_id uuid references public.warehouses(id) on delete restrict,

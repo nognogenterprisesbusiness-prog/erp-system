@@ -107,20 +107,44 @@ set search_path = ''
 as $$
 declare
   target_id uuid;
+  previous_data jsonb;
+  current_data jsonb;
 begin
   target_id := case when tg_op = 'DELETE' then old.id else new.id end;
+  previous_data := case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end;
+  current_data := case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) end;
+  -- Keep audit evidence of the changed record without copying sensitive contact
+  -- details or private storage paths into a long-lived general audit table.
+  previous_data := previous_data - array['email','client_email','client_phone','phone','contact_number',
+    'email_address','contact_person','tax_identification_number','avatar_path','photo_path'];
+  current_data := current_data - array['email','client_email','client_phone','phone','contact_number',
+    'email_address','contact_person','tax_identification_number','avatar_path','photo_path'];
   insert into public.audit_logs (actor_id, table_name, record_id, action, old_data, new_data)
   values (
     (select auth.uid()),
     tg_table_name,
     target_id,
     lower(tg_op),
-    case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end,
-    case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) end
+    previous_data,
+    current_data
   );
   return case when tg_op = 'DELETE' then old else new end;
 end;
 $$;
+
+create function private.audit_user_role_change()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.audit_logs (actor_id, table_name, record_id, action, old_data, new_data)
+    values (
+      auth.uid(), 'user_roles', case when tg_op = 'DELETE' then old.user_id else new.user_id end,
+      lower(tg_op), case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end,
+      case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) end
+    );
+  return case when tg_op = 'DELETE' then old else new end;
+end; $$;
+create trigger user_roles_audit after insert or update or delete on public.user_roles
+  for each row execute function private.audit_user_role_change();
 
 alter table public.profiles enable row level security;
 alter table public.user_roles enable row level security;
@@ -156,5 +180,6 @@ using ((select private.has_any_role(array['super_admin', 'owner', 'admin']::publ
 revoke execute on function private.has_any_role(public.app_role[]) from public, anon;
 grant execute on function private.has_any_role(public.app_role[]) to authenticated;
 revoke execute on function private.audit_row_change() from public, anon, authenticated;
+revoke execute on function private.audit_user_role_change() from public, anon, authenticated;
 revoke execute on function private.handle_new_user() from public, anon, authenticated;
 revoke execute on function private.set_updated_at() from public, anon, authenticated;

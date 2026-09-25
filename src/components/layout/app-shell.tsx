@@ -39,7 +39,7 @@ function Sidebar({ items, footerItems = [], footerAction, homeHref, pathname, na
     </div>
     <nav className={cn("flex-1", compact ? "mt-5" : "mt-9")} aria-label="Main navigation">
       <p className={cn("px-3 text-[10px] font-semibold tracking-[0.18em] text-slate-500", compact && "sr-only")}>WORKSPACE</p>
-      <div className="mt-3 space-y-1">{items.map((item) => <SidebarLink key={item.href} item={item} active={pathname === item.href || (item.href !== homeHref && pathname.startsWith(`${item.href}/`))} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}</div>
+      <div className="mt-3 space-y-1">{items.map((item) => <SidebarLink key={item.href} item={item} active={(pathname === item.href || (item.href !== homeHref && pathname.startsWith(`${item.href}/`))) && !items.some((other) => other.href !== item.href && other.href.length > item.href.length && (pathname === other.href || pathname.startsWith(`${other.href}/`)))} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}</div>
     </nav>
     {(footerItems.length > 0 || footerAction) && <nav className="border-t border-white/10 pt-3" aria-label="Support and account">
       {footerItems.map((item) => <SidebarLink key={item.href} item={item} active={pathname === item.href} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}
@@ -55,7 +55,7 @@ function Brand({ compact }: { compact: boolean }) {
     </>;
 }
 
-export function AppShell({ children, name, avatar, roleLabel, items, footerItems, footerAction, homeHref, headerActions, headerSearch, headerContext, profileActions, banner, activeHref, navigationMode = "client" }: {
+export function AppShell({ children, name, avatar, roleLabel, items, footerItems, footerAction, homeHref, headerActions, headerSearch, profileActions, banner, activeHref, navigationMode = "client" }: {
   children: React.ReactNode;
   name: string;
   avatar?: string | null;
@@ -66,7 +66,6 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
   homeHref: string;
   headerActions?: React.ReactNode;
   headerSearch?: React.ReactNode;
-  headerContext?: React.ReactNode;
   profileActions?: React.ReactNode;
   banner?: React.ReactNode;
   activeHref?: string;
@@ -119,7 +118,6 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
     <div className={cn("transition-[padding] duration-200", sidebarCollapsed ? "lg:pl-[76px]" : "lg:pl-[264px]")}>
       <header className={cn("sticky z-30 flex h-16 items-center border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-xl sm:px-6 xl:px-8", banner ? "top-11" : "top-0")}>
         <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><HugeiconsIcon icon={Menu01Icon} size={21} /></Button>
-        {headerContext ? <div className="mr-2 min-w-0 max-w-[320px] flex-1 sm:mr-3">{headerContext}</div> : null}
         {headerSearch ? <div className="min-w-0 max-w-[320px] flex-1">{headerSearch}</div> : null}
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <ThemeToggle />

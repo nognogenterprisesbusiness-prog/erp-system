@@ -1,6 +1,6 @@
 import type { DemoRole } from "./schema";
 
-export const demoViewNames = ["overview", "projects", "warehouses", "inventory", "requests", "equipment", "workforce", "suppliers", "reports", "qr", "users", "audit", "settings", "help"] as const;
+export const demoViewNames = ["overview", "projects", "warehouses", "inventory", "requests", "equipment", "equipment-requests", "workforce", "attendance", "suppliers", "reports", "qr", "users", "audit", "settings", "help"] as const;
 export type DemoView = (typeof demoViewNames)[number];
 
 export const demoPages = [
@@ -10,7 +10,9 @@ export const demoPages = [
   { id: "inventory", label: "Inventory", keywords: "materials stock balances stock in" },
   { id: "requests", label: "Material requests", keywords: "approval dispatch receipt site consumption project cost" },
   { id: "equipment", label: "Equipment", keywords: "assets vehicles registry" },
+  { id: "equipment-requests", label: "Equipment handovers", keywords: "equipment request approval checkout return custody" },
   { id: "workforce", label: "Employees", keywords: "workforce profile photo" },
+  { id: "attendance", label: "Attendance", keywords: "labor labour workers hours wage site present absent" },
   { id: "suppliers", label: "Suppliers", keywords: "vendors" },
   { id: "reports", label: "Daily reports", keywords: "site updates" },
   { id: "qr", label: "QR codes", keywords: "generate view print labels materials equipment warehouses sites" },
@@ -25,11 +27,11 @@ export const demoRoleViews: Record<DemoRole, readonly DemoView[]> = {
   super_admin: managerViews,
   owner: managerViews,
   admin: managerViews,
-  project_manager: ["overview", "projects", "requests", "equipment", "reports", "help", "settings"],
-  engineer: ["overview", "projects", "requests", "equipment", "reports", "help", "settings"],
-  foreman: ["overview", "projects", "requests", "reports", "help", "settings"],
+  project_manager: ["overview", "projects", "requests", "equipment", "equipment-requests", "reports", "help", "settings"],
+  engineer: ["overview", "projects", "requests", "equipment", "equipment-requests", "reports", "help", "settings"],
+  foreman: ["overview", "projects", "requests", "equipment-requests", "reports", "help", "settings"],
   warehouse_staff: ["overview", "warehouses", "inventory", "requests", "equipment", "help", "settings"],
-  accounting: ["overview", "projects", "suppliers", "reports", "help", "settings"],
+  accounting: ["overview", "projects", "attendance", "suppliers", "reports", "help", "settings"],
   worker: ["overview", "help", "settings"],
 };
 

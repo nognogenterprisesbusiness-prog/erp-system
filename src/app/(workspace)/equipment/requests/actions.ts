@@ -21,7 +21,8 @@ function messageFor(error: { code?: string; message: string }) {
 }
 
 export async function submitEquipmentRequestAction(_: EquipmentRequestActionState, form: FormData): Promise<EquipmentRequestActionState> {
-  await requireUser();
+  const user = await requireUser();
+  if (user.canManage || !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role))) return failure("Only assigned project staff can request equipment.");
   const parsed = equipmentRequestInputSchema.safeParse({
     assetId: field(form, "assetId"), projectId: field(form, "projectId"), siteId: field(form, "siteId"),
     neededOn: field(form, "neededOn"), expectedReturnOn: field(form, "expectedReturnOn"), purpose: field(form, "purpose"),

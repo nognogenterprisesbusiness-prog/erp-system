@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,7 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head><Script id="nognog-theme" strategy="beforeInteractive">{'try{const theme=localStorage.getItem("nognog.theme");if(theme==="blue"||theme==="dark")document.documentElement.dataset.theme=theme}catch{}'}</Script></head>
       <body className={`${inter.className} ${inter.variable} min-h-screen bg-white text-neutral-900 antialiased selection:bg-cyan-200 selection:text-[#061228]`}>
         {children}
       </body>

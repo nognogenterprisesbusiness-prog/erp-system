@@ -101,5 +101,23 @@ export async function getAsset(id: string, expectedKind: AssetKind) {
   return { asset, events: (events ?? []).map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user", previousLocation: event.previous_location_id ? locationMap.get(event.previous_location_id) : undefined, currentLocation: event.current_location_id ? locationMap.get(event.current_location_id) : undefined })) };
 }
 
+export async function getEquipmentUsage(assetId: string) {
+  const supabase = await createClient();
+  const { data: entries, count, error } = await supabase.from("project_equipment_usage")
+    .select("id,project_id,use_date,hours_used,hourly_rate_snapshot,cost_total,work_note", { count: "exact" })
+    .eq("asset_id", assetId).order("use_date", { ascending: false }).limit(50);
+  if (error) throw new Error("Unable to load equipment usage history.");
+  const usageIds = (entries ?? []).map((entry) => entry.id);
+  const projectIds = [...new Set((entries ?? []).map((entry) => entry.project_id))];
+  const [reversals, projects] = await Promise.all([
+    usageIds.length ? supabase.from("project_equipment_usage_reversals").select("usage_id,reason,reversed_at").in("usage_id", usageIds) : Promise.resolve({ data: [], error: null }),
+    projectIds.length ? supabase.from("projects").select("id,code,name").in("id", projectIds) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (reversals.error || projects.error) throw new Error("Unable to resolve equipment usage history.");
+  const reversed = new Map((reversals.data ?? []).map((row) => [row.usage_id, row]));
+  const projectNames = new Map((projects.data ?? []).map((row) => [row.id, `${row.code} · ${row.name}`]));
+  return { rows: (entries ?? []).map((entry) => ({ ...entry, projectName: projectNames.get(entry.project_id) ?? "Project", reversal: reversed.get(entry.id) })), count: count ?? 0 };
+}
+
 export type AssetCategory = AssetCategoryRow;
 export type AssetLocationKindValue = AssetLocationKind;

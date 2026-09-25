@@ -18,10 +18,10 @@ export default async function ApprovedRequestQueuePage({ searchParams }: { searc
   const selected = result.rows.find((row) => row.request_line_id === params.line);
   return <>
     <PageHeader title="Warehouse dispatch queue" description="Approved materials awaiting dispatch from your assigned warehouses." action={<Button asChild variant="outline"><Link href="/inventory/transfers">All transfers</Link></Button>} />
-    {selected && selected.available_quantity > 0 && <div className="mt-7"><p className="mb-3 text-sm text-slate-600">{selected.request_number} · {selected.material_code} · {selected.warehouse_name} → {selected.site_name}</p><RequestMovementForm mode="dispatch" id={selected.request_line_id} remaining={Math.min(selected.approved_quantity - selected.dispatched_quantity, selected.available_quantity)} unit={selected.unit_symbol} expanded /></div>}
+    {selected && selected.reserved_quantity > 0 && <div className="mt-7"><p className="mb-3 text-sm text-slate-600">{selected.request_number} · {selected.material_code} · {selected.warehouse_name} → {selected.site_name}</p><RequestMovementForm mode="dispatch" id={selected.request_line_id} remaining={selected.reserved_quantity} unit={selected.unit_symbol} expanded /></div>}
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No approved lines waiting" description="Approved requests will appear here when your warehouse can dispatch them." /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} line{result.count === 1 ? "" : "s"} awaiting dispatch</span>}>
       <table className="w-full min-w-[1000px] text-left text-sm"><thead className={tableHeadClass}><tr>
-        <th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Warehouse</th><th className="px-4 py-3">Material</th><th className="px-4 py-3 text-right">Remaining</th><th className="px-4 py-3 text-right">Available</th><th className="px-5 py-3 text-right">Action</th>
+        <th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Warehouse</th><th className="px-4 py-3">Material</th><th className="px-4 py-3 text-right">Remaining</th><th className="px-4 py-3 text-right">Reserved for request</th><th className="px-4 py-3 text-right">Unallocated</th><th className="px-5 py-3 text-right">Action</th>
       </tr></thead><tbody className="divide-y divide-slate-100">{result.rows.map((row) => {
         const remaining = row.approved_quantity - row.dispatched_quantity;
         return <tr key={row.request_line_id} className="align-top hover:bg-slate-50/70">
@@ -30,8 +30,9 @@ export default async function ApprovedRequestQueuePage({ searchParams }: { searc
           <td className="px-4 py-4 text-slate-600">{row.warehouse_name}</td>
           <td className="px-4 py-4"><span className="font-medium text-slate-800">{row.material_name}</span><span className="block text-xs text-slate-500">{row.material_code}</span></td>
           <td className="px-4 py-4 text-right tabular-nums">{remaining} {row.unit_symbol}</td>
+          <td className="px-4 py-4 text-right tabular-nums">{row.reserved_quantity} {row.unit_symbol}</td>
           <td className="px-4 py-4 text-right tabular-nums">{row.available_quantity} {row.unit_symbol}</td>
-          <td className="px-5 py-4 text-right">{row.available_quantity > 0 ? <Button asChild variant="outline" size="sm"><Link href={`/requests/queue?page=${result.page}&line=${row.request_line_id}`}>Dispatch</Link></Button> : <span className="text-xs font-medium text-amber-700">Awaiting stock</span>}</td>
+          <td className="px-5 py-4 text-right">{row.reserved_quantity > 0 ? <Button asChild variant="outline" size="sm"><Link href={`/requests/queue?page=${result.page}&line=${row.request_line_id}`}>Dispatch</Link></Button> : <span className="text-xs font-medium text-amber-700">Reservation unavailable</span>}</td>
         </tr>;
       })}</tbody></table>
     </DataTableShell>

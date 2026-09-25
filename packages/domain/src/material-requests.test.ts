@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { decideMaterialRequestSchema, dispatchRequestLineSchema, receiveRequestTransferSchema, submitMaterialRequestSchema } from "./material-requests";
+import { cancelMaterialRequestSchema, decideMaterialRequestSchema, dispatchRequestLineSchema, receiveRequestTransferSchema, submitMaterialRequestSchema } from "./material-requests";
 
 const projectId = "01234567-89ab-4cde-8123-456789abcdef";
 const siteId = "11234567-89ab-4cde-8123-456789abcdef";
@@ -36,4 +36,10 @@ test("dispatch and receipt require a scoped identifier, positive quantity and da
   assert.equal(receiveRequestTransferSchema.safeParse({ ...movement, transferItemId: siteId, requestId }).success, true);
   assert.equal(dispatchRequestLineSchema.safeParse({ ...movement, requestLineId: materialId, quantity: "0" }).success, false);
   assert.equal(receiveRequestTransferSchema.safeParse({ ...movement, transferItemId: siteId, requestId: "../users" }).success, false);
+});
+
+test("cancellation requires a valid request, retry key, and explanation", () => {
+  assert.equal(cancelMaterialRequestSchema.safeParse({ idempotencyKey: key, requestId, reason: "Project no longer needs this stock" }).success, true);
+  assert.equal(cancelMaterialRequestSchema.safeParse({ idempotencyKey: key, requestId, reason: "No" }).success, false);
+  assert.equal(cancelMaterialRequestSchema.safeParse({ idempotencyKey: key, requestId: "another-project", reason: "Project no longer needs this stock" }).success, false);
 });

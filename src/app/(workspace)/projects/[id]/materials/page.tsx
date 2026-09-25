@@ -1,0 +1,52 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
+import { uuidSchema } from "@nognog/domain";
+import { ProjectMaterialPlanForm } from "@/components/projects/project-material-plan-form";
+import { Button } from "@/components/ui/button";
+import { DataTableShell } from "@/components/ui/data-table-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { RecordActionMenu, type RecordAction } from "@/components/ui/record-action-menu";
+import { tableHeadClass } from "@/components/ui/table-sort-heading";
+import { requireUser } from "@/lib/auth";
+import { getProject } from "@/lib/data/projects";
+import { getProjectMaterialPlan } from "@/lib/data/project-operations";
+import { getMaterialRequestChoices } from "@/lib/data/material-requests";
+
+const quantity = (value: number) => new Intl.NumberFormat("en-PH", { maximumFractionDigits: 4 }).format(value);
+
+export default async function ProjectMaterialsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }> }) {
+  const { id } = await params;
+  if (!uuidSchema.safeParse(id).success) notFound();
+  const user = await requireUser();
+  if (!user.canViewDailyReports) redirect(`/projects/${id}`);
+  const [projectData, rows] = await Promise.all([getProject(id), getProjectMaterialPlan(id)]);
+  const canPlan = user.canManage || projectData.assignments.some((assignment) =>
+    assignment.user_id === user.userId && assignment.assignment_role === "project_manager" && assignment.status === "active");
+  const canRequest = !user.canManage && user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role));
+  const choices = canPlan ? await getMaterialRequestChoices() : null;
+  const editId = (await searchParams).edit;
+  const editing = canPlan ? rows.find((row) => row.id === editId) : undefined;
+  return <>
+    <PageHeader title="Material plan" description={`${projectData.project.code} · ${projectData.project.name}`} action={<Button variant="outline" asChild><Link href={`/projects/${id}`}>Back to project</Link></Button>} />
+    <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+      <h2 className="text-base font-semibold">Plan by site and source warehouse</h2>
+      <p className="mt-1 text-sm text-slate-500">Shortage compares planned work with posted use, site stock, open requests and available warehouse stock. It does not reserve stock.</p>
+      {canPlan && choices && <ProjectMaterialPlanForm key={editing?.id ?? "new"} projectId={id} choices={choices} initial={editing ? { siteId: editing.project_site_id, warehouseId: editing.warehouse_id, materialId: editing.material_id, quantity: String(editing.planned_quantity), requiredOn: editing.required_on, note: editing.note } : undefined} />}
+    </section>
+    <div className="mt-6"><DataTableShell empty={rows.length === 0 ? <EmptyState title="No planned materials" description="Add a material to see site needs and shortages." /> : undefined}>
+      <table className="w-full min-w-[1000px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">SKU / material</th><th className="px-4 py-3">Site / warehouse</th><th className="px-4 py-3 text-right">Planned</th><th className="px-4 py-3 text-right">Used / on site</th><th className="px-4 py-3 text-right">Available / requested</th><th className="px-4 py-3 text-right">Site need</th><th className="px-4 py-3 text-right">Purchase gap</th><th className="px-5 py-3 text-right">Next step</th></tr></thead>
+      <tbody className="divide-y divide-slate-100">{rows.map((row) => {
+        const params = new URLSearchParams({ project: id, site: row.project_site_id, warehouse: row.warehouse_id, material: row.material_id, quantity: String(row.quantity_to_request), date: row.required_on });
+        const purchaseParams = new URLSearchParams({ material: row.material_id, warehouse: row.warehouse_id, quantity: String(row.procurement_shortage) });
+        const actions: RecordAction[] = [
+          ...(canPlan ? [{ label: "Edit", href: `?edit=${row.id}` }] : []),
+          ...(canRequest && row.quantity_to_request > 0 ? [{ label: `Request ${quantity(row.quantity_to_request)} ${row.unit_symbol}`, href: `/requests/new?${params}` }] : []),
+          ...(user.canManage && row.procurement_shortage > 0 ? [{ label: `Purchase ${quantity(row.procurement_shortage)} ${row.unit_symbol}`, href: `/purchase-orders/new?${purchaseParams}` }] : []),
+        ];
+        return <tr key={row.id}><td className="px-5 py-4"><p className="font-medium">{row.material_code} · {row.material_name}</p><p className="text-xs text-slate-500">Needed {row.required_on}</p></td><td className="px-4 py-4">{row.site_name}<span className="block text-xs text-slate-500">{row.warehouse_name}</span></td><td className="px-4 py-4 text-right tabular-nums">{quantity(row.planned_quantity)} {row.unit_symbol}</td><td className="px-4 py-4 text-right tabular-nums">{quantity(row.consumed_quantity)} / {quantity(row.site_on_hand)}</td><td className="px-4 py-4 text-right tabular-nums">{quantity(row.warehouse_available)} / {quantity(row.outstanding_request_quantity)}</td><td className="px-4 py-4 text-right font-medium tabular-nums">{quantity(row.quantity_to_request)} {row.unit_symbol}</td><td className="px-4 py-4 text-right font-medium tabular-nums">{quantity(row.procurement_shortage)} {row.unit_symbol}</td><td className="px-5 py-4 text-right"><RecordActionMenu name={row.material_name} actions={actions} /></td></tr>;
+      })}</tbody></table>
+    </DataTableShell></div>
+  </>;
+}

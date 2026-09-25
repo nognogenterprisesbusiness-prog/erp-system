@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Building03Icon, ClipboardListIcon, ClipboardPenIcon, ExcavatorIcon, Notification01Icon, PackageIcon, UserGroupIcon, WarehouseIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Building03Icon, ExcavatorIcon, FilePenLineIcon, Notification01Icon, PackageIcon, UserGroupIcon, WarehouseIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { HistoryLink } from "@/components/layout/history-link";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -44,6 +44,9 @@ export function DemoDashboard({ tables, role, userId }: { tables: DemoData; role
   const visibleReports = tables.dailyReports.filter((report) => projectIds.has(report.projectId));
   const visibleEquipment = tables.equipment.filter((asset) => isDemoManager(role) || equipmentLocations.has(asset.location));
   const myNotifications = tables.notifications.filter((notification) => notification.userId === userId);
+  const myEmployee = role === "worker" ? tables.employees.find((employee) => employee.userId === userId) : undefined;
+  const reversedAttendanceIds = new Set(tables.attendanceReversals.map((entry) => entry.attendanceId));
+  const myAttendance = myEmployee ? tables.attendance.filter((entry) => entry.employeeId === myEmployee.id && !reversedAttendanceIds.has(entry.id)).toSorted((a, b) => b.date.localeCompare(a.date)) : [];
   const recentActivity = [
     ...(canSeeReports ? visibleReports.map((report) => ({ id: report.id, date: report.date, title: "Daily report submitted", detail: tables.projects.find((project) => project.id === report.projectId)?.name ?? "Project", href: "/demo?view=reports" })) : []),
     ...(canSeeInventory ? tables.transactions.filter((movement) => warehouseIds.has(movement.warehouseId)).map((movement) => ({ id: movement.id, date: movement.date, title: movement.kind === "stock_in" ? "Stock received" : "Opening stock recorded", detail: `${movement.quantity} ${tables.materials.find((material) => material.id === movement.materialId)?.unit ?? "units"} ${tables.materials.find((material) => material.id === movement.materialId)?.name ?? "material"}`, href: "/demo?view=inventory" })) : []),
@@ -54,20 +57,21 @@ export function DemoDashboard({ tables, role, userId }: { tables: DemoData; role
     ...(canSeeEquipment ? [{ label: "Equipment", value: visibleEquipment.length, icon: ExcavatorIcon, tone: "bg-amber-50 text-amber-700" }] : []),
     ...(allowed.has("workforce") ? [{ label: "Employees", value: tables.employees.length, icon: UserGroupIcon, tone: "bg-emerald-50 text-emerald-700" }] : []),
     ...(allowed.has("suppliers") ? [{ label: "Suppliers", value: tables.suppliers.length, icon: UserGroupIcon, tone: "bg-emerald-50 text-emerald-700" }] : []),
-    ...(canSeeRequests ? [{ label: "Material requests", value: visibleRequests.length, icon: ClipboardListIcon, tone: "bg-indigo-50 text-indigo-700" }] : []),
-    ...(canSeeReports ? [{ label: "Daily reports", value: visibleReports.length, icon: ClipboardPenIcon, tone: "bg-sky-50 text-sky-700" }] : []),
+    ...(canSeeRequests ? [{ label: "Material requests", value: visibleRequests.length, icon: AssignmentsIcon, tone: "bg-indigo-50 text-indigo-700" }] : []),
+    ...(canSeeReports ? [{ label: "Daily reports", value: visibleReports.length, icon: FilePenLineIcon, tone: "bg-sky-50 text-sky-700" }] : []),
     ...(role === "warehouse_staff" ? [{ label: "Warehouses", value: warehouseIds.size, icon: WarehouseIcon, tone: "bg-teal-50 text-teal-700" }] : []),
     ...(role === "foreman" ? [{ label: "Project sites", value: visibleSites.length, icon: Building03Icon, tone: "bg-teal-50 text-teal-700" }] : []),
     ...(role === "accounting" ? [{ label: "Completed projects", value: visibleProjects.filter((project) => project.status === "completed").length, icon: Building03Icon, tone: "bg-teal-50 text-teal-700" }] : []),
-    ...(role === "worker" ? [{ label: "Unread updates", value: myNotifications.filter((item) => !item.read).length, icon: Notification01Icon, tone: "bg-cyan-50 text-cyan-700" }] : []),
+    ...(role === "worker" ? [{ label: "Days present", value: myAttendance.filter((entry) => entry.status === "present").length, icon: UserGroupIcon, tone: "bg-emerald-50 text-emerald-700" }, { label: "Projects worked", value: new Set(myAttendance.map((entry) => entry.projectId)).size, icon: Building03Icon, tone: "bg-cyan-50 text-cyan-700" }, { label: "Unread updates", value: myNotifications.filter((item) => !item.read).length, icon: Notification01Icon, tone: "bg-violet-50 text-violet-700" }] : []),
   ].slice(0, 4);
 
   return <div className="space-y-5">
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">{metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}</div>
+    <div className={`grid grid-cols-2 gap-3 ${role === "worker" ? "xl:grid-cols-3" : "xl:grid-cols-4"}`}>{metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}</div>
     <div className="grid items-start gap-5 xl:grid-cols-2">
+      {role === "worker" && <section className={sectionClass} aria-labelledby="demo-worker-attendance-heading"><PanelHeader id="demo-worker-attendance-heading" title="My attendance" />{!myEmployee ? <EmptyState kind="items" title="No linked employee record" description="Ask an administrator to link your user account to your employee record." /> : !myAttendance.length ? <EmptyState kind="items" title="No attendance recorded" /> : <div className="divide-y divide-slate-100">{myAttendance.slice(0, 5).map((entry) => <div key={entry.id} className="flex items-center justify-between gap-3 px-5 py-3 sm:px-6"><div><p className="text-sm font-medium">{tables.projects.find((project) => project.id === entry.projectId)?.name ?? "Project"}</p><p className="mt-1 text-xs text-slate-500">{displayDate.format(new Date(`${entry.date}T12:00:00`))}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${entry.status === "present" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>{entry.status === "present" ? "Present" : "Absent"}</span></div>)}</div>}</section>}
       {canSeeProjects && <section className={sectionClass} aria-labelledby="demo-projects-heading">
         <PanelHeader id="demo-projects-heading" title="Ongoing projects" href="/demo?view=projects" />
-        {ongoing.length === 0 ? <EmptyState kind="items" title="No ongoing projects" /> : <div className="divide-y divide-slate-100">{ongoing.slice(0, 4).map((project, index) => <HistoryLink href="/demo?view=projects" key={project.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50 sm:px-6">
+        {ongoing.length === 0 ? <EmptyState kind="items" title="No ongoing projects" /> : <div className="divide-y divide-slate-100">{ongoing.slice(0, 4).map((project, index) => <HistoryLink href={`/demo?view=projects&project=${encodeURIComponent(project.id)}`} key={project.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-slate-50 sm:px-6">
           <div className="relative size-14 shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:size-16">{project.photo ? <Image src={project.photo} alt="" fill sizes="64px" loading={index === 0 ? "eager" : "lazy"} unoptimized={project.photo.startsWith("data:")} className="object-cover" /> : <div className="grid h-full place-items-center text-slate-400"><HugeiconsIcon icon={Building03Icon} size={23} /></div>}</div>
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{project.name}</p><p className="mt-1 truncate text-xs text-slate-500">{project.code} · {project.location}</p></div>
           <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Ongoing</span>

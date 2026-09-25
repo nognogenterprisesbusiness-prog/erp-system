@@ -1,15 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveSupplierAction, type SupplierActionState } from "@/app/(workspace)/suppliers/actions";
 import { Button } from "@/components/ui/button";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { LocationPicker } from "@/components/ui/location-picker";
+import { RecordPhotoInput } from "@/components/ui/record-photo-input";
+import { recordPhotoUrl } from "@/lib/media/record-photo-url";
 import type { SupplierCategoryRow, SupplierRow } from "@/types/database";
 
 const initialState: SupplierActionState = { ok: false, message: "" };
 export function SupplierForm({ supplier, categories }: { supplier?: SupplierRow; categories: SupplierCategoryRow[] }) {
   const [state, action, pending] = useActionState(saveSupplierAction, initialState);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
   const error = (field: string) => state.ok ? undefined : state.fieldErrors?.[field]?.[0];
   return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
     {supplier && <input type="hidden" name="id" value={supplier.id} />}
@@ -27,8 +30,9 @@ export function SupplierForm({ supplier, categories }: { supplier?: SupplierRow;
       <FormField label="Payment terms" htmlFor="paymentTerms" hint="Recorded as agreed text; no payable automation is implied." error={error("paymentTerms")}><input className={fieldControlClass} id="paymentTerms" name="paymentTerms" defaultValue={supplier?.payment_terms} placeholder="e.g. Net 30" required /></FormField>
       <FormField label="Supplier status" htmlFor="status" error={error("status")}><select className={fieldControlClass} id="status" name="status" defaultValue={supplier?.status ?? "active"}><option value="active">Active</option><option value="inactive">Inactive</option></select></FormField>
       <FormField label="Remarks" htmlFor="remarks" className="md:col-span-2" error={error("remarks")}><textarea className={`${fieldControlClass} h-auto py-3`} id="remarks" name="remarks" rows={3} defaultValue={supplier?.remarks ?? ""} /></FormField>
+      <div className="md:col-span-2"><RecordPhotoInput label="Supplier photo (optional)" currentPhoto={supplier?.photo_path ? recordPhotoUrl("suppliers", supplier.id) : undefined} convertBeforeSubmit onProcessingChange={setProcessingPhoto} /></div>
     </div>
-    {!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}
-    <div className="mt-6 flex justify-end"><Button type="submit" size="lg" disabled={pending}>{pending ? "Saving…" : supplier ? "Save changes" : "Register supplier"}</Button></div>
+    {state.message && <p role={state.ok ? "status" : "alert"} className={`mt-5 text-sm font-medium ${state.ok ? "text-amber-700" : "text-red-600"}`}>{state.message}{state.ok && state.data?.id ? <a href={`/suppliers/${state.data.id}/edit`} className="ml-2 underline">Open saved supplier</a> : null}</p>}
+    <div className="mt-6 flex justify-end"><Button type="submit" size="lg" disabled={pending || processingPhoto}>{pending ? "Saving…" : processingPhoto ? "Processing photo…" : supplier ? "Save changes" : "Register supplier"}</Button></div>
   </form>;
 }

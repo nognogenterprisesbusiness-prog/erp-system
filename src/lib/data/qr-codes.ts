@@ -1,7 +1,14 @@
 import "server-only";
 import { notFound } from "next/navigation";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { QrCodeRow, QrEntityType, QrResolution } from "@/types/database";
+
+const qrResolutionSchema: z.ZodType<QrResolution> = z.object({
+  qr_id: z.uuid(), identifier: z.string().regex(/^NQ-[A-F0-9]{32}$/),
+  entity_type: z.enum(["material", "equipment", "vehicle", "warehouse", "project_site"]),
+  entity_id: z.uuid(), name: z.string().min(1), code: z.string().nullable(), project_id: z.uuid().nullable(),
+});
 
 export const qrEntityLabels: Record<QrEntityType, string> = {
   material: "Material", equipment: "Equipment", vehicle: "Vehicle", warehouse: "Warehouse", project_site: "Project site",
@@ -67,8 +74,10 @@ export async function listQrCodes(page: number, entityType?: QrEntityType) {
 export async function resolveQrCode(identifier: string): Promise<QrResolution> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("resolve_qr_code", { p_identifier: identifier });
-  if (error || !data || typeof data !== "object" || Array.isArray(data)) throw new Error("QR code is unavailable or you do not have access.");
-  return data as QrResolution;
+  if (error) throw new Error("QR code is unavailable or you do not have access.");
+  const parsed = qrResolutionSchema.safeParse(data);
+  if (!parsed.success) throw new Error("QR code is unavailable or you do not have access.");
+  return parsed.data;
 }
 
 export function qrCodeImagePath(code: QrCodeRow, format: "png" | "svg") {

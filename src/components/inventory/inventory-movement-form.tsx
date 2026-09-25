@@ -11,10 +11,10 @@ type UnitOption = { id: string; name: string; symbol: string };
 type Mode = "stock-in" | "stock-out" | "transfer" | "return";
 const initialState: InventoryActionState = { ok: false, message: "" };
 
-export function InventoryMovementForm({ mode, materials, units, locations }: { mode: Mode; materials: MaterialOption[]; units: UnitOption[]; locations: LocationView[] }) {
+export function InventoryMovementForm({ mode, materials, units, locations, initialMaterialId = "" }: { mode: Mode; materials: MaterialOption[]; units: UnitOption[]; locations: LocationView[]; initialMaterialId?: string }) {
   const serverAction = mode === "stock-in" ? stockInAction : mode === "stock-out" ? stockOutAction : mode === "return" ? returnSiteStockAction : dispatchTransferAction;
   const [state, action, pending] = useActionState(serverAction, initialState);
-  const [materialId, setMaterialId] = useState("");
+  const [materialId, setMaterialId] = useState(() => materials.some((item) => item.id === initialMaterialId) ? initialMaterialId : "");
   const [destinationId, setDestinationId] = useState("");
   const [idempotencyKey] = useState(() => globalThis.crypto.randomUUID());
   const material = materials.find((item) => item.id === materialId);

@@ -19,7 +19,7 @@ export function MetricCard({ label, value, icon, tone, detail, trend, trendLabel
           {trend ? <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-700" aria-label={trendLabel ?? trend}><HugeiconsIcon icon={TrendingUpIcon} size={15} />{trend}</span> : null}
         </div>
       </div>
-      <span className={`grid size-10 shrink-0 place-items-center rounded-xl sm:size-12 ${tone}`} aria-hidden="true"><HugeiconsIcon icon={icon} size={21} strokeWidth={1.7} /></span>
+      <span className={`grid size-10 shrink-0 place-items-center rounded-xl sm:size-12 ${tone}`} aria-hidden="true"><HugeiconsIcon icon={icon} size={20} strokeWidth={1.4} /></span>
     </div>
     {detail ? <p className="mt-3 text-xs text-slate-500">{detail}</p> : null}
   </article>;

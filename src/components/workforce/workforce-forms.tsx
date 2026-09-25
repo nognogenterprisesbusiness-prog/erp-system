@@ -12,6 +12,7 @@ import {
 } from "@/app/(workspace)/employees/actions";
 import { Button } from "@/components/ui/button";
 import { fieldControlClass } from "@/components/ui/form-field";
+import { PesoAmountInput } from "@/components/ui/peso-amount-input";
 import type { EmployeeProjectAssignmentRow, LaborRateRow, ProjectRow, ProjectSiteRow } from "@/types/database";
 
 const initialState: WorkforceActionState = { ok: false, message: "" };
@@ -79,7 +80,7 @@ export function LaborRateForm({ employeeId }: { employeeId: string }) {
   return <form action={action} className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2 xl:grid-cols-5">
     <input type="hidden" name="employeeId" value={employeeId} />
     <select className={fieldControlClass} name="rateType" aria-label="Rate type" defaultValue="daily"><option value="daily">Daily</option><option value="hourly">Hourly</option></select>
-    <input className={fieldControlClass} name="amount" aria-label="Rate amount" inputMode="decimal" placeholder="Rate amount" required />
+    <PesoAmountInput name="amount" label="Rate amount (PHP)" required submitUngrouped />
     <input className={fieldControlClass} name="effectiveStartDate" aria-label="Effective start date" type="date" defaultValue={today} required />
     <input className={fieldControlClass} name="effectiveEndDate" aria-label="Effective end date" type="date" />
     <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add rate"}</Button>

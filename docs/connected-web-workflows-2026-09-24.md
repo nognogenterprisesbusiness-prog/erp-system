@@ -1,6 +1,6 @@
 # Connected web workflow continuation — coded, unapplied
 
-This is implementation status, **not production acceptance**. The user has no isolated staging Supabase project and the local Docker PostgreSQL engine is stopped. No new migration was applied to a database. TypeScript, lint, domain tests and the Next build cannot prove SQL creation, RLS, concurrency, role denial or value conservation. Git history remains untouched.
+This is implementation status, **not production acceptance**. The user has no isolated staging Supabase project and the local Docker PostgreSQL engine is stopped. No new migration was applied to a database. TypeScript, lint, domain tests and the Next build cannot prove SQL creation, RLS, concurrency, role denial or value conservation. A later local checkpoint commit recorded the pre-continuation worktree; current continuation changes remain uncommitted.
 
 ## Connected paths added
 
@@ -30,10 +30,10 @@ The migrations are `20260924200000` through `20260924215000` in timestamp order.
 
 ## Business rules still needing sign-off
 
-- How supplier invoice total, freight, VAT, discounts and credits are allocated to material landed cost; the current PO receipt accepts an **explicit actual goods cost** and does not allocate charges.
+- The current PO receipt accepts an **explicit actual goods cost**. Allocation of freight, VAT, discounts or supplier credits is not part of the quoted web scope without separate sign-off.
 - Whether the equipment hourly charge represents rental, fuel/maintenance or depreciation, so other expenses cannot double count it.
 - What qualifies as a full/partial paid day and whether overtime, absences, benefits or payroll charges belong in project labor cost. Current posting requires an explicit day fraction and is **not payroll**.
-- Revenue recognition, change orders, taxes, retention, credit notes and the formal project P&L definition. The current billed-margin view is a management comparison only.
-- Valued supplier returns/credits and damaged-on-hand corrections; site-to-warehouse returns are implemented, but these other correction paths are not.
+- Agree the Package 3 management project-profit calculation. The current billed-margin view is a comparison only, not project profit. Formal revenue recognition, taxes, retention, supplier credit notes and purchase-invoice matching need separate sign-off.
+- Agree a controlled damaged/lost stock correction if it occurs in normal operations. Site-to-warehouse returns are implemented; supplier returns/credits need separate sign-off.
 
-Until those rules, real opening data and staging tests are complete, the release decision remains **NO-GO** for connected production use. The local demo remains UI preview and does not prove live workflow parity.
+Until the in-scope cost/report rules, real opening data and staging tests are complete, the release decision remains **NO-GO** for connected production use. Optional accounting extensions above are not automatic release blockers. The local demo remains UI preview and does not prove live workflow parity.
