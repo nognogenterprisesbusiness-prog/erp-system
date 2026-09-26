@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import { IntentLink as Link } from "./intent-link";
 import { usePathname } from "next/navigation";
 import { ArrowDown01Icon, Cancel01Icon, Menu01Icon, PanelLeftCloseIcon, PanelLeftOpenIcon, Settings01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";

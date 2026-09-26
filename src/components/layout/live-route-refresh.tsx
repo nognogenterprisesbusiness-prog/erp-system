@@ -1,44 +1,68 @@
 "use client";
 
-import { useEffect } from "react";
+import { startTransition, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { liveTablesForPath, refreshIntervalForPath } from "@/lib/realtime/route-sources";
 
+const routeCacheMs = 120_000;
+const backgroundStaleMs = 30_000;
+
 export function LiveRouteRefresh({ userId }: { userId: string }) {
   const pathname = usePathname();
   const router = useRouter();
+  const visits = useRef(new Map<string, number>());
 
   useEffect(() => {
     const tables = liveTablesForPath(pathname);
     const interval = refreshIntervalForPath(pathname);
-    if (!interval) return;
-
+    const previousVisit = visits.current.get(pathname);
+    const age = previousVisit === undefined ? Infinity : Date.now() - previousVisit;
+    // An expired/unseen route is already fetching its page during navigation.
+    let lastRefresh = age >= routeCacheMs ? Date.now() : previousVisit!;
+    visits.current.set(pathname, lastRefresh);
+    if (visits.current.size > 100) {
+      const oldest = visits.current.keys().next().value;
+      if (oldest !== undefined) visits.current.delete(oldest);
+    }
     let disposed = false;
     let connected = false;
-    let lastRefresh = Date.now();
-    let pendingWhileHidden = false;
+    let subscribedBefore = false;
+    let pendingDeferred = false;
     let debounce: ReturnType<typeof setTimeout> | undefined;
+
     const refresh = () => {
       if (disposed) return;
-      if (document.visibilityState !== "visible") { pendingWhileHidden = true; return; }
-      pendingWhileHidden = false;
+      if (document.visibilityState !== "visible" || document.querySelector("dialog[open]")) {
+        pendingDeferred = true;
+        return;
+      }
+      pendingDeferred = false;
       lastRefresh = Date.now();
-      router.refresh();
+      visits.current.set(pathname, lastRefresh);
+      // Keep the current page visible while the new server data arrives.
+      startTransition(() => router.refresh());
     };
     const scheduleRefresh = () => {
       if (disposed) return;
-      if (debounce) clearTimeout(debounce);
+      clearTimeout(debounce);
       debounce = setTimeout(refresh, 400);
     };
     const refreshIfStale = () => {
-      if (pendingWhileHidden || Date.now() - lastRefresh >= interval) scheduleRefresh();
+      if (pendingDeferred || Date.now() - lastRefresh >= (interval ?? routeCacheMs)) scheduleRefresh();
     };
     const onVisibility = () => { if (document.visibilityState === "visible") refreshIfStale(); };
     const onOnline = () => scheduleRefresh();
+    const onDialogClose = () => { if (pendingDeferred) scheduleRefresh(); };
     document.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("close", onDialogClose, true);
     window.addEventListener("online", onOnline);
-    const poll = window.setInterval(refreshIfStale, interval);
+    // Realtime handles connected operational pages. Poll only as a fallback;
+    // analytics have no channel and retain their periodic refresh.
+    const poll = interval ? window.setInterval(() => {
+      if (!tables.length || !connected || pendingDeferred) refreshIfStale();
+    }, interval) : undefined;
+    if (age >= backgroundStaleMs && age < routeCacheMs) scheduleRefresh();
 
     const supabase = tables.length ? createClient() : null;
     const channel = supabase?.channel(`workspace-live-${userId}-${pathname}`);
@@ -49,17 +73,19 @@ export function LiveRouteRefresh({ userId }: { userId: string }) {
       }, scheduleRefresh);
     }
     channel?.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        if (connected) scheduleRefresh();
-        connected = true;
+      connected = status === "SUBSCRIBED";
+      if (connected) {
+        if (subscribedBefore) scheduleRefresh();
+        subscribedBefore = true;
       }
     });
 
     return () => {
       disposed = true;
-      if (debounce) clearTimeout(debounce);
-      window.clearInterval(poll);
+      clearTimeout(debounce);
+      if (poll !== undefined) window.clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("close", onDialogClose, true);
       window.removeEventListener("online", onOnline);
       if (channel && supabase) void supabase.removeChannel(channel);
     };

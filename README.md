@@ -667,6 +667,8 @@ nognog-enterprises/
 
 ### Progress log
 
+| 2026-09-26 | Session navigation cache and photo-policy correction | Added a two-minute Next client route cache, full destination prefetch on sidebar/project-link intent, transition-based silent refresh, connected-Realtime polling suppression, modal refresh deferral and duplicate-filter navigation suppression. Removed chart-data disclosure. Lint, typecheck, four media tests and production build passed. In isolated PostgreSQL, reproduced the photo UUID error with the old policy and verified valid project/warehouse upload paths and denied malformed paths with the corrective migration. | Hosted photo upload and production navigation timing remain unverified. Private authenticated data is not globally server-cached. | Apply `20260926201000_qualify_photo_storage_policy_paths.sql` in Supabase, then retry the photo and check repeat navigation in a production build. |
+
 | Date | Phase | Finished and tested | Open issue / decision | Next smallest slice |
 |---|---|---|---|---|
 | TBD | Discovery | None yet | D01–D18 | Sign off workflows and costing rules |

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Building03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 

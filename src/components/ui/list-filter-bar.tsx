@@ -20,6 +20,7 @@ export function ListFilterBar({ className, ...props }: ComponentProps<"form">) {
       for (const [key, entry] of new FormData(form.current)) if (typeof entry === "string" && entry && entry !== "all" && key !== "page") params.set(key, entry);
       if (name) { if (value && value !== "all") params.set(name, value); else params.delete(name); }
       const href = `${pathname}${params.size ? `?${params}` : ""}`;
+      if (href === `${window.location.pathname}${window.location.search}`) return;
       startTransition(() => router.replace(href, { scroll: false }));
     }, delay);
   }
