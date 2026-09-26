@@ -1,25 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Moon02Icon, PaintBrush01Icon, Sun01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useState } from "react";
+import { ContrastIcon, Moon02Icon, Sun01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 const key = "nognog.theme";
 type Theme = "light" | "blue" | "dark";
 const options = [
-  { value: "light", label: "Light", swatch: "#f5f6f8", icon: Sun01Icon },
-  { value: "blue", label: "Blue dark", swatch: "#142136", icon: Moon02Icon },
-  { value: "dark", label: "Charcoal", swatch: "#1b1d20", icon: Moon02Icon },
+  { value: "light", label: "Light", icon: Sun01Icon },
+  { value: "blue", label: "Blue dark", icon: Moon02Icon },
+  { value: "dark", label: "Charcoal", icon: ContrastIcon },
 ] as const;
+
+function nextTheme(theme: Theme): Theme {
+  return options[(options.findIndex((option) => option.value === theme) + 1) % options.length].value;
+}
 
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme;
 }
 
-export function ThemeToggle() {
+function useAppearance() {
   const [theme, setTheme] = useState<Theme>("light");
-  const menu = useRef<HTMLDetailsElement>(null);
-
   useEffect(() => {
     const readTheme = () => {
       let saved: Theme = "light";
@@ -30,31 +32,34 @@ export function ThemeToggle() {
       setTheme(saved);
       applyTheme(saved);
     };
+    const onThemeChange = (event: Event) => {
+      const next = (event as CustomEvent<Theme>).detail;
+      if (next === "light" || next === "blue" || next === "dark") setTheme(next);
+    };
     queueMicrotask(readTheme);
     window.addEventListener("storage", readTheme);
-    return () => window.removeEventListener("storage", readTheme);
+    window.addEventListener("nognog-theme-change", onThemeChange);
+    return () => { window.removeEventListener("storage", readTheme); window.removeEventListener("nognog-theme-change", onThemeChange); };
   }, []);
-
   function selectTheme(next: Theme) {
     setTheme(next);
     applyTheme(next);
     try { window.localStorage.setItem(key, next); } catch { /* The theme still works for this page. */ }
-    if (menu.current) menu.current.open = false;
+    window.dispatchEvent(new CustomEvent<Theme>("nognog-theme-change", { detail: next }));
   }
+  return { theme, selectTheme };
+}
 
-  return <details ref={menu} data-header-menu="theme" className="relative">
-    <summary aria-label={`Appearance: ${options.find((option) => option.value === theme)?.label}`} title="Choose appearance" className="grid size-10 cursor-pointer list-none place-items-center rounded-full text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 [&::-webkit-details-marker]:hidden">
-      <HugeiconsIcon icon={PaintBrush01Icon} size={19} strokeWidth={1.7} />
-    </summary>
-    <div className="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-      <p className="px-2.5 pb-2 pt-1 text-xs font-semibold text-slate-500">Appearance</p>
-      <div role="group" aria-label="Appearance theme" className="grid gap-1">
-        {options.map((option) => <button key={option.value} type="button" aria-label={option.label} aria-pressed={theme === option.value} onClick={() => selectTheme(option.value)} className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 ${theme === option.value ? "bg-slate-50 font-semibold text-slate-900" : "text-slate-600"}`}>
-          <span className="grid size-7 shrink-0 place-items-center rounded-full border border-slate-200" style={{ backgroundColor: option.swatch, color: option.value === "light" ? "#344054" : "#f8fafc" }}><HugeiconsIcon icon={option.icon} size={15} strokeWidth={1.6} /></span>
-          <span className="flex-1">{option.label}</span>
-          {theme === option.value && <HugeiconsIcon icon={Tick02Icon} size={16} className="text-cyan-700" aria-hidden="true" />}
-        </button>)}
-      </div>
-    </div>
-  </details>;
+export function ThemeSettings() {
+  const { theme, selectTheme } = useAppearance();
+  const current = options.find((option) => option.value === theme) ?? options[0];
+  const next = options.find((option) => option.value === nextTheme(theme)) ?? options[1];
+  return <button type="button" onClick={() => selectTheme(next.value)} aria-label={`Appearance: ${current.label}. Switch to ${next.label}`} className="mt-4 inline-flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-800 hover:border-cyan-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"><HugeiconsIcon icon={current.icon} size={19} strokeWidth={1.7} aria-hidden="true" /><span>{current.label}</span><span className="text-xs font-normal text-slate-500">Switch to {next.label}</span></button>;
+}
+
+export function ThemeToggle() {
+  const { theme, selectTheme } = useAppearance();
+  const current = options.find((option) => option.value === theme) ?? options[0];
+  const next = options.find((option) => option.value === nextTheme(theme)) ?? options[1];
+  return <button type="button" onClick={() => selectTheme(next.value)} aria-label={`Appearance: ${current.label}. Switch to ${next.label}`} title={`Switch to ${next.label}`} className="grid size-10 place-items-center rounded-full text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"><HugeiconsIcon icon={current.icon} size={19} strokeWidth={1.7} aria-hidden="true" /></button>;
 }

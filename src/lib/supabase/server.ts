@@ -1,10 +1,11 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import type { Database } from "@/types/database";
 import { getSupabaseEnv } from "./env";
 
-export async function createClient() {
+export const createClient = cache(async function createClient() {
   const cookieStore = await cookies();
   const { url, publishableKey } = getSupabaseEnv();
   return createServerClient<Database>(url, publishableKey, {
@@ -15,4 +16,4 @@ export async function createClient() {
       },
     },
   });
-}
+});

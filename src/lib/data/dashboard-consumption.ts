@@ -15,8 +15,8 @@ export async function getDashboardConsumption() {
     if (error) throw new Error("Unable to load monthly material consumption.");
     const rows = data ?? [];
     const reversedIds = new Set<string>();
-    for (let start = 0; start < rows.length; start += 100) {
-      const result = await client.from("inventory_transactions").select("reversal_of").in("reversal_of", rows.slice(start, start + 100).map((row) => row.id));
+    const reversalBatches = await Promise.all(Array.from({ length: Math.ceil(rows.length / 100) }, (_, index) => client.from("inventory_transactions").select("reversal_of").in("reversal_of", rows.slice(index * 100, index * 100 + 100).map((row) => row.id))));
+    for (const result of reversalBatches) {
       if (result.error) throw new Error("Unable to reconcile monthly material consumption.");
       for (const row of result.data ?? []) if (row.reversal_of) reversedIds.add(row.reversal_of);
     }

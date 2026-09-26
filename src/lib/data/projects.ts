@@ -28,16 +28,18 @@ export async function getProjects(params: ProjectListParams = {}) {
   if (error) throw new Error(`Unable to load projects: ${error.message}`);
   const projects = data ?? [];
   const ids = projects.map((project) => project.id);
-  const { data: progress, error: progressError } = ids.length && params.includeProgress
-    ? await supabase.from("project_progress_entries").select("project_id,completion_percent,progress_date,recorded_at")
+  const [progressResult, assignmentResult] = await Promise.all([
+    ids.length && params.includeProgress
+    ? supabase.from("project_progress_entries").select("project_id,completion_percent,progress_date,recorded_at")
       .in("project_id", ids).order("progress_date", { ascending: false }).order("recorded_at", { ascending: false })
-    : { data: [], error: null };
+    : Promise.resolve({ data: [], error: null }),
+    ids.length ? supabase.from("project_assignments").select("project_id,user_id").in("project_id", ids).eq("status", "active") : Promise.resolve({ data: [], error: null }),
+  ]);
+  const { data: progress, error: progressError } = progressResult;
   if (progressError) throw new Error(`Unable to load project progress: ${progressError.message}`);
   const latestProgress = new Map<string, number>();
   for (const entry of progress ?? []) if (!latestProgress.has(entry.project_id)) latestProgress.set(entry.project_id, Number(entry.completion_percent));
-  const { data: assignments, error: assignmentError } = ids.length
-    ? await supabase.from("project_assignments").select("project_id,user_id").in("project_id", ids).eq("status", "active")
-    : { data: [], error: null };
+  const { data: assignments, error: assignmentError } = assignmentResult;
   if (assignmentError) throw new Error(`Unable to load project personnel: ${assignmentError.message}`);
   const userIds = [...new Set((assignments ?? []).map((assignment) => assignment.user_id))];
   const { data: profiles, error: profileError } = userIds.length

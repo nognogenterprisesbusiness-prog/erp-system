@@ -38,5 +38,5 @@ export function RecordFormControls({ busy, disabled = false, label = "Save" }: {
   const dialog = useContext(FormDialogContext);
   const setBusy = dialog?.setBusy;
   useEffect(() => { setBusy?.(busy); }, [busy, setBusy]);
-  return <div className="mt-6 flex justify-end gap-2">{dialog && <Button type="button" variant="outline" onClick={dialog.close} disabled={busy}>Cancel</Button>}<Button type="submit" disabled={busy || disabled}>{busy ? "Saving…" : label}</Button></div>;
+  return <div className="mt-6 flex justify-end gap-2">{dialog && <Button type="button" variant="outline" onClick={dialog.close} disabled={busy}>Cancel</Button>}<Button type="submit" disabled={busy || disabled} aria-busy={busy}>{busy ? <><span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" />{label.endsWith("ing") ? label : `${label}…`}</> : label}</Button></div>;
 }

@@ -36,7 +36,7 @@ export function LoginForm() {
 
       <div className="text-right"><Link href="/auth/forgot-password" className="text-xs font-semibold text-cyan-700 hover:underline">Forgot password?</Link></div>
       {state.message && <p role="alert" className="text-sm font-medium text-red-600">{state.message}</p>}
-      <Button type="submit" size="lg" className="w-full" disabled={isPending}>{isPending ? "Signing in…" : "Sign in"}</Button>
+      <Button type="submit" size="lg" className="w-full" disabled={isPending} aria-busy={isPending}>{isPending ? <><span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" />Signing in</> : "Sign in"}</Button>
     </form>
   );
 }

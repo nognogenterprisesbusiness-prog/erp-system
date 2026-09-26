@@ -1,8 +1,10 @@
 import { MyProfileForm } from "@/components/users/my-profile-form";
+import Link from "next/link";
+import { ThemeSettings } from "@/components/layout/theme-toggle";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
 
 export default async function ProfilePage() {
   const { profile } = await requireUser();
-  return <><PageHeader eyebrow="My account" title="Settings" description="Update your profile photo, name, phone and email. Use the header theme control to change appearance." /><MyProfileForm fullName={profile.full_name} phone={profile.phone} email={profile.email} avatarUrl={profile.avatar_path ? "/profile/avatar" : undefined} /></>;
+  return <div className="mx-auto max-w-3xl space-y-6"><PageHeader eyebrow="My account" title="Settings" description="Manage your profile, appearance and notifications." /><section aria-labelledby="profile-settings-heading" className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 sm:p-7"><h2 id="profile-settings-heading" className="text-sm font-semibold text-slate-900">My profile</h2><MyProfileForm fullName={profile.full_name} phone={profile.phone} email={profile.email} avatarUrl={profile.avatar_path ? `/profile/avatar?v=${encodeURIComponent(profile.updated_at)}` : undefined} /></section><section aria-labelledby="notification-settings-heading" className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7"><h2 id="notification-settings-heading" className="text-sm font-semibold text-slate-900">Notifications</h2><p className="mt-2 text-sm leading-6 text-slate-600">Review in-app alerts and mark them read in the notification centre. Delivery follows your account and project access; this workspace has no per-alert preference switches.</p><Link href="/notifications" className="mt-4 inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-cyan-700 hover:bg-slate-50">Open notification centre</Link></section><section aria-labelledby="appearance-settings-heading" className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7"><h2 id="appearance-settings-heading" className="text-sm font-semibold text-slate-900">Appearance</h2><p className="mt-2 text-sm leading-6 text-slate-600">Use the button to cycle through Light, Blue dark and Charcoal on this device.</p><ThemeSettings /></section></div>;
 }

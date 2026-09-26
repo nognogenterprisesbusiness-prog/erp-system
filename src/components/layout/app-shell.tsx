@@ -4,10 +4,11 @@ import { useEffect, useId, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowDown01Icon, Cancel01Icon, Menu01Icon, PanelLeftCloseIcon, PanelLeftOpenIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Cancel01Icon, Menu01Icon, PanelLeftCloseIcon, PanelLeftOpenIcon, Settings01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
+import { AccountAvatar } from "@/components/ui/account-avatar";
 import { HistoryLink } from "@/components/layout/history-link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -51,9 +52,12 @@ function Sidebar({ items, footerItems = [], footerAction, homeHref, pathname, na
         </section>;
       })}</div>
     </nav>
-    {(footerItems.length > 0 || footerAction) && <nav className="border-t border-white/10 pt-3" aria-label="Support and account">
-      {footerItems.map((item) => <SidebarLink key={item.href} item={item} active={pathname === item.href} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}
-      {footerAction && <button type="button" onClick={() => { footerAction.onClick(); onNavigate?.(); }} aria-label={compact ? footerAction.label : undefined} title={compact ? footerAction.label : undefined} className={cn("flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400", compact && "justify-center px-0")}><HugeiconsIcon icon={footerAction.icon} size={19} strokeWidth={1.7} className="shrink-0" /><span className={compact ? "sr-only" : ""}>{footerAction.label}</span></button>}
+    {(footerItems.length > 0 || footerAction) && <nav className="mt-5 border-t border-white/10 pt-5" aria-label="Support and account">
+      {footerItems.length > 0 && !compact && <button type="button" aria-expanded={!collapsedGroups.includes("Settings")} aria-controls={`${navigationId}-settings`} onClick={() => onToggleGroup("Settings")} className="flex h-10 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-sm font-normal hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"><span className="flex items-center gap-3"><HugeiconsIcon icon={Settings01Icon} size={19} strokeWidth={1.7} />Settings</span><HugeiconsIcon icon={ArrowDown01Icon} size={15} strokeWidth={1.7} className={cn("transition-transform motion-reduce:transition-none", collapsedGroups.includes("Settings") && "-rotate-90")} /></button>}
+      <div id={`${navigationId}-settings`} hidden={!compact && collapsedGroups.includes("Settings")} className={cn("space-y-1", !compact && "pl-3")}>
+        {footerItems.map((item) => <SidebarLink key={item.href} item={item} active={pathname === item.href} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}
+      </div>
+      {footerAction && <button type="button" onClick={() => { footerAction.onClick(); onNavigate?.(); }} aria-label={compact ? footerAction.label : undefined} title={compact ? footerAction.label : undefined} className={cn("flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-normal hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400", compact && "justify-center px-0")}><HugeiconsIcon icon={footerAction.icon} size={19} strokeWidth={1.7} className="shrink-0" /><span className={compact ? "sr-only" : ""}>{footerAction.label}</span></button>}
     </nav>}
   </aside>;
 }
@@ -84,7 +88,7 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>(() => ["/profile", "/notifications", "/help"].includes(pathname) ? [] : ["Settings"]);
   function toggleGroup(group: string) {
     setCollapsedGroups((current) => current.includes(group) ? current.filter((item) => item !== group) : [...current, group]);
   }
@@ -121,7 +125,6 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
       return next;
     });
   }
-  const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return <div className="min-h-svh bg-[#f5f6f8] text-[#07152d]">
     {banner ? <div className="sticky top-0 z-50">{banner}</div> : null}
     <div className={cn("fixed bottom-0 left-0 z-40 hidden transition-[width] duration-200 lg:block", banner ? "top-11" : "top-0", sidebarCollapsed ? "w-[76px]" : "w-[264px]")}><Sidebar collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} items={items} footerItems={footerItems} footerAction={footerAction} homeHref={homeHref} pathname={activeHref ?? pathname} navigationMode={navigationMode} compact={sidebarCollapsed} onToggle={toggleSidebar} /></div>
@@ -137,7 +140,7 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
           <ThemeToggle />
           {headerActions}
           <details data-header-menu="profile" className="relative group"><summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-1.5 py-1 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 [&::-webkit-details-marker]:hidden" aria-label={`Profile menu for ${name}`}>
-            <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#07152d] text-xs font-bold text-white">{avatar ? <Image src={avatar} alt="" fill sizes="36px" unoptimized={avatar.startsWith("data:")} className="object-cover" /> : initials || <HugeiconsIcon icon={UserCircleIcon} size={18} />}</span>
+            <AccountAvatar key={avatar ?? ""} name={name} photo={avatar ?? undefined} className="bg-[#07152d] font-bold text-white" />
             <span className="hidden min-w-0 text-left sm:block"><span className="block truncate text-sm font-semibold text-slate-800">{name}</span><span className="block truncate text-xs capitalize text-slate-500">{roleLabel.replaceAll("_", " ")}</span></span>
             <HugeiconsIcon icon={ArrowDown01Icon} size={14} className="hidden text-slate-400 sm:block" />
           </summary><div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"><div className="border-b border-slate-100 px-3 py-2"><p className="truncate text-sm font-semibold">{name}</p><p className="text-xs capitalize text-slate-500">{roleLabel.replaceAll("_", " ")}</p></div><div className="pt-1">{profileActions ?? <p className="px-3 py-2 text-sm text-slate-500">Account options are not available.</p>}</div></div></details>

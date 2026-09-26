@@ -12,6 +12,7 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
 }) {
   const [preview, setPreview] = useState<string>();
   const [error, setError] = useState("");
+  const [currentPhotoFailed, setCurrentPhotoFailed] = useState(false);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
   async function choose(input: HTMLInputElement) {
@@ -38,7 +39,7 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
       <span>{label}</span>
       <span className="mt-2 flex items-center gap-4 rounded-xl border border-dashed border-slate-300 p-3 hover:border-cyan-500">
         <span className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 text-xs text-slate-500">
-          {preview || currentPhoto ? <Image src={preview ?? currentPhoto ?? ""} alt="Selected record photo" fill sizes="80px" unoptimized className="object-cover" /> : "No photo"}
+          {preview || (currentPhoto && !currentPhotoFailed) ? <Image src={preview ?? currentPhoto ?? ""} alt="Selected record photo" fill sizes="80px" unoptimized className="object-cover" onError={() => { if (!preview) setCurrentPhotoFailed(true); }} /> : "No photo"}
         </span>
         <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-slate-700">Choose PNG or JPEG</span><span className="mt-1 block text-xs font-normal text-slate-500">Converted to WebP before saving</span></span>
         <input name="photo" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" className="sr-only" onChange={(event) => void choose(event.currentTarget)} />
