@@ -1,12 +1,12 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getProjectAttendance(projectId: string, canManage: boolean) {
+export async function getProjectAttendance(projectId: string, canManage: boolean, page = 1) {
   const supabase = await createClient();
   const [entriesResult, costResult, assignmentsResult] = await Promise.all([
-    supabase.from("project_attendance").select("id,employee_id,assignment_id,project_id,project_site_id,work_date,attendance_status,hours_worked,billable_units,rate_type,rate_snapshot,cost_total,note,created_at").eq("project_id", projectId).order("work_date", { ascending: false }).limit(100),
+    supabase.from("project_attendance").select("id,employee_id,assignment_id,project_id,project_site_id,work_date,attendance_status,hours_worked,billable_units,rate_type,rate_snapshot,cost_total,note,created_at", { count: "exact" }).eq("project_id", projectId).order("work_date", { ascending: false }).order("id").range((page - 1) * 20, page * 20 - 1),
     supabase.rpc("get_project_labor_cost", { p_project_id: projectId }),
-    canManage ? supabase.from("employee_project_assignments").select("id,employee_id,project_id,project_site_id,start_date,end_date,status").eq("project_id", projectId).order("start_date", { ascending: false }).limit(500) : Promise.resolve({ data: [], error: null }),
+    canManage ? supabase.from("employee_project_assignments").select("id,employee_id,project_id,project_site_id,start_date,end_date,status").eq("project_id", projectId).order("start_date", { ascending: false }).order("id").range(0, 19) : Promise.resolve({ data: [], error: null }),
   ]);
   if (entriesResult.error || costResult.error || assignmentsResult.error) throw new Error("Unable to load project attendance.");
   const entries = entriesResult.data ?? [];
@@ -20,6 +20,7 @@ export async function getProjectAttendance(projectId: string, canManage: boolean
   const employees = new Map((employeesResult.data ?? []).map((employee) => [employee.id, employee]));
   const reversals = new Map((reversalResult.data ?? []).map((reversal) => [reversal.attendance_id, reversal]));
   return {
+    count: entriesResult.count ?? 0,
     entries: entries.map((entry) => ({ ...entry, employee: employees.get(entry.employee_id), reversal: reversals.get(entry.id) })),
     assignments: assignments.map((assignment) => ({ ...assignment, employee: employees.get(assignment.employee_id) })),
     costTotal: costResult.data ?? 0,

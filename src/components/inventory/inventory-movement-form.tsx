@@ -2,6 +2,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { dispatchTransferAction, returnSiteStockAction, stockInAction, stockOutAction, type InventoryActionState } from "@/app/(workspace)/inventory/actions";
 import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { PagedReferencePicker } from "@/components/ui/paged-reference-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import type { LocationView } from "@/lib/data/inventory";
 import { todayInManila } from "@/lib/date";
@@ -14,11 +15,12 @@ const initialState: InventoryActionState = { ok: false, message: "" };
 export function InventoryMovementForm({ mode, materials, units, locations, initialMaterialId = "" }: { mode: Mode; materials: MaterialOption[]; units: UnitOption[]; locations: LocationView[]; initialMaterialId?: string }) {
   const serverAction = mode === "stock-in" ? stockInAction : mode === "stock-out" ? stockOutAction : mode === "return" ? returnSiteStockAction : dispatchTransferAction;
   const [state, action, pending] = useActionState(serverAction, initialState);
+  const [chosenUnitId, setChosenUnitId] = useState("");
   const [materialId, setMaterialId] = useState(() => materials.some((item) => item.id === initialMaterialId) ? initialMaterialId : "");
   const [destinationId, setDestinationId] = useState("");
   const [idempotencyKey] = useState(() => globalThis.crypto.randomUUID());
   const material = materials.find((item) => item.id === materialId);
-  const unit = units.find((item) => item.id === material?.base_unit_id);
+  const unit = units.find((item) => item.id === (chosenUnitId || material?.base_unit_id));
   const warehouses = locations.filter((item) => item.location_type === "warehouse");
   const sites = locations.filter((item) => item.location_type === "project_site");
   const siteException = mode === "transfer" && locations.some((item) => item.id === destinationId && item.location_type === "project_site");
@@ -27,7 +29,7 @@ export function InventoryMovementForm({ mode, materials, units, locations, initi
   return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
     <input type="hidden" name="idempotencyKey" value={idempotencyKey} /><input type="hidden" name="unitId" value={unit?.id ?? ""} />
     <div className="grid gap-5 md:grid-cols-2">
-      <FormField label="Material" htmlFor="materialId" error={error("materialId")}><select className={fieldControlClass} id="materialId" name="materialId" value={materialId} onChange={(event) => setMaterialId(event.target.value)} required><option value="" disabled>Select material</option>{materials.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select></FormField>
+      <FormField label="Material" htmlFor="materialId" error={error("materialId")}><input type="hidden" name="materialId" value={materialId} /><PagedReferencePicker kind="material" label="Material" value={materialId} onValueChange={setMaterialId} onPick={(choice) => setChosenUnitId(choice.unitId ?? "")} initialOptions={materials.map((m) => ({ value: m.id, label: `${m.code} · ${m.name}`, unitId: m.base_unit_id }))} /></FormField>
       <FormField label="Unit" htmlFor="unitDisplay" hint="Units cannot be converted silently."><input className={fieldControlClass} id="unitDisplay" value={unit ? `${unit.name} (${unit.symbol})` : "Select a material first"} readOnly disabled /></FormField>
       {mode === "stock-in" && <FormField label="Receiving warehouse" htmlFor="destinationLocationId" error={error("destinationLocationId")}><select className={fieldControlClass} id="destinationLocationId" name="destinationLocationId" defaultValue="" required><option value="" disabled>Select warehouse</option>{locationOptions(warehouses)}</select></FormField>}
       {mode !== "stock-in" && <FormField label={mode === "return" ? "Source project site" : "Source warehouse"} htmlFor="sourceLocationId" error={error("sourceLocationId")}><select className={fieldControlClass} id="sourceLocationId" name="sourceLocationId" defaultValue="" required><option value="" disabled>Select {mode === "return" ? "site" : "warehouse"}</option>{locationOptions(mode === "return" ? sites : warehouses)}</select></FormField>}

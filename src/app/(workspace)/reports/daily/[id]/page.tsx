@@ -1,4 +1,6 @@
 import { IntentLink as Link } from "@/components/layout/intent-link";
+import { ReportResourceSection } from "@/components/reports/report-resource-section";
+import { pageNumber } from "@/lib/data/pagination";
 import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,8 +27,9 @@ function snapshotText(value: unknown, field: string) {
   return typeof candidate === "string" ? candidate : "";
 }
 
-export default async function DailyReportDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DailyReportDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ linkedPage?: string; candidatePage?: string }> }) {
   const { id } = await params;
+  const filters = await searchParams;
   const [user, data, progress] = await Promise.all([requireUser(), getDailyReport(id), getReportProgress(id)]);
   const { report, project, site, preparerName, events } = data;
   const canEdit = report.status === "draft" && user.userId === report.prepared_by;
@@ -68,6 +71,7 @@ export default async function DailyReportDetailPage({ params }: { params: Promis
     {canReview && <DailyReportReview reportId={id} />}
     {progress && <section className="mt-5 rounded-xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Project progress · {progress.completion_percent}%</h2><p className="mt-2 text-sm text-slate-600">{progress.summary}</p><Button variant="outline" size="sm" className="mt-4" asChild><Link href={`/projects/${report.project_id}/progress`}>View progress history</Link></Button></section>}
     {canRecordProgress && <ProjectProgressForm reportId={id} />}
+    <ReportResourceSection reportId={id} linkedPage={pageNumber(filters.linkedPage)} candidatePage={pageNumber(filters.candidatePage)} candidatesOpen={filters.candidatePage !== undefined} />
     <section className="mt-5 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <h2 className="font-semibold">Report history</h2><p className="mt-1 text-xs text-slate-500">Each saved version and submission is recorded with its author and time.</p>
       <div className="mt-5 divide-y divide-slate-100 border-t border-slate-100">{events.map((event) => <details key={event.id} className="py-4">

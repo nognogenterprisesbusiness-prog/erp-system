@@ -6,6 +6,7 @@ import { PlusSignIcon, Remove01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { submitMaterialRequestAction, type RequestActionState } from "@/app/(workspace)/requests/actions";
 import { Button } from "@/components/ui/button";
+import { PagedReferencePicker } from "@/components/ui/paged-reference-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { todayInManila } from "@/lib/date";
@@ -61,7 +62,7 @@ export function MaterialRequestForm({ choices, initialMaterialId = "", initialPr
     </div>
     <div className="mt-4 grid gap-3">{lines.map((line, index) => <div key={line.key} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[minmax(0,1fr)_150px_auto] sm:items-end">
       <FormField label={`Material ${index + 1}`} htmlFor={`material-${line.key}`}>
-        <SelectPicker label={`Material ${index + 1}`} value={line.materialId} onValueChange={(materialId) => updateLine(line.key, { materialId })} options={choices.materials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}`, disabled: lines.some((other) => other.key !== line.key && other.materialId === item.id) }))} placeholder="Select SKU" />
+        <PagedReferencePicker kind="material" label={`Material ${index + 1}`} value={line.materialId} onValueChange={(materialId) => updateLine(line.key, { materialId })} initialOptions={choices.materials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}`, unitId: item.base_unit_id }))} disabledValues={lines.filter((other) => other.key !== line.key).map((other) => other.materialId)} />
       </FormField>
       <FormField label="Quantity" htmlFor={`quantity-${line.key}`}><input id={`quantity-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(line.key, { quantity: event.target.value })} placeholder="0.0000" required /></FormField>
       <Button type="button" variant="ghost" size="icon" aria-label={`Remove material ${index + 1}`} disabled={lines.length === 1 || pending} onClick={() => setLines((current) => current.filter((item) => item.key !== line.key))}><HugeiconsIcon icon={Remove01Icon} size={17} /></Button>
@@ -69,6 +70,6 @@ export function MaterialRequestForm({ choices, initialMaterialId = "", initialPr
     {error("lines") && <p role="alert" className="mt-2 text-xs text-red-600">{error("lines")}</p>}
     {!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}
     {!warehouses.length && projectId && <p role="status" className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">An administrator must link an active warehouse to this project before a request can be submitted.</p>}
-    <div className="mt-6 flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" asChild><Link href="/requests">Cancel</Link></Button><Button type="submit" disabled={pending || !projectId || !selectedSite || !selectedWarehouse || !choices.materials.length || lines.some((line) => !line.materialId || !line.quantity)}>{pending ? "Submitting…" : "Submit request"}</Button></div>
+    <div className="mt-6 flex flex-wrap justify-end gap-2"><Button variant="outline" type="button" asChild><Link href="/requests">Cancel</Link></Button><Button type="submit" disabled={pending || !projectId || !selectedSite || !selectedWarehouse || lines.some((line) => !line.materialId || !line.quantity)}>{pending ? "Submitting…" : "Submit request"}</Button></div>
   </form>;
 }

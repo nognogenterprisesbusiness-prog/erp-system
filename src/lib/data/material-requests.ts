@@ -17,7 +17,7 @@ export async function getMaterialRequestChoices() {
   const [reportChoices, warehousesResult, materialsResult] = await Promise.all([
     getDailyReportChoices(),
     supabase.rpc("get_requestable_warehouses"),
-    supabase.from("materials").select("id,code,name,base_unit_id").eq("is_active", true).eq("material_kind", "consumable").is("archived_at", null).order("name").limit(1000),
+    supabase.from("materials").select("id,code,name,base_unit_id").eq("is_active", true).eq("material_kind", "consumable").is("archived_at", null).order("name").order("id").range(0, 19),
   ]);
   if (warehousesResult.error || materialsResult.error) throw new Error("Unable to load material request choices.");
   const projectIds = new Set(reportChoices.projects.filter((row) => row.status === "active").map((row) => row.id));

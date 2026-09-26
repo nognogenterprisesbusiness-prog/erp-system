@@ -33,6 +33,7 @@ export async function saveMaterialAction(_: MaterialActionState, form: FormData)
   try { await requireManager(); } catch { return failure("You do not have permission to manage materials."); }
   const parsed = materialInputSchema.safeParse({ id: value(form, "id") || undefined, code: value(form, "code").toUpperCase(), name: value(form, "name"), description: value(form, "description"), categoryId: value(form, "categoryId"), baseUnitId: value(form, "baseUnitId"), materialKind: value(form, "materialKind"), minimumStockLevel: value(form, "minimumStockLevel"), isActive: value(form, "isActive") });
   if (!parsed.success) return { ok: false, message: "Review the material details.", fieldErrors: parsed.error.flatten().fieldErrors };
+  if (parsed.data.materialKind !== "consumable") return failure("Register reusable tools in Equipment. Legacy reusable materials are read-only.");
   let photo: Buffer | undefined;
   try { photo = await prepareRecordPhoto(form.get("photo")); }
   catch (cause) { return failure(cause instanceof Error ? cause.message : "The material photo could not be processed."); }

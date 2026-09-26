@@ -18,8 +18,8 @@ export const postAttendanceSchema = z.object({
     return;
   }
   if (hours <= 0 || hours > 24 || value.rateType === "none") context.addIssue({ code: "custom", path: ["hours"], message: "Enter worked hours and a rate type" });
-  if (value.rateType === "daily" && (!/^0?\.\d{1,4}$|^1(\.0{1,4})?$/.test(value.dayFraction) || Number(value.dayFraction) <= 0))
-    context.addIssue({ code: "custom", path: ["dayFraction"], message: "Enter a paid-day fraction between 0 and 1" });
+  if (value.rateType === "daily" && !["0.5", "1"].includes(value.dayFraction))
+    context.addIssue({ code: "custom", path: ["dayFraction"], message: "Choose a full or half paid day" });
   if (value.rateType === "hourly" && value.dayFraction !== "") context.addIssue({ code: "custom", path: ["dayFraction"], message: "Day fraction is only for daily rates" });
 });
 

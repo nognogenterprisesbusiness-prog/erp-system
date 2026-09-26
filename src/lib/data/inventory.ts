@@ -91,21 +91,19 @@ export async function getInventoryOptions() {
   return { materials: materials ?? [], locations, units: references.units };
 }
 
-export async function getInventoryBalances(params: { query?: string; locationId?: string; kind?: "all" | "warehouse" | "project_site"; lowStock?: boolean; defaultToFirstLocation?: boolean } = {}) {
+export async function getInventoryBalances(params: { query?: string; locationId?: string; kind?: "all" | "warehouse" | "project_site"; lowStock?: boolean; defaultToFirstLocation?: boolean; page?: number; pageSize?: number } = {}) {
   const supabase = await createClient();
-  const [materials, locations] = await Promise.all([getMaterials({ query: params.query, status: "active" }), getLocationViews()]);
-  const allowedLocations = params.kind && params.kind !== "all" ? locations.filter((item) => item.location_type === params.kind) : locations;
-  const selectedLocationId = params.locationId && allowedLocations.some((item) => item.id === params.locationId)
-    ? params.locationId
-    : params.defaultToFirstLocation ? allowedLocations[0]?.id ?? "" : params.locationId ?? "";
-  const materialIds = materials.map((item) => item.id); const locationIds = allowedLocations.map((item) => item.id);
-  if (!materialIds.length || !locationIds.length || (selectedLocationId && !locationIds.includes(selectedLocationId))) return { balances: [], materials, locations, selectedLocationId };
-  const request = supabase.from("inventory_balances").select("id,material_id,inventory_location_id,quantity_on_hand,reserved_quantity,available_quantity,updated_at").in("material_id", materialIds).in("inventory_location_id", selectedLocationId ? [selectedLocationId] : locationIds).order("updated_at", { ascending: false }).limit(1000);
-  const { data, error } = await request;
-  if (error) throw new Error("Unable to load inventory balances.");
-  const materialMap = new Map(materials.map((item) => [item.id, item])); const locationMap = new Map(locations.map((item) => [item.id, item]));
-  const balances = (data ?? []).map((item) => ({ ...item, material: materialMap.get(item.material_id), location: locationMap.get(item.inventory_location_id) })).filter((item) => !params.lowStock || item.available_quantity <= (item.material?.minimum_stock_level ?? 0));
-  return { balances, materials, locations, selectedLocationId };
+  const locations = await getLocationViews();
+  const allowed = params.kind && params.kind !== "all" ? locations.filter((l) => l.location_type === params.kind) : locations;
+  const selectedLocationId = params.locationId || (params.defaultToFirstLocation ? allowed[0]?.id ?? "" : "");
+  const page = Number.isSafeInteger(params.page) && params.page! > 0 ? params.page! : 1;
+  const pageSize = Math.min(500, Math.max(1, params.pageSize ?? 24));
+  if (selectedLocationId && !allowed.some((l) => l.id === selectedLocationId)) return { balances: [], materials: [], locations, selectedLocationId, count: 0 };
+  const { data, error } = await supabase.rpc("list_inventory_balances", { p_query: params.query ?? "", p_location_id: selectedLocationId || null, p_kind: params.kind ?? "all", p_low: params.lowStock ?? false, p_offset: (page - 1) * pageSize, p_limit: pageSize });
+  if (error) throw new Error("Unable to load inventory balances.", { cause: error });
+  const locationMap = new Map(locations.map((l) => [l.id, l]));
+  const balances = (data ?? []).map((item) => ({ ...item, material: item.material as MaterialView, location: locationMap.get(item.inventory_location_id) }));
+  return { balances, materials: balances.map((b) => b.material), locations, selectedLocationId, count: data?.[0]?.total_count ?? 0 };
 }
 
 export async function getInventoryTransactions(params: { type?: InventoryTransactionType | "all"; locationId?: string; page?: number } = {}) {
@@ -182,16 +180,14 @@ export async function getUnvaluedLegacyTransitQueue() {
 
 export async function getSiteConsumptionOptions() {
   const supabase = await createClient();
-  const [options, { data: balances, error }, { data: projects, error: projectError }] = await Promise.all([
+  const [options, { data: projects, error: projectError }] = await Promise.all([
     getInventoryOptions(),
-    supabase.from("inventory_balances").select("material_id,inventory_location_id,available_quantity").gt("available_quantity", 0).limit(1000),
     supabase.from("projects").select("id,code,name").eq("status", "active").is("archived_at", null).order("name").limit(500),
   ]);
-  if (error || projectError) throw new Error("Unable to load available site stock.");
+  if (projectError) throw new Error("Unable to load available site stock.");
   const projectIds = new Set((projects ?? []).map((item) => item.id));
   const sites = options.locations.filter((item) => item.location_type === "project_site" && item.projectId && projectIds.has(item.projectId));
-  const siteIds = new Set(sites.map((item) => item.id));
-  return { ...options, projects: projects ?? [], sites, balances: (balances ?? []).filter((item) => siteIds.has(item.inventory_location_id)) };
+  return { ...options, projects: projects ?? [], sites, balances: [] as { material_id: string; inventory_location_id: string; available_quantity: number }[] };
 }
 
 export async function getProjectMaterialCost(projectId: string) {

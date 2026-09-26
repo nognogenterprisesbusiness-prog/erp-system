@@ -180,3 +180,14 @@ export async function closeLaborRateAction(_: WorkforceActionState, form: FormDa
   revalidateWorkforce(value(form, "employeeId") || undefined);
   return { ok: true, message: "Labor rate closed." };
 }
+
+export async function setAttendanceBasisAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
+  try { await requireManager(); } catch { return failure("Only an Admin can configure attendance costing."); }
+  const id = uuidSchema.safeParse(value(form, "employeeId"));
+  const basis = value(form, "rateType");
+  if (!id.success || !["hourly", "daily"].includes(basis)) return failure("Choose an employee and costing basis.");
+  const { error } = await (await createClient()).rpc("set_employee_attendance_basis", { p_employee_id: id.data, p_rate_type: basis as "hourly" | "daily" });
+  if (error) return failure("Attendance costing basis could not be saved.");
+  revalidateWorkforce(id.data);
+  return { ok: true, message: "Attendance costing basis saved; historical costs are unchanged." };
+}

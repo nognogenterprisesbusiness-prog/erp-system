@@ -9,13 +9,13 @@ export async function getProjectProfitability(projectId: string) {
   return data[0];
 }
 
-export async function getProjectCostData(projectId: string, canManage: boolean) {
+export async function getProjectCostData(projectId: string, canManage: boolean, pages = { equipment: 1, expenses: 1, budgets: 1 }) {
   const supabase = await createClient();
   const [profitResult, equipmentResult, expensesResult, budgetsResult, assetResult] = await Promise.all([
     supabase.rpc("get_project_profitability", { p_project_id: projectId }),
-    supabase.from("project_equipment_usage").select("id,asset_code,asset_name,asset_id,project_id,use_date,hours_used,hourly_rate_snapshot,cost_total,work_note").eq("project_id", projectId).order("use_date", { ascending: false }).limit(50),
-    supabase.from("project_additional_expenses").select("id,project_id,expense_date,category,description,external_reference,amount").eq("project_id", projectId).order("expense_date", { ascending: false }).limit(50),
-    supabase.from("project_budget_changes").select("id,project_id,change_amount,reason,approved_at").eq("project_id", projectId).order("approved_at", { ascending: false }).limit(50),
+    supabase.from("project_equipment_usage").select("id,asset_code,asset_name,asset_id,project_id,use_date,hours_used,hourly_rate_snapshot,cost_total,work_note", { count: "exact" }).eq("project_id", projectId).order("use_date", { ascending: false }).order("id").range((pages.equipment - 1) * 20, pages.equipment * 20 - 1),
+    supabase.from("project_additional_expenses").select("id,project_id,expense_date,category,description,external_reference,amount", { count: "exact" }).eq("project_id", projectId).order("expense_date", { ascending: false }).order("id").range((pages.expenses - 1) * 20, pages.expenses * 20 - 1),
+    supabase.from("project_budget_changes").select("id,project_id,change_amount,reason,approved_at", { count: "exact" }).eq("project_id", projectId).order("approved_at", { ascending: false }).order("id").range((pages.budgets - 1) * 20, pages.budgets * 20 - 1),
     canManage ? supabase.from("assets").select("id,code,name,current_location_id").eq("asset_kind", "equipment").is("archived_at", null).in("status", ["available", "assigned", "in_use"]).limit(500) : Promise.resolve({ data: [], error: null }),
   ]);
   if (profitResult.error || equipmentResult.error || expensesResult.error || budgetsResult.error || assetResult.error || !profitResult.data?.[0])
@@ -57,6 +57,7 @@ export async function getProjectCostData(projectId: string, canManage: boolean) 
   const latestRates = new Map<string, { hourly_rate: number; effective_start_date: string; effective_end_date: string | null }>();
   for (const rate of ratesResult.data ?? []) if (!latestRates.has(rate.asset_id)) latestRates.set(rate.asset_id, rate);
   return {
+    counts: { equipment: equipmentResult.count ?? 0, expenses: expensesResult.count ?? 0, budgets: budgetsResult.count ?? 0 },
     profitability: profitResult.data[0],
     equipment: equipment.map((row) => ({ ...row, reversal: equipmentReversalMap.get(row.id) })),
     expenses: expenses.map((row) => ({ ...row, reversal: expenseReversalMap.get(row.id) })),

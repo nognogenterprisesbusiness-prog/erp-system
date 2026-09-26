@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import {
   addLaborRateAction,
+  setAttendanceBasisAction,
   archiveEmployeeAction,
   assignEmployeeAction,
   closeLaborRateAction,
@@ -77,7 +78,7 @@ export function TransferAssignmentForm({ assignment, projects, sites }: {
 
 export function LaborRateForm({ employeeId }: { employeeId: string }) {
   const [state, action, pending] = useActionState(addLaborRateAction, initialState);
-  return <form action={action} className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2 xl:grid-cols-5">
+  return <><AttendanceBasisForm employeeId={employeeId} /><form action={action} className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2 xl:grid-cols-5">
     <input type="hidden" name="employeeId" value={employeeId} />
     <select className={fieldControlClass} name="rateType" aria-label="Rate type" defaultValue="daily"><option value="daily">Daily</option><option value="hourly">Hourly</option></select>
     <PesoAmountInput name="amount" label="Rate amount (PHP)" required submitUngrouped />
@@ -85,7 +86,12 @@ export function LaborRateForm({ employeeId }: { employeeId: string }) {
     <input className={fieldControlClass} name="effectiveEndDate" aria-label="Effective end date" type="date" />
     <Button type="submit" disabled={pending}>{pending ? "Adding…" : "Add rate"}</Button>
     <div className="sm:col-span-2 xl:col-span-5"><FormMessage state={state} /></div>
-  </form>;
+  </form></>;
+}
+
+function AttendanceBasisForm({ employeeId }: { employeeId: string }) {
+  const [state, action, pending] = useActionState(setAttendanceBasisAction, initialState);
+  return <form action={action} className="mb-3 flex flex-wrap items-center gap-3 rounded-lg bg-slate-50 p-4"><input type="hidden" name="employeeId" value={employeeId} /><label className="text-sm">Attendance costing basis <select name="rateType" className={fieldControlClass} defaultValue="" required><option value="" disabled>Choose basis</option><option value="daily">Daily</option><option value="hourly">Hourly</option></select></label><Button disabled={pending}>Save basis</Button><FormMessage state={state} /></form>;
 }
 
 export function CloseLaborRateForm({ employeeId, rate }: { employeeId: string; rate: LaborRateRow }) {

@@ -9,20 +9,28 @@ import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
-import { requireFinanceViewer } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
+import { ForemanProjectAttendance } from "@/components/workforce/foreman-project-attendance";
+import { pageNumber } from "@/lib/data/pagination";
+import { HistoryPagination } from "@/components/ui/history-pagination";
 import { getProjectAttendance } from "@/lib/data/project-attendance";
 import { createClient } from "@/lib/supabase/server";
 
 const money = (amount: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(amount);
 
-export default async function ProjectAttendancePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ posted?: string }> }) {
-  const user = await requireFinanceViewer();
+export default async function ProjectAttendancePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ posted?: string; page?: string }> }) {
+  const user = await requireUser();
   const id = (await params).id;
   if (!uuidSchema.safeParse(id).success) notFound();
+  const page = pageNumber((await searchParams).page);
+  if (!user.canManage) {
+    if (!user.roles.includes("foreman")) notFound();
+    return <ForemanProjectAttendance projectId={id} page={page} />;
+  }
   const supabase = await createClient();
   const [summaryResult, data] = await Promise.all([
     supabase.rpc("get_project_management_summary", { p_project_id: id }),
-    getProjectAttendance(id, user.canManage),
+    getProjectAttendance(id, user.canManage, page),
   ]);
   if (summaryResult.error || !summaryResult.data?.[0]) throw new Error("Unable to load project attendance summary.");
   const summary = summaryResult.data[0];
@@ -37,5 +45,6 @@ export default async function ProjectAttendancePage({ params, searchParams }: { 
     <DataTableShell empty={data.entries.length === 0 ? <EmptyState compact title="No attendance posted" /> : undefined} footer={<span className="text-xs text-slate-500">Showing {data.entries.length} most recent entries</span>}>
       <table className="w-full min-w-[730px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Employee</th><th className="px-4 py-3">Date</th><th className="px-4 py-3">Status / hours</th><th className="px-4 py-3 text-right">Cost</th><th className="px-5 py-3">Correction</th></tr></thead><tbody className="divide-y divide-slate-100">{data.entries.map((entry) => <tr key={entry.id}><td className="px-5 py-4"><p className="font-medium text-slate-900">{entry.employee?.code ?? "Employee"} · {entry.employee?.first_name} {entry.employee?.last_name}</p><p className="mt-1 text-xs text-slate-500">{entry.note}</p></td><td className="px-4 py-4">{entry.work_date}</td><td className="px-4 py-4 capitalize">{entry.attendance_status} · {entry.hours_worked} h{entry.rate_type === "daily" && <span className="block text-xs text-slate-500">{entry.billable_units} paid day</span>}</td><td className="px-4 py-4 text-right font-medium">{entry.reversal ? "—" : money(entry.cost_total)}</td><td className="px-5 py-4">{entry.reversal ? <span className="text-xs text-slate-500">Reversed · {entry.reversal.reason}</span> : user.canManage ? <details className="max-w-xs"><summary className="cursor-pointer text-xs font-medium text-cyan-700">Correct</summary><div className="mt-3"><ReverseAttendanceForm projectId={id} attendanceId={entry.id} idempotencyKey={randomUUID()} /></div></details> : <span className="text-xs text-emerald-700">Posted</span>}</td></tr>)}</tbody></table>
     </DataTableShell>
+    <HistoryPagination path={`/projects/${id}/attendance`} page={page} count={data.count} />
   </>;
 }

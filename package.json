@@ -6,6 +6,10 @@
     "packages/*"
   ],
   "scripts": {
+    "test:migrations": "node scripts/check-migration-versions.mjs",
+    "test:erp-gaps": "tsx --test packages/domain/src/attendance.test.ts src/lib/data/pagination.test.ts",
+    "test:automatic-attendance": "node scripts/test-automatic-attendance.mjs",
+    "test:inventory-pagination": "node scripts/test-inventory-pagination.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

@@ -94,26 +94,26 @@ export async function getAssets(params: { id?: string; kind: AssetKind; query?: 
   return (assets ?? []).map((asset): AssetView => ({ ...asset, categoryName: categoryMap.get(asset.category_id) ?? "Unavailable classification", location: locationMap.get(asset.current_location_id), equipment: equipmentMap.get(asset.id), vehicle: vehicleMap.get(asset.id) }));
 }
 
-export async function getAsset(id: string, expectedKind: AssetKind) {
+export async function getAsset(id: string, expectedKind: AssetKind, eventPage = 1) {
   if (!uuidSchema.safeParse(id).success) notFound();
   const assets = await getAssets({ id, kind: expectedKind, includeArchived: true });
   const asset = assets[0];
   if (!asset) notFound();
   const supabase = await createClient();
-  const { data: events, error } = await supabase.from("asset_events").select("id,asset_id,event_type,previous_status,current_status,previous_location_id,current_location_id,summary,details,actor_id,occurred_at").eq("asset_id", id).order("occurred_at", { ascending: false }).limit(100);
+  const { data: events, count, error } = await supabase.from("asset_events").select("id,asset_id,event_type,previous_status,current_status,previous_location_id,current_location_id,summary,details,actor_id,occurred_at", { count: "exact" }).eq("asset_id", id).order("occurred_at", { ascending: false }).order("id").range((eventPage - 1) * 20, eventPage * 20 - 1);
   if (error) throw new Error("Unable to load asset history.");
   const actorIds = [...new Set((events ?? []).map((event) => event.actor_id))];
   const { data: actors } = actorIds.length ? await supabase.from("profiles").select("id,full_name").in("id", actorIds) : { data: [] };
   const actorMap = new Map((actors ?? []).map((actor) => [actor.id, actor.full_name]));
   const locationMap = new Map((await getAssetLocations(true)).map((location) => [location.id, location]));
-  return { asset, events: (events ?? []).map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user", previousLocation: event.previous_location_id ? locationMap.get(event.previous_location_id) : undefined, currentLocation: event.current_location_id ? locationMap.get(event.current_location_id) : undefined })) };
+  return { asset, eventCount: count ?? 0, eventPage, events: (events ?? []).map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user", previousLocation: event.previous_location_id ? locationMap.get(event.previous_location_id) : undefined, currentLocation: event.current_location_id ? locationMap.get(event.current_location_id) : undefined })) };
 }
 
-export async function getEquipmentUsage(assetId: string) {
+export async function getEquipmentUsage(assetId: string, page = 1) {
   const supabase = await createClient();
   const { data: entries, count, error } = await supabase.from("project_equipment_usage")
     .select("id,project_id,use_date,hours_used,hourly_rate_snapshot,cost_total,work_note", { count: "exact" })
-    .eq("asset_id", assetId).order("use_date", { ascending: false }).limit(50);
+    .eq("asset_id", assetId).order("use_date", { ascending: false }).order("id").range((page - 1) * 20, page * 20 - 1);
   if (error) throw new Error("Unable to load equipment usage history.");
   const usageIds = (entries ?? []).map((entry) => entry.id);
   const projectIds = [...new Set((entries ?? []).map((entry) => entry.project_id))];
@@ -124,7 +124,7 @@ export async function getEquipmentUsage(assetId: string) {
   if (reversals.error || projects.error) throw new Error("Unable to resolve equipment usage history.");
   const reversed = new Map((reversals.data ?? []).map((row) => [row.usage_id, row]));
   const projectNames = new Map((projects.data ?? []).map((row) => [row.id, `${row.code} · ${row.name}`]));
-  return { rows: (entries ?? []).map((entry) => ({ ...entry, projectName: projectNames.get(entry.project_id) ?? "Project", reversal: reversed.get(entry.id) })), count: count ?? 0 };
+  return { page, rows: (entries ?? []).map((entry) => ({ ...entry, projectName: projectNames.get(entry.project_id) ?? "Project", reversal: reversed.get(entry.id) })), count: count ?? 0 };
 }
 
 export type AssetCategory = AssetCategoryRow;

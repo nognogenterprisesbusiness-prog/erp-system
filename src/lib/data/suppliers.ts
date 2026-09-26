@@ -73,7 +73,7 @@ export async function getSuppliers(params: { query?: string; categoryId?: string
   };
 }
 
-export async function getSupplier(id: string) {
+export async function getSupplier(id: string, pages = { events: 1, purchases: 1, prices: 1 }) {
   if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
   const { data: supplier, error } = await supabase.from("suppliers").select("*").eq("id", id).maybeSingle();
@@ -82,8 +82,8 @@ export async function getSupplier(id: string) {
   const [categoryResult, catalogResult, eventResult, purchaseResult, references] = await Promise.all([
     supabase.from("supplier_categories").select("*").eq("id", supplier.category_id).single(),
     supabase.from("supplier_materials").select("*").eq("supplier_id", id).order("updated_at", { ascending: false }),
-    supabase.from("supplier_events").select("*").eq("supplier_id", id).order("occurred_at", { ascending: false }).limit(100),
-    supabase.from("purchase_orders").select("id,po_number,warehouse_name,ordered_on,expected_on,status", { count: "exact" }).eq("supplier_id", id).order("ordered_on", { ascending: false }).limit(25),
+    supabase.from("supplier_events").select("*", { count: "exact" }).eq("supplier_id", id).order("occurred_at", { ascending: false }).order("id").range((pages.events - 1) * 20, pages.events * 20 - 1),
+    supabase.from("purchase_orders").select("id,po_number,warehouse_name,ordered_on,expected_on,status", { count: "exact" }).eq("supplier_id", id).order("ordered_on", { ascending: false }).order("id").range((pages.purchases - 1) * 20, pages.purchases * 20 - 1),
     getSupplierReferences(),
   ]);
   if (categoryResult.error || catalogResult.error || eventResult.error || purchaseResult.error) throw new Error("Unable to load the supplier record.");
@@ -95,11 +95,13 @@ export async function getSupplier(id: string) {
   const receiptCounts = new Map<string, number>();
   for (const receipt of receiptResult.data ?? []) receiptCounts.set(receipt.purchase_order_id, (receiptCounts.get(receipt.purchase_order_id) ?? 0) + 1);
   const catalog = catalogResult.data ?? [];
-  const catalogIds = catalog.map((item) => item.id);
-  const { data: prices, error: priceError } = catalogIds.length
-    ? await supabase.from("supplier_prices").select("*").in("supplier_material_id", catalogIds).order("effective_start_date", { ascending: false }).limit(1000)
-    : { data: [], error: null };
-  if (priceError) throw new Error("Unable to load supplier price history.");
+  const [summaryPrices, historyPrices] = await Promise.all([
+    supabase.rpc("list_supplier_summary_prices", { p_supplier_id: id, p_as_of: todayInManila() }),
+    supabase.rpc("list_supplier_price_history", { p_supplier_id: id, p_offset: (pages.prices - 1) * 20, p_limit: 20 }),
+  ]);
+  if (summaryPrices.error || historyPrices.error) throw new Error("Unable to load supplier price history.");
+  const history = (historyPrices.data ?? []).map((p) => p.record as SupplierPriceRow);
+  const prices = [...(summaryPrices.data ?? []), ...history];
   const actorIds = [...new Set([...(eventResult.data ?? []).map((event) => event.actor_id), ...(prices ?? []).map((price) => price.recorded_by)])];
   const { data: actors } = actorIds.length ? await supabase.from("profiles").select("id,full_name").in("id", actorIds) : { data: [] };
   const actorMap = new Map((actors ?? []).map((actor) => [actor.id, actor.full_name]));
@@ -108,13 +110,14 @@ export async function getSupplier(id: string) {
   const pricesByCatalog = new Map<string, SupplierPriceRow[]>();
   for (const price of prices ?? []) pricesByCatalog.set(price.supplier_material_id, [...(pricesByCatalog.get(price.supplier_material_id) ?? []), price]);
   return {
+    historyCounts: { events: eventResult.count ?? 0, prices: historyPrices.data?.[0]?.total_count ?? 0 },
     supplier,
     category: categoryResult.data,
     catalog: catalog.map((item) => ({
       ...item,
       material: materialMap.get(item.material_id),
       unit: unitMap.get(item.unit_of_measure_id),
-      prices: resolvePrices(pricesByCatalog.get(item.id) ?? []),
+      prices: { ...resolvePrices(pricesByCatalog.get(item.id) ?? []), history: history.filter((price) => price.supplier_material_id === item.id) },
     })),
     events: (eventResult.data ?? []).map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user" })),
     priceActors: actorMap,

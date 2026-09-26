@@ -208,6 +208,18 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      search_site_material_choices: { Args: { p_location_id: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; label: string; unit_id: string; available_quantity: number; total_count: number }[] };
+      search_material_choices: { Args: { p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; label: string; unit_id: string; total_count: number }[] };
+      search_attendance_assignment_choices: { Args: { p_project_id: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; label: string; unit_id: string | null; total_count: number }[] };
+      list_supplier_price_history: { Args: { p_supplier_id: string; p_offset?: number; p_limit?: number }; Returns: { record: Json; total_count: number }[] };
+      list_supplier_summary_prices: { Args: { p_supplier_id: string; p_as_of: string }; Returns: SupplierPriceRow[] };
+      attach_daily_report_resource: { Args: { p_report_id: string; p_kind: string; p_resource_id: string }; Returns: undefined };
+      detach_daily_report_resource: { Args: { p_report_id: string; p_kind: string; p_resource_id: string }; Returns: undefined };
+      list_daily_report_resources: { Args: { p_report_id: string; p_linked?: boolean; p_offset?: number; p_limit?: number }; Returns: { resource_id: string; kind: string; label: string; quantity: number; unit: string; reversed: boolean; site_known: boolean; cost: number | null; total_count: number }[] };
+      list_inventory_balances: { Args: { p_query?: string; p_location_id?: string | null; p_kind?: string; p_low?: boolean; p_offset?: number; p_limit?: number }; Returns: { id: string; material_id: string; inventory_location_id: string; quantity_on_hand: number; reserved_quantity: number; available_quantity: number; updated_at: string; material: Json; total_count: number }[] };
+      set_employee_attendance_basis: { Args: { p_employee_id: string; p_rate_type: LaborRateType }; Returns: undefined };
+      get_attendance_rate_basis: { Args: { p_employee_id: string; p_work_date: string }; Returns: LaborRateType };
+      get_project_attendance_operations: { Args: { p_project_id: string; p_offset?: number; p_limit?: number }; Returns: { id: string; employee_id: string; assignment_id: string; project_id: string; project_site_id: string; work_date: string; attendance_status: string; hours_worked: number; note: string; created_at: string; reversed: boolean; total_count: number }[] };
       assign_initial_user_role: { Args: { p_user_id: string; p_role: AppRole }; Returns: undefined };
       set_managed_user_active: { Args: { p_user_id: string; p_is_active: boolean }; Returns: undefined };
       archive_project: { Args: { p_project_id: string }; Returns: ProjectRow };

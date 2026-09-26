@@ -9,12 +9,16 @@ export async function getProjectMaterialPlan(projectId: string) {
 }
 
 export async function getProjectProgress(projectId: string) {
+  return (await getProjectProgressPage(projectId)).entries;
+}
+
+export async function getProjectProgressPage(projectId: string, page = 1) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("project_progress_entries").select("*")
+  const { data, count, error } = await supabase.from("project_progress_entries").select("*", { count: "exact" })
     .eq("project_id", projectId).order("progress_date", { ascending: false })
-    .order("recorded_at", { ascending: false }).limit(100);
+    .order("recorded_at", { ascending: false }).order("id").range((page - 1) * 20, page * 20 - 1);
   if (error) throw new Error("Unable to load project progress.");
-  return data ?? [];
+  return { entries: data ?? [], count: count ?? 0 };
 }
 
 export async function getReportProgress(reportId: string) {
