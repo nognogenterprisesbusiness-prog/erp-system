@@ -18,7 +18,7 @@ export async function saveRecordPhoto(kind: RecordPhotoKind, id: string, bytes: 
   const { error: uploadError } = await supabase.storage.from("erp-record-photos").upload(path, bytes, { contentType: "image/webp", upsert: true, cacheControl: "0" });
   if (uploadError) {
     console.error(`Photo upload failed for ${kind}:`, uploadError);
-    throw new Error("The record was saved, but its photo could not be uploaded. Please retry the photo.");
+    throw new Error(`Photo storage rejected the upload (${uploadError.statusCode ?? "unknown status"}: ${uploadError.message}).`);
   }
   if (kind === "projects" || kind === "warehouses") {
     const result = kind === "projects"
@@ -26,7 +26,7 @@ export async function saveRecordPhoto(kind: RecordPhotoKind, id: string, bytes: 
       : await supabase.from("warehouses").update({ photo_path: path }).eq("id", id).select("id").single();
     if (result.error || !result.data) {
       console.error(`Photo attachment failed for ${kind}:`, result.error);
-      throw new Error("The record was saved, but its photo could not be attached. Please retry the photo.");
+      throw new Error(`Photo uploaded, but could not be attached to the record (${result.error?.message ?? "no matching record"}).`);
     }
     return;
   }
