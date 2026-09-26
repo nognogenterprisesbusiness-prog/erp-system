@@ -3,6 +3,7 @@ import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Download04Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InventoryLocationPicker } from "@/components/inventory/inventory-location-picker";
+import { RecordListView } from "@/components/ui/record-list-view";
 import { InventoryBalanceCard } from "@/components/inventory/inventory-balance-card";
 import { MaterialForm } from "@/components/materials/material-form";
 import { InventoryMovementForm } from "@/components/inventory/inventory-movement-form";
@@ -56,6 +57,12 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       <label className="flex h-10 items-center gap-2 px-2 text-xs font-medium text-slate-600"><input type="checkbox" name="low" value="true" defaultChecked={lowStock} />Low stock</label>
       <Link href="/materials" className="text-sm font-medium text-slate-600 hover:text-cyan-700">All materials</Link>
     </ListFilterBar>
+    <RecordListView storageKey="inventory" title="Inventory" columns={["Material", "Stock location", "On hand", "Reserved", "Available", "Minimum"]} rows={data.balances.map((item) => ({ id: item.id, cells: [
+      <Link key="material" href={`/materials/${item.material_id}`} className="font-semibold hover:text-cyan-700">{item.material?.code} · {item.material?.name ?? "Unavailable material"}</Link>,
+      item.location?.name ?? "Unavailable location",
+      ...[item.quantity_on_hand, item.reserved_quantity, item.available_quantity, item.material?.minimum_stock_level ?? 0].map((value) => `${Number(value).toLocaleString("en-PH", { maximumFractionDigits: 4 })} ${item.material?.unitSymbol ?? ""}`),
+    ] }))}>
     {data.balances.length === 0 ? <section className="mt-5 rounded-xl border border-slate-200 bg-white"><EmptyState title="No inventory records found" description="Post stock in or change the current filters." /></section> : <section className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3" aria-label="Material stock balances">{data.balances.map((item) => <InventoryBalanceCard key={item.id} name={item.material?.name ?? "Unavailable material"} sku={item.material?.code ?? "—"} photo={item.material?.photo_path ? recordPhotoUrl("materials", item.material_id) : undefined} unit={item.material?.unitSymbol ?? ""} location={item.location?.name ?? "Unavailable location"} locationDetail={item.location?.detail} onHand={item.quantity_on_hand} reserved={item.reserved_quantity} available={item.available_quantity} minimum={item.material?.minimum_stock_level} href={`/materials/${item.material_id}`} />)}</section>}
+    </RecordListView>
   </>;
 }

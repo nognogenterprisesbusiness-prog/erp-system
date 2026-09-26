@@ -2,6 +2,7 @@ import { IntentLink as Link } from "@/components/layout/intent-link";
 import { SearchField } from "@/components/ui/search-field";
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { ProjectListPickers } from "@/components/projects/project-list-pickers";
+import { RecordListView } from "@/components/ui/record-list-view";
 import { ProjectSummaryCard } from "@/components/projects/project-summary-card";
 import { ProjectForm } from "@/components/projects/project-form";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
@@ -52,12 +53,18 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       {direction !== "desc" && <input type="hidden" name="direction" value={direction} />}
       <div className="w-full sm:w-auto"><ProjectListPickers query={query} status={status} sort={sort} direction={direction} /></div>
     </ListFilterBar>
+    <RecordListView storageKey="projects" title="Projects" columns={["Project", "Client", "Location", "Status", ...(user.canViewDailyReports ? ["Progress"] : []), "Timeline", ...(user.canViewLaborRates ? ["Initial budget"] : [])]} rows={data.projects.map((project) => ({ id: project.id, cells: [
+      <Link key="project" href={`/projects/${project.id}`} className="font-semibold hover:text-cyan-700">{project.code} · {project.name}</Link>, project.client_name, project.city_province, labels[project.status],
+      ...(user.canViewDailyReports ? [`${project.progress ?? 0}%`] : []), `${date(project.start_date)} – ${date(project.target_completion_date)}`,
+      ...(user.canViewLaborRates ? [money.format(project.initial_budget)] : []),
+    ] }))}>
     {data.projects.length === 0 ? <div className="mt-5 rounded-2xl border border-slate-200 bg-white"><EmptyState kind={query || status !== "all" ? "results" : "items"} title={query || status !== "all" ? "No matching projects" : "No projects yet"} description={query || status !== "all" ? "Try changing the search or status." : "Create a project to start tracking work."} /></div> : <section aria-label="Project list" className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.projects.map((project) => <ProjectSummaryCard key={project.id} href={`/projects/${project.id}`} code={project.code} name={project.name} location={project.city_province.split(",")[0]} photo={project.photo_path ? recordPhotoUrl("projects", project.id, project.updated_at) : null} progress={project.progress} showProgress={user.canViewDailyReports} status={labels[project.status]} statusTone={tones[project.status]} details={[
       { label: "Client", value: project.client_name },
       { label: "Assigned staff", value: project.assignedPersonnel.join(", ") || "Unassigned" },
       { label: "Timeline", value: `${date(project.start_date)} – ${date(project.target_completion_date)}` },
       ...(user.canViewLaborRates ? [{ label: "Initial budget", value: money.format(project.initial_budget) }] : []),
     ]} />)}</section>}
+    </RecordListView>
     <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500"><span>{data.count} project{data.count === 1 ? "" : "s"}</span><div className="flex gap-2">{data.page > 1 && <Button variant="outline" size="sm" asChild><Link href={href({ page: data.page - 1 })}>Previous</Link></Button>}{data.page < data.pageCount && <Button variant="outline" size="sm" asChild><Link href={href({ page: data.page + 1 })}>Next</Link></Button>}</div></div>
   </>;
 }

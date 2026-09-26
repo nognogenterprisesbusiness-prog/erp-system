@@ -16,6 +16,7 @@
     "test:media": "tsx --test src/lib/media/webp.test.ts src/lib/media/verify-record-photo.test.ts",
     "test:security": "tsx --test src/lib/data/search.test.ts",
     "test:navigation": "tsx --test src/lib/realtime/navigation-cache.test.ts",
+    "test:list-views": "tsx --test src/components/ui/record-list-view.test.ts",
     "supabase:start": "npx supabase start",
     "supabase:stop": "npx supabase stop",
     "supabase:reset": "npx supabase db reset",
