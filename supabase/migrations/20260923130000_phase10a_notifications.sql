@@ -27,7 +27,7 @@ create table public.notification_outbox (
   type_code text not null references public.notification_types(code) on delete restrict,
   title text not null check (char_length(trim(title)) between 3 and 160),
   message text not null check (char_length(trim(message)) between 3 and 500),
-  entity_type text not null check (entity_type in ('material', 'material_request', 'equipment', 'vehicle', 'warehouse', 'project', 'project_site', 'daily_report', 'inventory_transaction', 'supplier', 'qr_code', 'system')),
+  entity_type text not null check (entity_type in ('material','material_request','equipment','vehicle','warehouse','project','project_site','daily_report','inventory_transaction','supplier','qr_code','system')),
   entity_id uuid,
   project_id uuid references public.projects(id) on delete restrict,
   warehouse_id uuid references public.warehouses(id) on delete restrict,
@@ -45,7 +45,7 @@ create table public.notification_outbox (
   constraint notification_recipient_required check (cardinality(recipient_roles) > 0 or cardinality(recipient_user_ids) > 0),
   constraint notification_expiry_after_creation check (expires_at is null or expires_at > created_at)
 );
-create index notification_outbox_due_idx on public.notification_outbox (next_attempt_at, created_at) where status in ('pending', 'retry');
+create index notification_outbox_due_idx on public.notification_outbox (next_attempt_at, created_at) where status in ('pending','retry');
 create index notification_outbox_failed_idx on public.notification_outbox (created_at desc) where status = 'failed';
 
 create table public.notifications (
@@ -82,8 +82,8 @@ returns boolean language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.profiles where id = auth.uid() and is_active)
     and (p_project_id is null or private.can_access_project(p_project_id))
     and (p_warehouse_id is null or private.can_access_warehouse(p_warehouse_id))
-    and (p_type_code not in ('FINANCIAL', 'LABOR', 'ATTENDANCE')
-      or private.has_any_role(array['super_admin', 'owner', 'admin', 'accounting']::public.app_role[]))
+    and (p_type_code not in ('FINANCIAL','LABOR','ATTENDANCE')
+      or private.has_any_role(array['admin']::public.app_role[]))
 $$;
 
 create or replace function private.enqueue_notification_event(
@@ -126,7 +126,7 @@ begin
   if p_limit is null or p_limit not between 1 and 500 then raise exception 'invalid batch size' using errcode = '22023'; end if;
   for v_event in
     select * from public.notification_outbox
-    where status in ('pending', 'retry') and next_attempt_at <= now()
+    where status in ('pending','retry') and next_attempt_at <= now()
     order by next_attempt_at, created_at limit p_limit for update skip locked
   loop
     begin
@@ -140,17 +140,17 @@ begin
             select 1 from public.user_roles ur where ur.user_id = p.id and ur.role = any(v_event.recipient_roles)
           ))
           and (v_event.project_id is null or exists (
-            select 1 from public.user_roles ur where ur.user_id = p.id and ur.role in ('super_admin', 'owner', 'admin')
+            select 1 from public.user_roles ur where ur.user_id = p.id and ur.role in ('admin')
           ) or exists (
             select 1 from public.project_assignments pa where pa.project_id = v_event.project_id and pa.user_id = p.id and pa.status = 'active'
           ))
           and (v_event.warehouse_id is null or exists (
-            select 1 from public.user_roles ur where ur.user_id = p.id and ur.role in ('super_admin', 'owner', 'admin')
+            select 1 from public.user_roles ur where ur.user_id = p.id and ur.role in ('admin')
           ) or exists (
             select 1 from public.warehouse_assignments wa where wa.warehouse_id = v_event.warehouse_id and wa.user_id = p.id and wa.status = 'active'
           ))
-          and (v_event.type_code not in ('FINANCIAL', 'LABOR', 'ATTENDANCE') or exists (
-            select 1 from public.user_roles ur where ur.user_id = p.id and ur.role in ('super_admin', 'owner', 'admin', 'accounting')
+          and (v_event.type_code not in ('FINANCIAL','LABOR','ATTENDANCE') or exists (
+            select 1 from public.user_roles ur where ur.user_id = p.id and ur.role in ('admin')
           ))
       )
       insert into public.notifications (event_id, recipient_id, type_code, title, message, entity_type, entity_id, project_id, warehouse_id, priority, expires_at)

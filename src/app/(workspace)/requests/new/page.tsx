@@ -7,7 +7,7 @@ import { getMaterialRequestChoices } from "@/lib/data/material-requests";
 
 export default async function NewMaterialRequestPage({ searchParams }: { searchParams: Promise<{ material?: string; project?: string; site?: string; warehouse?: string; quantity?: string; date?: string }> }) {
   const user = await requireUser();
-  if (user.canManage || !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role))) redirect("/requests");
+  if (user.canManage || !user.roles.some((role) => ["engineer", "foreman"].includes(role))) redirect("/requests");
   const choices = await getMaterialRequestChoices();
   const query = await searchParams;
   const requestedMaterial = uuidSchema.safeParse(query.material);

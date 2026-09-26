@@ -17,7 +17,7 @@ alter table public.inventory_legacy_transit_values enable row level security;
 revoke all on public.inventory_legacy_transit_values from public, anon, authenticated;
 grant select on public.inventory_legacy_transit_values to authenticated;
 create policy inventory_legacy_transit_admin_read on public.inventory_legacy_transit_values for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 
 create function public.get_unvalued_legacy_transit_queue()
 returns table(transfer_item_id uuid, transfer_number text, material_code text, material_name text,

@@ -7,7 +7,7 @@ declare
   v_status public.daily_report_status;
   v_event public.daily_report_event_type;
 begin
-  if v_actor is null or p_report_id is null or p_action is null or p_action not in ('approve', 'return') then
+  if v_actor is null or p_report_id is null or p_action is null or p_action not in ('approve','return') then
     raise exception 'invalid report review action' using errcode = '22023';
   end if;
   if char_length(coalesce(v_note, '')) > 500 or (p_action = 'return' and char_length(coalesce(v_note, '')) < 3) then
@@ -19,12 +19,12 @@ begin
     select 1 from public.profiles where id = v_actor and is_active and not onboarding_required
   ) or not (
     private.can_manage_projects() or (
-      private.has_any_role(array['project_manager']::public.app_role[]) and exists (
+      private.has_any_role(array['engineer']::public.app_role[]) and exists (
         select 1 from public.project_assignments a where a.project_id = v_report.project_id
-          and a.user_id = v_actor and a.status = 'active' and a.assignment_role = 'project_manager'
+          and a.user_id = v_actor and a.status = 'active' and a.assignment_role = 'engineer'
       )
     )
-  ) then raise exception 'independent project manager review required' using errcode = '42501'; end if;
+  ) then raise exception 'independent assigned engineer or admin review required' using errcode = '42501'; end if;
   if v_report.status <> 'submitted' then raise exception 'only submitted reports can be reviewed' using errcode = '55000'; end if;
   if p_action = 'approve' then
     v_status := 'approved'; v_event := 'approved';
@@ -80,7 +80,7 @@ begin
     'daily-report-submitted-' || new.report_id || '-' || new.revision, 'DAILY_REPORT',
     'Daily report awaiting review', 'A project daily report is ready for review.',
     'daily_report', new.report_id, v_report.project_id, null, 'normal',
-    array['super_admin','owner','admin','project_manager']::public.app_role[], '{}'::uuid[], null
+    array['admin','engineer']::public.app_role[], '{}'::uuid[], null
   );
   return new;
 end; $$;

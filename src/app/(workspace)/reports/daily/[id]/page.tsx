@@ -32,17 +32,17 @@ export default async function DailyReportDetailPage({ params }: { params: Promis
   const canEdit = report.status === "draft" && user.userId === report.prepared_by;
   const canCorrect = report.status === "requires_revision" && user.userId === report.prepared_by;
   let canReview = report.status === "submitted" && user.userId !== report.prepared_by && user.canManage;
-  if (!canReview && report.status === "submitted" && user.userId !== report.prepared_by && user.roles.includes("project_manager")) {
+  if (!canReview && report.status === "submitted" && user.userId !== report.prepared_by && user.roles.includes("engineer")) {
     const supabase = await createClient();
     const { data: assignments, error } = await supabase.from("project_assignments").select("id")
       .eq("project_id", report.project_id).eq("user_id", user.userId)
-      .eq("assignment_role", "project_manager").eq("status", "active").limit(1);
+      .eq("assignment_role", "engineer").eq("status", "active").limit(1);
     if (error) throw new Error("Unable to verify report review access.");
     canReview = Boolean(assignments?.length);
   }
   const canRecordProgress = report.status === "approved" && !progress && (user.canManage ||
-    (user.roles.includes("project_manager") && Boolean((await (await createClient()).from("project_assignments").select("id")
-      .eq("project_id", report.project_id).eq("user_id", user.userId).eq("assignment_role", "project_manager")
+    (user.roles.includes("engineer") && Boolean((await (await createClient()).from("project_assignments").select("id")
+      .eq("project_id", report.project_id).eq("user_id", user.userId).eq("assignment_role", "engineer")
       .eq("status", "active").limit(1)).data?.length)));
   return <>
     <PageHeader eyebrow={report.report_number} title="Daily construction report" description={`${project.code} · ${project.name} · ${site.name}`}

@@ -1,9 +1,9 @@
-import { configuredAppMode, demoIsEnabled } from "@/lib/app-mode";
 import { safeSearchTerm } from "@/lib/data/search";
-import { locationKinds, searchDemoLocations, type LocationKind } from "@/lib/locations/search";
 import { createClient } from "@/lib/supabase/server";
 
 const codePattern = /^\d{10}$/;
+const locationKinds = ["regions", "provinces", "municipalities", "barangays"] as const;
+type LocationKind = (typeof locationKinds)[number];
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
@@ -14,12 +14,6 @@ export async function GET(request: Request) {
   const query = safeSearchTerm(params.get("q") ?? "").toLocaleLowerCase();
   const parent = params.get("parent") ?? "";
   if (parent && !codePattern.test(parent)) return Response.json({ error: "Invalid parent code." }, { status: 400 });
-  const isDemo = configuredAppMode() === "local-demo" || params.get("demo") === "1" && demoIsEnabled();
-
-  if (isDemo) {
-    return Response.json(searchDemoLocations(kind as LocationKind, query, parent, page, pageSize));
-  }
-
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
   if (!auth?.claims?.sub) return Response.json({ error: "Sign in to search locations." }, { status: 401 });

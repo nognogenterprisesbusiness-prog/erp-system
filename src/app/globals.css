@@ -131,9 +131,3 @@ html:is([data-theme="dark"], [data-theme="blue"]) [class~="text-violet-700"] { c
     animation-iteration-count: 1 !important;
   }
 }
-
-@media print {
-  body:has(.demo-qr-print) * { visibility: hidden !important; }
-  body:has(.demo-qr-print) .demo-qr-print, body:has(.demo-qr-print) .demo-qr-print * { visibility: visible !important; }
-  .demo-qr-print { display: block !important; position: fixed; inset: 0; padding: 1rem; background: white; }
-}

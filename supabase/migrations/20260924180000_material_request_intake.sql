@@ -28,7 +28,7 @@ create table public.material_requests (
 );
 create index material_requests_project_recent_idx on public.material_requests (project_id, requested_at desc);
 create index material_requests_warehouse_queue_idx on public.material_requests (source_warehouse_id, requested_at desc)
-  where status in ('approved', 'partially_approved');
+  where status in ('approved','partially_approved');
 create index material_requests_status_recent_idx on public.material_requests (status, requested_at desc);
 
 create table public.material_request_lines (
@@ -49,7 +49,7 @@ create table public.material_request_reservations (
   inventory_location_id uuid not null references public.inventory_locations(id) on delete restrict,
   original_quantity numeric(20,4) not null check (original_quantity > 0),
   remaining_quantity numeric(20,4) not null check (remaining_quantity >= 0 and remaining_quantity <= original_quantity),
-  status text not null default 'active' check (status in ('active', 'fulfilled', 'released')),
+  status text not null default 'active' check (status in ('active','fulfilled','released')),
   reserved_by uuid not null references public.profiles(id) on delete restrict,
   reserved_at timestamptz not null default now(),
   released_at timestamptz,
@@ -65,7 +65,7 @@ create index material_request_reservations_location_idx on public.material_reque
 create table public.material_request_reservation_events (
   id uuid primary key default gen_random_uuid(),
   reservation_id uuid not null references public.material_request_reservations(id) on delete restrict,
-  event_type text not null check (event_type in ('reserved', 'dispatched', 'released')),
+  event_type text not null check (event_type in ('reserved','dispatched','released')),
   quantity numeric(20,4) not null check (quantity > 0),
   actor_id uuid not null references public.profiles(id) on delete restrict,
   occurred_at timestamptz not null default now()
@@ -102,10 +102,10 @@ create table public.material_request_cancellation_receipts (
 create or replace function private.can_view_material_request_project(p_project_id uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
   select private.can_manage_projects()
-    or (private.has_any_role(array['project_manager','engineer','foreman']::public.app_role[])
+    or (private.has_any_role(array['engineer','foreman']::public.app_role[])
       and exists (select 1 from public.project_assignments a where a.project_id = p_project_id
         and a.user_id = auth.uid() and a.status = 'active'
-        and a.assignment_role in ('project_manager','engineer','foreman')));
+        and a.assignment_role in ('engineer','foreman')));
 $$;
 
 create or replace function private.can_view_material_request(p_request_id uuid)
@@ -121,11 +121,11 @@ language sql stable security definer set search_path = '' as $$
   from public.project_warehouses pw
   join public.warehouses w on w.id = pw.warehouse_id and w.status = 'active'
   join public.projects p on p.id = pw.project_id and p.status = 'active' and p.archived_at is null
-  where private.has_any_role(array['super_admin','owner','admin']::public.app_role[])
-    or (private.has_any_role(array['project_manager','engineer','foreman']::public.app_role[])
+  where private.has_any_role(array['admin']::public.app_role[])
+    or (private.has_any_role(array['engineer','foreman']::public.app_role[])
       and exists (select 1 from public.project_assignments a where a.project_id = pw.project_id
         and a.user_id = auth.uid() and a.status = 'active'
-        and a.assignment_role in ('project_manager','engineer','foreman')));
+        and a.assignment_role in ('engineer','foreman')));
 $$;
 
 create or replace function public.submit_material_request(
@@ -160,11 +160,11 @@ begin
     end if;
     return v_existing.id;
   end if;
-  if not private.has_any_role(array['super_admin','owner','admin']::public.app_role[])
-     and not (private.has_any_role(array['project_manager','engineer','foreman']::public.app_role[])
+  if not private.has_any_role(array['admin']::public.app_role[])
+     and not (private.has_any_role(array['engineer','foreman']::public.app_role[])
        and exists (select 1 from public.project_assignments a where a.project_id = p_project_id
          and a.user_id = v_actor and a.status = 'active'
-         and a.assignment_role in ('project_manager','engineer','foreman'))) then
+         and a.assignment_role in ('engineer','foreman'))) then
     raise exception 'not authorized to request for this project' using errcode = '42501';
   end if;
   if not exists (select 1 from public.projects where id = p_project_id and status = 'active' and archived_at is null)
@@ -209,7 +209,7 @@ begin
   perform private.enqueue_notification_event(
     'material-request-submitted-' || v_request_id, 'MATERIAL_REQUEST', 'Material request submitted',
     'A project material request is ready for review.', 'material_request', v_request_id,
-    p_project_id, null, 'normal', array['super_admin','owner','admin','project_manager']::public.app_role[],
+    p_project_id, null, 'normal', array['admin','engineer']::public.app_role[],
     '{}'::uuid[], null
   );
   return v_request_id;
@@ -256,11 +256,14 @@ begin
     end if;
     return p_request_id;
   end if;
-  if not private.has_any_role(array['super_admin','owner','admin']::public.app_role[])
-     and not (private.has_any_role(array['project_manager']::public.app_role[])
+  if not private.has_any_role(array['admin']::public.app_role[])
+     and not (private.has_any_role(array['engineer']::public.app_role[])
        and exists (select 1 from public.project_assignments a where a.project_id = v_request.project_id
-         and a.user_id = v_actor and a.status = 'active' and a.assignment_role = 'project_manager')) then
-    raise exception 'manager approval required' using errcode = '42501';
+         and a.user_id = v_actor and a.status = 'active' and a.assignment_role = 'engineer')) then
+    raise exception 'assigned engineer or admin approval required' using errcode = '42501';
+  end if;
+  if v_request.requested_by = v_actor and not private.has_any_role(array['admin']::public.app_role[]) then
+    raise exception 'requesters cannot approve their own requests' using errcode = '42501';
   end if;
   if v_request.status <> 'submitted' then raise exception 'request is already decided' using errcode = '22023'; end if;
   if (select count(*) from jsonb_object_keys(p_decisions)) <> (select count(*) from public.material_request_lines where request_id = p_request_id) then
@@ -347,7 +350,7 @@ begin
     end if;
     return p_request_id;
   end if;
-  if v_request.status not in ('submitted', 'approved', 'partially_approved') then
+  if v_request.status not in ('submitted','approved','partially_approved') then
     raise exception 'request cannot be cancelled' using errcode = '22023';
   end if;
   for v_reservation in
@@ -384,7 +387,7 @@ begin
     'material-request-cancelled-' || p_request_id, 'MATERIAL_REQUEST', 'Material request cancelled',
     'A project material request was cancelled before dispatch.', 'material_request', p_request_id,
     v_request.project_id, null, 'normal',
-    array['super_admin','owner','admin','project_manager']::public.app_role[], '{}'::uuid[], null
+    array['admin','engineer']::public.app_role[], '{}'::uuid[], null
   );
   insert into public.material_request_cancellation_receipts (idempotency_key, request_id, actor_id, payload_hash)
     values (p_idempotency_key, p_request_id, v_actor, v_hash);

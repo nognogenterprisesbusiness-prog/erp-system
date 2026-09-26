@@ -2,14 +2,14 @@ export type AppMode = "production" | "staging" | "local-demo";
 
 export type RuntimeConfig = {
   mode: AppMode;
-  dataProvider: "supabase" | "indexeddb";
-  authentication: "supabase" | "demo-role";
+  dataProvider: "supabase" | "none";
+  authentication: "supabase" | "none";
   externalEffects: boolean;
 };
 
 export function runtimeConfig(mode: AppMode): RuntimeConfig {
   return mode === "local-demo"
-    ? { mode, dataProvider: "indexeddb", authentication: "demo-role", externalEffects: false }
+    ? { mode, dataProvider: "none", authentication: "none", externalEffects: false }
     : { mode, dataProvider: "supabase", authentication: "supabase", externalEffects: true };
 }
 
@@ -26,8 +26,4 @@ export function configuredAppMode(): AppMode {
 
 export function configuredRuntime(): RuntimeConfig {
   return runtimeConfig(configuredAppMode());
-}
-
-export function demoIsEnabled(): boolean {
-  return configuredRuntime().dataProvider === "indexeddb" || process.env.ENABLE_LOCAL_DEMO === "true";
 }

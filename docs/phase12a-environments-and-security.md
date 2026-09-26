@@ -1,5 +1,7 @@
 # Phase 12A: web environment and security review
 
+**Historical review:** the IndexedDB demo described below was retired on 2026-09-26. Current preview instructions are in [staging preview setup](./staging-preview.md). Do not use this document to configure a new preview or interpret old demo test results as current release evidence.
+
 This is a limited Phase 12A web slice, not production-readiness approval. The attached Phase 12 plan's mobile and later deployment/turnover tasks are deferred by the web-first product decision. No production database, cloud project, deployment, or secret was changed.
 
 ## Environment selection

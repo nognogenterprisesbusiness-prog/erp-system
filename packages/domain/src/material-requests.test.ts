@@ -24,7 +24,7 @@ test("material requests reject duplicate SKUs and invalid quantities", () => {
   assert.equal(submitMaterialRequestSchema.safeParse({ ...request, lines: [{ materialId, quantity: "1.00001" }] }).success, false);
 });
 
-test("manager decisions accept zero and partial quantities but reject malformed values", () => {
+test("engineer decisions accept zero and partial quantities but reject malformed values", () => {
   assert.equal(decideMaterialRequestSchema.safeParse({ idempotencyKey: key, requestId, decisions: { [materialId]: "0" }, reason: "Not available" }).success, true);
   assert.equal(decideMaterialRequestSchema.safeParse({ idempotencyKey: key, requestId, decisions: { [materialId]: "25.5" }, reason: "Partial stock" }).success, true);
   assert.equal(decideMaterialRequestSchema.safeParse({ idempotencyKey: key, requestId, decisions: { [materialId]: "-1" }, reason: "Invalid" }).success, false);

@@ -102,8 +102,8 @@ begin
       raise exception 'transfer cost does not reconcile' using errcode = '22023';
     end if;
     update public.inventory_transfer_items set received_total_cost = received_total_cost + v_cost where id = v_item.id;
-  elsif new.transaction_type not in ('STOCK_OUT', 'WAREHOUSE_TRANSFER', 'SITE_TRANSFER', 'MATERIAL_RETURN', 'MATERIAL_CONSUMPTION')
-    or (new.transaction_type in ('WAREHOUSE_TRANSFER', 'SITE_TRANSFER', 'MATERIAL_RETURN') and new.transfer_phase <> 'dispatch') then
+  elsif new.transaction_type not in ('STOCK_OUT','WAREHOUSE_TRANSFER','SITE_TRANSFER','MATERIAL_RETURN','MATERIAL_CONSUMPTION')
+    or (new.transaction_type in ('WAREHOUSE_TRANSFER','SITE_TRANSFER','MATERIAL_RETURN') and new.transfer_phase <> 'dispatch') then
     raise exception 'this stock movement needs an approved valuation workflow' using errcode = '0A000';
   end if;
 
@@ -133,7 +133,7 @@ begin
   end if;
 
   if new.destination_location_id is not null and
-    (new.transaction_type in ('STOCK_IN', 'REVERSAL') or new.transfer_phase = 'receipt') and
+    (new.transaction_type in ('STOCK_IN','REVERSAL') or new.transfer_phase = 'receipt') and
     not (new.transaction_type = 'REVERSAL' and new.source_location_id is not null) then
     select quantity_on_hand into v_balance_quantity from public.inventory_balances
       where material_id = new.material_id and inventory_location_id = new.destination_location_id;
@@ -316,7 +316,7 @@ begin
     raise exception 'active site does not belong to project' using errcode = '22023';
   end if;
   if not private.can_manage_inventory() and not (
-    private.has_any_role(array['project_manager','engineer','foreman']::public.app_role[])
+    private.has_any_role(array['engineer','foreman']::public.app_role[])
     and private.can_access_project(p_project_id)) then
     raise exception 'not authorized for project consumption' using errcode = '42501';
   end if;
@@ -381,7 +381,7 @@ grant select (id, transfer_id, material_id, unit_of_measure_id,
   on public.inventory_transfer_items to authenticated;
 create policy inventory_valuations_select on public.inventory_valuations for select to authenticated
   using (private.can_manage_inventory() or
-    (private.has_any_role(array['accounting']::public.app_role[]) and private.can_view_inventory_location(inventory_location_id)));
+    (private.has_any_role(array['admin']::public.app_role[]) and private.can_view_inventory_location(inventory_location_id)));
 create policy inventory_opening_values_admin_select on public.inventory_opening_values for select to authenticated
   using (private.can_manage_inventory());
 revoke execute on function private.existing_valuation_command(uuid,text,uuid,text),
@@ -403,7 +403,7 @@ returns table (material_id uuid, material_code text, material_name text,
 language plpgsql stable security definer set search_path = '' as $$
 begin
   if auth.uid() is null or not private.can_access_project(p_project_id)
-    or not private.has_any_role(array['super_admin','owner','admin','project_manager','accounting']::public.app_role[]) then
+    or not private.has_any_role(array['admin','engineer']::public.app_role[]) then
     raise exception 'not authorized for project costs' using errcode = '42501';
   end if;
   if exists (select 1 from public.inventory_transactions t

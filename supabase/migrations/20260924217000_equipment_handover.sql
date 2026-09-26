@@ -101,7 +101,7 @@ grant select on public.equipment_requests to authenticated;
 create policy equipment_requests_read on public.equipment_requests for select to authenticated
   using (private.can_manage_assets() or (requested_by = (select auth.uid())
       and exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.is_active))
-    or (private.has_any_role(array['project_manager','engineer','foreman']::public.app_role[])
+    or (private.has_any_role(array['engineer','foreman']::public.app_role[])
       and private.can_access_project(project_id)));
 
 create function public.get_requestable_equipment(p_project_id uuid, p_project_site_id uuid)
@@ -117,12 +117,12 @@ language sql stable security definer set search_path = '' as $$
   left join public.project_sites ps on ps.id = il.project_site_id and ps.project_id = p_project_id
   where (select auth.uid()) is not null
     and not private.can_manage_assets()
-    and private.has_any_role(array['project_manager','engineer','foreman']::public.app_role[])
+    and private.has_any_role(array['engineer','foreman']::public.app_role[])
     and private.can_access_project(p_project_id)
     and a.asset_kind = 'equipment' and a.archived_at is null and a.status = 'available'
     and al.archived_at is null and (w.id is not null or ps.id = target.id)
     and not exists (select 1 from public.equipment_requests er
-      where er.asset_id = a.id and er.status in ('approved', 'checked_out'))
+      where er.asset_id = a.id and er.status in ('approved','checked_out'))
   order by a.code limit 300
 $$;
 
@@ -169,7 +169,7 @@ revoke execute on function private.equipment_source_for_project(uuid,uuid,uuid) 
 create or replace function private.protect_assigned_asset_custody()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
-  if old.status in ('assigned', 'in_use')
+  if old.status in ('assigned','in_use')
     and (new.status is distinct from old.status or new.current_location_id is distinct from old.current_location_id) then
     if old.asset_kind <> 'equipment' or not exists (
       select 1 from private.asset_return_authorizations a
@@ -195,7 +195,7 @@ create function public.submit_equipment_request(
 declare v_actor uuid := (select auth.uid()); v_asset public.assets; v_id uuid;
 begin
   if v_actor is null or private.can_manage_assets()
-    or not private.has_any_role(array['project_manager','engineer','foreman']::public.app_role[])
+    or not private.has_any_role(array['engineer','foreman']::public.app_role[])
     or not private.can_access_project(p_project_id) then
     raise exception 'Not authorized for this project' using errcode = '42501';
   end if;
@@ -235,7 +235,7 @@ begin
     raise exception 'A rejection reason is required' using errcode = '22023';
   end if;
   select * into v_request from public.equipment_requests where id = p_id for update;
-  if v_request.id is null or v_request.status not in ('submitted', 'approved')
+  if v_request.id is null or v_request.status not in ('submitted','approved')
     or (p_approve and v_request.status <> 'submitted') then
     raise exception 'Request is not pending or approved for withdrawal' using errcode = '22023';
   end if;

@@ -20,7 +20,7 @@ export default async function StockCountsPage({ searchParams }: { searchParams: 
   const materialMap = new Map(inventory.materials.map((material) => [material.id, material]));
   const pendingMaterialIds = new Set(counts.filter((count) => count.status === "pending").map((count) => count.material_id));
   const canCount = user.canManage || (selected?.location_type === "warehouse" && user.roles.includes("warehouse_staff"))
-    || (selected?.location_type === "project_site" && user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)));
+    || (selected?.location_type === "project_site" && user.roles.some((role) => ["engineer", "foreman"].includes(role)));
   return <>
     <PageHeader title="Stock counts" description="Record physical quantities; an administrator reviews a shortage before stock and value change." action={<Button variant="outline" asChild><Link href="/inventory">Back to inventory</Link></Button>} />
     <InventoryLocationPicker locations={inventory.locations} value={inventory.selectedLocationId} />

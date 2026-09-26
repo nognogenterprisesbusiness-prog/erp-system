@@ -1,5 +1,5 @@
 create type public.project_status as enum ('draft', 'active', 'on_hold', 'completed', 'cancelled');
-create type public.assignment_role as enum ('project_manager', 'engineer', 'foreman', 'warehouse_staff', 'accounting', 'worker');
+create type public.assignment_role as enum ('engineer', 'foreman');
 create type public.assignment_status as enum ('active', 'inactive');
 create type public.warehouse_status as enum ('active', 'inactive');
 create type public.site_status as enum ('active', 'inactive');
@@ -67,11 +67,11 @@ begin
   if tg_op = 'UPDATE' and old.project_manager_id is distinct from new.project_manager_id and old.project_manager_id is not null then
     update public.project_assignments
     set status = 'inactive', ended_at = now(), ended_by = new.updated_by
-    where project_id = new.id and user_id = old.project_manager_id and assignment_role = 'project_manager' and status = 'active';
+    where project_id = new.id and user_id = old.project_manager_id and assignment_role = 'engineer' and status = 'active';
   end if;
   if new.project_manager_id is not null then
     insert into public.project_assignments (project_id, user_id, assignment_role, assigned_on, assigned_by)
-    values (new.id, new.project_manager_id, 'project_manager', current_date, new.updated_by)
+    values (new.id, new.project_manager_id, 'engineer', current_date, new.updated_by)
     on conflict (project_id, user_id, assignment_role) where status = 'active' do nothing;
   end if;
   return new;
@@ -158,7 +158,7 @@ create table public.inventory_locations (
 
 create or replace function private.can_manage_projects()
 returns boolean language sql stable security definer set search_path = ''
-as $$ select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]) $$;
+as $$ select private.has_any_role(array['admin']::public.app_role[]) $$;
 
 create or replace function private.can_access_project(target_project_id uuid)
 returns boolean language sql stable security definer set search_path = ''
@@ -174,7 +174,7 @@ $$;
 
 create or replace function private.can_manage_warehouses()
 returns boolean language sql stable security definer set search_path = ''
-as $$ select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]) $$;
+as $$ select private.has_any_role(array['admin']::public.app_role[]) $$;
 
 create or replace function private.can_access_warehouse(target_warehouse_id uuid)
 returns boolean language sql stable security definer set search_path = ''
@@ -304,3 +304,44 @@ revoke execute on function private.can_manage_projects(), private.can_access_pro
 grant execute on function private.can_manage_projects(), private.can_access_project(uuid), private.can_manage_warehouses(), private.can_access_warehouse(uuid), private.can_view_assigned_profile(uuid) to authenticated;
 revoke execute on function private.create_inventory_location() from authenticated;
 revoke execute on function private.sync_project_manager_assignment() from authenticated;
+
+create or replace function private.assert_active_account_role(p_user_id uuid, p_role public.app_role)
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if p_user_id is not null and not exists (
+    select 1 from public.user_roles ur
+    join public.profiles p on p.id = ur.user_id
+    where ur.user_id = p_user_id and ur.role = p_role and p.is_active
+  ) then
+    raise exception 'assigned account does not hold the required active role' using errcode = '42501';
+  end if;
+end;
+$$;
+
+create or replace function private.enforce_assignment_role()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if tg_table_name = 'projects' then
+    perform private.assert_active_account_role(new.project_manager_id, 'engineer');
+  elsif tg_table_name = 'project_assignments' then
+    perform private.assert_active_account_role(new.user_id, new.assignment_role::text::public.app_role);
+  elsif tg_table_name = 'warehouse_assignments' then
+    perform private.assert_active_account_role(new.user_id, 'warehouse_staff');
+  elsif tg_table_name = 'project_sites' then
+    perform private.assert_active_account_role(new.engineer_id, 'engineer');
+    perform private.assert_active_account_role(new.foreman_id, 'foreman');
+  end if;
+  return new;
+end;
+$$;
+
+create trigger projects_role_guard before insert or update of project_manager_id on public.projects
+for each row execute function private.enforce_assignment_role();
+create trigger project_assignments_role_guard before insert or update of user_id, assignment_role on public.project_assignments
+for each row execute function private.enforce_assignment_role();
+create trigger warehouse_assignments_role_guard before insert or update of user_id on public.warehouse_assignments
+for each row execute function private.enforce_assignment_role();
+create trigger project_sites_role_guard before insert or update of engineer_id, foreman_id on public.project_sites
+for each row execute function private.enforce_assignment_role();
+
+revoke all on function private.assert_active_account_role(uuid, public.app_role), private.enforce_assignment_role() from public, anon, authenticated;

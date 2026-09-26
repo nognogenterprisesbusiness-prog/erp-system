@@ -45,7 +45,7 @@ export async function cancelMaterialRequestAction(_: RequestActionState, form: F
 
 export async function submitMaterialRequestAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
   const user = await requireUser();
-  if (user.canManage || !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)))
+  if (user.canManage || !user.roles.some((role) => ["engineer", "foreman"].includes(role)))
     return failure("You do not have permission to request materials.");
   const rawLines = value(form, "lines");
   if (rawLines.length > 8_000) return failure("Too many request lines.");
@@ -71,7 +71,7 @@ export async function submitMaterialRequestAction(_: RequestActionState, form: F
 
 export async function decideMaterialRequestAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
   const user = await requireUser();
-  if (!user.canManage && !user.roles.includes("project_manager")) return failure("Manager approval is required.");
+  if (!user.canManage && !user.roles.includes("engineer")) return failure("Assigned engineer or admin approval is required.");
   const rawDecisions = value(form, "decisions");
   if (rawDecisions.length > 8_000) return failure("Too many approval lines.");
   let decisions: unknown;
@@ -127,7 +127,7 @@ export async function dispatchRequestLineAction(_: RequestActionState, form: For
 
 export async function receiveRequestTransferAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
   const user = await requireUser();
-  if (!user.canManage && !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)))
+  if (!user.canManage && !user.roles.some((role) => ["engineer", "foreman"].includes(role)))
     return failure("Only assigned project staff can confirm receipt.");
   const parsed = receiveRequestTransferSchema.safeParse({
     idempotencyKey: value(form, "idempotencyKey"), transferItemId: value(form, "transferItemId"), requestId: value(form, "requestId"),

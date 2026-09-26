@@ -78,11 +78,11 @@ alter table public.purchase_order_receipts enable row level security;
 revoke all on public.purchase_orders, public.purchase_order_lines, public.purchase_order_receipts from public, anon, authenticated;
 grant select on public.purchase_orders, public.purchase_order_lines, public.purchase_order_receipts to authenticated;
 create policy purchase_orders_finance_read on public.purchase_orders for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy purchase_order_lines_finance_read on public.purchase_order_lines for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy purchase_order_receipts_finance_read on public.purchase_order_receipts for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create trigger purchase_orders_audit after insert or update on public.purchase_orders for each row execute function private.audit_row_change();
 create trigger purchase_order_lines_audit after insert or update on public.purchase_order_lines for each row execute function private.audit_row_change();
 create trigger purchase_order_receipts_audit after insert on public.purchase_order_receipts for each row execute function private.audit_row_change();
@@ -106,7 +106,7 @@ declare
   v_quantity numeric;
   v_seen uuid[] := '{}'::uuid[];
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can issue a purchase order' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_supplier_id is null or p_warehouse_id is null
@@ -193,7 +193,7 @@ declare
   v_transaction_id uuid;
   v_id uuid := gen_random_uuid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can post valued purchase receipts' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_line_id is null or p_received_on is null
@@ -256,7 +256,7 @@ create function public.cancel_purchase_order(p_order_id uuid, p_reason text)
 returns void language plpgsql security definer set search_path = '' as $$
 declare v_actor uuid := (select auth.uid()); v_order public.purchase_orders;
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can cancel purchase orders' using errcode = '42501';
   end if;
   if char_length(trim(coalesce(p_reason, ''))) not between 3 and 500 then

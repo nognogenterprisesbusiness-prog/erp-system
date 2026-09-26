@@ -31,9 +31,9 @@ create function public.save_project_material_plan_line(
 declare v_actor uuid := auth.uid(); v_id uuid;
 begin
   if v_actor is null or not (private.can_manage_projects() or (
-    private.has_any_role(array['project_manager']::public.app_role[])
+    private.has_any_role(array['engineer']::public.app_role[])
     and exists(select 1 from public.project_assignments a where a.project_id = p_project_id
-      and a.user_id = v_actor and a.assignment_role = 'project_manager' and a.status = 'active')))
+      and a.user_id = v_actor and a.assignment_role = 'engineer' and a.status = 'active')))
   then raise exception 'Not authorized to plan project materials' using errcode = '42501'; end if;
   if p_quantity is null or p_quantity <= 0 or p_quantity > 1000000000 or p_required_on is null
     or char_length(coalesce(p_note, '')) > 500 then
@@ -141,9 +141,9 @@ declare v_actor uuid := auth.uid(); v_report public.daily_reports; v_existing pu
 begin
   select * into v_report from public.daily_reports where id = p_report_id;
   if v_actor is null or v_report.id is null or not (private.can_manage_projects() or (
-    private.has_any_role(array['project_manager']::public.app_role[])
+    private.has_any_role(array['engineer']::public.app_role[])
     and exists(select 1 from public.project_assignments a where a.project_id = v_report.project_id
-      and a.user_id = v_actor and a.assignment_role = 'project_manager' and a.status = 'active')))
+      and a.user_id = v_actor and a.assignment_role = 'engineer' and a.status = 'active')))
   then raise exception 'Not authorized to record progress' using errcode = '42501'; end if;
   if v_report.status <> 'approved' or p_percent is null or p_percent < 0 or p_percent > 100
     or char_length(trim(coalesce(p_summary,''))) not between 3 and 500 then

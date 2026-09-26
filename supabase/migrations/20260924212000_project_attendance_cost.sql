@@ -44,9 +44,9 @@ alter table public.project_attendance_reversals enable row level security;
 revoke all on public.project_attendance, public.project_attendance_reversals from public, anon, authenticated;
 grant select on public.project_attendance, public.project_attendance_reversals to authenticated;
 create policy project_attendance_finance_read on public.project_attendance for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy project_attendance_reversals_finance_read on public.project_attendance_reversals for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create trigger project_attendance_audit after insert on public.project_attendance
 for each row execute function private.audit_row_change();
 create trigger project_attendance_reversals_audit after insert on public.project_attendance_reversals
@@ -70,7 +70,7 @@ declare
   v_id uuid := gen_random_uuid();
   v_other_hours numeric(6,2);
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can post project attendance cost' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_assignment_id is null or p_work_date is null
@@ -152,7 +152,7 @@ declare
   v_payload jsonb;
   v_id uuid := gen_random_uuid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can reverse attendance' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_attendance_id is null
@@ -184,10 +184,7 @@ create function public.get_project_labor_cost(p_project_id uuid)
 returns numeric language plpgsql stable security definer set search_path = '' as $$
 declare v_total numeric;
 begin
-  if (select auth.uid()) is null or not (
-    private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])
-    or (private.has_any_role(array['project_manager']::public.app_role[]) and private.can_access_project(p_project_id))
-  ) then
+  if (select auth.uid()) is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Not authorized to view project labor cost' using errcode = '42501';
   end if;
   select coalesce(sum(a.cost_total), 0) into v_total from public.project_attendance a

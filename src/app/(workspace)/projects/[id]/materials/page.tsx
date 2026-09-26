@@ -23,8 +23,8 @@ export default async function ProjectMaterialsPage({ params, searchParams }: { p
   if (!user.canViewDailyReports) redirect(`/projects/${id}`);
   const [projectData, rows] = await Promise.all([getProject(id), getProjectMaterialPlan(id)]);
   const canPlan = user.canManage || projectData.assignments.some((assignment) =>
-    assignment.user_id === user.userId && assignment.assignment_role === "project_manager" && assignment.status === "active");
-  const canRequest = !user.canManage && user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role));
+    assignment.user_id === user.userId && assignment.assignment_role === "engineer" && assignment.status === "active");
+  const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
   const choices = canPlan ? await getMaterialRequestChoices() : null;
   const editId = (await searchParams).edit;
   const editing = canPlan ? rows.find((row) => row.id === editId) : undefined;

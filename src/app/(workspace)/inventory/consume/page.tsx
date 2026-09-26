@@ -10,7 +10,7 @@ import { getSiteConsumptionOptions } from "@/lib/data/inventory";
 
 export default async function SiteConsumptionPage({ searchParams }: { searchParams: Promise<{ material?: string }> }) {
   const user = await requireUser();
-  if (!user.canManage && !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role))) redirect("/inventory");
+  if (!user.canManage && !user.roles.some((role) => ["engineer", "foreman"].includes(role))) redirect("/inventory");
   const options = await getSiteConsumptionOptions();
   const parsed = uuidSchema.safeParse((await searchParams).material);
   const hasSiteStock = options.balances.length > 0;

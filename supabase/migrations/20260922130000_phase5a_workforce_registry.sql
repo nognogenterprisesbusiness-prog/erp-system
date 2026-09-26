@@ -110,11 +110,11 @@ create index employee_events_employee_idx on public.employee_events (employee_id
 
 create or replace function private.can_manage_workforce()
 returns boolean language sql stable security definer set search_path = ''
-as $$ select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]) $$;
+as $$ select private.has_any_role(array['admin']::public.app_role[]) $$;
 
 create or replace function private.can_view_workforce_financials()
 returns boolean language sql stable security definer set search_path = ''
-as $$ select private.has_any_role(array['super_admin', 'owner', 'admin', 'accounting']::public.app_role[]) $$;
+as $$ select private.has_any_role(array['admin']::public.app_role[]) $$;
 
 create or replace function private.can_view_employee(target_employee_id uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
@@ -156,7 +156,7 @@ begin
   end if;
   if not exists (
     select 1 from public.projects
-    where id = p_project_id and archived_at is null and status not in ('completed', 'cancelled')
+    where id = p_project_id and archived_at is null and status not in ('completed','cancelled')
   ) then
     raise exception 'project is unavailable for assignment' using errcode = '22023';
   end if;

@@ -82,7 +82,7 @@ export async function verifyLegacyTransitValueAction(_: InventoryActionState, fo
 
 export async function consumeSiteMaterialAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
   const user = await requireUser();
-  if (!user.canManage && !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)))
+  if (!user.canManage && !user.roles.some((role) => ["engineer", "foreman"].includes(role)))
     return failure("Only assigned project staff can record site consumption.");
   const parsed = siteConsumptionInputSchema.safeParse({ ...basePayload(form),
     siteLocationId: value(form, "siteLocationId"), projectId: value(form, "projectId") });

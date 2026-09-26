@@ -17,7 +17,7 @@ const statuses = ["all", "submitted", "approved", "checked_out", "overdue", "ret
 
 export default async function EquipmentRequestsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
-  const canRequest = !user.canManage && user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role));
+  const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
   if (!user.canManage && !canRequest) notFound();
   const params = await searchParams;
   const requestedProject = uuidSchema.safeParse(params.project);

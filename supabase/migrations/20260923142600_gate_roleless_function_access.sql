@@ -3,8 +3,8 @@ returns boolean language sql stable security definer set search_path = '' as $$
   select private.has_any_role(enum_range(null::public.app_role))
     and (p_project_id is null or private.can_access_project(p_project_id))
     and (p_warehouse_id is null or private.can_access_warehouse(p_warehouse_id))
-    and (p_type_code not in ('FINANCIAL', 'LABOR', 'ATTENDANCE')
-      or private.has_any_role(array['super_admin', 'owner', 'admin', 'accounting']::public.app_role[]))
+    and (p_type_code not in ('FINANCIAL','LABOR','ATTENDANCE')
+      or private.has_any_role(array['admin']::public.app_role[]))
 $$;
 
 create or replace function public.resolve_qr_code(p_identifier text)
@@ -19,7 +19,7 @@ begin
   if not found then raise exception 'QR code is invalid or inactive' using errcode = '22023'; end if;
   if v_code.entity_type = 'material' then
     select name, code into v_name, v_code_label from public.materials where id = v_code.material_id and archived_at is null;
-  elsif v_code.entity_type in ('equipment', 'vehicle') then
+  elsif v_code.entity_type in ('equipment','vehicle') then
     if not private.can_view_asset(v_code.asset_id) then raise exception 'not authorized' using errcode = '42501'; end if;
     select name, code into v_name, v_code_label from public.assets where id = v_code.asset_id and archived_at is null;
   elsif v_code.entity_type = 'warehouse' then

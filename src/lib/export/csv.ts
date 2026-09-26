@@ -7,15 +7,6 @@ export function encodeCsv(headers: string[], rows: Array<Array<string | number>>
   return `\uFEFF${[headers, ...rows].map((row) => row.map(cell).join(",")).join("\r\n")}`;
 }
 
-export function downloadCsv(filename: string, headers: string[], rows: Array<Array<string | number>>): void {
-  const url = URL.createObjectURL(new Blob([encodeCsv(headers, rows)], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 export function csvAttachment(filename: string, headers: string[], rows: Array<Array<string | number>>): Response {
   return new Response(encodeCsv(headers, rows), {
     headers: {

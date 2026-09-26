@@ -34,7 +34,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         { label: "Transaction history", href: "/inventory/transactions" },
         { label: "Transfers", href: "/inventory/transfers" },
         { label: "Stock counts", href: "/inventory/counts" },
-        ...((user.canManage || user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role))) ? [{ label: "Record site use", href: "/inventory/consume" }] : []),
+        ...((user.canManage || user.roles.some((role) => ["engineer", "foreman"].includes(role))) ? [{ label: "Record site use", href: "/inventory/consume" }] : []),
         ...(user.canManage ? [
           { label: "Opening values", href: "/inventory/opening-values" },
           { label: "Exception receipt", href: "/inventory/stock-in" },

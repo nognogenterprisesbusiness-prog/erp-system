@@ -144,13 +144,13 @@ create table public.inventory_command_receipts (
 
 create or replace function private.can_manage_inventory()
 returns boolean language sql stable security definer set search_path = ''
-as $$ select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]) $$;
+as $$ select private.has_any_role(array['admin']::public.app_role[]) $$;
 
 create or replace function private.can_view_inventory_location(target_location_id uuid)
 returns boolean language sql stable security definer set search_path = ''
 as $$
   select private.can_manage_inventory()
-    or private.has_any_role(array['accounting']::public.app_role[])
+    or private.has_any_role(array['admin']::public.app_role[])
     or exists (
     select 1 from public.inventory_locations il
     where il.id = target_location_id and (
@@ -293,7 +293,7 @@ begin
   if v_item.id is null then raise exception 'transfer item not found' using errcode = 'P0002'; end if;
   perform private.validate_inventory_quantity(p_quantity, v_item.unit_of_measure_id);
   select * into v_transfer from public.inventory_transfers where id = v_item.transfer_id for update;
-  if v_transfer.status in ('received', 'cancelled') then raise exception 'transfer is not receivable' using errcode = '22023'; end if;
+  if v_transfer.status in ('received','cancelled') then raise exception 'transfer is not receivable' using errcode = '22023'; end if;
   if not private.can_manage_inventory() and not private.can_operate_inventory_location(v_transfer.destination_location_id) then raise exception 'not authorized for destination location' using errcode = '42501'; end if;
   if v_item.received_quantity + p_quantity > v_item.dispatched_quantity then raise exception 'received quantity exceeds remaining in-transit quantity' using errcode = '22023'; end if;
   update public.inventory_transfer_items set received_quantity = received_quantity + p_quantity, updated_at = now() where id = v_item.id;
@@ -383,7 +383,7 @@ begin
   select * into v_original from public.inventory_transactions where id = p_transaction_id for update;
   if v_original.id is null or v_original.transaction_type = 'REVERSAL' or exists (select 1 from public.inventory_transactions where reversal_of = p_transaction_id) then raise exception 'transaction is not reversible' using errcode = '22023'; end if;
 
-  if v_original.transaction_type in ('STOCK_IN', 'OPENING_BALANCE') or v_original.transfer_phase = 'receipt' then
+  if v_original.transaction_type in ('STOCK_IN','OPENING_BALANCE') or v_original.transfer_phase = 'receipt' then
     select available_quantity into v_available from public.inventory_balances where material_id = v_original.material_id and inventory_location_id = v_original.destination_location_id for update;
     if coalesce(v_available, 0) < v_original.quantity then raise exception 'reversal would create negative or reserved stock' using errcode = 'P0001'; end if;
     update public.inventory_balances set quantity_on_hand = quantity_on_hand - v_original.quantity, updated_at = now() where material_id = v_original.material_id and inventory_location_id = v_original.destination_location_id;
@@ -409,7 +409,7 @@ begin
   insert into public.inventory_transactions (id, material_id, quantity, unit_of_measure_id, source_location_id, destination_location_id, transaction_type, reference_document, project_id, responsible_user_id, transaction_date, remarks, reversal_of)
   values (
     v_reversal_id, v_original.material_id, v_original.quantity, v_original.unit_of_measure_id,
-    case when v_original.transaction_type in ('STOCK_IN', 'OPENING_BALANCE') or v_original.transfer_phase = 'receipt' then v_original.destination_location_id else null end,
+    case when v_original.transaction_type in ('STOCK_IN','OPENING_BALANCE') or v_original.transfer_phase = 'receipt' then v_original.destination_location_id else null end,
     case when v_original.transaction_type = 'STOCK_OUT' or v_original.transfer_phase = 'dispatch' then v_original.source_location_id else null end,
     'REVERSAL', left('REV-' || v_original.reference_document, 120), v_original.project_id, v_actor, current_date, trim(p_reason), v_original.id
   );
@@ -451,11 +451,6 @@ create policy balances_select_authorized on public.inventory_balances for select
 create policy transfers_select_authorized on public.inventory_transfers for select to authenticated using (private.can_view_inventory_location(source_location_id) or private.can_view_inventory_location(destination_location_id));
 create policy transfer_items_select_authorized on public.inventory_transfer_items for select to authenticated using (exists (select 1 from public.inventory_transfers t where t.id = transfer_id and (private.can_view_inventory_location(t.source_location_id) or private.can_view_inventory_location(t.destination_location_id))));
 create policy transactions_select_authorized on public.inventory_transactions for select to authenticated using ((source_location_id is not null and private.can_view_inventory_location(source_location_id)) or (destination_location_id is not null and private.can_view_inventory_location(destination_location_id)));
-create policy inventory_locations_select_accounting on public.inventory_locations for select to authenticated using (private.has_any_role(array['accounting']::public.app_role[]));
-create policy warehouses_select_accounting_inventory on public.warehouses for select to authenticated using (private.has_any_role(array['accounting']::public.app_role[]));
-create policy project_sites_select_accounting_inventory on public.project_sites for select to authenticated using (private.has_any_role(array['accounting']::public.app_role[]));
-create policy projects_select_accounting_inventory on public.projects for select to authenticated using (private.has_any_role(array['accounting']::public.app_role[]));
-
 revoke execute on function private.can_manage_inventory(), private.can_view_inventory_location(uuid), private.can_operate_inventory_location(uuid), private.validate_inventory_material(uuid, uuid), private.validate_inventory_quantity(numeric, uuid), private.existing_inventory_command(uuid, text, uuid) from public, anon, authenticated;
 grant execute on function private.can_view_inventory_location(uuid) to authenticated;
 revoke execute on function public.post_stock_in(uuid, uuid, uuid, numeric, uuid, text, date, text), public.post_stock_out(uuid, uuid, uuid, numeric, uuid, text, date, uuid, text), public.dispatch_inventory_transfer(uuid, uuid, uuid, uuid, numeric, uuid, text, date, text), public.receive_inventory_transfer(uuid, uuid, numeric, date, text), public.save_material_category(uuid, text, text), public.archive_material_category(uuid), public.save_material(uuid, text, text, text, uuid, uuid, public.material_kind, numeric, boolean), public.archive_material(uuid), public.reverse_inventory_transaction(uuid, uuid, text) from public, anon;

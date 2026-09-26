@@ -4,34 +4,30 @@ insert into auth.users (
   confirmation_token, email_change, email_change_token_new, recovery_token
 )
 values
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'admin@nognog.local', extensions.crypt('Admin123!', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Alex Dela Cruz"}', now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000002', 'authenticated', 'authenticated', 'manager@nognog.local', extensions.crypt('Manager123!', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Maria Santos"}', now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000003', 'authenticated', 'authenticated', 'engineer@nognog.local', extensions.crypt('Engineer123!', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Carlo Reyes"}', now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000004', 'authenticated', 'authenticated', 'foreman@nognog.local', extensions.crypt('Foreman123!', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Ramon Flores"}', now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000005', 'authenticated', 'authenticated', 'warehouse@nognog.local', extensions.crypt('Warehouse123!', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Liza Garcia"}', now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000006', 'authenticated', 'authenticated', 'worker@nognog.local', extensions.crypt('Worker123!', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Joel Mendoza"}', now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000007', 'authenticated', 'authenticated', 'accounting@nognog.local', extensions.crypt('Accounting123!', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Ana Villanueva"}', now(), now(), '', '', '', '')
+  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000001', 'authenticated', 'authenticated', 'admin@nognog.local', extensions.crypt(gen_random_uuid()::text || gen_random_uuid()::text, extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Alex Dela Cruz"}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000003', 'authenticated', 'authenticated', 'engineer@nognog.local', extensions.crypt(gen_random_uuid()::text || gen_random_uuid()::text, extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Carlo Reyes"}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000004', 'authenticated', 'authenticated', 'foreman@nognog.local', extensions.crypt(gen_random_uuid()::text || gen_random_uuid()::text, extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Ramon Flores"}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000005', 'authenticated', 'authenticated', 'warehouse@nognog.local', extensions.crypt(gen_random_uuid()::text || gen_random_uuid()::text, extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Liza Garcia"}', now(), now(), '', '', '', '')
 on conflict (id) do nothing;
 
 insert into auth.identities (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 select id::text, id, jsonb_build_object('sub', id::text, 'email', email), 'email', now(), now(), now()
 from auth.users
 where id in (
-  '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002',
-  '10000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000004',
-  '10000000-0000-0000-0000-000000000005', '10000000-0000-0000-0000-000000000006',
-  '10000000-0000-0000-0000-000000000007'
+  '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003',
+  '10000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000005'
 )
 on conflict (provider, id) do nothing;
 
+-- Subsequent fixture writes are genuine audited changes attributed to the
+-- seeded admin; do not insert fabricated rows into audit_logs.
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', false);
+
 insert into public.user_roles (user_id, role, granted_by) values
   ('10000000-0000-0000-0000-000000000001', 'admin', '10000000-0000-0000-0000-000000000001'),
-  ('10000000-0000-0000-0000-000000000002', 'project_manager', '10000000-0000-0000-0000-000000000001'),
   ('10000000-0000-0000-0000-000000000003', 'engineer', '10000000-0000-0000-0000-000000000001'),
   ('10000000-0000-0000-0000-000000000004', 'foreman', '10000000-0000-0000-0000-000000000001'),
-  ('10000000-0000-0000-0000-000000000005', 'warehouse_staff', '10000000-0000-0000-0000-000000000001'),
-  ('10000000-0000-0000-0000-000000000006', 'worker', '10000000-0000-0000-0000-000000000001'),
-  ('10000000-0000-0000-0000-000000000007', 'accounting', '10000000-0000-0000-0000-000000000001')
+  ('10000000-0000-0000-0000-000000000005', 'warehouse_staff', '10000000-0000-0000-0000-000000000001')
 on conflict do nothing;
 
 insert into public.projects (
@@ -39,15 +35,14 @@ insert into public.projects (
   start_date, target_completion_date, contract_amount, initial_budget, status, project_manager_id, created_by, updated_by
 )
 values
-  ('20000000-0000-0000-0000-000000000001', 'PRJ-024', 'CTU Multipurpose Building', 'Construction of a multipurpose university facility.', 'Cebu Technological University', 'facilities@ctu.local', '(032) 000 0001', 'Borbon Campus', 'Borbon, Cebu', '2026-01-15', '2026-11-18', 8400000.00, 7200000.00, 'active', '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001'),
-  ('20000000-0000-0000-0000-000000000002', 'PRJ-019', 'Barangay Road Improvement', 'Concrete road rehabilitation and drainage improvements.', 'Barangay Bingay', null, '(032) 000 0002', 'Barangay Bingay', 'Borbon, Cebu', '2026-02-01', '2026-12-02', 5100000.00, 4650000.00, 'on_hold', '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001'),
-  ('20000000-0000-0000-0000-000000000003', 'PRJ-027', 'Private Residence Phase 2', 'Second phase residential construction.', 'Private Client', null, null, 'Greenbelt Drive', 'Cebu City', '2026-06-01', '2027-02-14', 6700000.00, 6000000.00, 'active', '10000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001');
+  ('20000000-0000-0000-0000-000000000001', 'PRJ-024', 'CTU Multipurpose Building', 'Construction of a multipurpose university facility.', 'Cebu Technological University', 'facilities@ctu.local', '(032) 000 0001', 'Borbon Campus', 'Borbon, Cebu', '2026-01-15', '2026-11-18', 8400000.00, 7200000.00, 'active', '10000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001'),
+  ('20000000-0000-0000-0000-000000000002', 'PRJ-019', 'Barangay Road Improvement', 'Concrete road rehabilitation and drainage improvements.', 'Barangay Bingay', null, '(032) 000 0002', 'Barangay Bingay', 'Borbon, Cebu', '2026-02-01', '2026-12-02', 5100000.00, 4650000.00, 'on_hold', '10000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001'),
+  ('20000000-0000-0000-0000-000000000003', 'PRJ-027', 'Private Residence Phase 2', 'Second phase residential construction.', 'Private Client', null, null, 'Greenbelt Drive', 'Cebu City', '2026-06-01', '2027-02-14', 6700000.00, 6000000.00, 'active', '10000000-0000-0000-0000-000000000003', '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001');
 
 insert into public.project_assignments (project_id, user_id, assignment_role, assigned_on, assigned_by) values
-  ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'project_manager', '2026-01-10', '10000000-0000-0000-0000-000000000001'),
   ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003', 'engineer', '2026-01-10', '10000000-0000-0000-0000-000000000001'),
   ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000004', 'foreman', '2026-01-10', '10000000-0000-0000-0000-000000000001'),
-  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000002', 'project_manager', '2026-01-25', '10000000-0000-0000-0000-000000000001'),
+  ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000003', 'engineer', '2026-01-25', '10000000-0000-0000-0000-000000000001'),
   ('20000000-0000-0000-0000-000000000002', '10000000-0000-0000-0000-000000000004', 'foreman', '2026-01-25', '10000000-0000-0000-0000-000000000001')
 on conflict (project_id, user_id, assignment_role) where status = 'active' do nothing;
 
@@ -124,7 +119,7 @@ insert into public.employee_categories (id, name, description, created_by, updat
   ('90000000-0000-0000-0000-000000000002', 'General Labor', 'Development workforce category for site support labor.', '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001'),
   ('90000000-0000-0000-0000-000000000003', 'Site Supervision', 'Development workforce category for site leadership.', '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001');
 
-select public.save_employee(null, 'EMP-001', 'Joel', '', 'Mendoza', '+63 900 000 0001', '90000000-0000-0000-0000-000000000001', 'Regular', 'active', '2025-05-12', '10000000-0000-0000-0000-000000000006');
+select public.save_employee(null, 'EMP-001', 'Joel', '', 'Mendoza', '+63 900 000 0001', '90000000-0000-0000-0000-000000000001', 'Regular', 'active', '2025-05-12', null);
 select public.save_employee(null, 'EMP-002', 'Nico', 'S.', 'Alcantara', '+63 900 000 0002', '90000000-0000-0000-0000-000000000001', 'Project-based', 'active', '2026-01-10', null);
 select public.save_employee(null, 'EMP-003', 'Paolo', '', 'Mercado', '+63 900 000 0003', '90000000-0000-0000-0000-000000000002', 'Project-based', 'active', '2026-01-10', null);
 

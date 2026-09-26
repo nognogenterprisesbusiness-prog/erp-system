@@ -5,7 +5,7 @@ import { moneySchema, optionalTextSchema, phoneSchema, uuidSchema } from "./comm
 export const projectStatuses = ["draft", "active", "on_hold", "completed", "cancelled"] as const;
 export const projectStatusSchema = z.enum(projectStatuses);
 
-export const assignmentRoles = ["project_manager", "engineer", "foreman", "warehouse_staff", "accounting", "worker"] as const;
+export const assignmentRoles = ["engineer", "foreman"] as const;
 export const assignmentRoleSchema = z.enum(assignmentRoles);
 export const assignmentStatuses = ["active", "inactive"] as const;
 

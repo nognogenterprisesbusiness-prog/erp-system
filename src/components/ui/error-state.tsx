@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export function ErrorState({ code, onRetry }: { code: 404 | 500; onRetry?: () => void }) {
   const missing = code === 404;
-  const homeHref = process.env.NEXT_PUBLIC_APP_MODE === "local-demo" ? "/demo" : "/";
+  const homeHref = process.env.NEXT_PUBLIC_APP_MODE === "local-demo" ? "/setup" : "/";
 
   return <main className="flex min-h-svh items-center justify-center bg-[#f5f7fa] px-5 py-10 text-[#07152d]">
     <section className="mx-auto w-full max-w-lg text-center" aria-labelledby="error-title">
@@ -16,7 +16,7 @@ export function ErrorState({ code, onRetry }: { code: 404 | 500; onRetry?: () =>
       <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-500">{missing ? "This page may have moved or the address may be incorrect." : "We couldn’t load this page. Try again, or contact your administrator if the problem continues."}</p>
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
         {onRetry ? <Button type="button" onClick={onRetry}>Try again</Button> : null}
-        <Button variant={onRetry ? "outline" : "default"} asChild><Link href={homeHref}>{homeHref === "/demo" ? "Back to demo" : "Back to home"}</Link></Button>
+        <Button variant={onRetry ? "outline" : "default"} asChild><Link href={homeHref}>{homeHref === "/setup" ? "Staging setup" : "Back to home"}</Link></Button>
       </div>
     </section>
   </main>;

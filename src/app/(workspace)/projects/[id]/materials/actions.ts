@@ -10,7 +10,7 @@ const value = (form: FormData, key: string) => String(form.get(key) ?? "");
 
 export async function saveProjectMaterialPlanAction(_: PlanActionState, form: FormData): Promise<PlanActionState> {
   const user = await requireUser();
-  if (!user.canManage && !user.roles.includes("project_manager")) return { message: "Only an administrator or assigned project manager can edit the plan." };
+  if (!user.canManage && !user.roles.includes("engineer")) return { message: "Only an administrator or assigned engineer can edit the plan." };
   const parsed = projectMaterialPlanInputSchema.safeParse({
     projectId: value(form, "projectId"), siteId: value(form, "siteId"),
     warehouseId: value(form, "warehouseId"), materialId: value(form, "materialId"),

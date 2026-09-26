@@ -11,7 +11,7 @@ create table public.client_invoices (
   issued_on date not null,
   due_on date not null check (due_on >= issued_on),
   amount numeric(18,2) not null check (amount > 0),
-  status text not null default 'issued' check (status in ('issued', 'void')),
+  status text not null default 'issued' check (status in ('issued','void')),
   issued_by uuid not null references public.profiles(id) on delete restrict,
   voided_by uuid references public.profiles(id) on delete restrict,
   voided_at timestamptz,
@@ -61,11 +61,11 @@ revoke all on public.client_invoices, public.client_payments, public.client_paym
 grant select on public.client_invoices, public.client_payments, public.client_payment_reversals to authenticated;
 
 create policy client_invoices_finance_read on public.client_invoices for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy client_payments_finance_read on public.client_payments for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy client_payment_reversals_finance_read on public.client_payment_reversals for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 
 create trigger client_invoices_audit after insert or update on public.client_invoices
 for each row execute function private.audit_row_change();
@@ -104,7 +104,7 @@ declare
   v_billed numeric(18,2);
   v_id uuid := gen_random_uuid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Not authorized to issue invoices' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_project_id is null or p_issued_on is null or p_due_on is null or p_due_on < p_issued_on
@@ -155,7 +155,7 @@ declare
   v_paid numeric(18,2);
   v_id uuid := gen_random_uuid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Not authorized to record payments' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_invoice_id is null or p_paid_on is null or p_amount is null or p_amount <= 0
@@ -198,7 +198,7 @@ declare
   v_payload jsonb;
   v_id uuid := gen_random_uuid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can reverse a payment' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_payment_id is null or char_length(trim(coalesce(p_reason, ''))) not between 3 and 500 then
@@ -231,7 +231,7 @@ declare
   v_actor uuid := (select auth.uid());
   v_invoice public.client_invoices;
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can void an invoice' using errcode = '42501';
   end if;
   if char_length(trim(coalesce(p_reason, ''))) not between 3 and 500 then
@@ -253,7 +253,7 @@ create function public.get_client_invoice_balances(p_invoice_ids uuid[])
 returns table(invoice_id uuid, paid_amount numeric, outstanding_amount numeric)
 language plpgsql stable security definer set search_path = '' as $$
 begin
-  if (select auth.uid()) is null or not private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[]) then
+  if (select auth.uid()) is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Not authorized to view billing' using errcode = '42501';
   end if;
   if coalesce(array_length(p_invoice_ids, 1), 0) > 100 then
@@ -275,7 +275,7 @@ create function public.get_billable_projects()
 returns table(id uuid, code text, name text, client_name text, contract_amount numeric, status public.project_status)
 language plpgsql stable security definer set search_path = '' as $$
 begin
-  if (select auth.uid()) is null or not private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[]) then
+  if (select auth.uid()) is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Not authorized to view billing projects' using errcode = '42501';
   end if;
   return query select p.id, p.code, p.name, p.client_name, p.contract_amount, p.status

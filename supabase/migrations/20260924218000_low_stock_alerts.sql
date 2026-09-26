@@ -39,9 +39,9 @@ begin
 
   if v_location.project_site_id is not null then
     select project_id into v_project_id from public.project_sites where id = v_location.project_site_id;
-    v_roles := array['super_admin','owner','admin','project_manager','engineer','foreman']::public.app_role[];
+    v_roles := array['admin','engineer','foreman']::public.app_role[];
   else
-    v_roles := array['super_admin','owner','admin','warehouse_staff']::public.app_role[];
+    v_roles := array['admin','warehouse_staff']::public.app_role[];
   end if;
 
   if v_material.is_active and v_material.archived_at is null

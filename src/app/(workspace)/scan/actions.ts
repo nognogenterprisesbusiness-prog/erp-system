@@ -24,7 +24,7 @@ export async function resolveScannedCode(rawIdentifier: string): Promise<ScanRes
 
   const actions: ScanAction[] = [{ label: "Open record", href: qrEntityHref(resolution) }];
   const id = encodeURIComponent(resolution.entity_id);
-  const canRequest = !user.canManage && user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role));
+  const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
   if (resolution.entity_type === "material") {
     if (canRequest) {
       actions.push({ label: "Request material", href: `/requests/new?material=${id}` });

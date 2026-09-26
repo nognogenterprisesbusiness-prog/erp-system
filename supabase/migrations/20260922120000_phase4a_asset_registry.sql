@@ -32,8 +32,8 @@ create table public.asset_locations (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint asset_locations_source check (
-    (location_kind in ('warehouse', 'project_site') and inventory_location_id is not null and name is null and address is null)
-    or (location_kind in ('maintenance_facility', 'other') and inventory_location_id is null and char_length(trim(name)) between 2 and 160 and char_length(trim(address)) between 3 and 300)
+    (location_kind in ('warehouse','project_site') and inventory_location_id is not null and name is null and address is null)
+    or (location_kind in ('maintenance_facility','other') and inventory_location_id is null and char_length(trim(name)) between 2 and 160 and char_length(trim(address)) between 3 and 300)
   ),
   constraint asset_locations_archive_pair check ((archived_at is null) = (archived_by is null))
 );
@@ -148,12 +148,12 @@ create index asset_events_asset_idx on public.asset_events (asset_id, occurred_a
 
 create or replace function private.can_manage_assets()
 returns boolean language sql stable security definer set search_path = ''
-as $$ select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]) $$;
+as $$ select private.has_any_role(array['admin']::public.app_role[]) $$;
 
 create or replace function private.can_view_asset_location(target_location_id uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
   select private.can_manage_assets()
-    or private.has_any_role(array['accounting']::public.app_role[])
+    or private.has_any_role(array['admin']::public.app_role[])
     or exists (
       select 1 from public.asset_locations al
       where al.id = target_location_id
@@ -227,7 +227,7 @@ returns uuid language plpgsql security definer set search_path = '' as $$
 declare v_actor uuid := (select auth.uid()); v_id uuid;
 begin
   if v_actor is null or not private.can_manage_assets() then raise exception 'not authorized' using errcode = '42501'; end if;
-  if p_location_kind not in ('maintenance_facility', 'other') or char_length(trim(p_name)) not between 2 and 160 or char_length(trim(p_address)) not between 3 and 300 then
+  if p_location_kind not in ('maintenance_facility','other') or char_length(trim(p_name)) not between 2 and 160 or char_length(trim(p_address)) not between 3 and 300 then
     raise exception 'invalid standalone asset location' using errcode = '22023';
   end if;
   if p_id is null then
@@ -263,7 +263,7 @@ create or replace function public.save_equipment(
 declare v_actor uuid := (select auth.uid()); v_id uuid; v_old public.assets; v_event public.asset_event_type;
 begin
   if v_actor is null or not private.can_manage_assets() then raise exception 'not authorized' using errcode = '42501'; end if;
-  if p_status in ('assigned', 'in_use', 'retired') then raise exception 'this status is managed by assignment or archive workflows' using errcode = '22023'; end if;
+  if p_status in ('assigned','in_use','retired') then raise exception 'this status is managed by assignment or archive workflows' using errcode = '22023'; end if;
   if trim(p_code) !~ '^[A-Z0-9-]{2,32}$' or char_length(trim(p_name)) not between 2 and 160 or char_length(trim(p_equipment_type)) not between 2 and 120 or trim(p_serial_number) !~ '^[A-Z0-9./-]{2,80}$' or p_acquisition_cost < 0 then raise exception 'invalid equipment values' using errcode = '22023'; end if;
   perform private.validate_asset_reference(p_category_id, 'equipment', p_location_id);
   if p_id is null then
@@ -295,7 +295,7 @@ create or replace function public.save_vehicle(
 declare v_actor uuid := (select auth.uid()); v_id uuid; v_old public.assets; v_old_mileage numeric; v_event public.asset_event_type;
 begin
   if v_actor is null or not private.can_manage_assets() then raise exception 'not authorized' using errcode = '42501'; end if;
-  if p_status in ('assigned', 'in_use', 'retired') then raise exception 'this status is managed by assignment or archive workflows' using errcode = '22023'; end if;
+  if p_status in ('assigned','in_use','retired') then raise exception 'this status is managed by assignment or archive workflows' using errcode = '22023'; end if;
   if trim(p_code) !~ '^[A-Z0-9-]{2,32}$' or char_length(trim(p_name)) not between 2 and 160 or trim(p_plate_number) !~ '^[A-Z0-9 -]{2,20}$' or p_manufacture_year not between 1886 and extract(year from current_date)::smallint + 1 or p_current_mileage < 0 then raise exception 'invalid vehicle values' using errcode = '22023'; end if;
   perform private.validate_asset_reference(p_category_id, 'vehicle', p_location_id);
   if p_id is null then
@@ -328,7 +328,7 @@ begin
   if char_length(trim(p_reason)) not between 3 and 500 then raise exception 'archive reason is required' using errcode = '22023'; end if;
   select * into v_old from public.assets where id = p_id and archived_at is null for update;
   if v_old.id is null then raise exception 'asset not found or already archived' using errcode = 'P0002'; end if;
-  if v_old.status in ('assigned', 'in_use') then raise exception 'an assigned or in-use asset cannot be archived' using errcode = '22023'; end if;
+  if v_old.status in ('assigned','in_use') then raise exception 'an assigned or in-use asset cannot be archived' using errcode = '22023'; end if;
   update public.assets set status = 'retired', archived_at = now(), archived_by = v_actor, updated_by = v_actor where id = p_id;
   perform private.record_asset_event(p_id, 'archived', v_old.status, 'retired', v_old.current_location_id, v_old.current_location_id, trim(p_reason), '{}'::jsonb, v_actor);
 end;
@@ -345,8 +345,8 @@ begin
   insert into public.audit_logs (actor_id, table_name, record_id, action, old_data, new_data)
   values (
     (select auth.uid()), tg_table_name, target_id, lower(tg_op),
-    case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end,
-    case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) end
+    case when tg_op in ('UPDATE','DELETE') then to_jsonb(old) end,
+    case when tg_op in ('INSERT','UPDATE') then to_jsonb(new) end
   );
   return case when tg_op = 'DELETE' then old else new end;
 end;

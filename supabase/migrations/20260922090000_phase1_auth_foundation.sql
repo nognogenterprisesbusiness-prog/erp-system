@@ -2,15 +2,10 @@ create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 
 create type public.app_role as enum (
-  'super_admin',
-  'owner',
   'admin',
-  'project_manager',
   'engineer',
   'foreman',
-  'warehouse_staff',
-  'accounting',
-  'worker'
+  'warehouse_staff'
 );
 
 create table public.profiles (
@@ -38,7 +33,7 @@ create table public.audit_logs (
   actor_id uuid references public.profiles(id) on delete set null,
   table_name text not null,
   record_id uuid,
-  action text not null check (action in ('insert', 'update', 'delete')),
+  action text not null check (action in ('insert','update','delete')),
   old_data jsonb,
   new_data jsonb,
   created_at timestamptz not null default now()
@@ -111,8 +106,8 @@ declare
   current_data jsonb;
 begin
   target_id := case when tg_op = 'DELETE' then old.id else new.id end;
-  previous_data := case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end;
-  current_data := case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) end;
+  previous_data := case when tg_op in ('UPDATE','DELETE') then to_jsonb(old) end;
+  current_data := case when tg_op in ('INSERT','UPDATE') then to_jsonb(new) end;
   -- Keep audit evidence of the changed record without copying sensitive contact
   -- details or private storage paths into a long-lived general audit table.
   previous_data := previous_data - array['email','client_email','client_phone','phone','contact_number',
@@ -138,8 +133,8 @@ begin
   insert into public.audit_logs (actor_id, table_name, record_id, action, old_data, new_data)
     values (
       auth.uid(), 'user_roles', case when tg_op = 'DELETE' then old.user_id else new.user_id end,
-      lower(tg_op), case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end,
-      case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) end
+      lower(tg_op), case when tg_op in ('UPDATE','DELETE') then to_jsonb(old) end,
+      case when tg_op in ('INSERT','UPDATE') then to_jsonb(new) end
     );
   return case when tg_op = 'DELETE' then old else new end;
 end; $$;
@@ -158,7 +153,7 @@ create policy profiles_select_self_or_admin
 on public.profiles for select to authenticated
 using (
   id = (select auth.uid())
-  or (select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]))
+  or (select private.has_any_role(array['admin']::public.app_role[]))
 );
 
 create policy profiles_update_self
@@ -170,12 +165,12 @@ create policy user_roles_select_self_or_admin
 on public.user_roles for select to authenticated
 using (
   user_id = (select auth.uid())
-  or (select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]))
+  or (select private.has_any_role(array['admin']::public.app_role[]))
 );
 
 create policy audit_logs_select_admin
 on public.audit_logs for select to authenticated
-using ((select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 
 revoke execute on function private.has_any_role(public.app_role[]) from public, anon;
 grant execute on function private.has_any_role(public.app_role[]) to authenticated;

@@ -18,10 +18,10 @@ export default async function MaterialRequestDetailPage({ params }: { params: Pr
   const { id } = await params;
   const [user, data] = await Promise.all([requireUser(), getMaterialRequest(id)]);
   const { request, project, site, warehouse, lines, events, fulfillmentEvents, reservationEvents, varianceEvents, dispatches } = data;
-  const canDecide = request.status === "submitted" && (user.canManage || user.roles.includes("project_manager"));
+  const canDecide = request.status === "submitted" && (user.canManage || (user.roles.includes("engineer") && request.requested_by !== user.userId));
   const canCancel = (request.status === "submitted" || request.status === "approved" || request.status === "partially_approved")
     && dispatches.length === 0 && (user.canManage || request.requested_by === user.userId);
-  const canReceive = user.canManage || user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role));
+  const canReceive = user.canManage || user.roles.some((role) => ["engineer", "foreman"].includes(role));
   const totals = new Map(lines.map((line) => [line.id, dispatches.filter((dispatch) => dispatch.request_line_id === line.id).reduce((total, dispatch) => ({ dispatched: total.dispatched + dispatch.item.dispatched_quantity, received: total.received + dispatch.item.received_quantity, variance: total.variance + dispatch.item.variance_quantity }), { dispatched: 0, received: 0, variance: 0 })]));
   const history = [
     ...events.map((event) => ({ id: event.id, event: labels[event.event_type], material: "—", quantity: "—", actor: event.actorName, detail: "", occurredAt: event.occurred_at })),

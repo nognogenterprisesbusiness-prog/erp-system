@@ -7,9 +7,9 @@ type Table<Row, Insert, Update = Partial<Insert>> = {
   Relationships: [];
 };
 
-export type AppRole = "super_admin" | "owner" | "admin" | "project_manager" | "engineer" | "foreman" | "warehouse_staff" | "accounting" | "worker";
+export type AppRole = "admin" | "engineer" | "foreman" | "warehouse_staff";
 export type ProjectStatus = "draft" | "active" | "on_hold" | "completed" | "cancelled";
-export type AssignmentRole = "project_manager" | "engineer" | "foreman" | "warehouse_staff" | "accounting" | "worker";
+export type AssignmentRole = "engineer" | "foreman";
 export type AssignmentStatus = "active" | "inactive";
 export type WarehouseStatus = "active" | "inactive";
 export type MaterialKind = "consumable" | "reusable";

@@ -24,7 +24,7 @@ export default async function MaterialRequestsPage({ searchParams }: { searchPar
   const page = typeof params.page === "string" ? Number(params.page) : 1;
   const filters = { search, status: status.success ? status.data : "all" as const, page };
   const [user, result] = await Promise.all([requireUser(), getMaterialRequests(filters)]);
-  const canRequest = !user.canManage && user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role));
+  const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (search) next.set("q", search); if (filters.status !== "all") next.set("status", filters.status); next.set("page", String(target)); return `/requests?${next}`; };
   return <>
     <PageHeader title="Material requests" description="Review site demand, manager decisions, and delivery progress." action={<div className="flex flex-wrap gap-2">{user.canOperateInventory && <Button asChild variant="outline"><Link href="/requests/queue">Dispatch queue</Link></Button>}{canRequest && <Button asChild><Link href="/requests/new"><HugeiconsIcon icon={PlusSignIcon} size={17} />New request</Link></Button>}</div>} />

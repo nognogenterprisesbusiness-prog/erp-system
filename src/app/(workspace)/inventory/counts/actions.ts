@@ -10,7 +10,7 @@ const value = (form: FormData, key: string) => String(form.get(key) ?? "");
 
 export async function recordStockCountAction(_: StockCountActionState, form: FormData): Promise<StockCountActionState> {
   const user = await requireUser();
-  if (!user.canOperateInventory && !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)))
+  if (!user.canOperateInventory && !user.roles.some((role) => ["engineer", "foreman"].includes(role)))
     return { message: "You cannot count this stock location." };
   const parsed = stockCountInputSchema.safeParse({
     idempotencyKey: value(form, "idempotencyKey"), materialId: value(form, "materialId"),

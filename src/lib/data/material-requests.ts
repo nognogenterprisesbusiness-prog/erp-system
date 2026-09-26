@@ -11,7 +11,7 @@ const PAGE_SIZE = 20;
 
 export async function getMaterialRequestChoices() {
   const user = await requireUser();
-  if (!user.canManage && !user.roles.some((role) => ["project_manager", "engineer", "foreman"].includes(role)))
+  if (!user.canManage && !user.roles.some((role) => ["engineer", "foreman"].includes(role)))
     return { projects: [], sites: [], warehouses: [], links: [], materials: [] };
   const supabase = await createClient();
   const [reportChoices, warehousesResult, materialsResult] = await Promise.all([

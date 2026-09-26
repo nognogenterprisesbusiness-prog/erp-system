@@ -21,7 +21,7 @@ create table public.qr_codes (
   remarks text check (remarks is null or char_length(trim(remarks)) between 2 and 500),
   constraint qr_entity_match check (
     (entity_type = 'material' and material_id is not null and asset_id is null and warehouse_id is null and project_site_id is null)
-    or (entity_type in ('equipment', 'vehicle') and material_id is null and asset_id is not null and warehouse_id is null and project_site_id is null)
+    or (entity_type in ('equipment','vehicle') and material_id is null and asset_id is not null and warehouse_id is null and project_site_id is null)
     or (entity_type = 'warehouse' and material_id is null and asset_id is null and warehouse_id is not null and project_site_id is null)
     or (entity_type = 'project_site' and material_id is null and asset_id is null and warehouse_id is null and project_site_id is not null)
   ),
@@ -61,7 +61,7 @@ create trigger qr_codes_validate before insert or update on public.qr_codes for 
 
 create or replace function private.can_manage_qr()
 returns boolean language sql stable security definer set search_path = ''
-as $$ select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]) $$;
+as $$ select private.has_any_role(array['admin']::public.app_role[]) $$;
 
 create or replace function public.ensure_qr_code(p_entity_type public.qr_entity_type, p_entity_id uuid)
 returns uuid language plpgsql security definer set search_path = '' as $$
@@ -73,7 +73,7 @@ begin
   select id into v_id from public.qr_codes where entity_type = p_entity_type and entity_id = p_entity_id and status = 'active';
   if v_id is not null then return v_id; end if;
   if (p_entity_type = 'material' and not exists (select 1 from public.materials where id = p_entity_id and archived_at is null))
-    or (p_entity_type in ('equipment', 'vehicle') and not exists (select 1 from public.assets where id = p_entity_id and asset_kind::text = p_entity_type::text and archived_at is null))
+    or (p_entity_type in ('equipment','vehicle') and not exists (select 1 from public.assets where id = p_entity_id and asset_kind::text = p_entity_type::text and archived_at is null))
     or (p_entity_type = 'warehouse' and not exists (select 1 from public.warehouses where id = p_entity_id and status = 'active'))
     or (p_entity_type = 'project_site' and not exists (select 1 from public.project_sites where id = p_entity_id and status = 'active')) then
     raise exception 'entity is unavailable or incompatible' using errcode = '22023';
@@ -81,7 +81,7 @@ begin
   insert into public.qr_codes (entity_type, material_id, asset_id, warehouse_id, project_site_id, generated_by)
   values (p_entity_type,
     case when p_entity_type = 'material' then p_entity_id end,
-    case when p_entity_type in ('equipment', 'vehicle') then p_entity_id end,
+    case when p_entity_type in ('equipment','vehicle') then p_entity_id end,
     case when p_entity_type = 'warehouse' then p_entity_id end,
     case when p_entity_type = 'project_site' then p_entity_id end,
     auth.uid()) returning id into v_id;
@@ -134,7 +134,7 @@ begin
   if not found then raise exception 'QR code is invalid or inactive' using errcode = '22023'; end if;
   if v_code.entity_type = 'material' then
     select name, code into v_name, v_code_label from public.materials where id = v_code.material_id and archived_at is null;
-  elsif v_code.entity_type in ('equipment', 'vehicle') then
+  elsif v_code.entity_type in ('equipment','vehicle') then
     if not private.can_view_asset(v_code.asset_id) then raise exception 'not authorized' using errcode = '42501'; end if;
     select name, code into v_name, v_code_label from public.assets where id = v_code.asset_id and archived_at is null;
   elsif v_code.entity_type = 'warehouse' then

@@ -8,7 +8,7 @@ import { safeSearchTerm } from "./search";
 import type { DailyReportStatus } from "@/types/database";
 
 const PAGE_SIZE = 20;
-const reportingRoles = ["project_manager", "engineer", "foreman"] as const;
+const reportingRoles = ["engineer", "foreman"] as const;
 
 export async function getDailyReportChoices() {
   const user = await requireDailyReportViewer();

@@ -7,11 +7,10 @@ as $$
 declare
   v_actor uuid := auth.uid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'not authorized to assign a user role' using errcode = '42501';
   end if;
-  if p_role in ('super_admin', 'owner') or
-     (p_role = 'admin' and not private.has_any_role(array['super_admin', 'owner']::public.app_role[])) then
+  if p_role = 'admin' then
     raise exception 'not authorized to assign this role' using errcode = '42501';
   end if;
   if p_user_id = v_actor or not exists (select 1 from public.profiles where id = p_user_id) then
@@ -34,15 +33,13 @@ as $$
 declare
   v_actor uuid := auth.uid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'not authorized to manage users' using errcode = '42501';
   end if;
   if p_user_id is null or p_is_active is null or p_user_id = v_actor then
     raise exception 'invalid target user or status' using errcode = '22023';
   end if;
-  if exists (select 1 from public.user_roles where user_id = p_user_id and role in ('super_admin', 'owner')) or
-     (exists (select 1 from public.user_roles where user_id = p_user_id and role = 'admin') and
-      not private.has_any_role(array['super_admin', 'owner']::public.app_role[])) then
+  if exists (select 1 from public.user_roles where user_id = p_user_id and role = 'admin') then
     raise exception 'not authorized to change this account' using errcode = '42501';
   end if;
   if p_is_active and exists (select 1 from public.profiles where id = p_user_id and onboarding_required) then

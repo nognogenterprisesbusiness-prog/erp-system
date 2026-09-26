@@ -57,7 +57,7 @@ returns boolean language sql stable security definer set search_path = '' as $$
     join public.profiles p on p.id = pa.user_id and p.is_active
     join public.user_roles ur on ur.user_id = pa.user_id and ur.role::text = pa.assignment_role::text
     where pa.project_id = p_project_id and pa.user_id = (select auth.uid())
-      and pa.status = 'active' and pa.assignment_role in ('project_manager', 'engineer', 'foreman')
+      and pa.status = 'active' and pa.assignment_role in ('engineer','foreman')
   )
 $$;
 
@@ -88,7 +88,7 @@ begin
   if not exists (
     select 1 from public.projects p join public.project_sites ps on ps.project_id = p.id
     where p.id = p_project_id and ps.id = p_project_site_id
-      and p.archived_at is null and p.status in ('active', 'on_hold') and ps.status = 'active'
+      and p.archived_at is null and p.status in ('active','on_hold') and ps.status = 'active'
   ) then
     raise exception 'project or site is unavailable' using errcode = '22023';
   end if;

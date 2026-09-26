@@ -98,11 +98,11 @@ create index supplier_events_supplier_idx on public.supplier_events (supplier_id
 
 create or replace function private.can_manage_suppliers()
 returns boolean language sql stable security definer set search_path = ''
-as $$ select private.has_any_role(array['super_admin', 'owner', 'admin']::public.app_role[]) $$;
+as $$ select private.has_any_role(array['admin']::public.app_role[]) $$;
 
 create or replace function private.can_view_suppliers()
 returns boolean language sql stable security definer set search_path = ''
-as $$ select private.has_any_role(array['super_admin', 'owner', 'admin', 'accounting']::public.app_role[]) $$;
+as $$ select private.has_any_role(array['admin']::public.app_role[]) $$;
 
 create or replace function private.record_supplier_event(
   p_supplier_id uuid, p_event_type public.supplier_event_type, p_summary text, p_details jsonb, p_actor uuid

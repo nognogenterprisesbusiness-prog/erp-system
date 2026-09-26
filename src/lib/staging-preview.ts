@@ -18,10 +18,19 @@ export function stagingPreviewAccounts() {
   if (!stagingUrl || stagingUrl === process.env.NEXT_PUBLIC_SUPABASE_URL) {
     throw new Error("Preview accounts require an isolated staging Supabase project.");
   }
-  const parsed = accountSchema.safeParse(JSON.parse(process.env.STAGING_PREVIEW_ACCOUNTS ?? "null"));
+  let raw: unknown;
+  try {
+    raw = JSON.parse(process.env.STAGING_PREVIEW_ACCOUNTS ?? "null");
+  } catch {
+    throw new Error("STAGING_PREVIEW_ACCOUNTS must be valid JSON.");
+  }
+  const parsed = accountSchema.safeParse(raw);
   if (!parsed.success) throw new Error("STAGING_PREVIEW_ACCOUNTS must contain 2–12 labeled test accounts with strong passwords.");
   const emails = parsed.data.map((account) => account.email.toLowerCase());
   if (new Set(emails).size !== emails.length) throw new Error("Preview account emails must be unique.");
+  if (new Set(parsed.data.map((account) => account.password)).size !== parsed.data.length) {
+    throw new Error("Every preview account needs a distinct password.");
+  }
   return parsed.data;
 }
 

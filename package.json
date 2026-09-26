@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:demo": "tsx --test src/lib/demo/database.test.ts src/lib/demo/isolation.test.ts src/lib/export/csv.test.ts src/lib/locations/catalog.test.ts src/lib/locations/search.test.ts",
+    "test:unit": "tsx --test src/lib/export/csv.test.ts src/lib/locations/catalog.test.ts",
     "test:auth": "tsx --test src/lib/users/access.test.ts",
     "test:media": "tsx --test src/lib/media/webp.test.ts",
     "test:security": "tsx --test src/lib/data/search.test.ts",
@@ -22,7 +22,8 @@
     "test:material-reservations": "node scripts/test-material-reservations.mjs",
     "test:requests": "tsx --test packages/domain/src/material-requests.test.ts",
     "test:daily-reports": "tsx --test packages/domain/src/daily-reports.test.ts",
-    "test:inventory-domain": "tsx --test packages/domain/src/inventory-valuation.test.ts"
+    "test:inventory-domain": "tsx --test packages/domain/src/inventory-valuation.test.ts",
+    "staging:provision-preview": "node scripts/provision-staging-preview.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",
@@ -35,7 +36,6 @@
     "@zxing/browser": "^0.2.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dexie": "^4.4.6",
     "next": "16.3.5",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
@@ -54,7 +54,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
-    "fake-indexeddb": "^6.2.5",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

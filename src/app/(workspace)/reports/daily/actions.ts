@@ -66,7 +66,7 @@ export async function reviewDailyReportAction(_: DailyReportActionState, form: F
   const { error } = await supabase.rpc("review_daily_report", {
     p_report_id: parsed.data.reportId, p_action: parsed.data.action, p_note: parsed.data.note,
   });
-  if (error) return { ok: false, message: error.code === "42501" ? "An independent project manager must review this report." : error.code === "55000" ? "This report is no longer awaiting review." : "The review could not be saved. Please try again." };
+  if (error) return { ok: false, message: error.code === "42501" ? "An independent assigned engineer or admin must review this report." : error.code === "55000" ? "This report is no longer awaiting review." : "The review could not be saved. Please try again." };
   revalidatePath(`/reports/daily/${parsed.data.reportId}`);
   revalidatePath("/reports/daily");
   return { ok: true, message: parsed.data.action === "approve" ? "Report approved." : "Report returned for correction." };
@@ -85,7 +85,7 @@ export async function startDailyReportCorrectionAction(_: DailyReportActionState
 
 export async function recordProjectProgressAction(_: DailyReportActionState, form: FormData): Promise<DailyReportActionState> {
   const user = await requireUser();
-  if (!user.canManage && !user.roles.includes("project_manager")) return { ok: false, message: "Only an administrator or assigned project manager can record progress." };
+  if (!user.canManage && !user.roles.includes("engineer")) return { ok: false, message: "Only an administrator or assigned engineer can record progress." };
   const parsed = projectProgressInputSchema.safeParse({ reportId: value(form, "reportId"), percent: value(form, "percent"), summary: value(form, "summary") });
   if (!parsed.success) return { ok: false, message: "Review the progress details.", fieldErrors: parsed.error.flatten().fieldErrors };
   const supabase = await createClient();

@@ -4,17 +4,17 @@ create function public.get_dashboard_monthly_project_costs(p_months integer defa
 returns table(month_start date, material_cost numeric, labor_cost numeric,
   equipment_cost numeric, other_cost numeric)
 language plpgsql stable security definer set search_path = '' as $$
-declare v_first_month date;
+declare v_first_month date; v_today date := (now() at time zone 'Asia/Manila')::date;
 begin
   if (select auth.uid()) is null or not private.has_any_role(
-    array['super_admin','owner','admin','accounting']::public.app_role[]
+    array['admin']::public.app_role[]
   ) then
     raise exception 'Not authorized to view project costs' using errcode = '42501';
   end if;
   if p_months is null or p_months not between 1 and 12 then
     raise exception 'Month count must be between 1 and 12' using errcode = '22023';
   end if;
-  v_first_month := (date_trunc('month', current_date) - (p_months - 1) * interval '1 month')::date;
+  v_first_month := (date_trunc('month', v_today) - (p_months - 1) * interval '1 month')::date;
   if exists (
     select 1 from public.inventory_transactions t
     where t.transaction_type = 'MATERIAL_CONSUMPTION' and t.project_id is not null
@@ -23,10 +23,21 @@ begin
   ) then
     raise exception 'Unvalued material consumption prevents monthly cost reporting' using errcode = '22023';
   end if;
+  if exists (
+    select 1 from public.inventory_stock_counts c
+    join public.inventory_locations l on l.id = c.inventory_location_id
+    join public.project_sites s on s.id = l.project_site_id
+    join public.inventory_transactions t on t.id = c.transaction_id
+    where c.status = 'approved' and t.transaction_date >= v_first_month
+      and t.cost_total is null
+      and not exists (select 1 from public.inventory_transactions r where r.reversal_of = t.id)
+  ) then
+    raise exception 'Unvalued site stock loss prevents monthly cost reporting' using errcode = '22023';
+  end if;
 
   return query
   with months as (
-    select (date_trunc('month', current_date) - n * interval '1 month')::date as month
+    select (date_trunc('month', v_today) - n * interval '1 month')::date as month
     from pg_catalog.generate_series(0, p_months - 1) as n
   ), costs as (
     select date_trunc('month', t.transaction_date)::date as month,
@@ -59,13 +70,13 @@ begin
     where c.status = 'approved' and t.transaction_date >= v_first_month
       and not exists (select 1 from public.inventory_transactions r where r.reversal_of = t.id)
     union all
-    select date_trunc('month', v.approved_at)::date, 0, 0, 0, v.cost_total
+    select date_trunc('month', v.approved_at at time zone 'Asia/Manila')::date, 0, 0, 0, v.cost_total
     from public.inventory_transfer_variances v
     join public.inventory_transfer_items i on i.id = v.transfer_item_id
     join public.inventory_transfers tr on tr.id = i.transfer_id
     join public.inventory_locations src on src.id = tr.source_location_id
     join public.inventory_locations dst on dst.id = tr.destination_location_id
-    where v.approved_at::date >= v_first_month
+    where (v.approved_at at time zone 'Asia/Manila')::date >= v_first_month
       and (src.project_site_id is not null or dst.project_site_id is not null)
   )
   select m.month, coalesce(sum(c.material), 0), coalesce(sum(c.labor), 0),

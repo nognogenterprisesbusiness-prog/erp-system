@@ -92,17 +92,17 @@ grant select on public.equipment_hour_rates, public.project_equipment_usage,
   public.project_equipment_usage_reversals, public.project_additional_expenses,
   public.project_expense_reversals, public.project_budget_changes to authenticated;
 create policy equipment_hour_rates_finance_read on public.equipment_hour_rates for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy project_equipment_usage_finance_read on public.project_equipment_usage for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy project_equipment_usage_reversals_finance_read on public.project_equipment_usage_reversals for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy project_additional_expenses_finance_read on public.project_additional_expenses for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy project_expense_reversals_finance_read on public.project_expense_reversals for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create policy project_budget_changes_finance_read on public.project_budget_changes for select to authenticated
-using ((select private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])));
+using ((select private.has_any_role(array['admin']::public.app_role[])));
 create trigger equipment_hour_rates_audit after insert or update on public.equipment_hour_rates for each row execute function private.audit_row_change();
 create trigger project_equipment_usage_audit after insert on public.project_equipment_usage for each row execute function private.audit_row_change();
 create trigger project_equipment_usage_reversals_audit after insert on public.project_equipment_usage_reversals for each row execute function private.audit_row_change();
@@ -128,7 +128,7 @@ create function public.set_equipment_hour_rate(p_asset_id uuid, p_hourly_rate nu
 returns uuid language plpgsql security definer set search_path = '' as $$
 declare v_actor uuid := (select auth.uid()); v_asset public.assets; v_current public.equipment_hour_rates; v_id uuid := gen_random_uuid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can set equipment rates' using errcode = '42501';
   end if;
   if p_asset_id is null or p_hourly_rate is null or p_hourly_rate <= 0 or p_hourly_rate <> round(p_hourly_rate, 2)
@@ -173,7 +173,7 @@ declare
   v_total_hours numeric;
   v_id uuid := gen_random_uuid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can post equipment usage cost' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_project_id is null or p_asset_id is null or p_use_date is null
@@ -238,7 +238,7 @@ create function public.post_project_additional_expense(
 ) returns uuid language plpgsql security definer set search_path = '' as $$
 declare v_actor uuid := (select auth.uid()); v_payload jsonb; v_existing public.project_additional_expenses; v_id uuid := gen_random_uuid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can post additional project expense' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_project_id is null or p_expense_date is null
@@ -275,7 +275,7 @@ create function public.adjust_project_budget(
 declare v_actor uuid := (select auth.uid()); v_payload jsonb; v_existing public.project_budget_changes;
   v_project public.projects; v_changes numeric; v_id uuid := gen_random_uuid();
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can adjust project budget' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_project_id is null or p_change_amount is null
@@ -310,7 +310,7 @@ create function public.reverse_project_cost_entry(
 declare v_actor uuid := (select auth.uid()); v_payload jsonb; v_id uuid := gen_random_uuid();
   v_existing_id uuid; v_existing_actor uuid; v_existing_payload jsonb; v_asset_id uuid; v_project_id uuid;
 begin
-  if v_actor is null or not private.has_any_role(array['super_admin','owner','admin']::public.app_role[]) then
+  if v_actor is null or not private.has_any_role(array['admin']::public.app_role[]) then
     raise exception 'Only an administrator can reverse project cost' using errcode = '42501';
   end if;
   if p_idempotency_key is null or p_entry_id is null or p_kind not in ('equipment','expense')
@@ -367,10 +367,9 @@ language plpgsql stable security definer set search_path = '' as $$
 declare v_project public.projects; v_material numeric; v_labor numeric; v_equipment numeric;
   v_additional numeric; v_budget numeric; v_invoiced numeric; v_cash numeric;
 begin
-  if (select auth.uid()) is null or not (
-    private.has_any_role(array['super_admin','owner','admin','accounting']::public.app_role[])
-    or (private.has_any_role(array['project_manager']::public.app_role[]) and private.can_access_project(p_project_id))
-  ) then raise exception 'Not authorized to view project management summary' using errcode = '42501'; end if;
+  if (select auth.uid()) is null or not private.has_any_role(array['admin']::public.app_role[]) then
+    raise exception 'Not authorized to view project management summary' using errcode = '42501';
+  end if;
   select * into v_project from public.projects where id = p_project_id;
   if v_project.id is null then raise exception 'Project not found' using errcode = '22023'; end if;
   if exists(select 1 from public.inventory_transactions t where t.project_id = p_project_id
