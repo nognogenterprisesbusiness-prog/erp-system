@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { IssueInvoiceForm } from "@/components/billing/billing-forms";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";

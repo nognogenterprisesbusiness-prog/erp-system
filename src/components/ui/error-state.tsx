@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 
 import { Button } from "@/components/ui/button";
 

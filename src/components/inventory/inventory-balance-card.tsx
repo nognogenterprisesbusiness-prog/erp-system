@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 
 import { MaterialThumbnail } from "@/components/ui/material-thumbnail";
 

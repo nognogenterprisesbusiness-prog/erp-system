@@ -1,7 +1,7 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { SupplierForm } from "@/components/suppliers/supplier-form";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { uuidSchema } from "@nognog/domain";
 import { SupplierCards } from "@/components/suppliers/supplier-cards";
 import { Button } from "@/components/ui/button";

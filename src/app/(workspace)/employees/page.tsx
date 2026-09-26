@@ -4,7 +4,7 @@ import { SearchField } from "@/components/ui/search-field";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { EmployeeForm } from "@/components/workforce/employee-form";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { EmployeeTable } from "@/components/workforce/employee-table";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";

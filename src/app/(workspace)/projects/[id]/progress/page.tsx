@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { notFound } from "next/navigation";
 import { requireDailyReportViewer } from "@/lib/auth";
 import { uuidSchema } from "@nognog/domain";

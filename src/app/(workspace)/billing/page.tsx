@@ -1,5 +1,5 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";

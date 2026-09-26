@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { uuidSchema } from "@nognog/domain";
 import { notFound } from "next/navigation";
 import { ReverseAttendanceForm } from "@/components/workforce/attendance-forms";

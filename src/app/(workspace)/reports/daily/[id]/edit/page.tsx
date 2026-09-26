@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { notFound } from "next/navigation";
 import { DailyReportForm } from "@/components/reports/daily-report-form";
 import { Button } from "@/components/ui/button";

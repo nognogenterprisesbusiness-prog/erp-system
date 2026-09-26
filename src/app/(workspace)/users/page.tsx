@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 
 import { InitialRoleForm, UserInviteDialog, UserPasswordResetForm, UserStatusForm } from "@/components/users/user-management";
 import { UserProfileButton } from "@/components/users/user-profile-button";

@@ -1,5 +1,5 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { ReversalForm } from "@/components/inventory/transaction-action-form";
 import { Button } from "@/components/ui/button";
 import { DataTableShell } from "@/components/ui/data-table-shell";

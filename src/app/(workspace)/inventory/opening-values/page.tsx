@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { OpeningValueForm } from "@/components/inventory/opening-value-form";

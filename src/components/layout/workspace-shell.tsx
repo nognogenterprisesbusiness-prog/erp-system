@@ -9,7 +9,7 @@ import { HeaderSearch } from "@/components/layout/header-search";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { LiveRouteRefresh } from "@/components/layout/live-route-refresh";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { usePathname } from "next/navigation";
 
 const navItems = [

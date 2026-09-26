@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Building03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -29,9 +29,7 @@ export function ProjectSummaryCard({ href, navigation = "app", code, name, locat
   const NavigationLink = navigation === "history" ? HistoryLink : Link;
   return <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
     <div className="relative h-44 shrink-0 bg-slate-100 sm:h-48">
-      <NavigationLink href={href} aria-label={`View ${name}`} className="absolute inset-0 grid place-items-center overflow-hidden text-slate-400 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-600">
-        {photo ? <Image src={photo} alt="" fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" unoptimized={photo.startsWith("data:") || photo.startsWith("/record-photos/")} className="object-cover transition-transform duration-300 hover:scale-[1.03]" /> : <HugeiconsIcon icon={Building03Icon} size={40} strokeWidth={1.4} aria-hidden="true" />}
-      </NavigationLink>
+       {photo ? <PhotoViewer src={photo} alt={`${name} photo`} sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw" /> : <NavigationLink href={href} aria-label={`View ${name}`} className="absolute inset-0 grid place-items-center text-slate-400"><HugeiconsIcon icon={Building03Icon} size={40} strokeWidth={1.4} aria-hidden="true" /></NavigationLink>}
       <span className={`pointer-events-none absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm ${statusStyles[statusTone]}`}>{status}</span>
     </div>
     <div className="flex flex-1 flex-col p-5">

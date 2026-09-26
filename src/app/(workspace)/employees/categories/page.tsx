@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { archiveEmployeeCategoryAction } from "@/app/(workspace)/employees/actions";
 import { EmployeeCategoryForm } from "@/components/workforce/employee-category-form";
 import { Button } from "@/components/ui/button";

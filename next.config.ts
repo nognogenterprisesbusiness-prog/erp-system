@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   experimental: {
     serverActions: { bodySizeLimit: "4mb" },
-    staleTimes: { dynamic: 120, static: 120 },
+    staleTimes: { dynamic: 600, static: 600 },
   },
 };
 

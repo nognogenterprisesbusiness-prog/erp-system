@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
@@ -28,4 +28,3 @@ export function ProjectSitesSection({ data, canManage, qrCodes }: { data: Projec
       {sites.length === 0 ? <EmptyState compact kind="items" title="No sites recorded" /> : <div className="mt-4 grid gap-4 md:grid-cols-2">{sites.map((site) => <article key={site.id} className="rounded-xl border border-slate-200 p-4"><div className="flex justify-between gap-3"><div><h3 className="text-sm font-semibold">{site.name}</h3><p className="mt-1 text-xs text-slate-500">{site.address}</p></div><Badge variant={site.status === "active" ? "active" : "neutral"}>{site.status}</Badge></div><dl className="mt-4 grid grid-cols-2 gap-3 text-xs"><div><dt className="text-slate-400">Engineer</dt><dd className="mt-1 font-medium">{profileName(site.engineer_id)}</dd></div><div><dt className="text-slate-400">Foreman</dt><dd className="mt-1 font-medium">{profileName(site.foreman_id)}</dd></div></dl>{canManage && <div className="mt-4 border-t border-slate-100 pt-4">{siteQrById.get(site.id) ? <Button asChild variant="outline" size="sm"><Link href={`/qr-codes/${siteQrById.get(site.id)!.id}`}>View QR label</Link></Button> : <GenerateQrForm entityType="project_site" entityId={site.id} />}</div>}</article>)}</div>}
     </section>);
 }
-

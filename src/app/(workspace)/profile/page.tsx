@@ -1,5 +1,5 @@
 import { MyProfileForm } from "@/components/users/my-profile-form";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { ThemeSettings } from "@/components/layout/theme-toggle";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";

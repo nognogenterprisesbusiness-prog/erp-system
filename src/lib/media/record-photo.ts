@@ -30,7 +30,8 @@ export async function saveRecordPhoto(kind: RecordPhotoKind, id: string, bytes: 
     }
     return;
   }
-  const result = kind === "daily-reports" ? await supabase.rpc("attach_daily_report_photo", { p_report_id: id })
+  const result = kind === "assets" ? await supabase.rpc("attach_asset_photo", { p_asset_id: id })
+    : kind === "daily-reports" ? await supabase.rpc("attach_daily_report_photo", { p_report_id: id })
     : kind === "suppliers" ? await supabase.rpc("attach_supplier_photo", { p_supplier_id: id })
     : await supabase.rpc("attach_material_photo", { p_material_id: id });
   if (result.error) {

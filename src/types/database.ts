@@ -78,7 +78,7 @@ export type InventoryValuationRow = { id: string; material_id: string; inventory
 export type InventoryOpeningValueRow = { id: string; material_id: string; inventory_location_id: string; verified_quantity: number; verified_total_value: number; reason: string; verified_by: string; verified_at: string };
 export type AssetCategoryRow = { id: string; asset_kind: AssetKind; name: string; description: string | null; created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
 export type AssetLocationRow = { id: string; location_kind: AssetLocationKind; inventory_location_id: string | null; name: string | null; address: string | null; created_by: string | null; updated_by: string | null; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
-export type AssetRow = { id: string; asset_kind: AssetKind; code: string; name: string; description: string | null; category_id: string; brand: string; model: string; acquisition_date: string; ownership_type: AssetOwnershipType; status: AssetStatus; current_location_id: string; condition_notes: string | null; created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
+export type AssetRow = { photo_path: string | null; id: string; asset_kind: AssetKind; code: string; name: string; description: string | null; category_id: string; brand: string; model: string; acquisition_date: string; ownership_type: AssetOwnershipType; status: AssetStatus; current_location_id: string; condition_notes: string | null; created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
 export type EquipmentDetailRow = { asset_id: string; equipment_type: string; serial_number: string; acquisition_cost: number; sku: string | null };
 export type VehicleDetailRow = { asset_id: string; plate_number: string; manufacture_year: number; current_mileage: number };
 export type AssetEventRow = { id: string; asset_id: string; event_type: AssetEventType; previous_status: AssetStatus | null; current_status: AssetStatus | null; previous_location_id: string | null; current_location_id: string | null; summary: string; details: Json; actor_id: string; occurred_at: string };
@@ -297,6 +297,7 @@ export type Database = {
         start_daily_report_correction: { Args: { p_report_id: string }; Returns: string };
         attach_material_photo: { Args: { p_material_id: string }; Returns: undefined };
         attach_supplier_photo: { Args: { p_supplier_id: string }; Returns: undefined };
+        attach_asset_photo: { Args: { p_asset_id: string }; Returns: undefined };
       ensure_qr_code: { Args: { p_entity_type: QrEntityType; p_entity_id: string }; Returns: string };
       deactivate_qr_code: { Args: { p_qr_id: string; p_reason: string }; Returns: undefined };
       replace_qr_code: { Args: { p_qr_id: string; p_reason: string }; Returns: string };

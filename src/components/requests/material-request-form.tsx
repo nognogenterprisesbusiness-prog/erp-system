@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { PlusSignIcon, Remove01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { submitMaterialRequestAction, type RequestActionState } from "@/app/(workspace)/requests/actions";

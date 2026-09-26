@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { MaterialRequestDecision } from "@/components/requests/material-request-decision";
 import { MaterialRequestCancellation } from "@/components/requests/material-request-cancellation";
 import { RequestMovementForm } from "@/components/requests/request-movement-form";

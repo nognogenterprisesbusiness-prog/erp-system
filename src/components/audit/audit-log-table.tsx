@@ -1,5 +1,5 @@
 import { DataTableShell } from "@/components/ui/data-table-shell";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { AccountAvatar } from "@/components/ui/account-avatar";

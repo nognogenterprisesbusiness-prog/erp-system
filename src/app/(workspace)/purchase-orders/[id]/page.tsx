@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { uuidSchema } from "@nognog/domain";
 import { notFound } from "next/navigation";
 import { CancelPurchaseOrderForm, ReceivePurchaseLineForm } from "@/components/purchase-orders/purchase-order-forms";

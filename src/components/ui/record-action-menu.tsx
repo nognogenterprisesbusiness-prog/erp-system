@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Archive01Icon, ArrowRight01Icon, Cancel01Icon, Delete02Icon, DeliveryTruck01Icon, FileAddIcon, MoreVerticalIcon, PencilEdit02Icon, PrinterIcon, ShoppingCart01Icon, Tick02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 

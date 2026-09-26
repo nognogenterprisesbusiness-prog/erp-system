@@ -1,5 +1,9 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
+import { randomUUID } from "node:crypto";
+import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
+import { DailyReportForm } from "@/components/reports/daily-report-form";
+import { todayInManila } from "@/lib/date";
 import { dailyReportStatuses, uuidSchema } from "@nognog/domain";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -30,7 +34,7 @@ export default async function DailyReportsPage({ searchParams }: { searchParams:
     <PageHeader eyebrow="Site reporting" title="Daily reports" description="Record site work and preserve submitted report history for assigned projects."
       action={<div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
         <ReportDateRangeFilter key={`${filters.reportDateFrom}:${filters.reportDateTo}`} startDate={filters.reportDateFrom} endDate={filters.reportDateTo} search={search} projectId={filters.projectId} siteId={filters.siteId} status={filters.status} />
-        {choices.sites.length > 0 && <Button asChild><Link href="/reports/daily/new">Add report</Link></Button>}
+        {choices.sites.length > 0 && <RecordCreateDialog title="Add daily report" triggerLabel="Add report" initialOpen={params.create === "1"} closeHref="/reports/daily"><DailyReportForm initialId={randomUUID()} initialProjectId={filters.projectId || undefined} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}
       </div>} />
     <ListFilterBar>
       <input type="hidden" name="from" value={filters.reportDateFrom} />

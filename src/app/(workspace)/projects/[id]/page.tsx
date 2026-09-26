@@ -1,5 +1,5 @@
-import Link from "next/link";
-import Image from "next/image";
+import { IntentLink as Link } from "@/components/layout/intent-link";
+import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { ArrowLeft01Icon, Building03Icon, Calendar03Icon, Download04Icon, Money03Icon, PackageIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +75,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
       <div className="flex flex-wrap gap-2"><ShareProjectButton href={`/projects/${id}`} />{user.canViewLaborRates && <><Button variant="outline" asChild><a href={`/projects/${id}/costs/export?format=pdf`}><HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={1.5} />PDF</a></Button><Button variant="outline" asChild><a href={`/projects/${id}/costs/export?format=xlsx`}><HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={1.5} />Excel</a></Button></>}{user.canManage && <><RecordCreateDialog key={`${project.id}:${project.updated_at}`} title="Edit project" triggerLabel="Edit" triggerVariant="outline" initialOpen={filters.edit === "1"} closeHref={returnHref}><ProjectForm project={project} profiles={data.engineers} /></RecordCreateDialog><form action={archiveProjectAction}><input type="hidden" name="id" value={id} /><Button variant="outline" type="submit">Archive</Button></form></>}</div>
     </header>
     <div className="relative mt-6 grid h-44 place-items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 text-slate-400 sm:h-60">
-      {project.photo_path ? <Image src={recordPhotoUrl("projects", id, project.updated_at)} alt={`${project.name} project`} fill sizes="(max-width: 768px) 100vw, 1200px" unoptimized className="object-cover" /> : <HugeiconsIcon icon={Building03Icon} size={48} strokeWidth={1.3} aria-label="No project photo uploaded" />}
+      {project.photo_path ? <PhotoViewer src={recordPhotoUrl("projects", id, project.updated_at)} alt={`${project.name} project`} sizes="(max-width: 768px) 100vw, 1200px" /> : <HugeiconsIcon icon={Building03Icon} size={48} strokeWidth={1.3} aria-label="No project photo uploaded" />}
     </div>
     <section aria-label="Project summary" className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <MetricCard label="Timeline" value={`${project.estimated_duration_days} days`} detail={`${date(project.start_date)} – ${date(project.target_completion_date)}`} icon={Calendar03Icon} tone="bg-blue-50 text-blue-600" />

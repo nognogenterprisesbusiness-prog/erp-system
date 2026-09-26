@@ -58,10 +58,16 @@ export async function getAssetReferences(kind: AssetKind) {
   return { categories, locations };
 }
 
-export async function getAssets(params: { id?: string; kind: AssetKind; query?: string; categoryId?: string; status?: AssetStatus | "all"; locationId?: string; includeArchived?: boolean }) {
+export async function getAssets(params: { id?: string; kind: AssetKind; query?: string; categoryId?: string; status?: AssetStatus | "all"; locationId?: string; includeArchived?: boolean; page?: number; pageSize?: number }) {
   const supabase = await createClient();
-  let request = supabase.from("assets").select("id,asset_kind,code,name,description,category_id,brand,model,acquisition_date,ownership_type,status,current_location_id,condition_notes,created_by,updated_by,archived_at,archived_by,created_at,updated_at").eq("asset_kind", params.kind).order("updated_at", { ascending: false }).limit(500);
+  let request = supabase.from("assets").select("id,asset_kind,code,name,description,category_id,brand,model,acquisition_date,ownership_type,status,current_location_id,condition_notes,photo_path,created_by,updated_by,archived_at,archived_by,created_at,updated_at").eq("asset_kind", params.kind).order("updated_at", { ascending: false }).limit(500);
   if (params.id) request = request.eq("id", params.id);
+  if (params.page !== undefined && !params.id) {
+    const size = Math.max(1, Math.min(100, Math.floor(params.pageSize ?? 24)));
+    const offset = (Math.max(1, Math.min(1000, Math.floor(params.page))) - 1) * size;
+    // One extra row determines whether another page exists without a count query.
+    request = request.range(offset, offset + size);
+  }
   if (!params.includeArchived) request = request.is("archived_at", null);
   if (params.categoryId) request = request.eq("category_id", params.categoryId);
   if (params.locationId) request = request.eq("current_location_id", params.locationId);

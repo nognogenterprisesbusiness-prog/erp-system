@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { archiveAssetLocationAction } from "@/app/(workspace)/equipment/actions";
 import { AssetLocationForm } from "@/components/assets/asset-location-form";
 import { Button } from "@/components/ui/button";

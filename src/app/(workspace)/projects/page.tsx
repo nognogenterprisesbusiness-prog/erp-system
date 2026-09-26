@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { SearchField } from "@/components/ui/search-field";
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { ProjectListPickers } from "@/components/projects/project-list-pickers";
@@ -26,9 +26,8 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const direction = params.direction === "asc" ? "asc" : "desc";
   const page = typeof params.page === "string" ? Number.parseInt(params.page, 10) || 1 : 1;
   const user = await requireUser();
-  const data = await getProjects({ query, status, sort, direction, page, includeProgress: user.canViewDailyReports });
+  const [data, profiles] = await Promise.all([getProjects({ query, status, sort, direction, page, includeProgress: user.canViewDailyReports }), user.canManage ? getAssignableProfiles("engineer") : Promise.resolve([])]);
   const creating = user.canManage && params.create === "1";
-  const profiles = creating ? await getAssignableProfiles("engineer") : [];
   const href = (changes: { page?: number; status?: typeof status; sort?: typeof sort; direction?: typeof direction }) => {
     const value = new URLSearchParams();
     if (query) value.set("q", query);
@@ -44,7 +43,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   return <>
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Project control</p><h1 className="mt-1.5 text-3xl font-semibold tracking-[-0.035em]">Projects</h1><p className="mt-1 text-sm text-slate-500">Search and manage the project records available to you.</p></div>
-      {user.canManage && <><Button asChild><Link href={`${href({ page })}${href({ page }).endsWith("?") ? "" : "&"}create=1`}>Add project</Link></Button>{creating && <RecordCreateDialog title="Add project" initialOpen hideTrigger closeHref={href({ page })}><ProjectForm profiles={profiles} /></RecordCreateDialog>}</>}
+      {user.canManage && <RecordCreateDialog title="Add project" initialOpen={creating} closeHref={href({ page })}><ProjectForm profiles={profiles} /></RecordCreateDialog>}
     </div>
     <ListFilterBar>
       <SearchField name="q" defaultValue={query} label="Search projects" placeholder="Search name, code, or client" />

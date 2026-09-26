@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prepareRecordPhoto, saveRecordPhoto } from "@/lib/media/record-photo";
 
 export type DailyReportActionState =
-  | { ok: true; message: string }
+  | { ok: true; message: string; id?: string }
   | { ok: false; message: string; fieldErrors?: Record<string, string[]> };
 
 const value = (form: FormData, key: string) => String(form.get(key) ?? "");
@@ -27,6 +27,7 @@ export async function saveDailyReportAction(_: DailyReportActionState, form: For
   let photo: Buffer | undefined;
   try { photo = await prepareRecordPhoto(form.get("photo")); }
   catch (cause) { return { ok: false, message: cause instanceof Error ? cause.message : "The report photo could not be processed." }; }
+  if (value(form, "photoSelected") === "1" && !photo) return { ok: false, message: "The selected photo was not attached. Choose it again before saving." };
   const supabase = await createClient();
   const args = {
     p_id: input.id, p_project_id: input.projectId, p_project_site_id: input.projectSiteId,
@@ -52,10 +53,7 @@ export async function saveDailyReportAction(_: DailyReportActionState, form: For
       if (submitError) return { ok: false, message: "The photo was saved, but the report remains a draft. Review and submit it again." };
     }
   }
-  revalidatePath("/reports/daily");
-  revalidatePath(`/reports/daily/${data}`);
-  revalidatePath(`/projects/${input.projectId}/reports`);
-  redirect(`/reports/daily/${data}`);
+  return { ok: true, message: input.intent === "submit" ? "Report submitted." : "Draft saved.", id: data };
 }
 
 export async function reviewDailyReportAction(_: DailyReportActionState, form: FormData): Promise<DailyReportActionState> {

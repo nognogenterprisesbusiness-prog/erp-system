@@ -1,5 +1,5 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { z } from "zod";
 import { uuidSchema } from "@nognog/domain";
 import { Badge } from "@/components/ui/badge";

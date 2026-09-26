@@ -1,5 +1,5 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { uuidSchema } from "@nognog/domain";
 import { AttendanceOverviewTable } from "@/components/workforce/attendance-overview-table";
 import { Button } from "@/components/ui/button";

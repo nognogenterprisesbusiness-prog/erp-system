@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { PencilEdit02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArchiveSupplierForm, ArchiveSupplierMaterialForm, CloseSupplierPriceForm, SupplierMaterialForm, SupplierPriceForm } from "@/components/suppliers/supplier-catalog-forms";

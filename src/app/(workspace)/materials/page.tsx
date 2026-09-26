@@ -4,7 +4,7 @@ import { SearchField } from "@/components/ui/search-field";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { MaterialForm } from "@/components/materials/material-form";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableShell } from "@/components/ui/data-table-shell";

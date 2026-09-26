@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Button } from "@/components/ui/button";
 import { GenerateQrForm } from "@/components/qr/qr-action-form";
 import { getActiveQrCode } from "@/lib/data/qr-codes";

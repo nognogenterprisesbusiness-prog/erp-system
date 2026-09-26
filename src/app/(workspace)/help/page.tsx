@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { requireUser } from "@/lib/auth";
 import { PageHeader } from "@/components/ui/page-header";
 

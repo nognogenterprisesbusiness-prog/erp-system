@@ -1,6 +1,6 @@
 "use client";
 import { useActionState, useState } from "react";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { saveWarehouseAction, type WarehouseActionState } from "@/app/(workspace)/warehouses/actions";
 import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";

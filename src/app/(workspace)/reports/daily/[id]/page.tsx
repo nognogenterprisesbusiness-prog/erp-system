@@ -1,5 +1,5 @@
-import Link from "next/link";
-import Image from "next/image";
+import { IntentLink as Link } from "@/components/layout/intent-link";
+import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -48,7 +48,7 @@ export default async function DailyReportDetailPage({ params }: { params: Promis
     <PageHeader eyebrow={report.report_number} title="Daily construction report" description={`${project.code} · ${project.name} · ${site.name}`}
       action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${report.project_id}/reports`}>Project reports</Link></Button>{canEdit && <Button asChild><Link href={`/reports/daily/${id}/edit`}>Edit draft</Link></Button>}{canCorrect && <DailyReportCorrection reportId={id} />}</div>} />
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-      {report.photo_path && <div className="relative mb-6 h-56 overflow-hidden rounded-xl bg-slate-100 sm:h-72"><Image src={recordPhotoUrl("daily-reports", report.id)} alt={`Site photo for ${report.report_number}`} fill sizes="(max-width: 640px) 100vw, 960px" unoptimized className="object-cover" /></div>}
+      {report.photo_path && <div className="relative mb-6 h-56 overflow-hidden rounded-xl bg-slate-100 sm:h-72"><PhotoViewer src={recordPhotoUrl("daily-reports", report.id, report.updated_at)} alt={`Site photo for ${report.report_number}`} sizes="(max-width: 640px) 100vw, 960px" /></div>}
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold">Report details</h2><Badge variant={report.status === "draft" || report.status === "requires_revision" ? "review" : report.status === "approved" ? "active" : "neutral"}>{report.status.replaceAll("_", " ")}</Badge></div>
       <dl className="mt-5 grid gap-5 border-t border-slate-100 pt-5 sm:grid-cols-2 xl:grid-cols-4">
         <div><dt className="text-xs text-slate-400">Reporting date</dt><dd className="mt-1 text-sm font-medium">{date(report.report_date)}</dd></div>

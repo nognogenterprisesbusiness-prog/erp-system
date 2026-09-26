@@ -1,5 +1,5 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Download04Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InventoryLocationPicker } from "@/components/inventory/inventory-location-picker";
@@ -40,7 +40,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   return <>
     <PageHeader eyebrow="Materials control" title="Inventory" description={selectedLocationName ? `${selectedLocationName} stock balances` : "Stock balances"} action={<div className="flex flex-wrap items-center gap-2">
       <InventoryLocationPicker locations={data.locations} value={data.selectedLocationId} />
-      <Button variant="outline" asChild><Link href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export CSV</Link></Button>
+      <Button variant="outline" asChild><a href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export CSV</a></Button>
       {user.canManage && references && <RecordCreateDialog title="Add material"><MaterialForm {...references} /></RecordCreateDialog>}
       <RecordActionMenu name="Inventory" triggerLabel="Stock actions" actions={[
         ...(user.canManage ? [{ label: "Stock in", href: `/inventory?${exportParams}&action=stock-in` }, { label: "Stock out", href: `/inventory?${exportParams}&action=stock-out` }] : []),

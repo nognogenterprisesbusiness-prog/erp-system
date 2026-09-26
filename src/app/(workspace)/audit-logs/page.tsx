@@ -1,5 +1,5 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { notFound } from "next/navigation";
 
 import { AuditLogTable } from "@/components/audit/audit-log-table";

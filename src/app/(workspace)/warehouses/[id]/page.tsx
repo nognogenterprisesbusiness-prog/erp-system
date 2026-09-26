@@ -1,5 +1,5 @@
-import Link from "next/link";
-import Image from "next/image";
+import { IntentLink as Link } from "@/components/layout/intent-link";
+import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { PencilEdit02Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +26,7 @@ export default async function WarehousePage({ params }: { params: Promise<{ id: 
       <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">{warehouse.code}</p><div className="mt-1.5 flex items-center gap-3"><h1 className="text-3xl font-semibold tracking-[-0.035em]">{warehouse.name}</h1><Badge variant={warehouse.status === "active" ? "active" : "neutral"}>{warehouse.status}</Badge></div><p className="mt-1 text-sm text-slate-500">{warehouse.address}</p></div>
       {user.canManage && <Button variant="outline" asChild><Link href={`/warehouses/${id}/edit`}><HugeiconsIcon icon={PencilEdit02Icon} size={17} /> Edit</Link></Button>}
     </div>
-    {warehouse.photo_path && <div className="relative mt-6 h-52 overflow-hidden rounded-2xl bg-slate-100 sm:h-64"><Image src={recordPhotoUrl("warehouses", id)} alt={`${warehouse.name} warehouse`} fill sizes="(max-width: 768px) 100vw, 900px" unoptimized className="object-cover" /></div>}
+    {warehouse.photo_path && <div className="relative mt-6 h-52 overflow-hidden rounded-2xl bg-slate-100 sm:h-64"><PhotoViewer src={recordPhotoUrl("warehouses", id, warehouse.updated_at)} alt={`${warehouse.name} warehouse`} sizes="(max-width: 768px) 100vw, 900px" /></div>}
     <EntityQrSection entityType="warehouse" entityId={id} canManage={user.canManage} />
     <section className="mt-8 grid gap-5 md:grid-cols-2">
       <article className="rounded-2xl border border-slate-200 bg-white p-6"><h2 className="font-semibold">Warehouse details</h2><dl className="mt-5 space-y-4 text-sm"><div><dt className="text-xs text-slate-400">Address</dt><dd className="mt-1 font-medium">{warehouse.address}</dd></div>{municipality && <div><dt className="text-xs text-slate-400">City / municipality</dt><dd className="mt-1 font-medium">{municipality.displayName}, {municipality.province} · {municipality.region}{municipality.zipCode ? ` · ${municipality.zipCode}` : ""}</dd></div>}<div><dt className="text-xs text-slate-400">Contact person</dt><dd className="mt-1 font-medium">{warehouse.contact_person || "Not recorded"}</dd></div><div><dt className="text-xs text-slate-400">Contact number</dt><dd className="mt-1 font-medium">{warehouse.contact_number || "Not recorded"}</dd></div>{warehouse.description && <div><dt className="text-xs text-slate-400">Description</dt><dd className="mt-1 leading-6 text-slate-600">{warehouse.description}</dd></div>}</dl></article>

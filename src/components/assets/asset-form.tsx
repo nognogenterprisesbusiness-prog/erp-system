@@ -2,9 +2,12 @@
 import { SelectPicker } from "@/components/ui/select-picker";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PesoAmountInput } from "@/components/ui/peso-amount-input";
-import { useActionState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { RecordPhotoInput } from "@/components/ui/record-photo-input";
+import { recordPhotoUrl } from "@/lib/media/record-photo-url";
 import { saveAssetAction, type AssetActionState } from "@/app/(workspace)/equipment/actions";
-import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import type { AssetLocationView, AssetView } from "@/lib/data/assets";
 import type { AssetCategoryRow, AssetKind } from "@/types/database";
@@ -12,10 +15,29 @@ import type { AssetCategoryRow, AssetKind } from "@/types/database";
 const initialState: AssetActionState = { ok: false, message: "" };
 export function AssetForm({ kind, asset, categories, locations }: { kind: AssetKind; asset?: AssetView; categories: AssetCategoryRow[]; locations: AssetLocationView[] }) {
   const [state, action, pending] = useActionState(saveAssetAction, initialState);
+  const dialog = useRecordDialog();
+  const router = useRouter();
+  const completed = useRef(false);
+  const photo = useRef<File | null>(null);
+  const [processingPhoto, setProcessingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!state.ok || completed.current) return;
+    completed.current = true;
+    if (dialog) dialog.complete();
+    else startTransition(() => router.replace(`/${kind === "equipment" ? "equipment" : "vehicles"}/${state.data.id}`));
+  }, [state, dialog, router, kind]);
   const error = (field: string) => state.ok ? undefined : state.fieldErrors?.[field]?.[0];
   const isEquipment = kind === "equipment";
-  return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-    <input type="hidden" name="assetKind" value={kind} />{asset && <input type="hidden" name="id" value={asset.id} />}
+  return <form onSubmit={(event) => {
+    event.preventDefault();
+    if (pending || processingPhoto || photoError) return;
+    const form = new FormData(event.currentTarget);
+    if (photo.current) form.set("photo", photo.current);
+    startTransition(() => action(form));
+  }} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+    <input type="hidden" name="assetKind" value={kind} /><input type="hidden" name="id" value={state.savedId ?? asset?.id ?? ""} />
+    <div className="mb-5"><RecordPhotoInput label={`${isEquipment ? "Equipment" : "Vehicle"} photo`} currentPhoto={asset?.photo_path ? recordPhotoUrl("assets", asset.id, asset.updated_at) : undefined} convertBeforeSubmit onProcessingChange={setProcessingPhoto} onPreparedFile={(file) => { photo.current = file; }} onPreparationError={setPhotoError} /></div>
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label={`${isEquipment ? "Equipment" : "Vehicle"} code`} htmlFor="code" error={error("code")}><input className={fieldControlClass} id="code" name="code" defaultValue={asset?.code} placeholder={isEquipment ? "EQ-EXC-001" : "VEH-DT-001"} required /></FormField>
       {isEquipment && <FormField label="SKU" htmlFor="sku" hint="Optional catalog or model SKU; separate from the asset code and serial number." error={error("sku")}><input className={fieldControlClass} id="sku" name="sku" defaultValue={asset?.equipment?.sku ?? ""} placeholder="CAT-320-GX" /></FormField>}
@@ -34,6 +56,6 @@ export function AssetForm({ kind, asset, categories, locations }: { kind: AssetK
       <FormField label="Condition notes" htmlFor="conditionNotes" className="md:col-span-2" error={error("conditionNotes")}><textarea className={`${fieldControlClass} h-auto py-3`} id="conditionNotes" name="conditionNotes" rows={3} defaultValue={asset?.condition_notes ?? ""} /></FormField>
     </div>
     {!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}
-    <RecordFormControls busy={pending} />
+    <RecordFormControls busy={pending} disabled={processingPhoto || Boolean(photoError)} />
   </form>;
 }

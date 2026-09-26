@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useRecordDialog } from "@/components/ui/record-create-dialog";
 import { saveDailyReportAction, type DailyReportActionState } from "@/app/(workspace)/reports/daily/actions";
 import { Button } from "@/components/ui/button";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -22,6 +24,18 @@ export function DailyReportForm({ report, initialId, initialProjectId, initialDa
   sites: SiteChoice[];
 }) {
   const [state, action, pending] = useActionState(saveDailyReportAction, initialState);
+  const dialog = useRecordDialog();
+  const router = useRouter();
+  const completed = useRef(false);
+  const preparedPhoto = useRef<File | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  useEffect(() => { dialog?.setBusy(pending); }, [dialog, pending]);
+  useEffect(() => {
+    if (!state.ok || completed.current) return;
+    completed.current = true;
+    if (dialog) dialog.complete();
+    else startTransition(() => router.replace(`/reports/daily/${state.id ?? initialId}`));
+  }, [state, dialog, router, initialId]);
   const [reportId] = useState(initialId);
   const [projectId, setProjectId] = useState(report?.project_id ?? initialProjectId ?? projects[0]?.id ?? "");
   const [processingPhoto, setProcessingPhoto] = useState(false);
@@ -36,7 +50,15 @@ export function DailyReportForm({ report, initialId, initialProjectId, initialDa
         defaultValue={String(report?.[name] ?? "")} />
     </FormField>
   );
-  return <form action={action} className="space-y-5">
+  return <form onSubmit={(event) => {
+    event.preventDefault();
+    if (pending || processingPhoto || photoError) return;
+    const form = new FormData(event.currentTarget);
+    const submitter = (event.nativeEvent as SubmitEvent).submitter;
+    if (submitter instanceof HTMLButtonElement) form.set("intent", submitter.value);
+    if (preparedPhoto.current) form.set("photo", preparedPhoto.current);
+    startTransition(() => action(form));
+  }} className="space-y-5">
     <input type="hidden" name="id" value={reportId} />
     <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <h2 className="text-base font-semibold">Report context</h2>
@@ -60,7 +82,7 @@ export function DailyReportForm({ report, initialId, initialProjectId, initialDa
           <DatePicker id="reportDate" name="reportDate" label="Report date" defaultValue={report?.report_date ?? initialDate} required allowClear={false} />
         </FormField>
       </div>
-      <div className="mt-5 max-w-sm"><RecordPhotoInput label="Site photo (optional)" currentPhoto={report?.photo_path ? recordPhotoUrl("daily-reports", report.id) : undefined} convertBeforeSubmit onProcessingChange={setProcessingPhoto} /></div>
+      <div className="mt-5 max-w-sm"><RecordPhotoInput label="Site photo (optional)" currentPhoto={report?.photo_path ? recordPhotoUrl("daily-reports", report.id, report.updated_at) : undefined} convertBeforeSubmit onProcessingChange={setProcessingPhoto} onPreparedFile={(file) => { preparedPhoto.current = file; }} onPreparationError={setPhotoError} /></div>
     </section>
     <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <h2 className="text-base font-semibold">Work and observations</h2>

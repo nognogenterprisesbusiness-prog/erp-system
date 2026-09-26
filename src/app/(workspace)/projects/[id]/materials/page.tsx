@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { notFound } from "next/navigation";
 import { redirect } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";

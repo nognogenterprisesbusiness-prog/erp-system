@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { uuidSchema } from "@nognog/domain";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { InventoryMovementForm } from "@/components/inventory/inventory-movement-form";
