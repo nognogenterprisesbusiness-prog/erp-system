@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { convertImageToWebp } from "@/lib/media/webp";
 
-export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = false, onProcessingChange }: {
+export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = false, onProcessingChange, onPreparedFile }: {
   label: string;
   currentPhoto?: string;
   convertBeforeSubmit?: boolean;
   onProcessingChange?: (processing: boolean) => void;
+  onPreparedFile?: (file: File | null) => void;
 }) {
   const [preview, setPreview] = useState<string>();
   const [photoSelected, setPhotoSelected] = useState(false);
@@ -19,20 +20,24 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
   async function choose(input: HTMLInputElement) {
     const file = input.files?.[0];
     setError("");
-    if (!file) { setPreview(undefined); setPhotoSelected(false); return; }
-    if (!convertBeforeSubmit) { setPreview(URL.createObjectURL(file)); setPhotoSelected(true); return; }
+    if (!file) { setPreview(undefined); setPhotoSelected(false); onPreparedFile?.(null); return; }
+    if (!convertBeforeSubmit) { setPreview(URL.createObjectURL(file)); setPhotoSelected(true); onPreparedFile?.(file); return; }
     onProcessingChange?.(true);
     try {
       const converted = await convertImageToWebp(file, { targetDimension: 1600, maxOutputBytes: 700_000 });
-      const files = new DataTransfer();
-      files.items.add(converted);
-      input.files = files.files;
+      if (!onPreparedFile) {
+        const files = new DataTransfer();
+        files.items.add(converted);
+        input.files = files.files;
+      }
+      onPreparedFile?.(converted);
       setPreview(URL.createObjectURL(converted));
       setPhotoSelected(true);
     } catch (cause) {
       input.value = "";
       setPreview(undefined);
       setPhotoSelected(false);
+      onPreparedFile?.(null);
       setError(cause instanceof Error ? cause.message : "Unable to process this photo.");
     } finally { onProcessingChange?.(false); }
   }
