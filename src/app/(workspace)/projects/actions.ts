@@ -36,6 +36,7 @@ export async function saveProjectAction(_: ProjectActionState, form: FormData): 
     catch (error) { revalidatePath("/projects"); return { ok: true, data: { id: result.data.id }, message: error instanceof Error ? error.message : "The record was saved, but its photo could not be uploaded." }; }
   }
   revalidatePath("/dashboard"); revalidatePath("/projects");
+  revalidatePath(`/projects/${result.data.id}`);
   redirect(`/projects/${result.data.id}`);
 }
 

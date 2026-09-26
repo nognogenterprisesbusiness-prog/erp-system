@@ -719,7 +719,13 @@ nognog-enterprises/
 
 ---
 
+| 2026-09-26 | Connected UI parity continuation | Dedicated project sections, shared Add dialogs, custom date/picker/PHP controls, compact registry filters, audit avatars, monthly expense lines, unit-separated consumption areas and full-width recent activity are implemented. Vehicles remain in scope. Production build, lint, typecheck, four-role auth/unit tests, isolated role/tab renders and dashboard aggregation checks pass; shared dialog controls were checked in the browser. See [verification details](docs/connected-ui-parity-2026-09-26.md). | No authenticated live-account save/RLS/concurrency tests or deployment occurred; isolated fixtures do not close connected acceptance checkboxes. | Run database-backed role/workflow UAT against the connected build. |
+
 ## 19. Commercial and change control checklist
+
+### Seeded-record access correction — 2026-09-26
+
+Shared PostgreSQL identifier validation now accepts existing seeded GUIDs across domain inputs, QR resolution, and account actions without replacing database IDs. Detail loaders distinguish absent/RLS-hidden records from database failures; project and warehouse reference-query failures are no longer silently ignored. The workspace error boundary exposes only the error digest and retries server data. Added a guarded notification Realtime grant/publication repair that preserves recipient RLS. Verification: 4 unit, 3 account-access, 5 request, 3 daily-report, and 5 inventory-domain tests; 27 isolated mocked-loader checks; isolated PostgreSQL notification repair/reapplication/recipient-isolation checks; lint, typecheck and production build passed. Hosted database migration application, authenticated Vercel page navigation, and live Realtime remain unverified; no deployed data was changed.
 
 - [ ] Confirm exact client legal/business name and authorized signatory.
 - [ ] Confirm whether ₱120,000+ starting quote includes all agreed tasks, and document any approved exclusions/changes.

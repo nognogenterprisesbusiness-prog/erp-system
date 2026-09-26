@@ -38,7 +38,7 @@ export function ProjectListPickers({ query, status, sort, direction }: { query: 
     if (nextStatus !== "all") params.set("status", nextStatus);
     if (nextSort !== "newest") params.set("sort", nextSort);
     if (nextDirection !== "desc") params.set("direction", nextDirection);
-    router.push(`/projects?${params}`);
+    router.push(`/projects?${params}`, { scroll: false });
   }
 
   return <div className="flex w-full flex-wrap gap-3 sm:w-auto">

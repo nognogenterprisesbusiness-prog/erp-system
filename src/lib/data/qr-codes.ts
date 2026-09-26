@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
+import { safeSearchTerm } from "./search";
 import type { QrCodeRow, QrEntityType, QrResolution } from "@/types/database";
 
 const qrResolutionSchema: z.ZodType<QrResolution> = z.object({
@@ -63,11 +64,14 @@ export async function getQrReplacement(id: string) {
   return data;
 }
 
-export async function listQrCodes(page: number, entityType?: QrEntityType) {
+export async function listQrCodes(page: number, entityType?: QrEntityType, search = "", batchSize = 25) {
   const supabase = await createClient();
-  const pageSize = 25;
-  let query = supabase.from("qr_codes").select("*", { count: "exact" }).order("generated_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1);
+  const pageSize = Math.min(500, Math.max(1, Number.isSafeInteger(batchSize) ? batchSize : 25));
+  const safePage = Math.min(10000, Math.max(1, Number.isSafeInteger(page) ? page : 1));
+  let query = supabase.from("qr_codes").select("*", { count: "exact" }).order("generated_at", { ascending: false }).order("id").range((safePage - 1) * pageSize, safePage * pageSize - 1);
   if (entityType) query = query.eq("entity_type", entityType);
+  const term = safeSearchTerm(search);
+  if (term) query = query.ilike("public_identifier", `%${term}%`);
   const { data, count, error } = await query;
   if (error) throw new Error("Unable to load QR registry.");
   return { codes: data ?? [], count: count ?? 0, pageSize };
@@ -96,7 +100,7 @@ export async function getQrAssociatedRecord(code: QrCodeRow) {
   if (code.entity_type === "equipment" || code.entity_type === "vehicle") {
     const { data, error } = await supabase.from("assets").select("name,code").eq("id", code.entity_id).single();
     if (error) throw new Error("Unable to load associated asset.");
-    return { name: data.name, code: data.code, href: `/${code.entity_type}/${code.entity_id}` };
+    return { name: data.name, code: data.code, href: `/${code.entity_type === "vehicle" ? "vehicles" : "equipment"}/${code.entity_id}` };
   }
   if (code.entity_type === "warehouse") {
     const { data, error } = await supabase.from("warehouses").select("name,code").eq("id", code.entity_id).single();

@@ -1,3 +1,4 @@
+import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import Link from "next/link";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -21,10 +22,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const pageHref = (target: number) => `/billing?${new URLSearchParams({ ...(query ? { q: query } : {}), page: String(target) })}`;
   return <>
     <PageHeader title="Client billing" description="Issued project invoices, partial payments, and outstanding balances." action={<Button asChild><Link href="/billing/new"><HugeiconsIcon icon={PlusSignIcon} size={17} /> New invoice</Link></Button>} />
-    <form className="mt-7 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
+    <ListFilterBar className="mt-7 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
       <SearchField name="q" label="Search invoices" defaultValue={query} placeholder="Search invoice, client, or description" wrapperClassName="min-w-[220px] flex-1" />
-      <Button variant="outline">Search</Button>
-    </form>
+    </ListFilterBar>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No invoices found" description="Issue an invoice or change the search." /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} invoice{result.count === 1 ? "" : "s"}</span>}>
       <table className="w-full min-w-[790px] text-left text-sm"><thead className={tableHeadClass}><tr>
         <th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / client</th><th className="px-4 py-3">Issued / due</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Outstanding</th><th className="px-5 py-3">Status</th>

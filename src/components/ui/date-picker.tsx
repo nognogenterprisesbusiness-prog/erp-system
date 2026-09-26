@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { FilterBarContext } from "./filter-bar-context";
 import { createPortal } from "react-dom";
 import { ArrowLeft01Icon, ArrowRight01Icon, Calendar03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -46,10 +47,10 @@ export function DatePicker({ id, name, label = "Date", placeholder, value, defau
   useEffect(() => {
     if (!open) return;
     const dismiss = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node) && !calendar.current?.contains(event.target as Node)) setOpen(false); };
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setOpen(false); } };
     document.addEventListener("pointerdown", dismiss);
-    document.addEventListener("keydown", escape);
-    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape); };
+    document.addEventListener("keydown", escape, true);
+    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape, true); };
   }, [open]);
 
   useLayoutEffect(() => {
@@ -74,9 +75,11 @@ export function DatePicker({ id, name, label = "Date", placeholder, value, defau
     return () => { window.removeEventListener("resize", place); document.removeEventListener("scroll", place, true); };
   }, [open, month, popoverAlign]);
 
+  const filterChange = useContext(FilterBarContext);
   const change = (next: string) => {
     if (value === undefined) setInternalValue(next);
     onValueChange?.(next);
+    if (name) filterChange?.(name, next);
     setOpen(false);
   };
   const moveMonth = (offset: number) => setMonth(new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + offset, 1)));

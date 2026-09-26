@@ -2,7 +2,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { saveWarehouseAction, type WarehouseActionState } from "@/app/(workspace)/warehouses/actions";
-import { Button } from "@/components/ui/button";
+import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
 import { LocationPicker } from "@/components/ui/location-picker";
 import { SelectPicker } from "@/components/ui/select-picker";
@@ -38,5 +38,5 @@ export function WarehouseForm({ warehouse, municipalityLabel = "" }: { warehouse
       </p>}
     </div>
     <div className="md:col-span-2">{field("Description", "description", <textarea id="description" name="description" rows={4} className={`${inputClass} h-auto py-3`} defaultValue={warehouse?.description ?? ""} />)}</div>
-  </div>{!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}{state.ok && "message" in state && <p role="status" className="mt-5 text-sm text-amber-700">{state.message} <Link className="underline" href={`/warehouses/${state.data.id}`}>Open saved warehouse</Link></p>}<div className="mt-6 flex justify-end"><Button size="lg" type="submit" disabled={pending || photoBusy}>{pending || photoBusy ? "Saving…" : "Save"}</Button></div></form>;
+  </div>{!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}{state.ok && "message" in state && <p role="status" className="mt-5 text-sm text-amber-700">{state.message} <Link className="underline" href={`/warehouses/${state.data.id}`}>Open saved warehouse</Link></p>}<RecordFormControls busy={pending || photoBusy} /></form>;
 }

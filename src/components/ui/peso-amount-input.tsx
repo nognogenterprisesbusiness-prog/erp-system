@@ -19,10 +19,10 @@ export function PesoAmountInput({ name, label, defaultValue = "", placeholder = 
   submitUngrouped?: boolean;
 }) {
   const [display, setDisplay] = useState(() => formatAmount(defaultValue));
-  return <label className="grid gap-1.5 text-xs font-semibold">{label}
+  return <label className="grid gap-2 text-sm font-medium text-slate-700">{label}
     <span className="relative block">
       <span aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">₱</span>
-      <input name={submitUngrouped ? undefined : name} aria-label={label} value={display} onChange={(event) => setDisplay(formatAmount(event.target.value))} inputMode="decimal" autoComplete="off" required={required} placeholder={placeholder} className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" />
+      <input name={submitUngrouped ? undefined : name} aria-label={label} value={display} onChange={(event) => setDisplay(formatAmount(event.target.value))} inputMode="decimal" autoComplete="off" required={required} placeholder={placeholder} className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" />
       {submitUngrouped && <input type="hidden" name={name} value={display.replaceAll(",", "")} />}
     </span>
   </label>;

@@ -1,3 +1,4 @@
+import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import Link from "next/link";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -28,11 +29,10 @@ export default async function MaterialRequestsPage({ searchParams }: { searchPar
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (search) next.set("q", search); if (filters.status !== "all") next.set("status", filters.status); next.set("page", String(target)); return `/requests?${next}`; };
   return <>
     <PageHeader title="Material requests" description="Review site demand, manager decisions, and delivery progress." action={<div className="flex flex-wrap gap-2">{user.canOperateInventory && <Button asChild variant="outline"><Link href="/requests/queue">Dispatch queue</Link></Button>}{canRequest && <Button asChild><Link href="/requests/new"><HugeiconsIcon icon={PlusSignIcon} size={17} />New request</Link></Button>}</div>} />
-    <form className="mt-7 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
-      <SearchField name="q" label="Search request number" defaultValue={search} placeholder="Search request number" wrapperClassName="min-w-[220px] flex-1" />
+    <ListFilterBar>
+      <SearchField name="q" label="Search request number" defaultValue={search} placeholder="Search request number" />
       <div className="min-w-[180px]"><SelectPicker name="status" label="Status" defaultValue={filters.status} options={[{ value: "all", label: "All statuses" }, ...statuses.map((value) => ({ value, label: statusLabels[value] }))]} /></div>
-      <Button variant="outline">Apply</Button>
-    </form>
+    </ListFilterBar>
     <DataTableShell empty={result.requests.length === 0 ? <EmptyState title="No material requests found" description={canRequest ? "Create a request or change the filters." : "No requests are available to your account."} /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} request{result.count === 1 ? "" : "s"}</span>}>
       <table className="w-full min-w-[980px] text-left text-sm"><thead className={tableHeadClass}><tr>
         <th className="px-5 py-3">Code</th><th className="px-4 py-3">Material</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Source warehouse</th><th className="px-4 py-3">Needed by</th><th className="px-4 py-3">Status</th><th className="px-5 py-3 text-right">Requested</th>

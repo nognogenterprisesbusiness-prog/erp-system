@@ -33,7 +33,7 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
     } finally { onProcessingChange?.(false); }
   }
 
-  return <div className="text-sm font-semibold text-slate-700">
+  return <div className="text-sm font-medium text-slate-700">
     <label className="block cursor-pointer">
       <span>{label}</span>
       <span className="mt-2 flex items-center gap-4 rounded-xl border border-dashed border-slate-300 p-3 hover:border-cyan-500">

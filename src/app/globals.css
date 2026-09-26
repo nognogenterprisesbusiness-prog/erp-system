@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+.dialog-scroll { scrollbar-width: thin; scrollbar-color: #94a3b8 transparent; }
+.dialog-scroll::-webkit-scrollbar { width: 6px; }
+.dialog-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border: 1px solid transparent; background-clip: padding-box; border-radius: 999px; }
+
 :root {
   color-scheme: light;
   --font-sans: var(--font-inter), Arial, sans-serif;

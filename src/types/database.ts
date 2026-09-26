@@ -283,6 +283,7 @@ export type Database = {
       get_project_management_summary: { Args: { p_project_id: string }; Returns: ProjectManagementSummaryRow[] };
       get_project_profitability: { Args: { p_project_id: string }; Returns: ProjectProfitabilityRow[] };
       get_dashboard_monthly_project_costs: { Args: { p_months?: number }; Returns: DashboardMonthlyCostRow[] };
+      get_dashboard_totals: { Args: Record<string, never>; Returns: { total_sales: number; total_expenses: number | null; total_material_value: number | null; unvalued_stock: number; unvalued_expenses: number }[] };
       get_project_material_plan: { Args: { p_project_id: string }; Returns: ProjectMaterialPlanView[] };
       save_project_material_plan_line: { Args: { p_project_id: string; p_site_id: string; p_warehouse_id: string; p_material_id: string; p_quantity: number | string; p_required_on: string; p_note: string }; Returns: string };
       record_project_progress: { Args: { p_report_id: string; p_percent: number | string; p_summary: string }; Returns: string };

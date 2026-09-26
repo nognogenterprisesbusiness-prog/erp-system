@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AssetForm } from "@/components/assets/asset-form";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -7,6 +8,7 @@ import { getAsset, getAssetReferences } from "@/lib/data/assets";
 import type { AssetKind } from "@/types/database";
 export async function AssetEditorPage({ kind, id }: { kind: AssetKind; id?: string }) {
   await requireManager();
+  if (!id) redirect(`${kind === "equipment" ? "/equipment" : "/vehicles"}?create=1`);
   const [references, data] = await Promise.all([getAssetReferences(kind), id ? getAsset(id, kind) : Promise.resolve(undefined)]);
   const label = kind === "equipment" ? "equipment" : "vehicle";
   const base = kind === "equipment" ? "/equipment" : "/vehicles";

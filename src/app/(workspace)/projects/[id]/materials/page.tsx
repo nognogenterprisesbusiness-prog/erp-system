@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { redirect } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { ProjectMaterialPlanForm } from "@/components/projects/project-material-plan-form";
+import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { Button } from "@/components/ui/button";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -29,11 +30,10 @@ export default async function ProjectMaterialsPage({ params, searchParams }: { p
   const editId = (await searchParams).edit;
   const editing = canPlan ? rows.find((row) => row.id === editId) : undefined;
   return <>
-    <PageHeader title="Material plan" description={`${projectData.project.code} · ${projectData.project.name}`} action={<Button variant="outline" asChild><Link href={`/projects/${id}`}>Back to project</Link></Button>} />
+    <PageHeader title="Material plan" description={`${projectData.project.code} · ${projectData.project.name}`} action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}?tab=materials`}>Back to project</Link></Button>{canPlan && choices && <RecordCreateDialog key={editing?.id ?? "new"} title={editing ? "Edit material plan" : "Add material plan"} initialOpen={Boolean(editing)} closeHref={`/projects/${id}/materials`}><ProjectMaterialPlanForm projectId={id} choices={choices} initial={editing ? { siteId: editing.project_site_id, warehouseId: editing.warehouse_id, materialId: editing.material_id, quantity: String(editing.planned_quantity), requiredOn: editing.required_on, note: editing.note } : undefined} /></RecordCreateDialog>}</div>} />
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <h2 className="text-base font-semibold">Plan by site and source warehouse</h2>
       <p className="mt-1 text-sm text-slate-500">Shortage compares planned work with posted use, site stock, open requests and available warehouse stock. It does not reserve stock.</p>
-      {canPlan && choices && <ProjectMaterialPlanForm key={editing?.id ?? "new"} projectId={id} choices={choices} initial={editing ? { siteId: editing.project_site_id, warehouseId: editing.warehouse_id, materialId: editing.material_id, quantity: String(editing.planned_quantity), requiredOn: editing.required_on, note: editing.note } : undefined} />}
     </section>
     <div className="mt-6"><DataTableShell empty={rows.length === 0 ? <EmptyState title="No planned materials" description="Add a material to see site needs and shortages." /> : undefined}>
       <table className="w-full min-w-[1000px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">SKU / material</th><th className="px-4 py-3">Site / warehouse</th><th className="px-4 py-3 text-right">Planned</th><th className="px-4 py-3 text-right">Used / on site</th><th className="px-4 py-3 text-right">Available / requested</th><th className="px-4 py-3 text-right">Site need</th><th className="px-4 py-3 text-right">Purchase gap</th><th className="px-5 py-3 text-right">Next step</th></tr></thead>

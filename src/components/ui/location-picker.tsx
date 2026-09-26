@@ -7,13 +7,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 
 type Option = { code: string; displayName: string; province: string; region: string; zipCode: string };
 
-export function LocationPicker({ name = "municipalityCode", displayNameName, label = "City / municipality", initialCode = "", initialLabel = "", demo = false }: {
+export function LocationPicker({ name = "municipalityCode", displayNameName, label = "City / municipality", initialCode = "", initialLabel = "" }: {
   name?: string;
   displayNameName?: string;
   label?: string;
   initialCode?: string;
   initialLabel?: string;
-  demo?: boolean;
 }) {
   const [code, setCode] = useState(initialCode);
   const [query, setQuery] = useState(initialLabel);
@@ -32,7 +31,6 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
       setLoading(true); setError("");
       try {
         const params = new URLSearchParams({ kind: "municipalities", q: query, limit: "20" });
-        if (demo) params.set("demo", "1");
         const response = await fetch(`/api/locations?${params}`, { signal: controller.signal });
         if (!response.ok) throw new Error("Location search is unavailable.");
         const result = await response.json() as { items: Option[] };
@@ -43,7 +41,7 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
       } finally { if (!controller.signal.aborted) setLoading(false); }
     }, 150);
     return () => { controller.abort(); window.clearTimeout(timer); };
-  }, [query, open, demo]);
+  }, [query, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -59,7 +57,7 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Escape") { setOpen(false); return; }
+    if (event.key === "Escape" && open) { event.preventDefault(); event.stopPropagation(); setOpen(false); return; }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       setOpen(true);
@@ -75,7 +73,7 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
     <label htmlFor={`${listId}-input`} className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
     <div className="relative">
       <HugeiconsIcon icon={Search01Icon} size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-      <input id={`${listId}-input`} type="search" value={query} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setCode(""); setOptions([]); setActiveIndex(0); setOpen(true); }} onKeyDown={handleKeyDown} role="combobox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-activedescendant={open && options[activeIndex] ? `${listId}-option-${activeIndex}` : undefined} aria-autocomplete="list" autoComplete="off" placeholder="Search any city or municipality" className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10" />
+      <input id={`${listId}-input`} type="search" value={query} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setCode(""); setOptions([]); setActiveIndex(0); setOpen(true); }} onKeyDown={handleKeyDown} role="combobox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-activedescendant={open && options[activeIndex] ? `${listId}-option-${activeIndex}` : undefined} aria-autocomplete="list" autoComplete="off" placeholder="Search any city or municipality" className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10" />
     </div>
     <input type="hidden" name={name} value={code} />
     {displayNameName && <input type="hidden" name={displayNameName} value={query} />}

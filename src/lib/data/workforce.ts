@@ -189,6 +189,14 @@ export async function getProjectWorkforce(projectId: string, canViewRates: boole
   };
 }
 
+export async function getProjectWorkerCount(projectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("employee_project_assignments")
+    .select("employee_id").eq("project_id", projectId).eq("status", "active");
+  if (error) throw new Error(`Unable to load project worker count: ${error.message}`);
+  return new Set((data ?? []).map((row) => row.employee_id)).size;
+}
+
 export type EmployeeCategory = EmployeeCategoryRow;
 export type EmployeeProfile = ProfileRow;
 export type EmployeeProject = ProjectRow;

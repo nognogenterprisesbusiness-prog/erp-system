@@ -2,11 +2,12 @@
 
 import { DatePicker } from "@/components/ui/date-picker";
 
-export function DateRangePicker({ startDate, endDate, onStartChange, onEndChange, startName, endName, startLabel = "Start date", endLabel = "End date", groupLabel = "Date range", className = "" }: {
+export function DateRangePicker({ startDate, endDate, onStartChange, onEndChange, onRangeChange, startName, endName, startLabel = "Start date", endLabel = "End date", groupLabel = "Date range", className = "" }: {
   startDate: string;
   endDate: string;
   onStartChange: (value: string) => void;
   onEndChange: (value: string) => void;
+  onRangeChange?: (start: string, end: string) => void;
   startName?: string;
   endName?: string;
   startLabel?: string;
@@ -15,10 +16,12 @@ export function DateRangePicker({ startDate, endDate, onStartChange, onEndChange
   className?: string;
 }) {
   const changeStart = (value: string) => {
+    if (onRangeChange) { onRangeChange(value, value && endDate && value > endDate ? "" : endDate); return; }
     onStartChange(value);
     if (value && endDate && value > endDate) onEndChange("");
   };
   const changeEnd = (value: string) => {
+    if (onRangeChange) { onRangeChange(value && startDate && value < startDate ? "" : startDate, value); return; }
     onEndChange(value);
     if (value && startDate && value < startDate) onStartChange("");
   };

@@ -1,8 +1,11 @@
+import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import Link from "next/link";
 import { dailyReportStatuses, uuidSchema } from "@nognog/domain";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectPicker } from "@/components/ui/select-picker";
 import { DailyReportList } from "@/components/reports/daily-report-list";
 import { ReportDateRangeFilter } from "@/components/reports/report-date-range-filter";
 import { getDailyReportChoices, getDailyReportFilterChoices, getDailyReports } from "@/lib/data/daily-reports";
@@ -29,15 +32,14 @@ export default async function DailyReportsPage({ searchParams }: { searchParams:
         <ReportDateRangeFilter key={`${filters.reportDateFrom}:${filters.reportDateTo}`} startDate={filters.reportDateFrom} endDate={filters.reportDateTo} search={search} projectId={filters.projectId} siteId={filters.siteId} status={filters.status} />
         {choices.sites.length > 0 && <Button asChild><Link href="/reports/daily/new">Add report</Link></Button>}
       </div>} />
-    <form className="mt-7 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_160px_auto]">
+    <ListFilterBar>
       <input type="hidden" name="from" value={filters.reportDateFrom} />
       <input type="hidden" name="to" value={filters.reportDateTo} />
-      <input name="q" aria-label="Search report number or work" defaultValue={search} placeholder="Search reports" className="h-10 min-w-0 rounded-full border border-slate-200 px-4 text-sm" />
-      <select name="project" aria-label="Project" defaultValue={filters.projectId} className="h-10 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm"><option value="">All projects</option>{filterChoices.projects.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select>
-      <select name="site" aria-label="Site" defaultValue={filters.siteId} className="h-10 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm"><option value="">All sites</option>{filterChoices.sites.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-      <select name="status" aria-label="Status" defaultValue={filters.status} className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm"><option value="all">All statuses</option>{dailyReportStatuses.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}</select>
-      <Button variant="outline">Apply</Button>
-    </form>
+      <SearchField name="q" label="Search report number or work" defaultValue={search} placeholder="Search reports" />
+      <SelectPicker name="project" label="Project" defaultValue={filters.projectId || "all"} options={[{ value: "all", label: "All projects" }, ...filterChoices.projects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))]} />
+      <SelectPicker name="site" label="Site" defaultValue={filters.siteId || "all"} options={[{ value: "all", label: "All sites" }, ...filterChoices.sites.map((item) => ({ value: item.id, label: item.name }))]} />
+      <SelectPicker name="status" label="Status" defaultValue={filters.status} options={[{ value: "all", label: "All statuses" }, ...dailyReportStatuses.map((item) => ({ value: item, label: item.replaceAll("_", " ") }))]} />
+    </ListFilterBar>
     <div className="mt-4"><DailyReportList reports={result.reports} count={result.count} /></div>
     {result.pageCount > 1 && <nav className="mt-4 flex items-center justify-end gap-2" aria-label="Report pages">{result.page > 1 ? <Button variant="outline" size="sm" asChild><Link href={pageHref(result.page - 1)}>Previous</Link></Button> : <Button variant="outline" size="sm" disabled>Previous</Button>}<span className="px-2 text-xs text-slate-500">Page {result.page} of {result.pageCount}</span>{result.page < result.pageCount ? <Button variant="outline" size="sm" asChild><Link href={pageHref(result.page + 1)}>Next</Link></Button> : <Button variant="outline" size="sm" disabled>Next</Button>}</nav>}
   </>;
