@@ -36,7 +36,7 @@ export async function convertImageToWebp(file: File, options: { targetDimension?
   }
   const signature = new Uint8Array(await file.slice(0, 12).arrayBuffer());
   const detected = detectSourceImage(signature);
-  if (!detected || file.type !== detected) throw new Error("Only genuine PNG and JPEG images are supported.");
+  if (!detected) throw new Error("Only genuine PNG and JPEG images are supported.");
   if (typeof createImageBitmap !== "function") throw new Error("This browser cannot process images locally.");
 
   const bitmap = await createImageBitmap(file);

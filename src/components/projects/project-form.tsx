@@ -1,5 +1,5 @@
 "use client";
-import { startTransition, useActionState, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { saveProjectAction, type ProjectActionState } from "@/app/(workspace)/projects/actions";
 import { RecordFormControls } from "@/components/ui/record-create-dialog";
@@ -25,6 +25,7 @@ export function ProjectForm({ project, profiles }: { project?: ProjectRow; profi
   const [state, action, pending] = useActionState(saveProjectAction, initialState);
   const preparedPhoto = useRef<File | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [engineerId, setEngineerId] = useState(project?.project_manager_id ?? "unassigned");
   const [startDate, setStartDate] = useState(project?.start_date ?? "");
   const [targetCompletionDate, setTargetCompletionDate] = useState(project?.target_completion_date ?? "");
@@ -36,14 +37,14 @@ export function ProjectForm({ project, profiles }: { project?: ProjectRow; profi
       formData.set("photo", preparedPhoto.current);
       formData.set("photoSelected", "1");
     }
-    startTransition(() => action(formData));
+    return action(formData);
   };
   return <form action={submit} className="space-y-8">
     {project && <input type="hidden" name="id" value={project.id} />}
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="font-semibold">Project information</h2><div className="mt-5 grid gap-5 md:grid-cols-2">
       <Field label="Project code" name="code" error={error("code")}><input id="code" name="code" className={inputClass} defaultValue={project?.code} placeholder="NNE-2026-001" required /></Field>
       <Field label="Project name" name="name" error={error("name")}><input id="name" name="name" className={inputClass} defaultValue={project?.name} required /></Field>
-      <div className="md:col-span-2"><RecordPhotoInput label="Project photo" currentPhoto={project?.photo_path ? recordPhotoUrl("projects", project.id, project.updated_at) : undefined} convertBeforeSubmit onProcessingChange={setPhotoBusy} onPreparedFile={(file) => { preparedPhoto.current = file; }} />{error("photo")?.[0] && <p role="alert" className="mt-2 text-sm text-red-700">{error("photo")?.[0]}</p>}{state.ok && "message" in state && <p role="status" className="mt-2 text-sm text-amber-700">{state.message} <Link className="underline" href={`/projects/${state.data.id}`}>Open saved project</Link></p>}</div>
+      <div className="md:col-span-2"><RecordPhotoInput label="Project photo" currentPhoto={project?.photo_path ? recordPhotoUrl("projects", project.id, project.updated_at) : undefined} convertBeforeSubmit onProcessingChange={setPhotoBusy} onPreparedFile={(file) => { preparedPhoto.current = file; }} onPreparationError={setPhotoError} />{error("photo")?.[0] && <p role="alert" className="mt-2 text-sm text-red-700">{error("photo")?.[0]}</p>}{state.ok && "message" in state && <p role="status" className="mt-2 text-sm text-amber-700">{state.message} <Link className="underline" href={`/projects/${state.data.id}`}>Open saved project</Link></p>}</div>
       <Field label="Client name" name="clientName" error={error("clientName")}><input id="clientName" name="clientName" className={inputClass} defaultValue={project?.client_name} required /></Field>
       <Field label="Client email" name="clientEmail" error={error("clientEmail")}><input id="clientEmail" name="clientEmail" type="email" className={inputClass} defaultValue={project?.client_email ?? ""} /></Field>
       <Field label="Client phone" name="clientPhone" error={error("clientPhone")}><input id="clientPhone" name="clientPhone" type="tel" inputMode="numeric" autoComplete="tel" minLength={9} maxLength={11} pattern="[0-9]{9,11}" title="Enter 9 to 11 digits only" className={inputClass} defaultValue={project?.client_phone?.replace(/\D/g, "") ?? ""} onInput={(event) => { event.currentTarget.value = event.currentTarget.value.replace(/\D/g, "").slice(0, 11); }} /></Field>
@@ -62,6 +63,6 @@ export function ProjectForm({ project, profiles }: { project?: ProjectRow; profi
     </div></section>
     {!state.ok && state.message && <p role="alert" className="text-sm font-medium text-red-600">{state.message}</p>}
     {state.ok && "message" in state && <p role="status" className="text-sm font-medium text-amber-700">{state.message} <Link className="underline" href={`/projects/${state.data.id}`}>Open saved project</Link></p>}
-    <RecordFormControls busy={pending || photoBusy} />
+    <RecordFormControls busy={pending || photoBusy} disabled={Boolean(photoError)} />
   </form>;
 }
