@@ -70,7 +70,7 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
   };
 
   return <div ref={root} className="relative min-w-0">
-    <label htmlFor={`${listId}-input`} className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
+    <label htmlFor={`${listId}-input`} className="mb-2 block text-sm font-medium leading-5 text-slate-700">{label}</label>
     <div className="relative">
       <HugeiconsIcon icon={Search01Icon} size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
       <input id={`${listId}-input`} type="search" value={query} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setCode(""); setOptions([]); setActiveIndex(0); setOpen(true); }} onKeyDown={handleKeyDown} role="combobox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-activedescendant={open && options[activeIndex] ? `${listId}-option-${activeIndex}` : undefined} aria-autocomplete="list" autoComplete="off" placeholder="Search any city or municipality" className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10" />

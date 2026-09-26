@@ -12,7 +12,7 @@ export async function getProjects(params: ProjectListParams = {}) {
   const supabase = await createClient();
   const page = Math.max(1, params.page ?? 1);
   const from = (page - 1) * PAGE_SIZE;
-  let query = supabase.from("projects").select("id,code,name,photo_path,client_name,city_province,start_date,target_completion_date,status,initial_budget,created_at", { count: "exact" }).is("archived_at", null);
+  let query = supabase.from("projects").select("id,code,name,photo_path,client_name,city_province,start_date,target_completion_date,status,initial_budget,created_at,updated_at", { count: "exact" }).is("archived_at", null);
   const search = safeSearchTerm(params.query);
   if (search) query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%,client_name.ilike.%${search}%`);
   if (params.status && params.status !== "all") query = query.eq("status", params.status);

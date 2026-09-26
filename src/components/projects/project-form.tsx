@@ -13,7 +13,13 @@ import type { ProfileRow, ProjectRow } from "@/types/database";
 
 const initialState: ProjectActionState = { ok: false, message: "" };
 const inputClass = "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10";
-function Field({ label, name, error, children }: { label: string; name: string; error?: string[]; children: React.ReactNode }) { return <label className="block space-y-2 text-sm font-medium text-slate-700" htmlFor={name}><span>{label}</span>{children}{error?.[0] && <span className="block text-xs text-red-600">{error[0]}</span>}</label>; }
+function Field({ label, name, error, children }: { label: string; name: string; error?: string[]; children: React.ReactNode }) {
+  return <div className="grid min-w-0 content-start gap-2 text-sm">
+    <label className="font-medium leading-5 text-slate-700" htmlFor={name}>{label}</label>
+    {children}
+    {error?.[0] && <span role="alert" className="text-xs text-red-600">{error[0]}</span>}
+  </div>;
+}
 
 export function ProjectForm({ project, profiles }: { project?: ProjectRow; profiles: Pick<ProfileRow, "id" | "full_name">[] }) {
   const [state, action, pending] = useActionState(saveProjectAction, initialState);
@@ -25,7 +31,7 @@ export function ProjectForm({ project, profiles }: { project?: ProjectRow; profi
     <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="font-semibold">Project information</h2><div className="mt-5 grid gap-5 md:grid-cols-2">
       <Field label="Project code" name="code" error={error("code")}><input id="code" name="code" className={inputClass} defaultValue={project?.code} placeholder="NNE-2026-001" required /></Field>
       <Field label="Project name" name="name" error={error("name")}><input id="name" name="name" className={inputClass} defaultValue={project?.name} required /></Field>
-      <div className="md:col-span-2"><RecordPhotoInput label="Project photo" currentPhoto={project?.photo_path ? recordPhotoUrl("projects", project.id) : undefined} convertBeforeSubmit onProcessingChange={setPhotoBusy} /></div>
+      <div className="md:col-span-2"><RecordPhotoInput label="Project photo" currentPhoto={project?.photo_path ? recordPhotoUrl("projects", project.id, project.updated_at) : undefined} convertBeforeSubmit onProcessingChange={setPhotoBusy} />{state.ok && "message" in state && <p role="status" className="mt-2 text-sm text-amber-700">{state.message} <Link className="underline" href={`/projects/${state.data.id}`}>Open saved project</Link></p>}</div>
       <Field label="Client name" name="clientName" error={error("clientName")}><input id="clientName" name="clientName" className={inputClass} defaultValue={project?.client_name} required /></Field>
       <Field label="Client email" name="clientEmail" error={error("clientEmail")}><input id="clientEmail" name="clientEmail" type="email" className={inputClass} defaultValue={project?.client_email ?? ""} /></Field>
       <Field label="Client phone" name="clientPhone" error={error("clientPhone")}><input id="clientPhone" name="clientPhone" className={inputClass} defaultValue={project?.client_phone ?? ""} /></Field>
@@ -39,11 +45,10 @@ export function ProjectForm({ project, profiles }: { project?: ProjectRow; profi
       <Field label="Actual completion" name="actualCompletionDate" error={error("actualCompletionDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="actualCompletionDate" name="actualCompletionDate" label="Actual completion" defaultValue={project?.actual_completion_date ?? ""} /></Field>
       <div><PesoAmountInput name="contractAmount" label="Contract amount" defaultValue={String(project?.contract_amount ?? "")} submitUngrouped required />{error("contractAmount")?.[0] && <p role="alert" className="mt-1 text-xs text-red-600">{error("contractAmount")?.[0]}</p>}</div>
       <div><PesoAmountInput name="initialBudget" label="Initial budget" defaultValue={String(project?.initial_budget ?? "")} submitUngrouped required />{error("initialBudget")?.[0] && <p role="alert" className="mt-1 text-xs text-red-600">{error("initialBudget")?.[0]}</p>}</div>
-      <Field label="Status" name="status" error={error("status")}><SelectPicker className="h-11" label="Status" name="status" defaultValue={project?.status ?? "draft"} options={[{ value: "draft", label: "Draft" }, { value: "active", label: "Active" }, { value: "on_hold", label: "On hold" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }]} /></Field>
-      <Field label="Lead engineer" name="projectManagerId" error={error("projectManagerId")}><input type="hidden" name="projectManagerId" value={engineerId === "unassigned" ? "" : engineerId} /><SelectPicker className="h-11" label="Lead engineer" value={engineerId} onValueChange={setEngineerId} options={[{ value: "unassigned", label: "Not assigned" }, ...profiles.map((profile) => ({ value: profile.id, label: profile.full_name }))]} /></Field>
+      <Field label="Status" name="status" error={error("status")}><SelectPicker id="status" className="h-11" label="Status" name="status" defaultValue={project?.status ?? "draft"} options={[{ value: "draft", label: "Draft" }, { value: "active", label: "Active" }, { value: "on_hold", label: "On hold" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }]} /></Field>
+      <Field label="Lead engineer" name="projectManagerId" error={error("projectManagerId")}><input type="hidden" name="projectManagerId" value={engineerId === "unassigned" ? "" : engineerId} /><SelectPicker id="projectManagerId" className="h-11" label="Lead engineer" value={engineerId} onValueChange={setEngineerId} options={[{ value: "unassigned", label: "Not assigned" }, ...profiles.map((profile) => ({ value: profile.id, label: profile.full_name }))]} /></Field>
     </div></section>
     {!state.ok && state.message && <p role="alert" className="text-sm font-medium text-red-600">{state.message}</p>}
-    {state.ok && "message" in state && <p role="status" className="text-sm text-amber-700">{state.message} <Link className="underline" href={`/projects/${state.data.id}`}>Open saved project</Link></p>}
     <RecordFormControls busy={pending || photoBusy} />
   </form>;
 }
