@@ -17,7 +17,7 @@ function parseDate(value: string) {
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date;
 }
 
-export function DatePicker({ id, name, label = "Date", placeholder, value, defaultValue = "", onValueChange, allowClear = true, required = false, popoverAlign = "start", className = "" }: {
+export function DatePicker({ id, name, label = "Date", placeholder, value, defaultValue = "", onValueChange, allowClear = true, required = false, minDate, maxDate, popoverAlign = "start", className = "" }: {
   id?: string;
   name?: string;
   label?: string;
@@ -27,6 +27,8 @@ export function DatePicker({ id, name, label = "Date", placeholder, value, defau
   onValueChange?: (value: string) => void;
   allowClear?: boolean;
   required?: boolean;
+  minDate?: string;
+  maxDate?: string;
   popoverAlign?: "start" | "end";
   className?: string;
 }) {
@@ -83,6 +85,8 @@ export function DatePicker({ id, name, label = "Date", placeholder, value, defau
     setOpen(false);
   };
   const moveMonth = (offset: number) => setMonth(new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + offset, 1)));
+  const previousMonthEnd = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), 0)).toISOString().slice(0, 10);
+  const nextMonthStart = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 1)).toISOString().slice(0, 10);
 
   return <div ref={root} className={`relative min-w-0 ${className}`}>
     <button type="button" id={id ?? generatedId} aria-label={label} aria-haspopup="dialog" aria-expanded={open} onClick={() => { setPortalContainer(root.current?.closest("dialog") ?? document.body); setOpen((current) => !current); }} className="flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm text-slate-700 hover:border-cyan-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
@@ -91,8 +95,8 @@ export function DatePicker({ id, name, label = "Date", placeholder, value, defau
     </button>
     {name && <input type="hidden" name={name} value={selected} required={required} />}
     {open && portalContainer && createPortal(<div ref={calendar} role="dialog" aria-label={`${label} calendar`} style={{ left: position.left, top: position.top, width: position.width, maxHeight: "min(24rem, calc(100vh - 2rem))" }} className="fixed z-[100] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-3 text-slate-800 shadow-xl">
-      <div className="flex items-center justify-between gap-2 px-1 pb-3"><button type="button" onClick={() => moveMonth(-1)} aria-label="Previous month" className="grid size-8 place-items-center rounded-lg hover:bg-slate-100"><HugeiconsIcon icon={ArrowLeft01Icon} size={17} /></button><span className="text-sm font-semibold">{monthYear}</span><button type="button" onClick={() => moveMonth(1)} aria-label="Next month" className="grid size-8 place-items-center rounded-lg hover:bg-slate-100"><HugeiconsIcon icon={ArrowRight01Icon} size={17} /></button></div>
-      <div className="grid grid-cols-7 gap-1 text-center">{weekdays.map((day) => <span key={day} className="py-1 text-xs font-medium text-slate-500">{day}</span>)}{Array.from({ length: firstWeekday }, (_, index) => <span key={`blank-${index}`} />)}{Array.from({ length: daysInMonth }, (_, index) => { const day = index + 1; const iso = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), day)).toISOString().slice(0, 10); return <button key={iso} type="button" aria-label={dateFormatter.format(new Date(`${iso}T12:00:00Z`))} aria-pressed={selected === iso} onClick={() => change(iso)} className={`grid size-9 place-items-center rounded-full text-sm hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 ${selected === iso ? "bg-cyan-700 font-semibold text-white hover:bg-cyan-700" : ""}`}>{day}</button>; })}</div>
+      <div className="flex items-center justify-between gap-2 px-1 pb-3"><button type="button" onClick={() => moveMonth(-1)} disabled={Boolean(minDate && previousMonthEnd < minDate)} aria-label="Previous month" className="grid size-8 place-items-center rounded-lg hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><HugeiconsIcon icon={ArrowLeft01Icon} size={17} /></button><span className="text-sm font-semibold">{monthYear}</span><button type="button" onClick={() => moveMonth(1)} disabled={Boolean(maxDate && nextMonthStart > maxDate)} aria-label="Next month" className="grid size-8 place-items-center rounded-lg hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"><HugeiconsIcon icon={ArrowRight01Icon} size={17} /></button></div>
+      <div className="grid grid-cols-7 gap-1 text-center">{weekdays.map((day) => <span key={day} className="py-1 text-xs font-medium text-slate-500">{day}</span>)}{Array.from({ length: firstWeekday }, (_, index) => <span key={`blank-${index}`} />)}{Array.from({ length: daysInMonth }, (_, index) => { const day = index + 1; const iso = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), day)).toISOString().slice(0, 10); const outsideRange = Boolean((minDate && iso < minDate) || (maxDate && iso > maxDate)); return <button key={iso} type="button" disabled={outsideRange} aria-label={dateFormatter.format(new Date(`${iso}T12:00:00Z`))} aria-pressed={selected === iso} onClick={() => change(iso)} className={`grid size-9 place-items-center rounded-full text-sm hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent ${selected === iso ? "bg-cyan-700 font-semibold text-white hover:bg-cyan-700" : ""}`}>{day}</button>; })}</div>
       {allowClear && selected && <div className="mt-3 flex justify-end border-t border-slate-100 pt-2"><button type="button" onClick={() => change("")} className="rounded-lg px-2 py-1 text-xs font-medium text-cyan-700 hover:bg-cyan-50">Clear date</button></div>}
     </div>, portalContainer)}
   </div>;

@@ -26,16 +26,25 @@ export async function saveRecordPhoto(kind: RecordPhotoKind, id: string, bytes: 
   const supabase = await createClient();
   const path = `${kind}/${id}/cover.webp`;
   const { error: uploadError } = await supabase.storage.from("erp-record-photos").upload(path, bytes, { contentType: "image/webp", upsert: true, cacheControl: "0" });
-  if (uploadError) throw new Error("The record was saved, but its photo could not be uploaded.");
+  if (uploadError) {
+    console.error(`Photo upload failed for ${kind}:`, uploadError);
+    throw new Error("The record was saved, but its photo could not be uploaded. Please retry the photo.");
+  }
   if (kind === "projects" || kind === "warehouses") {
     const result = kind === "projects"
       ? await supabase.from("projects").update({ photo_path: path }).eq("id", id).select("id").single()
       : await supabase.from("warehouses").update({ photo_path: path }).eq("id", id).select("id").single();
-    if (result.error || !result.data) throw new Error("The record was saved, but its photo could not be attached.");
+    if (result.error || !result.data) {
+      console.error(`Photo attachment failed for ${kind}:`, result.error);
+      throw new Error("The record was saved, but its photo could not be attached. Please retry the photo.");
+    }
     return;
   }
   const result = kind === "daily-reports" ? await supabase.rpc("attach_daily_report_photo", { p_report_id: id })
     : kind === "suppliers" ? await supabase.rpc("attach_supplier_photo", { p_supplier_id: id })
     : await supabase.rpc("attach_material_photo", { p_material_id: id });
-  if (result.error) throw new Error("The record was saved, but its photo could not be attached.");
+  if (result.error) {
+    console.error(`Photo attachment failed for ${kind}:`, result.error);
+    throw new Error("The record was saved, but its photo could not be attached. Please retry the photo.");
+  }
 }

@@ -18,8 +18,16 @@ export async function saveProjectAction(_: ProjectActionState, form: FormData): 
   const id = value(form, "id");
   const parsed = id ? projectUpdateSchema.safeParse({ ...projectPayload(form), id }) : projectInputSchema.safeParse(projectPayload(form));
   if (!parsed.success) return { ok: false, message: "Review the highlighted fields.", fieldErrors: parsed.error.flatten().fieldErrors };
+  const submittedPhoto = form.get("photo");
+  if (form.get("photoSelected") === "1" && (!(submittedPhoto instanceof File) || submittedPhoto.size === 0)) {
+    const message = "The selected project photo was not included in the submission. Please choose it again.";
+    return { ok: false, message, fieldErrors: { photo: [message] } };
+  }
   let photo: Buffer | undefined;
-  try { photo = await prepareRecordPhoto(form.get("photo")); } catch (error) { return initialError(error instanceof Error ? error.message : "Invalid photo."); }
+  try { photo = await prepareRecordPhoto(submittedPhoto); } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid photo.";
+    return { ok: false, message, fieldErrors: { photo: [message] } };
+  }
   const input = parsed.data;
   const supabase = await createClient();
   if (input.projectManagerId) {

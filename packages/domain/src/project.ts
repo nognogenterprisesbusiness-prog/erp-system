@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { moneySchema, optionalTextSchema, phoneSchema, uuidSchema } from "./common";
+import { moneySchema, optionalTextSchema, uuidSchema } from "./common";
 
 export const projectStatuses = ["draft", "active", "on_hold", "completed", "cancelled"] as const;
 export const projectStatusSchema = z.enum(projectStatuses);
@@ -15,7 +15,7 @@ const projectFields = z.object({
   description: optionalTextSchema,
   clientName: z.string().trim().min(2).max(160),
   clientEmail: z.email().optional().or(z.literal("")),
-  clientPhone: phoneSchema,
+  clientPhone: z.string().trim().regex(/^[0-9]{9,11}$/, "Enter 9 to 11 digits only").or(z.literal("")),
   address: z.string().trim().min(3).max(300),
   municipalityCode: z.string().regex(/^\d{10}$/, "Choose a city or municipality from the list"),
   startDate: z.iso.date(),

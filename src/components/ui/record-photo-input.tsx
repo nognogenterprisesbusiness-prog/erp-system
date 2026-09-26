@@ -11,6 +11,7 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
   onProcessingChange?: (processing: boolean) => void;
 }) {
   const [preview, setPreview] = useState<string>();
+  const [photoSelected, setPhotoSelected] = useState(false);
   const [error, setError] = useState("");
   const [currentPhotoFailed, setCurrentPhotoFailed] = useState(false);
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
@@ -18,8 +19,8 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
   async function choose(input: HTMLInputElement) {
     const file = input.files?.[0];
     setError("");
-    if (!file) { setPreview(undefined); return; }
-    if (!convertBeforeSubmit) { setPreview(URL.createObjectURL(file)); return; }
+    if (!file) { setPreview(undefined); setPhotoSelected(false); return; }
+    if (!convertBeforeSubmit) { setPreview(URL.createObjectURL(file)); setPhotoSelected(true); return; }
     onProcessingChange?.(true);
     try {
       const converted = await convertImageToWebp(file, { targetDimension: 1600, maxOutputBytes: 700_000 });
@@ -27,9 +28,11 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
       files.items.add(converted);
       input.files = files.files;
       setPreview(URL.createObjectURL(converted));
+      setPhotoSelected(true);
     } catch (cause) {
       input.value = "";
       setPreview(undefined);
+      setPhotoSelected(false);
       setError(cause instanceof Error ? cause.message : "Unable to process this photo.");
     } finally { onProcessingChange?.(false); }
   }
@@ -45,6 +48,7 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
         <input name="photo" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" className="sr-only" onChange={(event) => void choose(event.currentTarget)} />
       </span>
     </label>
+    <input type="hidden" name="photoSelected" value={photoSelected ? "1" : "0"} />
     {error ? <p role="alert" className="mt-2 text-sm font-medium text-red-700">{error}</p> : null}
   </div>;
 }
