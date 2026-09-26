@@ -87,7 +87,7 @@ begin
   return v_id;
 end; $$;
 
-create function public.decide_inventory_stock_count(p_count_id uuid, p_approve boolean, p_note text)
+create or replace function public.decide_inventory_stock_count(p_count_id uuid, p_approve boolean, p_note text)
 returns uuid language plpgsql security definer set search_path = '' as $$
 declare v_actor uuid := auth.uid(); v_count public.inventory_stock_counts;
   v_balance public.inventory_balances; v_valuation public.inventory_valuations;
@@ -101,7 +101,7 @@ begin
   if v_count.id is null then
     raise exception 'Stock count was not found' using errcode = 'P0002'; end if;
   if v_count.status <> 'pending' then
-    if v_count.decided_by = v_actor and v_count.status = case when p_approve then 'approved' else 'rejected' end
+    if v_count.decided_by = v_actor and v_count.status = (case when p_approve then 'approved' else 'rejected' end)
       and coalesce(v_count.decision_note,'') = trim(coalesce(p_note,'')) then return p_count_id; end if;
     raise exception 'Stock count is no longer pending' using errcode = '55000'; end if;
   if not p_approve then

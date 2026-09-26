@@ -22,8 +22,7 @@
     "test:material-reservations": "node scripts/test-material-reservations.mjs",
     "test:requests": "tsx --test packages/domain/src/material-requests.test.ts",
     "test:daily-reports": "tsx --test packages/domain/src/daily-reports.test.ts",
-    "test:inventory-domain": "tsx --test packages/domain/src/inventory-valuation.test.ts",
-    "staging:provision-preview": "node scripts/provision-staging-preview.mjs"
+    "test:inventory-domain": "tsx --test packages/domain/src/inventory-valuation.test.ts"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

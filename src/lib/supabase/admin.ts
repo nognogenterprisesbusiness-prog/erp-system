@@ -2,14 +2,12 @@ import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
 
-import { configuredAppMode } from "@/lib/app-mode";
 import type { Database } from "@/types/database";
 import { getSupabaseEnv } from "./env";
 
 export function createAdminClient() {
-  const mode = configuredAppMode();
-  const secret = mode === "staging" ? process.env.STAGING_SUPABASE_SECRET_KEY : process.env.SUPABASE_SECRET_KEY;
-  if (!secret) throw new Error(`Missing server-only Supabase secret for ${mode}.`);
+  const secret = process.env.SUPABASE_SECRET_KEY;
+  if (!secret) throw new Error("SUPABASE_SECRET_KEY is required.");
   const { url } = getSupabaseEnv();
   return createClient<Database>(url, secret, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },

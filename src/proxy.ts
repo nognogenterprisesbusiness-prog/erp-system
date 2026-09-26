@@ -12,11 +12,6 @@ function secureResponse(response: NextResponse): NextResponse {
 }
 
 export async function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-  if (process.env.APP_MODE === "local-demo") {
-    if (pathname === "/setup") return secureResponse(NextResponse.next({ request }));
-    return secureResponse(NextResponse.redirect(new URL("/setup", request.url)));
-  }
   const response = await updateSession(request);
   response.headers.set("Content-Security-Policy", "base-uri 'self'; object-src 'none'; frame-ancestors 'none'");
   return secureResponse(response);
