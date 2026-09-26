@@ -6,6 +6,7 @@
     "packages/*"
   ],
   "scripts": {
+    "test:all": "tsx --test packages/domain/src/*.test.ts src/lib/**/*.test.ts src/components/ui/*.test.ts",
     "test:migrations": "node scripts/check-migration-versions.mjs",
     "test:erp-gaps": "tsx --test packages/domain/src/attendance.test.ts src/lib/data/pagination.test.ts",
     "test:automatic-attendance": "node scripts/test-automatic-attendance.mjs",

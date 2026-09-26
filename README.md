@@ -2,6 +2,8 @@
 
 > **Project blueprint, feature checklist, acceptance criteria, and development tracker** for the web-first Construction ERP. The responsive web application is the only active client; shared domain contracts keep a future native client possible without carrying Expo or React Native today.
 
+**Latest package-by-package recheck (2026-09-27):** See [the complete web feature audit](docs/package-3-web-audit-2026-09-27.md) for every quoted web feature, meeting-note coverage, source evidence, remaining defects and acceptance gates. **Not operationally accepted.** Broad feature checkboxes remain unchecked: passing static/unit checks does not verify database permissions, stock concurrency, uploads, realtime delivery or financial reconciliation. The older audit and dated progress entries below are historical; the latest audit takes precedence.
+
 **Six-gap implementation update (2026-09-27):** See [implementation and verification record](docs/erp-six-gap-verification-2026-09-27.md). Automatic assigned-Foreman attendance (no approval), consumable-only new materials, report-resource links, migration reconciliation, isolated four-role test fixtures, and selected history/balance pagination are coded. Database acceptance and the complete purchasing-to-profitability workflow remain unverified; remaining reference/history caps are documented, not marked complete.
 
 **Document status:** Web-first Package 3 implementation is in progress, **not production accepted**. Many connected screens, commands and migrations are coded, but the ordered migrations and real-role transaction tests have not run in an isolated Supabase database. The browser-only demo and staging-preview account switcher have been retired. The app uses one standard Supabase configuration and normal authentication; no staging-specific environment variables are required. See the item-by-item audit below and [Supabase configuration](docs/supabase-setup.md).
@@ -161,7 +163,7 @@ The web ERP now defines exactly four login roles: **Admin, Engineer, Foreman, Wa
 - [ ] Company profile, logo, contact and default currency (PHP).
 - [ ] Unit of measure (bag, kg, m³, liter, piece, hour, day, etc.) and allowed conversions.
 - [ ] Material categories, SKUs, names, specifications and active/archive status.
-- [ ] Separate catalog types: **consumable stock**, **reusable tracked item**, **serialized equipment/vehicle**.
+- [ ] Keep **consumable stock** in Materials and reusable tools/serialized equipment/vehicles in Equipment/Vehicles. Preserve legacy reusable material records read-only until Admin reconciliation; do not duplicate or silently consume them.
 - [ ] Consistent naming/unique identifiers for suppliers, clients, employees, warehouses, locations, assets and projects.
 - [ ] Rate/price effective dates; never overwrite old posted transaction prices.
 - [ ] Optional item photos, descriptions, documents and QR labels.
@@ -256,7 +258,7 @@ The web ERP now defines exactly four login roles: **Admin, Engineer, Foreman, Wa
 - [ ] Project and foreman assignment with effective dates.
 - [ ] Labor rates (hourly/daily/piece-rate only if explicitly specified), versioned by effective date.
 - [ ] Daily attendance: present, absent, time-in/out or hours worked according to agreed workflow.
-- [ ] Foreman daily entry with manager approval and edit/correction history.
+- [ ] Automatic attendance entry by assigned Foremen, **without approval**; Admin-only costing-basis/rate management and audited reversal/correction. — Coded; database acceptance pending.
 - [ ] Allocate worker hours to project; prevent accidental overlapping hours.
 - [ ] Distinguish regular/overtime, travel and allowances only if agreed.
 - [ ] Post actual labor cost using historical rate snapshot; do not retroactively recalculate when rate changes.

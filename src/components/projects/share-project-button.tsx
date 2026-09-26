@@ -6,12 +6,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
 
-export function ShareProjectButton({ href, demo = false }: { href: string; demo?: boolean }) {
+export function ShareProjectButton({ href }: { href: string }) {
   const [message, setMessage] = useState("");
   async function copy() {
     try {
       await navigator.clipboard.writeText(new URL(href, window.location.origin).toString());
-      setMessage(demo ? "Demo link copied. It works on this device." : "Link copied. The recipient still needs project access.");
+      setMessage("Link copied. The recipient still needs project access.");
     } catch {
       setMessage("Could not copy the link in this browser.");
     }
