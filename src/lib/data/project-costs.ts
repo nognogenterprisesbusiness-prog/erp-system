@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 export async function getProjectProfitability(projectId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_project_profitability", { p_project_id: projectId });
-  if (error || !data?.[0]) throw new Error("Unable to load project profitability.");
+  if (error) throw new Error(`Unable to load project profitability: ${error.message}`, { cause: error });
+  if (!data?.[0]) throw new Error("No project profitability record was returned.");
   return data[0];
 }
 

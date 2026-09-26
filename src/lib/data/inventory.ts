@@ -63,15 +63,18 @@ export async function getMaterials(params: { query?: string; categoryId?: string
 }
 
 export async function getMaterial(id: string) {
+  if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
   const [{ data: material, error }, references] = await Promise.all([
-    supabase.from("materials").select("*").eq("id", id).single(),
+    supabase.from("materials").select("*").eq("id", id).maybeSingle(),
     getMaterialReferences(),
   ]);
-  if (error || !material) notFound();
+  if (error) throw new Error(`Unable to load material: ${error.message}`, { cause: error });
+  if (!material) notFound();
   const category = references.categories.find((item) => item.id === material.category_id);
   const unit = references.units.find((item) => item.id === material.base_unit_id);
-  const { data: balances } = await supabase.from("inventory_balances").select("id,material_id,inventory_location_id,quantity_on_hand,reserved_quantity,available_quantity,updated_at").eq("material_id", id).order("updated_at", { ascending: false });
+  const { data: balances, error: balanceError } = await supabase.from("inventory_balances").select("id,material_id,inventory_location_id,quantity_on_hand,reserved_quantity,available_quantity,updated_at").eq("material_id", id).order("updated_at", { ascending: false });
+  if (balanceError) throw new Error(`Unable to load material balances: ${balanceError.message}`, { cause: balanceError });
   const locations = await getLocationViews();
   const locationMap = new Map(locations.map((item) => [item.id, item]));
   return { material, category, unit, references, balances: (balances ?? []).map((balance) => ({ ...balance, location: locationMap.get(balance.inventory_location_id) })) };
@@ -187,6 +190,6 @@ export async function getProjectMaterialCost(projectId: string) {
   if (!parsed.success) notFound();
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_project_material_cost", { p_project_id: parsed.data });
-  if (error) throw new Error("Unable to load verified project material costs.");
+  if (error) throw new Error(`Unable to load verified project material costs: ${error.message}`, { cause: error });
   return data ?? [];
 }

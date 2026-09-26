@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export const uuidSchema = z.uuid("Invalid identifier");
+// PostgreSQL UUID keys include persisted fixtures without RFC version/variant bits.
+export const uuidSchema = z.guid("Invalid identifier");
 export const optionalTextSchema = z.string().trim().max(2_000).optional().or(z.literal(""));
 export const phoneSchema = z.string().trim().max(40).optional().or(z.literal(""));
 export const moneySchema = z

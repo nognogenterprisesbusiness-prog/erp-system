@@ -1,5 +1,6 @@
 import "server-only";
 import { notFound } from "next/navigation";
+import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import type { NotificationRow } from "@/types/database";
 
@@ -45,6 +46,7 @@ export async function getNotifications(page: number, unreadOnly: boolean) {
 }
 
 export async function getNotification(id: string) {
+  if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
   const { data, error } = await supabase.from("notifications").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error("Unable to load notification.");

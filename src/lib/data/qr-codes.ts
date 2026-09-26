@@ -1,13 +1,14 @@
 import "server-only";
 import { notFound } from "next/navigation";
 import { z } from "zod";
+import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import type { QrCodeRow, QrEntityType, QrResolution } from "@/types/database";
 
 const qrResolutionSchema: z.ZodType<QrResolution> = z.object({
-  qr_id: z.uuid(), identifier: z.string().regex(/^NQ-[A-F0-9]{32}$/),
+  qr_id: uuidSchema, identifier: z.string().regex(/^NQ-[A-F0-9]{32}$/),
   entity_type: z.enum(["material", "equipment", "vehicle", "warehouse", "project_site"]),
-  entity_id: z.uuid(), name: z.string().min(1), code: z.string().nullable(), project_id: z.uuid().nullable(),
+  entity_id: uuidSchema, name: z.string().min(1), code: z.string().nullable(), project_id: uuidSchema.nullable(),
 });
 
 export const qrEntityLabels: Record<QrEntityType, string> = {
@@ -40,6 +41,7 @@ export async function getActiveQrCodesForEntities(entityType: QrEntityType, enti
 }
 
 export async function getQrCode(id: string) {
+  if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
   const { data, error } = await supabase.from("qr_codes").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error("Unable to load QR code.");

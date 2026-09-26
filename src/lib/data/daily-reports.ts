@@ -99,8 +99,9 @@ export async function getDailyReport(id: string) {
   await requireDailyReportViewer();
   if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
-  const { data: report, error } = await supabase.from("daily_reports").select("*").eq("id", id).single();
-  if (error || !report) notFound();
+  const { data: report, error } = await supabase.from("daily_reports").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Unable to load daily report: ${error.message}`, { cause: error });
+  if (!report) notFound();
   const [project, site, events, preparer] = await Promise.all([
     supabase.from("projects").select("id,code,name,address,city_province").eq("id", report.project_id).single(),
     supabase.from("project_sites").select("id,project_id,name,address,status").eq("id", report.project_site_id).single(),

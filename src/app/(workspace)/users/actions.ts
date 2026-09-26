@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { uuidSchema } from "@nognog/domain";
 
 import { requireManager } from "@/lib/auth";
 import { canAssignInitialRole, canManageAccount, invitableRoles } from "@/lib/users/access";
@@ -15,9 +16,9 @@ const invitationSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email().max(320)),
   role: z.enum(invitableRoles),
 });
-const assignmentSchema = z.object({ userId: z.uuid(), role: z.enum(invitableRoles) });
-const statusSchema = z.object({ userId: z.uuid(), isActive: z.enum(["true", "false"]) });
-const resetSchema = z.object({ userId: z.uuid() });
+const assignmentSchema = z.object({ userId: uuidSchema, role: z.enum(invitableRoles) });
+const statusSchema = z.object({ userId: uuidSchema, isActive: z.enum(["true", "false"]) });
+const resetSchema = z.object({ userId: uuidSchema });
 const value = (form: FormData, key: string) => String(form.get(key) ?? "");
 
 export async function inviteUserAction(_: UserActionState, form: FormData): Promise<UserActionState> {

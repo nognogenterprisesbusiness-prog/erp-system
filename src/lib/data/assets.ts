@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { notFound } from "next/navigation";
+import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
 import type { AssetCategoryRow, AssetKind, AssetLocationKind, AssetLocationRow, AssetRow, AssetStatus, EquipmentDetailRow, VehicleDetailRow } from "@/types/database";
@@ -88,6 +89,7 @@ export async function getAssets(params: { id?: string; kind: AssetKind; query?: 
 }
 
 export async function getAsset(id: string, expectedKind: AssetKind) {
+  if (!uuidSchema.safeParse(id).success) notFound();
   const assets = await getAssets({ id, kind: expectedKind, includeArchived: true });
   const asset = assets[0];
   if (!asset) notFound();

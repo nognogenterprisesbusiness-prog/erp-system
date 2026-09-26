@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { notFound } from "next/navigation";
+import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
 import type {
@@ -102,9 +103,11 @@ export async function getWorkforceReferences() {
 }
 
 export async function getEmployee(id: string) {
+  if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
-  const { data: employee, error } = await supabase.from("employees").select("*").eq("id", id).single();
-  if (error || !employee) notFound();
+  const { data: employee, error } = await supabase.from("employees").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Unable to load employee: ${error.message}`, { cause: error });
+  if (!employee) notFound();
   const [categoryResult, contactResult, assignmentResult, rateResult, eventResult, references] = await Promise.all([
     supabase.from("employee_categories").select("*").eq("id", employee.category_id).single(),
     supabase.from("employee_private_contacts").select("employee_id,contact_number,email_address,updated_by,updated_at").eq("employee_id", id).maybeSingle(),

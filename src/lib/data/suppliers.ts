@@ -74,9 +74,11 @@ export async function getSuppliers(params: { query?: string; categoryId?: string
 }
 
 export async function getSupplier(id: string) {
+  if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
-  const { data: supplier, error } = await supabase.from("suppliers").select("*").eq("id", id).single();
-  if (error || !supplier) notFound();
+  const { data: supplier, error } = await supabase.from("suppliers").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Unable to load supplier: ${error.message}`, { cause: error });
+  if (!supplier) notFound();
   const [categoryResult, catalogResult, eventResult, purchaseResult, references] = await Promise.all([
     supabase.from("supplier_categories").select("*").eq("id", supplier.category_id).single(),
     supabase.from("supplier_materials").select("*").eq("supplier_id", id).order("updated_at", { ascending: false }),

@@ -1,5 +1,6 @@
 import "server-only";
 import { notFound } from "next/navigation";
+import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "@/lib/data/search";
 
@@ -18,9 +19,11 @@ export async function getPurchaseOrders({ page = 1, query = "" }: { page?: numbe
 }
 
 export async function getPurchaseOrder(id: string) {
+  if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
-  const { data: order, error } = await supabase.from("purchase_orders").select("*").eq("id", id).single();
-  if (error || !order) notFound();
+  const { data: order, error } = await supabase.from("purchase_orders").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Unable to load purchase order: ${error.message}`, { cause: error });
+  if (!order) notFound();
   const [linesResult, receiptsResult] = await Promise.all([
     supabase.from("purchase_order_lines").select("*").eq("purchase_order_id", id).order("material_code"),
     supabase.from("purchase_order_receipts").select("id,purchase_order_id,purchase_order_line_id,inventory_transaction_id,quantity,goods_total_cost,expected_total_cost,cost_variance_reason,delivery_reference,received_on,received_by,created_at").eq("purchase_order_id", id).order("created_at", { ascending: false }),

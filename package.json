@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:unit": "tsx --test src/lib/export/csv.test.ts src/lib/locations/catalog.test.ts",
+    "test:unit": "tsx --test src/lib/export/csv.test.ts src/lib/locations/catalog.test.ts packages/domain/src/common.test.ts",
     "test:auth": "tsx --test src/lib/users/access.test.ts",
     "test:media": "tsx --test src/lib/media/webp.test.ts",
     "test:security": "tsx --test src/lib/data/search.test.ts",

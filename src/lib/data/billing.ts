@@ -1,5 +1,6 @@
 import "server-only";
 import { notFound } from "next/navigation";
+import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "@/lib/data/search";
 
@@ -23,9 +24,11 @@ export async function getInvoices({ page = 1, query = "" }: { page?: number; que
 }
 
 export async function getInvoice(id: string) {
+  if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
-  const { data: invoice, error } = await supabase.from("client_invoices").select("*").eq("id", id).single();
-  if (error || !invoice) notFound();
+  const { data: invoice, error } = await supabase.from("client_invoices").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Unable to load invoice: ${error.message}`, { cause: error });
+  if (!invoice) notFound();
   const [paymentsResult, balanceResult] = await Promise.all([
     supabase.from("client_payments").select("id,invoice_id,amount,paid_on,reference,recorded_by,created_at").eq("invoice_id", id).order("created_at", { ascending: false }),
     supabase.rpc("get_client_invoice_balances", { p_invoice_ids: [id] }),

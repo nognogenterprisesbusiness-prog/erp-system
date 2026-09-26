@@ -83,8 +83,9 @@ export async function getMaterialRequest(id: string) {
   await requireUser();
   if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
-  const { data: request, error } = await supabase.from("material_requests").select("*").eq("id", id).single();
-  if (error || !request) notFound();
+  const { data: request, error } = await supabase.from("material_requests").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Unable to load material request: ${error.message}`, { cause: error });
+  if (!request) notFound();
   const [linesResult, eventsResult, projectResult, siteResult] = await Promise.all([
     supabase.from("material_request_lines").select("*").eq("request_id", id).order("id"),
     supabase.from("material_request_events").select("*").eq("request_id", id).order("occurred_at", { ascending: false }),

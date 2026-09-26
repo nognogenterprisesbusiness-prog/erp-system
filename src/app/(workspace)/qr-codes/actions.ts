@@ -2,15 +2,16 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { uuidSchema } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export type QrActionState = { error: string };
 const qrEntity = z.object({
   entityType: z.enum(["material", "equipment", "vehicle", "warehouse", "project_site"]),
-  entityId: z.uuid(),
+  entityId: uuidSchema,
 });
-const change = z.object({ id: z.uuid(), reason: z.string().trim().min(2).max(500), operation: z.enum(["deactivate", "replace"]) });
+const change = z.object({ id: uuidSchema, reason: z.string().trim().min(2).max(500), operation: z.enum(["deactivate", "replace"]) });
 
 export async function generateQrAction(_state: QrActionState, formData: FormData): Promise<QrActionState> {
   if (!(await requireUser()).canManage) return { error: "You do not have permission to manage QR codes." };

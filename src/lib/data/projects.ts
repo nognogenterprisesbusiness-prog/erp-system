@@ -1,5 +1,6 @@
 import "server-only";
 import { notFound } from "next/navigation";
+import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
 import type { AppRole, ProjectStatus } from "@/types/database";
@@ -43,15 +44,20 @@ export async function getProjects(params: ProjectListParams = {}) {
 }
 
 export async function getProject(id: string) {
+  if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
-  const { data: project, error } = await supabase.from("projects").select("*").eq("id", id).is("archived_at", null).single();
-  if (error || !project) notFound();
-  const [{ data: assignments }, { data: sites }, { data: profiles }, { data: roleRows, error: roleError }] = await Promise.all([
+  const { data: project, error } = await supabase.from("projects").select("*").eq("id", id).is("archived_at", null).maybeSingle();
+  if (error) throw new Error(`Unable to load project: ${error.message}`, { cause: error });
+  if (!project) notFound();
+  const [{ data: assignments, error: assignmentError }, { data: sites, error: siteError }, { data: profiles, error: profileError }, { data: roleRows, error: roleError }] = await Promise.all([
     supabase.from("project_assignments").select("*").eq("project_id", id).order("assigned_on", { ascending: false }),
     supabase.from("project_sites").select("*").eq("project_id", id).order("name"),
     supabase.from("profiles").select("id,full_name,email,phone,is_active,onboarding_required,created_at,updated_at").eq("is_active", true).order("full_name"),
     supabase.from("user_roles").select("user_id,role").in("role", ["engineer", "foreman"]),
   ]);
+  if (assignmentError) throw new Error(`Unable to load project assignments: ${assignmentError.message}`, { cause: assignmentError });
+  if (siteError) throw new Error(`Unable to load project sites: ${siteError.message}`, { cause: siteError });
+  if (profileError) throw new Error(`Unable to load project personnel: ${profileError.message}`, { cause: profileError });
   if (roleError) throw new Error(`Unable to load project role choices: ${roleError.message}`);
   const profileMap = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
   const eligible = (role: "engineer" | "foreman") => {

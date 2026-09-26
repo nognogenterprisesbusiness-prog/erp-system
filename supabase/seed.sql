@@ -1,3 +1,6 @@
+-- Fictional fixtures for an empty disposable database; all writes succeed or roll back together.
+begin;
+
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
@@ -10,18 +13,18 @@ values
   ('00000000-0000-0000-0000-000000000000', '10000000-0000-0000-0000-000000000005', 'authenticated', 'authenticated', 'warehouse@nognog.local', extensions.crypt(gen_random_uuid()::text || gen_random_uuid()::text, extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{"full_name":"Liza Garcia"}', now(), now(), '', '', '', '')
 on conflict (id) do nothing;
 
-insert into auth.identities (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-select id::text, id, jsonb_build_object('sub', id::text, 'email', email), 'email', now(), now(), now()
+insert into auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+select id::text, id, jsonb_build_object('sub', id::text, 'email', email, 'email_verified', true), 'email', now(), now(), now()
 from auth.users
 where id in (
   '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000003',
   '10000000-0000-0000-0000-000000000004', '10000000-0000-0000-0000-000000000005'
 )
-on conflict (provider, id) do nothing;
+on conflict (provider_id, provider) do nothing;
 
 -- Subsequent fixture writes are genuine audited changes attributed to the
 -- seeded admin; do not insert fabricated rows into audit_logs.
-select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', false);
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
 
 insert into public.user_roles (user_id, role, granted_by) values
   ('10000000-0000-0000-0000-000000000001', 'admin', '10000000-0000-0000-0000-000000000001'),
@@ -76,7 +79,7 @@ select '60000000-0000-0000-0000-000000000001', 'MAT-CEMENT', 'Portland Cement', 
 insert into public.materials (id, code, name, description, category_id, base_unit_id, material_kind, minimum_stock_level, created_by, updated_by)
 select '60000000-0000-0000-0000-000000000002', 'MAT-GRAVEL', 'Gravel', 'Bulk gravel development fixture.', '50000000-0000-0000-0000-000000000001', id, 'consumable', 5, '10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000001' from public.units_of_measure where code = 'M3';
 
-select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', false);
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
 select public.post_valued_stock_in(
   '70000000-0000-0000-0000-000000000001',
   '60000000-0000-0000-0000-000000000001',
@@ -111,7 +114,7 @@ select public.save_vehicle(
   '80000000-0000-0000-0000-000000000003', 'Isuzu', 'GIGA', '2024-08-10',
   'company_owned', 'available',
   (select al.id from public.asset_locations al join public.inventory_locations il on il.id = al.inventory_location_id where il.warehouse_id = '30000000-0000-0000-0000-000000000001'),
-  'Roadworthy at registration.', 'ABC 1234', 2024, 18450.50
+  'Roadworthy at registration.', 'ABC 1234', 2024::smallint, 18450.50
 );
 
 insert into public.employee_categories (id, name, description, created_by, updated_by) values
@@ -130,4 +133,4 @@ select public.assign_employee_to_project((select id from public.employees where 
 select public.post_labor_rate((select id from public.employees where code = 'EMP-001'), 'daily', 750.00, '2026-01-01', null);
 select public.post_labor_rate((select id from public.employees where code = 'EMP-002'), 'daily', 700.00, '2026-01-01', null);
 select public.post_labor_rate((select id from public.employees where code = 'EMP-003'), 'daily', 600.00, '2026-01-01', null);
-select set_config('request.jwt.claim.sub', '', false);
+commit;

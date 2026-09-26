@@ -17,7 +17,8 @@ export default async function AuditLogDetailPage({ params }: { params: Promise<{
   const { data: log, error } = await supabase.from("audit_logs")
     .select("id,actor_id,table_name,record_id,action,old_data,new_data,created_at")
     .filter("id", "eq", id).maybeSingle();
-  if (error || !log) notFound();
+  if (error) throw new Error(`Unable to load audit record: ${error.message}`, { cause: error });
+  if (!log) notFound();
   const actor = log.actor_id ? await supabase.from("profiles").select("full_name").eq("id", log.actor_id).maybeSingle() : null;
   const changes = changedAuditFields(log.old_data, log.new_data);
   return <>
