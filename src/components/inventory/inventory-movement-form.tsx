@@ -1,7 +1,7 @@
 "use client";
 import { useActionState, useMemo, useState } from "react";
 import { dispatchTransferAction, returnSiteStockAction, stockInAction, stockOutAction, type InventoryActionState } from "@/app/(workspace)/inventory/actions";
-import { Button } from "@/components/ui/button";
+import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import type { LocationView } from "@/lib/data/inventory";
 import { todayInManila } from "@/lib/date";
@@ -37,9 +37,9 @@ export function InventoryMovementForm({ mode, materials, units, locations, initi
       {mode === "stock-in" && <FormField label="Verified total material cost (PHP)" htmlFor="totalCost" hint="Use the supplier invoice or approved receipt value; do not guess a unit cost." error={error("totalCost")}><input className={fieldControlClass} id="totalCost" name="totalCost" type="number" inputMode="decimal" min="0" step="0.01" required /></FormField>}
       <FormField label="Reference number" htmlFor="referenceNumber" error={error("referenceNumber")}><input className={fieldControlClass} id="referenceNumber" name="referenceNumber" required /></FormField>
       <FormField label={mode === "stock-in" ? "Date received" : mode === "transfer" || mode === "return" ? "Dispatch date" : "Release date"} htmlFor="transactionDate" error={error("transactionDate")}><input className={fieldControlClass} id="transactionDate" name="transactionDate" type="date" defaultValue={todayInManila()} required /></FormField>
-      <FormField label={mode === "stock-out" || siteException || mode === "return" || mode === "stock-in" ? "Exception / return reason" : "Remarks"} htmlFor="remarks" className="md:col-span-2" error={error("remarks")}><textarea className={`${fieldControlClass} h-auto py-3`} id="remarks" name="remarks" rows={3} required={mode === "stock-out" || siteException || mode === "return" || mode === "stock-in"} /></FormField>
+      <FormField label={mode === "stock-out" || siteException || mode === "return" || mode === "stock-in" ? "Reason" : "Remarks"} htmlFor="remarks" className="md:col-span-2" error={error("remarks")}><textarea className={`${fieldControlClass} h-auto py-3`} id="remarks" name="remarks" rows={3} required={mode === "stock-out" || siteException || mode === "return" || mode === "stock-in"} /></FormField>
     </div>
     {!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}
-    <div className="mt-6 flex justify-end"><Button size="lg" type="submit" disabled={pending || !unit}>{pending ? "Posting…" : mode === "stock-in" ? "Post exception receipt" : mode === "stock-out" ? "Post stock out" : mode === "return" ? "Dispatch return" : "Dispatch transfer"}</Button></div>
+    <RecordFormControls busy={pending} disabled={!unit} label={mode === "stock-in" ? "Record stock in" : mode === "stock-out" ? "Record stock out" : mode === "return" ? "Dispatch return" : "Dispatch transfer"} />
   </form>;
 }

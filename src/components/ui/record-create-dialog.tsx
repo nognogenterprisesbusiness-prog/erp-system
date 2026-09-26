@@ -9,13 +9,14 @@ import { DialogHeading } from "./dialog-heading";
 
 const FormDialogContext = createContext<{ close: () => void; setBusy: (busy: boolean) => void } | null>(null);
 
-export function RecordCreateDialog({ title, children, initialOpen = false, closeHref, triggerLabel, triggerVariant }: {
+export function RecordCreateDialog({ title, children, initialOpen = false, closeHref, triggerLabel, triggerVariant, hideTrigger = false }: {
   title: string;
   children: React.ReactNode;
   initialOpen?: boolean;
   closeHref?: string;
   triggerLabel?: string;
   triggerVariant?: ButtonProps["variant"];
+  hideTrigger?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const router = useRouter();
@@ -25,7 +26,7 @@ export function RecordCreateDialog({ title, children, initialOpen = false, close
   useEffect(() => { if (initialOpen && !dialog.current?.open) dialog.current?.showModal(); }, [initialOpen]);
   const close = () => { if (!busy) dialog.current?.close(); };
   return <>
-    <Button variant={triggerVariant} onClick={() => { setFormKey((key) => key + 1); dialog.current?.showModal(); }}><HugeiconsIcon icon={title.startsWith("Edit") ? PencilEdit02Icon : PlusSignIcon} size={17} strokeWidth={1.5} />{triggerLabel ?? title}</Button>
+    {!hideTrigger && <Button variant={triggerVariant} onClick={() => { setFormKey((key) => key + 1); dialog.current?.showModal(); }}><HugeiconsIcon icon={title.startsWith("Edit") ? PencilEdit02Icon : PlusSignIcon} size={17} strokeWidth={1.5} />{triggerLabel ?? title}</Button>}
     <dialog ref={dialog} aria-labelledby={titleId} onCancel={(event) => { if (busy) event.preventDefault(); }} onClose={() => { if (initialOpen && closeHref) router.replace(closeHref, { scroll: false }); }} className="m-auto max-h-[90dvh] w-[min(100%-2rem,800px)] overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-950/50">
       <div className="px-5 pt-5 sm:px-6 sm:pt-6"><DialogHeading id={titleId} title={title} onClose={close} disabled={busy} /></div>
       <FormDialogContext.Provider value={{ close, setBusy }}><div key={formKey} className="dialog-scroll max-h-[calc(90dvh-5rem)] overflow-y-auto overscroll-contain px-5 pb-5 pt-5 sm:px-6 sm:pb-6">{children}</div></FormDialogContext.Provider>

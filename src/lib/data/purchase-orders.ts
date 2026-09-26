@@ -3,12 +3,13 @@ import { notFound } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "@/lib/data/search";
+import type { SupplierPriceRow } from "@/types/database";
 
 const PAGE_SIZE = 20;
 
 export async function getPurchaseOrders({ page = 1, query = "" }: { page?: number; query?: string } = {}) {
   const supabase = await createClient();
-  const currentPage = Math.max(1, Math.min(10000, page));
+  const currentPage = Math.max(1, Math.min(10000, Number.isSafeInteger(page) ? page : 1));
   const from = (currentPage - 1) * PAGE_SIZE;
   let request = supabase.from("purchase_orders").select("id,po_number,supplier_name,warehouse_code,warehouse_name,ordered_on,expected_on,status,created_at", { count: "exact" });
   const search = safeSearchTerm(query);
@@ -41,9 +42,19 @@ export async function getPurchaseOrderChoices() {
     supabase.from("materials").select("id,code,name,material_kind,is_active,archived_at").eq("material_kind", "consumable").eq("is_active", true).is("archived_at", null).limit(1000),
   ]);
   if (suppliersResult.error || warehousesResult.error || catalogResult.error || materialsResult.error) throw new Error("Unable to load purchasing choices.");
+  const prices: Array<Pick<SupplierPriceRow, "supplier_material_id" | "unit_price" | "effective_start_date" | "effective_end_date" | "created_at">> = [];
+  let pricePreviewLimited = false;
+  for (let offset = 0; offset < 5000; offset += 500) {
+    const { data, error } = await supabase.from("supplier_prices").select("supplier_material_id,unit_price,effective_start_date,effective_end_date,created_at").eq("currency", "PHP").order("effective_start_date", { ascending: false }).order("created_at", { ascending: false }).order("id").range(offset, offset + 499);
+    if (error) throw new Error("Unable to load supplier price previews.");
+    prices.push(...(data ?? []));
+    if ((data?.length ?? 0) < 500) break;
+    if (offset === 4500) pricePreviewLimited = true;
+  }
   const materials = new Map((materialsResult.data ?? []).map((item) => [item.id, item]));
   return {
     suppliers: suppliersResult.data ?? [], warehouses: warehousesResult.data ?? [],
+    prices, pricePreviewLimited,
     catalog: (catalogResult.data ?? []).flatMap((item) => {
       const material = materials.get(item.material_id);
       return material ? [{ id: item.id, supplierId: item.supplier_id, materialId: item.material_id, code: material.code, name: material.name, minimumQuantity: item.minimum_order_quantity }] : [];

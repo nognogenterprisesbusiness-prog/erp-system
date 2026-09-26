@@ -32,7 +32,7 @@
 - [ ] Multi-warehouse support and stock assigned to individual project sites. — **Coded; database verification pending** (#6)
 - [ ] Foreman/engineer access from mobile-sized web layouts to request materials and equipment; warehouse or authorized staff process **in/out** and approvals. — **Partial** (#7)
 - [ ] View request, release, receipt, consumption, return, and transfer history. — **Partial** (#8)
-- [ ] Check available stock before requesting/procuring missing materials for a new project. — **Partial** (#9)
+- [ ] Check available stock before requesting/procuring missing materials for a new project. — **Coded; database verification pending** (#9)
 - [ ] Track supplier/hardware, purchase history, and changing material prices while preserving historical prices. — **Coded; database verification pending** (#10)
 - [ ] Track workers, assigned project, attendance/work hours, labor rates, and project labor expense. — **Partial** (#11)
 - [ ] Track equipment assignment, usage hours, and equipment cost by project. — **Partial** (#12)
@@ -55,16 +55,16 @@ The 16 rows below correspond **in order** to the 16 confirmed-needs checkboxes a
 | 6 | Multiple warehouses and project-site stock | **Coded, unverified** | Location-scoped balances, transfers and a warehouse selector exist; two-warehouse/site reconciliation and authorization tests remain. |
 | 7 | Staff material/equipment requests; authorized in/out | **Partial** | Material request, assigned-engineer/admin decision, warehouse dispatch/site receipt and equipment handover code exist. Equipment site-receipt/transfer detail and real-role tests are incomplete. |
 | 8 | Request, release, receipt, use, return and transfer history | **Partial** | Connected ledgers, request detail and asset events exist; connected reconciliation/history tests remain. |
-| 9 | Stock shortage before request/procurement | **Partial** | Project material plan calculates needs and prefills requests/POs. There is no distinct purchase-request (PR) and PR-approval workflow. |
+| 9 | Stock shortage before request/procurement | **Coded, unverified** | Project material plan calculates needs and prefills material requests/POs; real-role shortage-to-purchase testing remains. A separate purchase-request approval stage is not required by the agreed simple workflow. |
 | 10 | Supplier history and changing prices | **Coded, unverified** | Supplier directory, dated quotes, POs and receipt-linked history exist; connected historical-price/PO receipt tests remain. |
 | 11 | Workers, assignments, attendance, rates and labor expense | **Partial** | Connected project attendance posting/reversal and a paginated all-project attendance review screen are coded but remain database-untested. Foreman entry/manager approval remains open. |
 | 12 | Equipment assignment, hours and project cost | **Partial** | Connected handover and usage/rate-snapshot cost commands exist; service/availability and connected overlap tests remain. |
 | 13 | Daily site and project transaction reports | **Partial** | Report review, project progress and cost/transaction pages exist; approved daily reports do not explicitly link material, labor and equipment postings. |
 | 14 | QR identification and processing | **Partial** | Opaque labels, print routes, web scanner, permission-scoped lookup and action prefill exist; authenticated scan/denial tests and direct action completion remain. |
 | 15 | Role-scoped projects, locations, stock and actions | **Coded, unverified** | Auth, memberships, scoped queries and RLS policies are written; cross-project/location/export/Storage denial tests with real accounts have not run. |
-| 16 | Package 1–3 web extras | **Partial** | PO, dashboards, low-stock alerts, PDF/XLSX export, notifications and audit code exist. PR workflow, complete role dashboards/notification coverage, connected tests and signed acceptance criteria remain. |
+| 16 | Package 1–3 web extras | **Partial** | PO, dashboards, low-stock alerts, PDF/XLSX export, notifications and audit code exist. Complete role dashboards/notification coverage, connected tests and signed acceptance criteria remain; no separate PR stage is assumed. |
 
-**Detailed README section check:** §3 roles are coded but real-account/RLS and capability-catalog acceptance is open; §4 master data/projects lack reusable custody, full project status/task coverage and verified BOQ pricing; §5 inventory has coded atomic commands but lacks daily-report links and database concurrency/reconciliation proof; §6 equipment lacks the full receipt/transfer, service and demo usage-cost path; §7 labor lacks the foreman approval path; §8 procurement lacks PR/review and several optional commercial details; §9 finance has provisional contract-minus-posted-cost reporting, not formal accounting or complete expense approvals; §10 daily reports lack posted-resource links; §11 role dashboards/notifications are incomplete; §12 QR is coded but unverified; §13 screens are not proof of workflow completion; §15 command acceptance requires database tests. §16 Phase 7/UAT/handover is not complete. These gaps remain unchecked in their original lists below.
+**Detailed README section check:** §3 roles are coded but real-account/RLS and capability-catalog acceptance is open; §4 master data/projects lack reusable custody, full project status/task coverage and verified BOQ pricing; §5 inventory has coded atomic commands but lacks daily-report links and database concurrency/reconciliation proof; §6 equipment lacks the full receipt/transfer, service and demo usage-cost path; §7 labor lacks the foreman approval path; §8 procurement requires connected PO/receipt verification; a separate PR/review stage and optional commercial extras are not assumed; §9 finance has provisional contract-minus-posted-cost reporting, not formal accounting or complete expense approvals; §10 daily reports lack posted-resource links; §11 role dashboards/notifications are incomplete; §12 QR is coded but unverified; §13 screens are not proof of workflow completion; §15 command acceptance requires database tests. §16 Phase 7/UAT/handover is not complete. These gaps remain unchecked in their original lists below.
 
 **Current verification (2026-09-26):** `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:unit` (2), `npm run test:auth` (3), `npm run test:security` (1), `npm run test:requests` (5), `npm run test:inventory-domain` (5), and `npm run test:daily-reports` (3) passed. The retired `/demo` and `/setup` pages and the staging-preview account switcher are no longer part of the app. This is static/unit verification, **not** SQL/RLS or real-account proof. Database execution, role-by-role UAT and opening-value reconciliation remain unverified release gates; these use the same standard Supabase configuration, not staging-only variables. See [web release readiness](docs/web-release-readiness.md).
 
@@ -270,8 +270,7 @@ The web ERP now defines exactly four login roles: **Admin, Engineer, Foreman, Wa
 - [ ] Supplier-item catalog and unit-of-measure crosswalk.
 - [ ] Record dated quoted prices and/or last purchased price per supplier/item.
 - [ ] Preserve history: ₱100 cement purchase remains ₱100 even if future quote is ₱120.
-- [ ] Material shortfall → purchase request (PR) linked to project or warehouse demand.
-- [ ] PR review/approval; record authorization and rejection reasons.
+- [ ] Material shortfall → material request or admin-created PO linked to project or warehouse demand. No separate purchase-request approval workflow.
 - [ ] PO with supplier, price/currency, unit, quantity, discount/taxes/delivery, due date and status.
 - [ ] Receive partially or fully into selected warehouse; inspect shortages/rejections.
 - [ ] Record actual purchase price/cost on receipt/batch according to approved valuation rule.
@@ -563,8 +562,8 @@ Do not implement later phases until previous critical business flows are validat
 
 ### Phase 4 — Procurement, suppliers and reports
 
-- [ ] Supplier price history, PR, PO and partial purchasing receipt.
-- [ ] Shortage-to-PR workflow from project plan/approved request.
+- [ ] Supplier price history, PO and partial purchasing receipt.
+- [ ] Shortage-to-request/PO workflow from project plan/approved request.
 - [ ] Stock card, material cost report and exports.
 
 ### Phase 5 — Equipment, vehicles and labor
@@ -720,6 +719,13 @@ nognog-enterprises/
 ---
 
 | 2026-09-26 | Connected UI parity continuation | Dedicated project sections, shared Add dialogs, custom date/picker/PHP controls, compact registry filters, audit avatars, monthly expense lines, unit-separated consumption areas and full-width recent activity are implemented. Vehicles remain in scope. Production build, lint, typecheck, four-role auth/unit tests, isolated role/tab renders and dashboard aggregation checks pass; shared dialog controls were checked in the browser. See [verification details](docs/connected-ui-parity-2026-09-26.md). | No authenticated live-account save/RLS/concurrency tests or deployment occurred; isolated fixtures do not close connected acceptance checkboxes. | Run database-backed role/workflow UAT against the connected build. |
+| 2026-09-26 | Simple Package 3 navigation and scope | Removed duplicate Stock tools/Administration menus, simplified stock-action naming and relocated usage, count and starting-value controls to contextual entry points. Removed the proposed separate PR approval stage from scope. Build/TypeScript, lint, 13 domain/auth tests, 24 project role/tab renders and targeted four-role inventory/project-prefill checks pass. | No transaction rules, tables or histories removed; authenticated database/browser UAT remains unverified. | Verify simplified navigation with real role accounts. |
+
+### Simple purchasing and grouped navigation — 2026-09-26
+
+Purchases now follow supplier → materials and dated prices → delivery, retaining the existing PO/receipt and historical costing safeguards. Purchase entry, delivery, stock in/out, site use, transfer and transfer-receipt forms use shared modals. Lists and project details remain pages. The role-filtered sidebar is grouped by operations, materials/assets, purchasing/finance and people/administration, with contextual links for dispatch, handovers, attendance and scanning. Settings and Help are available in the sidebar footer; vehicles remain in scope.
+
+Production build, TypeScript, lint, auth/inventory/procurement tests and isolated navigation/redirect checks pass. Browser checks covered the actual purchase dialog and dated price selection, without database writes. No migrations or deployment were performed; database-backed UAT remains required. See [verification details](docs/connected-ui-parity-2026-09-26.md).
 
 ## 19. Commercial and change control checklist
 

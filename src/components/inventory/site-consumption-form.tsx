@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { consumeSiteMaterialAction, type InventoryActionState } from "@/app/(workspace)/inventory/actions";
-import { Button } from "@/components/ui/button";
+import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { todayInManila } from "@/lib/date";
 
@@ -12,12 +12,12 @@ type Site = { id: string; name: string; projectId: string | null };
 type Balance = { material_id: string; inventory_location_id: string; available_quantity: number };
 const initialState: InventoryActionState = { ok: false, message: "" };
 
-export function SiteConsumptionForm({ projects, materials, units, sites, balances, initialMaterialId = "" }: {
-  projects: { id: string; code: string; name: string }[]; materials: Option[]; units: Unit[]; sites: Site[]; balances: Balance[]; initialMaterialId?: string;
+export function SiteConsumptionForm({ projects, materials, units, sites, balances, initialMaterialId = "", initialProjectId = "" }: {
+  projects: { id: string; code: string; name: string }[]; materials: Option[]; units: Unit[]; sites: Site[]; balances: Balance[]; initialMaterialId?: string; initialProjectId?: string;
 }) {
   const [state, action, pending] = useActionState(consumeSiteMaterialAction, initialState);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
-  const [projectId, setProjectId] = useState("");
+  const [projectId, setProjectId] = useState(() => projects.some((project) => project.id === initialProjectId) ? initialProjectId : "");
   const [siteId, setSiteId] = useState("");
   const [materialId, setMaterialId] = useState("");
   const projectSites = sites.filter((site) => site.projectId === projectId);
@@ -62,6 +62,6 @@ export function SiteConsumptionForm({ projects, materials, units, sites, balance
       </FormField>
     </div>
     {!state.ok && state.message && <p role="alert" className="mt-5 text-sm text-red-600">{state.message}</p>}
-    <div className="mt-6 flex justify-end"><Button type="submit" disabled={pending || !material || available <= 0}>{pending ? "Posting…" : "Record consumption"}</Button></div>
+    <RecordFormControls busy={pending} disabled={!material || available <= 0} label="Record use" />
   </form>;
 }

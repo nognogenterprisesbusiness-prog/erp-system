@@ -29,7 +29,7 @@ const basePayload = (form: FormData) => ({ idempotencyKey: value(form, "idempote
 
 export async function stockInAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
   const user = await requireUser();
-  if (!user.canManage) return failure("An administrator must approve a costed stock receipt until purchase orders are available.");
+  if (!user.canManage) return failure("Only an administrator can record a non-purchase stock receipt.");
   const parsed = stockInInputSchema.safeParse({ ...basePayload(form), destinationLocationId: value(form, "destinationLocationId"), totalCost: value(form, "totalCost") });
   if (!parsed.success) return failure("Review the stock-in details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data; const supabase = await createClient();

@@ -23,6 +23,14 @@ The retired demo is not reinstated. These changes use the existing authenticated
 
 ## Not verified by these checks
 
+### Simple Package 3 inventory navigation
+
+Removed the separate Stock tools and Administration menus. The inventory header has one stock-action entry point: Stock in/Stock out (Admin), Transfer and History. All material records—including those without stock yet—remain reachable through a small All materials link. Project Materials now links to Record use with an authorized project preselected. Stock checking is accessed from History; starting-value reconciliation sits under collapsed Existing stock setup on Stock in, rather than a daily toolbar feature. Plain Stock in/Stock out/Reason labels replace exception-specific labels without relaxing server authorization or cost validation.
+
+This removes duplicate navigation, not the contracted stock ledger, approvals, multi-warehouse transfers, actual-use costing, procurement, attendance, equipment/vehicle, finance or reporting workflows. No database tables, transactions or stored histories were deleted. A separate purchase-request (PR) approval stage is removed from the proposed backlog; shortages lead directly into the existing material request or admin PO path. Optional payroll, tax/GL accounting, GPS, supplier portals, biometric attendance and native clients remain outside the active web scope.
+
+Verification for this simplification: production build (including TypeScript), lint, 13 inventory/request/auth tests, and 24 project role/tab renders passed. Isolated actual-page checks covered four-role stock-action visibility, absence of old extra menu entries, authorized project prefill, rejection of unlisted project prefill and warehouse-staff usage denial. Diagnostic fixtures were outside the repository. Live authenticated browser navigation/saves remain unverified; no database migration or deployment was performed.
+
 ### QR, filters, dashboard totals and form consistency
 
 QR registry now has identifier search, a record-type picker, filtered CSV export and a matching five-column skeleton with export/action placeholders. Export is admin-only, batches 500 records and rejects exports above 20,000 records; spreadsheet formula escaping remains enabled. Shared list filters now use debounced client-side navigation, reset pagination and preserve scroll instead of Apply buttons/full-page submissions. Daily-report dates also apply automatically and clear conflicting date bounds atomically.
@@ -40,5 +48,15 @@ Following the supplied screenshot, paired dashboard cards now stretch to the sam
 ### Project-edit form follow-up
 
 The project header now opens the existing prefilled ProjectForm in the shared modal, with an outline Edit trigger and consistent Save/Cancel/X controls. The legacy `/projects/[id]/edit` route redirects administrators to the project-detail modal; other roles return to the permitted detail page without an edit form. Cancel from a deep link retains the active section/report page. Successful saves explicitly revalidate project details and the dialog is keyed to the persisted update timestamp to reset after a saved update. Typecheck, lint and 24 isolated role/section renders, including edit prefill/visibility and legacy-route authorization redirects, pass. Live saves remain subject to the authenticated testing gate below.
+
+### Purchasing, inventory dialogs and grouped navigation
+
+Purchasing is presented as Purchases: select supplier, warehouse, materials and quantities, review dated saved prices, then record deliveries with their actual costs. Entry and delivery forms use the shared modal; the existing PO/receipt ledger and historical cost snapshots remain intact. Price previews are paginated and bounded, with a limit notice; server-side pricing remains authoritative.
+
+Stock in/out, project material use, transfers, site returns, transfer receipt and variance forms open in shared dialogs with Save/Cancel and busy-state protection. Legacy stock-entry and purchase-entry URLs redirect to these dialogs. Inventory and transaction lists remain pages, as do project details. Transfer query combinations cannot open multiple dialogs simultaneously. Occasional stock-count and opening-value reconciliation screens remain contextual administrative pages.
+
+The sidebar is grouped into Projects & operations, Materials & assets, Purchasing & finance, and People & administration. Dispatch, equipment handovers, attendance, purchases and scanning remain reachable from their parent screens rather than duplicate sidebar entries. Settings links to the existing real profile form; Help contains authenticated workflow guidance, not a new support-ticket system. Four-role visibility, finance restrictions and the vehicle registry remain intact.
+
+Verification: production build, TypeScript and lint; auth/inventory/procurement tests; isolated four-role navigation and legacy-redirect checks; and browser checks of the actual purchase dialog, saved-price date selection, and cancellation. Diagnostic fixtures were outside the repository and made no database writes.
 
 There was no authenticated live-account browser session in this task. Diagnostic rendering is not proof of database saves, Storage permissions, RLS denial behavior, transaction concurrency, or deployed UI parity. No migrations, seeds, Git commits or deployments were performed. Retain the release-readiness gate until database-backed workflows and real-account browser UAT have passed; do not mark the entire Package 3 contract complete from a passing build.

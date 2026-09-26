@@ -1,7 +1,13 @@
 import { redirect } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
-import { InventoryMovementForm } from "@/components/inventory/inventory-movement-form";
-import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
-import { getInventoryOptions } from "@/lib/data/inventory";
-export default async function StockOutPage({ searchParams }: { searchParams: Promise<{ material?: string }> }) { const user = await requireUser(); if (!user.canManage) redirect("/inventory"); const options = await getInventoryOptions(); const parsed = uuidSchema.safeParse((await searchParams).material); return <><PageHeader eyebrow="Inventory exception" title="Warehouse stock out" description="Administrator-only non-project write-off. For project use, transfer stock to the site and record its consumption. Enter a reference and reason." /><div className="mt-7"><InventoryMovementForm mode="stock-out" initialMaterialId={parsed.success ? parsed.data : ""} {...options} /></div></>; }
+
+export default async function InventoryFormRedirect({ searchParams }: { searchParams: Promise<{ material?: string; project?: string }> }) {
+  const user = await requireUser();
+  if (!(user.canManage)) redirect("/inventory");
+  const query = await searchParams;
+  const params = new URLSearchParams({ action: "stock-out" });
+  const material = uuidSchema.safeParse(query.material);
+  if (material.success) params.set("material", material.data);
+  redirect(`/inventory?${params}`);
+}

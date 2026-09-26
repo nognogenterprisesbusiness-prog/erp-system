@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,7 +12,7 @@ import { HistoryLink } from "@/components/layout/history-link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { cn } from "@/lib/utils";
 
-export type ShellNavItem = { href: string; label: string; icon: IconSvgElement };
+export type ShellNavItem = { href: string; label: string; icon: IconSvgElement; group?: string };
 type FooterAction = { label: string; icon: IconSvgElement; onClick: () => void };
 type NavigationMode = "client" | "document" | "history";
 
@@ -26,7 +26,9 @@ function SidebarLink({ item, active, compact, navigationMode, onNavigate }: { it
       : <Link href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined} aria-label={compact ? item.label : undefined} title={compact ? item.label : undefined} className={className}>{content}</Link>;
 }
 
-function Sidebar({ items, footerItems = [], footerAction, homeHref, pathname, navigationMode, compact = false, onToggle, onNavigate }: { items: ShellNavItem[]; footerItems?: ShellNavItem[]; footerAction?: FooterAction; homeHref: string; pathname: string; navigationMode: NavigationMode; compact?: boolean; onToggle?: () => void; onNavigate?: () => void }) {
+function Sidebar({ items, footerItems = [], footerAction, homeHref, pathname, navigationMode, collapsedGroups, onToggleGroup, compact = false, onToggle, onNavigate }: { items: ShellNavItem[]; footerItems?: ShellNavItem[]; footerAction?: FooterAction; homeHref: string; pathname: string; navigationMode: NavigationMode; collapsedGroups: string[]; onToggleGroup: (group: string) => void; compact?: boolean; onToggle?: () => void; onNavigate?: () => void }) {
+  const navigationId = useId();
+  const groups = [...new Set(items.map((item) => item.group ?? "Workspace"))];
   const brand = navigationMode === "document"
     ? <a href={homeHref} aria-label="Nognog Enterprises home" className={cn("flex min-w-0 items-center gap-3", compact ? "justify-center" : "px-2")} onClick={onNavigate}><Brand compact={compact} /></a>
     : navigationMode === "history"
@@ -38,8 +40,16 @@ function Sidebar({ items, footerItems = [], footerAction, homeHref, pathname, na
       {onToggle ? <button type="button" onClick={onToggle} aria-label={compact ? "Expand sidebar" : "Collapse sidebar"} title={compact ? "Expand sidebar" : "Collapse sidebar"} className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"><HugeiconsIcon icon={compact ? PanelLeftOpenIcon : PanelLeftCloseIcon} size={19} /></button> : null}
     </div>
     <nav className={cn("flex-1", compact ? "mt-5" : "mt-9")} aria-label="Main navigation">
-      <p className={cn("px-3 text-[10px] font-semibold tracking-[0.18em] text-slate-500", compact && "sr-only")}>WORKSPACE</p>
-      <div className="mt-3 space-y-1">{items.map((item) => <SidebarLink key={item.href} item={item} active={(pathname === item.href || (item.href !== homeHref && pathname.startsWith(`${item.href}/`))) && !items.some((other) => other.href !== item.href && other.href.length > item.href.length && (pathname === other.href || pathname.startsWith(`${other.href}/`)))} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}</div>
+      <div className="space-y-5">{groups.map((group, index) => {
+        const expanded = compact || !collapsedGroups.includes(group);
+        const panelId = `${navigationId}-group-${index}`;
+        return <section key={group} aria-label={group}>
+          {compact ? <p className="sr-only">{group}</p> : <button type="button" aria-expanded={expanded} aria-controls={panelId} onClick={() => onToggleGroup(group)} className="mb-2 flex min-h-9 w-full items-center justify-between gap-2 rounded-lg px-3 text-left text-xs font-medium text-slate-400 hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
+            <span>{group}</span><HugeiconsIcon icon={ArrowDown01Icon} size={15} strokeWidth={1.7} className={cn("shrink-0 transition-transform motion-reduce:transition-none", !expanded && "-rotate-90")} />
+          </button>}
+          <div id={panelId} hidden={!expanded} className="space-y-1">{items.filter((item) => (item.group ?? "Workspace") === group).map((item) => <SidebarLink key={item.href} item={item} active={(pathname === item.href || (item.href !== homeHref && pathname.startsWith(`${item.href}/`))) && !items.some((other) => other.href !== item.href && other.href.length > item.href.length && (pathname === other.href || pathname.startsWith(`${other.href}/`)))} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}</div>
+        </section>;
+      })}</div>
     </nav>
     {(footerItems.length > 0 || footerAction) && <nav className="border-t border-white/10 pt-3" aria-label="Support and account">
       {footerItems.map((item) => <SidebarLink key={item.href} item={item} active={pathname === item.href} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}
@@ -74,6 +84,10 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
+  function toggleGroup(group: string) {
+    setCollapsedGroups((current) => current.includes(group) ? current.filter((item) => item !== group) : [...current, group]);
+  }
   useEffect(() => {
     queueMicrotask(() => {
       try { setSidebarCollapsed(window.localStorage.getItem("nognog.sidebar.collapsed") === "1"); }
@@ -110,10 +124,10 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
   const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
   return <div className="min-h-svh bg-[#f5f6f8] text-[#07152d]">
     {banner ? <div className="sticky top-0 z-50">{banner}</div> : null}
-    <div className={cn("fixed bottom-0 left-0 z-40 hidden transition-[width] duration-200 lg:block", banner ? "top-11" : "top-0", sidebarCollapsed ? "w-[76px]" : "w-[264px]")}><Sidebar items={items} footerItems={footerItems} footerAction={footerAction} homeHref={homeHref} pathname={activeHref ?? pathname} navigationMode={navigationMode} compact={sidebarCollapsed} onToggle={toggleSidebar} /></div>
+    <div className={cn("fixed bottom-0 left-0 z-40 hidden transition-[width] duration-200 lg:block", banner ? "top-11" : "top-0", sidebarCollapsed ? "w-[76px]" : "w-[264px]")}><Sidebar collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} items={items} footerItems={footerItems} footerAction={footerAction} homeHref={homeHref} pathname={activeHref ?? pathname} navigationMode={navigationMode} compact={sidebarCollapsed} onToggle={toggleSidebar} /></div>
     {sidebarOpen && <div role="dialog" aria-modal="true" aria-label="Navigation" className="fixed inset-0 z-50 lg:hidden">
       <button className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />
-      <div className="relative h-full w-[min(88vw,280px)] shadow-2xl"><Sidebar items={items} footerItems={footerItems} footerAction={footerAction} homeHref={homeHref} pathname={activeHref ?? pathname} navigationMode={navigationMode} onNavigate={() => setSidebarOpen(false)} /><button onClick={() => setSidebarOpen(false)} aria-label="Close navigation" className="absolute right-3 top-4 grid size-9 place-items-center rounded-lg text-slate-300 hover:bg-white/10"><HugeiconsIcon icon={Cancel01Icon} size={20} /></button></div>
+      <div className="relative h-full w-[min(88vw,280px)] shadow-2xl"><Sidebar collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} items={items} footerItems={footerItems} footerAction={footerAction} homeHref={homeHref} pathname={activeHref ?? pathname} navigationMode={navigationMode} onNavigate={() => setSidebarOpen(false)} /><button onClick={() => setSidebarOpen(false)} aria-label="Close navigation" className="absolute right-3 top-4 grid size-9 place-items-center rounded-lg text-slate-300 hover:bg-white/10"><HugeiconsIcon icon={Cancel01Icon} size={20} /></button></div>
     </div>}
     <div className={cn("transition-[padding] duration-200", sidebarCollapsed ? "lg:pl-[76px]" : "lg:pl-[264px]")}>
       <header className={cn("sticky z-30 flex h-16 items-center border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-xl sm:px-6 xl:px-8", banner ? "top-11" : "top-0")}>
