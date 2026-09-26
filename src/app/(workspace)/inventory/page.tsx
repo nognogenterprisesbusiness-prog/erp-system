@@ -1,8 +1,9 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { IntentLink as Link } from "@/components/layout/intent-link";
-import { Download04Icon } from "@hugeicons/core-free-icons";
+import { Download04Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InventoryLocationPicker } from "@/components/inventory/inventory-location-picker";
+import { RecordThumbnail } from "@/components/ui/record-thumbnail";
 import { RecordListView } from "@/components/ui/record-list-view";
 import { InventoryBalanceCard } from "@/components/inventory/inventory-balance-card";
 import { MaterialForm } from "@/components/materials/material-form";
@@ -51,14 +52,14 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     </div>} />
     {movement && movementOptions && <RecordCreateDialog title={movement === "stock-in" ? "Stock in" : "Stock out"} initialOpen hideTrigger closeHref={`/inventory?${exportParams}`}><p className="mb-4 text-sm text-slate-500">{movement === "stock-in" ? "Supplier deliveries should be received through Purchases. This records other receipts with a verified cost." : "Project deliveries use approved requests. This records admin-authorized non-project stock removal."}</p><InventoryMovementForm mode={movement} {...movementOptions} initialMaterialId={material.success ? material.data : ""} />{movement === "stock-in" && <details className="mt-4 text-sm text-slate-500"><summary className="cursor-pointer">Existing stock setup</summary><Link href="/inventory/opening-values" className="mt-2 block font-medium text-cyan-700">Verify starting values without receiving stock again</Link></details>}</RecordCreateDialog>}
     {usageOptions && <RecordCreateDialog title="Record material use" initialOpen hideTrigger closeHref={projectId ? `/projects/${projectId}?tab=materials` : `/inventory?${exportParams}`}>{usageOptions.balances.length ? <SiteConsumptionForm {...usageOptions} initialMaterialId={material.success ? material.data : ""} initialProjectId={projectId} /> : <EmptyState title="No site stock available" description="Receive material at an assigned site before recording use." />}</RecordCreateDialog>}
-    <ListFilterBar>
+    <ListFilterBar viewKey="inventory" viewTitle="Inventory">
       <input type="hidden" name="location" value={data.selectedLocationId} />
       <SearchField name="q" defaultValue={query} label="Search materials" placeholder="Search materials" />
       <label className="flex h-10 items-center gap-2 px-2 text-xs font-medium text-slate-600"><input type="checkbox" name="low" value="true" defaultChecked={lowStock} />Low stock</label>
       <Link href="/materials" className="text-sm font-medium text-slate-600 hover:text-cyan-700">All materials</Link>
     </ListFilterBar>
     <RecordListView storageKey="inventory" title="Inventory" columns={["Material", "Stock location", "On hand", "Reserved", "Available", "Minimum"]} rows={data.balances.map((item) => ({ id: item.id, cells: [
-      <Link key="material" href={`/materials/${item.material_id}`} className="font-semibold hover:text-cyan-700">{item.material?.code} · {item.material?.name ?? "Unavailable material"}</Link>,
+      <div key="record" className="flex min-w-56 items-center gap-3"><RecordThumbnail icon={PackageIcon} name={item.material?.name ?? "Material"} photo={item.material?.photo_path ? recordPhotoUrl("materials", item.material_id) : null} /><Link key="material" href={`/materials/${item.material_id}`} className="font-semibold hover:text-cyan-700">{item.material?.code} · {item.material?.name ?? "Unavailable material"}</Link></div>,
       item.location?.name ?? "Unavailable location",
       ...[item.quantity_on_hand, item.reserved_quantity, item.available_quantity, item.material?.minimum_stock_level ?? 0].map((value) => `${Number(value).toLocaleString("en-PH", { maximumFractionDigits: 4 })} ${item.material?.unitSymbol ?? ""}`),
     ] }))}>

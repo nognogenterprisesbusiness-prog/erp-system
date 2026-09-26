@@ -2,6 +2,7 @@ import { IntentLink as Link } from "@/components/layout/intent-link";
 import { SearchField } from "@/components/ui/search-field";
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { ProjectListPickers } from "@/components/projects/project-list-pickers";
+import { RecordThumbnail } from "@/components/ui/record-thumbnail";
 import { RecordListView } from "@/components/ui/record-list-view";
 import { ProjectSummaryCard } from "@/components/projects/project-summary-card";
 import { ProjectForm } from "@/components/projects/project-form";
@@ -46,7 +47,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Project control</p><h1 className="mt-1.5 text-3xl font-semibold tracking-[-0.035em]">Projects</h1><p className="mt-1 text-sm text-slate-500">Search and manage the project records available to you.</p></div>
       {user.canManage && <RecordCreateDialog title="Add project" initialOpen={creating} closeHref={href({ page })}><ProjectForm profiles={profiles} /></RecordCreateDialog>}
     </div>
-    <ListFilterBar>
+    <ListFilterBar viewKey="projects" viewTitle="Projects">
       <SearchField name="q" defaultValue={query} label="Search projects" placeholder="Search name, code, or client" />
       {status !== "all" && <input type="hidden" name="status" value={status} />}
       {sort !== "newest" && <input type="hidden" name="sort" value={sort} />}
@@ -54,7 +55,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
       <div className="w-full sm:w-auto"><ProjectListPickers query={query} status={status} sort={sort} direction={direction} /></div>
     </ListFilterBar>
     <RecordListView storageKey="projects" title="Projects" columns={["Project", "Client", "Location", "Status", ...(user.canViewDailyReports ? ["Progress"] : []), "Timeline", ...(user.canViewLaborRates ? ["Initial budget"] : [])]} rows={data.projects.map((project) => ({ id: project.id, cells: [
-      <Link key="project" href={`/projects/${project.id}`} className="font-semibold hover:text-cyan-700">{project.code} · {project.name}</Link>, project.client_name, project.city_province, labels[project.status],
+      <div key="record" className="flex min-w-56 items-center gap-3"><RecordThumbnail name={project.name} photo={project.photo_path ? recordPhotoUrl("projects", project.id, project.updated_at) : null} /><Link key="project" href={`/projects/${project.id}`} className="font-semibold hover:text-cyan-700">{project.code} · {project.name}</Link></div>, project.client_name, project.city_province, labels[project.status],
       ...(user.canViewDailyReports ? [`${project.progress ?? 0}%`] : []), `${date(project.start_date)} – ${date(project.target_completion_date)}`,
       ...(user.canViewLaborRates ? [money.format(project.initial_budget)] : []),
     ] }))}>

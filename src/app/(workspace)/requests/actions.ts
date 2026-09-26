@@ -37,7 +37,6 @@ export async function cancelMaterialRequestAction(_: RequestActionState, form: F
     return failure(requestError(error));
   }
   revalidatePath("/requests");
-  revalidatePath("/requests/queue");
   revalidatePath("/inventory");
   revalidatePath(`/requests/${data}`);
   redirect(`/requests/${data}?cancelled=1`);
@@ -90,7 +89,6 @@ export async function decideMaterialRequestAction(_: RequestActionState, form: F
   if (error) return failure(requestError(error));
   revalidatePath("/requests");
   revalidatePath(`/requests/${data}`);
-  revalidatePath("/requests/queue");
   revalidatePath("/inventory");
   redirect(`/requests/${data}?decided=1`);
 }
@@ -99,7 +97,7 @@ function fulfillmentError(error: { code?: string; message: string }): string {
   if (error.code === "42501") return "You are not authorized for this warehouse or project.";
   if (error.code === "23505") return "This form was already used for another movement. Refresh before trying again.";
   if (error.message.includes("insufficient available stock")) return "The warehouse does not have enough available stock.";
-  if (error.message.includes("reserved stock is unavailable") || error.message.includes("reserved quantity")) return "The reserved quantity is no longer available. Refresh the queue.";
+  if (error.message.includes("reserved stock is unavailable") || error.message.includes("reserved quantity")) return "The reserved quantity is no longer available. Refresh the request.";
   if (error.message.includes("exceeds remaining approved")) return "The quantity exceeds the approved amount still awaiting dispatch.";
   if (error.message.includes("exceeds remaining in-transit")) return "The quantity exceeds what is still in transit.";
   if (error.message.includes("inactive")) return "The project, site, or warehouse is no longer active.";
@@ -121,8 +119,8 @@ export async function dispatchRequestLineAction(_: RequestActionState, form: For
     p_quantity: input.quantity, p_transaction_date: input.transactionDate, p_remarks: input.remarks || null,
   });
   if (error) return failure(fulfillmentError(error));
-  revalidatePath("/requests/queue"); revalidatePath("/requests"); revalidatePath("/inventory/transfers"); revalidatePath("/inventory");
-  redirect("/requests/queue?dispatched=1");
+  revalidatePath("/requests"); revalidatePath("/requests/[id]", "page"); revalidatePath("/inventory/transfers"); revalidatePath("/inventory");
+  return { ok: true, data: { id: input.requestLineId } };
 }
 
 export async function receiveRequestTransferAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
@@ -142,5 +140,5 @@ export async function receiveRequestTransferAction(_: RequestActionState, form: 
   });
   if (error) return failure(fulfillmentError(error));
   revalidatePath("/requests"); revalidatePath(`/requests/${input.requestId}`); revalidatePath("/inventory/transfers"); revalidatePath("/inventory");
-  redirect(`/requests/${input.requestId}?received=1`);
+  return { ok: true, data: { id: input.requestId } };
 }

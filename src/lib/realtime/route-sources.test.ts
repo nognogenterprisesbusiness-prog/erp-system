@@ -3,7 +3,7 @@ import test from "node:test";
 import { liveTablesForPath, refreshIntervalForPath } from "./route-sources";
 
 test("operational routes subscribe only to their related data", () => {
-  assert.deepEqual(liveTablesForPath("/requests/queue"), ["material_requests", "material_request_lines", "inventory_balances", "inventory_transfers", "inventory_transfer_items"]);
+  assert.deepEqual(liveTablesForPath("/requests/assigned-request"), ["material_requests", "material_request_lines", "inventory_balances", "inventory_transfers", "inventory_transfer_items"]);
   assert.deepEqual(liveTablesForPath("/inventory/transactions"), ["inventory_transactions"]);
   assert.deepEqual(liveTablesForPath("/inventory/counts"), ["inventory_stock_counts", "inventory_balances"]);
   assert.deepEqual(liveTablesForPath("/equipment/requests"), ["equipment_requests", "assets"]);

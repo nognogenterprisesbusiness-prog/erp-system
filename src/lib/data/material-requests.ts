@@ -67,18 +67,6 @@ export async function getMaterialRequests(filters: { search?: string; status?: M
   };
 }
 
-export async function getApprovedRequestQueue(page = 1) {
-  const user = await requireUser();
-  if (!user.canOperateInventory) return { rows: [], count: 0, page: 1, pageCount: 1 };
-  const safePage = Math.min(10_000, Math.max(1, Number.isSafeInteger(page) ? page : 1));
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_approved_request_queue", { p_limit: PAGE_SIZE, p_offset: (safePage - 1) * PAGE_SIZE });
-  if (error) throw new Error("Unable to load approved requests for dispatch.");
-  const rows = data ?? [];
-  const count = rows[0]?.total_count ?? 0;
-  return { rows, count, page: safePage, pageCount: Math.max(1, Math.ceil(count / PAGE_SIZE)) };
-}
-
 export async function getMaterialRequest(id: string) {
   await requireUser();
   if (!uuidSchema.safeParse(id).success) notFound();

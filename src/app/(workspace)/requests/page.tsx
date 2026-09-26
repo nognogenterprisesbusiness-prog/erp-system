@@ -28,7 +28,7 @@ export default async function MaterialRequestsPage({ searchParams }: { searchPar
   const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (search) next.set("q", search); if (filters.status !== "all") next.set("status", filters.status); next.set("page", String(target)); return `/requests?${next}`; };
   return <>
-    <PageHeader title="Material requests" description="Review site demand, manager decisions, and delivery progress." action={<div className="flex flex-wrap gap-2">{user.canOperateInventory && <Button asChild variant="outline"><Link href="/requests/queue">Dispatch queue</Link></Button>}{canRequest && <Button asChild><Link href="/requests/new"><HugeiconsIcon icon={PlusSignIcon} size={17} />New request</Link></Button>}</div>} />
+    <PageHeader title="Material requests" description="Review site demand, manager decisions, and delivery progress." action={<div className="flex flex-wrap gap-2">{canRequest && <Button asChild><Link href="/requests/new"><HugeiconsIcon icon={PlusSignIcon} size={17} />New request</Link></Button>}</div>} />
     <ListFilterBar>
       <SearchField name="q" label="Search request number" defaultValue={search} placeholder="Search request number" />
       <div className="min-w-[180px]"><SelectPicker name="status" label="Status" defaultValue={filters.status} options={[{ value: "all", label: "All statuses" }, ...statuses.map((value) => ({ value, label: statusLabels[value] }))]} /></div>

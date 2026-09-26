@@ -3,9 +3,10 @@
 import { useEffect, useRef, useTransition, type ComponentProps } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { RecordListViewToggle } from "./record-list-view";
 import { FilterBarContext } from "./filter-bar-context";
 
-export function ListFilterBar({ className, ...props }: ComponentProps<"form">) {
+export function ListFilterBar({ className, children, viewKey, viewTitle, ...props }: ComponentProps<"form"> & { viewKey?: string; viewTitle?: string }) {
   const form = useRef<HTMLFormElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const router = useRouter();
@@ -24,5 +25,5 @@ export function ListFilterBar({ className, ...props }: ComponentProps<"form">) {
       startTransition(() => router.replace(href, { scroll: false }));
     }, delay);
   }
-  return <FilterBarContext.Provider value={(name, value) => navigate(name, value)}><form {...props} ref={form} aria-busy={pending} onSubmit={(event) => { event.preventDefault(); navigate(); }} onChange={(event) => { const target = event.target; if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) || !target.name) return; navigate(undefined, undefined, target instanceof HTMLInputElement && target.type === "search" ? 300 : 0); }} className={cn("mt-7 flex flex-wrap items-center gap-3 [&>button[role=combobox]]:w-full sm:[&>button[role=combobox]]:w-44", className)} /></FilterBarContext.Provider>;
+  return <FilterBarContext.Provider value={(name, value) => navigate(name, value)}><form {...props} ref={form} aria-busy={pending} onSubmit={(event) => { event.preventDefault(); navigate(); }} onChange={(event) => { const target = event.target; if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement) || !target.name) return; navigate(undefined, undefined, target instanceof HTMLInputElement && target.type === "search" ? 300 : 0); }} className={cn("mt-7 flex flex-wrap items-center gap-3 [&>button[role=combobox]]:w-full sm:[&>button[role=combobox]]:w-44", className)} >{children}{viewKey && <RecordListViewToggle storageKey={viewKey} title={viewTitle ?? viewKey} />}</form></FilterBarContext.Provider>;
 }

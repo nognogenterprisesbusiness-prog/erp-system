@@ -1,6 +1,7 @@
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { ExcavatorIcon, Car01Icon, Location01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { RecordThumbnail } from "@/components/ui/record-thumbnail";
 import { RecordListView } from "@/components/ui/record-list-view";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PhotoViewer } from "@/components/ui/photo-viewer";
@@ -14,7 +15,7 @@ export function AssetCards({ assets, kind, canManage, categories, locations }: {
   if (!assets.length) return <div className="mt-5 rounded-2xl border border-slate-200 bg-white"><EmptyState kind="results" title={`No ${kind} records found`} description="Change the filters or add a record." /></div>;
   const base = kind === "equipment" ? "/equipment" : "/vehicles";
   return <RecordListView storageKey={kind === "equipment" ? "equipment" : "vehicles"} title={kind === "equipment" ? "Equipment" : "Vehicles"} columns={["Asset", "Classification", "Brand / model", kind === "equipment" ? "Serial number" : "Plate number", "Location", "Status", "Actions"]} rows={assets.map((asset) => ({ id: asset.id, cells: [
-    <Link key="asset" href={`${base}/${asset.id}`} className="font-semibold hover:text-cyan-700">{asset.code} · {asset.name}</Link>, asset.categoryName, `${asset.brand} ${asset.model}`, asset.equipment?.serial_number ?? asset.vehicle?.plate_number ?? "—", asset.location?.displayName ?? "Unavailable location",
+    <div key="record" className="flex min-w-56 items-center gap-3"><RecordThumbnail icon={kind === "equipment" ? ExcavatorIcon : Car01Icon} name={asset.name} photo={asset.photo_path ? recordPhotoUrl("assets", asset.id, asset.updated_at) : null} /><Link key="asset" href={`${base}/${asset.id}`} className="font-semibold hover:text-cyan-700">{asset.code} · {asset.name}</Link></div>, asset.categoryName, `${asset.brand} ${asset.model}`, asset.equipment?.serial_number ?? asset.vehicle?.plate_number ?? "—", asset.location?.displayName ?? "Unavailable location",
     <AssetStatusBadge key="status" status={asset.status} />, <AssetCardActions key="actions" asset={asset} kind={kind} canManage={canManage} categories={categories} locations={locations} />,
   ] }))}><section aria-label={`${kind} records`} className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
     {assets.map((asset) => <article key={asset.id} className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
