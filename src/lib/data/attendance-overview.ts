@@ -12,7 +12,7 @@ export async function getAttendanceOverview(date: string, projectId: string | nu
     .lte("start_date", date)
     .or(`end_date.is.null,end_date.gte.${date}`);
   if (projectId) request = request.eq("project_id", projectId);
-  const { data: assignments, count, error } = await request.order("employee_id").range(from, from + PAGE_SIZE - 1);
+  const { data: assignments, count, error } = await request.order("employee_id").order("id").range(from, from + PAGE_SIZE - 1);
   if (error) throw new Error("Unable to load attendance assignments.");
   const assignmentIds = (assignments ?? []).map((item) => item.id);
   const employeeIds = [...new Set((assignments ?? []).map((item) => item.employee_id))];

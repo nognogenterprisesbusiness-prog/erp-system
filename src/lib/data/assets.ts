@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
+import { readAllPages, readByIds } from "./read-all-pages";
 import type { AssetCategoryRow, AssetKind, AssetLocationKind, AssetLocationRow, AssetRow, AssetStatus, EquipmentDetailRow, VehicleDetailRow } from "@/types/database";
 
 export type AssetLocationView = AssetLocationRow & { displayName: string; displayAddress: string };
@@ -16,36 +17,33 @@ export type AssetView = AssetRow & {
 
 export const getAssetCategories = cache(async function getAssetCategories(kind?: AssetKind, includeArchived = false) {
   const supabase = await createClient();
-  let query = supabase.from("asset_categories").select("id,asset_kind,name,description,created_by,updated_by,archived_at,archived_by,created_at,updated_at").order("asset_kind").order("name").limit(500);
-  if (kind) query = query.eq("asset_kind", kind);
-  if (!includeArchived) query = query.is("archived_at", null);
-  const { data, error } = await query;
-  if (error) throw new Error("Unable to load asset categories.");
-  return data ?? [];
+  return readAllPages((from, to) => {
+    let query = supabase.from("asset_categories").select("id,asset_kind,name,description,created_by,updated_by,archived_at,archived_by,created_at,updated_at").order("asset_kind").order("name").order("id");
+    if (kind) query = query.eq("asset_kind", kind);
+    if (!includeArchived) query = query.is("archived_at", null);
+    return query.range(from, to);
+  }, "asset categories");
 });
 
 export const getAssetLocations = cache(async function getAssetLocations(includeArchived = false): Promise<AssetLocationView[]> {
   const supabase = await createClient();
-  let locationQuery = supabase.from("asset_locations").select("id,location_kind,inventory_location_id,name,address,created_by,updated_by,archived_at,archived_by,created_at,updated_at").order("location_kind").order("name").limit(500);
-  if (!includeArchived) locationQuery = locationQuery.is("archived_at", null);
-  const { data: assetLocations, error } = await locationQuery;
-  if (error) throw new Error("Unable to load asset locations.");
-  const inventoryIds = (assetLocations ?? []).flatMap((item) => item.inventory_location_id ? [item.inventory_location_id] : []);
-  const { data: inventoryLocations, error: inventoryError } = inventoryIds.length
-    ? await supabase.from("inventory_locations").select("id,warehouse_id,project_site_id").in("id", inventoryIds)
-    : { data: [], error: null };
-  if (inventoryError) throw new Error("Unable to resolve asset locations.");
-  const warehouseIds = (inventoryLocations ?? []).flatMap((item) => item.warehouse_id ? [item.warehouse_id] : []);
-  const siteIds = (inventoryLocations ?? []).flatMap((item) => item.project_site_id ? [item.project_site_id] : []);
-  const [{ data: warehouses, error: warehouseError }, { data: sites, error: siteError }] = await Promise.all([
-    warehouseIds.length ? supabase.from("warehouses").select("id,code,name,address").in("id", warehouseIds) : Promise.resolve({ data: [], error: null }),
-    siteIds.length ? supabase.from("project_sites").select("id,name,address").in("id", siteIds) : Promise.resolve({ data: [], error: null }),
+  const assetLocations = await readAllPages((from, to) => {
+    let query = supabase.from("asset_locations").select("id,location_kind,inventory_location_id,name,address,created_by,updated_by,archived_at,archived_by,created_at,updated_at").order("location_kind").order("name").order("id");
+    if (!includeArchived) query = query.is("archived_at", null);
+    return query.range(from, to);
+  }, "asset locations");
+  const inventoryIds = assetLocations.flatMap((item) => item.inventory_location_id ? [item.inventory_location_id] : []);
+  const inventoryLocations = await readByIds(inventoryIds, (ids, from, to) => supabase.from("inventory_locations").select("id,warehouse_id,project_site_id").in("id", ids).order("id").range(from, to), "asset inventory locations");
+  const warehouseIds = inventoryLocations.flatMap((item) => item.warehouse_id ? [item.warehouse_id] : []);
+  const siteIds = inventoryLocations.flatMap((item) => item.project_site_id ? [item.project_site_id] : []);
+  const [warehouses, sites] = await Promise.all([
+    readByIds(warehouseIds, (ids, from, to) => supabase.from("warehouses").select("id,code,name,address").in("id", ids).order("id").range(from, to), "asset warehouses"),
+    readByIds(siteIds, (ids, from, to) => supabase.from("project_sites").select("id,name,address").in("id", ids).order("id").range(from, to), "asset sites"),
   ]);
-  if (warehouseError || siteError) throw new Error("Unable to resolve warehouse and site names.");
-  const inventoryMap = new Map((inventoryLocations ?? []).map((item) => [item.id, item]));
-  const warehouseMap = new Map((warehouses ?? []).map((item) => [item.id, item]));
-  const siteMap = new Map((sites ?? []).map((item) => [item.id, item]));
-  return (assetLocations ?? []).map((location) => {
+  const inventoryMap = new Map(inventoryLocations.map((item) => [item.id, item]));
+  const warehouseMap = new Map(warehouses.map((item) => [item.id, item]));
+  const siteMap = new Map(sites.map((item) => [item.id, item]));
+  return assetLocations.map((location) => {
     const inventory = location.inventory_location_id ? inventoryMap.get(location.inventory_location_id) : undefined;
     const warehouse = inventory?.warehouse_id ? warehouseMap.get(inventory.warehouse_id) : undefined;
     const site = inventory?.project_site_id ? siteMap.get(inventory.project_site_id) : undefined;
@@ -58,13 +56,38 @@ export async function getAssetReferences(kind: AssetKind) {
   return { categories, locations };
 }
 
+/** Wage/rate-free equipment choices at this project's active sites. The posting RPC rechecks custody. */
+export async function getProjectEquipmentChoices(projectId: string) {
+  if (!uuidSchema.safeParse(projectId).success) return [];
+  const supabase = await createClient();
+  const sites = await readAllPages((from, to) => supabase.from("project_sites").select("id").eq("project_id", projectId).eq("status", "active").order("id").range(from, to), "project sites");
+  if (!sites.length) return [];
+  const inventoryIds: string[] = [];
+  for (let offset = 0; offset < sites.length; offset += 100) {
+    const siteIds = sites.slice(offset, offset + 100).map((site) => site.id);
+    const locations = await readAllPages((from, to) => supabase.from("inventory_locations").select("id").in("project_site_id", siteIds).order("id").range(from, to), "site locations");
+    inventoryIds.push(...locations.map((location) => location.id));
+  }
+  const assetLocationIds: string[] = [];
+  for (let offset = 0; offset < inventoryIds.length; offset += 100) {
+    const locations = await readAllPages((from, to) => supabase.from("asset_locations").select("id").is("archived_at", null).in("inventory_location_id", inventoryIds.slice(offset, offset + 100)).order("id").range(from, to), "equipment locations");
+    assetLocationIds.push(...locations.map((location) => location.id));
+  }
+  const assets: { id: string; code: string; name: string }[] = [];
+  for (let offset = 0; offset < assetLocationIds.length; offset += 100) {
+    const rows = await readAllPages((from, to) => supabase.from("assets").select("id,code,name").eq("asset_kind", "equipment").is("archived_at", null).in("status", ["available", "assigned", "in_use"]).in("current_location_id", assetLocationIds.slice(offset, offset + 100)).order("code").order("id").range(from, to), "project equipment");
+    assets.push(...rows);
+  }
+  return assets.sort((a, b) => a.code.localeCompare(b.code) || a.id.localeCompare(b.id));
+}
+
 export async function getAssets(params: { id?: string; kind: AssetKind; query?: string; categoryId?: string; status?: AssetStatus | "all"; locationId?: string; includeArchived?: boolean; page?: number; pageSize?: number }) {
   const supabase = await createClient();
-  let request = supabase.from("assets").select("id,asset_kind,code,name,description,category_id,brand,model,acquisition_date,ownership_type,status,current_location_id,condition_notes,photo_path,created_by,updated_by,archived_at,archived_by,created_at,updated_at").eq("asset_kind", params.kind).order("updated_at", { ascending: false }).limit(500);
+  let request = supabase.from("assets").select("id,asset_kind,code,name,description,category_id,brand,model,acquisition_date,ownership_type,status,current_location_id,condition_notes,photo_path,created_by,updated_by,archived_at,archived_by,created_at,updated_at").eq("asset_kind", params.kind).order("updated_at", { ascending: false }).order("id");
   if (params.id) request = request.eq("id", params.id);
   if (params.page !== undefined && !params.id) {
     const size = Math.max(1, Math.min(100, Math.floor(params.pageSize ?? 24)));
-    const offset = (Math.max(1, Math.min(1000, Math.floor(params.page))) - 1) * size;
+    const offset = (Math.max(1, Math.floor(params.page)) - 1) * size;
     // One extra row determines whether another page exists without a count query.
     request = request.range(offset, offset + size);
   }

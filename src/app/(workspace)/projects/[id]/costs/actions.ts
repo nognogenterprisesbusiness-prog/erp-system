@@ -3,15 +3,15 @@
 import { additionalExpenseSchema, budgetChangeSchema, equipmentRateSchema, equipmentUsageSchema, reverseProjectCostSchema, uuidSchema } from "@nognog/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireManager } from "@/lib/auth";
+import { requireManager, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export type ProjectCostActionState = { message: string; fieldErrors?: Record<string, string[]> };
+export type ProjectCostActionState = { ok?: boolean; message: string; fieldErrors?: Record<string, string[]> };
 const value = (form: FormData, key: string) => String(form.get(key) ?? "");
 const fail = (message: string, fieldErrors?: Record<string, string[]>): ProjectCostActionState => ({ message, fieldErrors });
 
 function costError(error: { code?: string; message: string }) {
-  if (error.code === "42501") return "Only an administrator can post or correct project costs.";
+  if (error.code === "42501") return "You do not have permission to record or correct this project cost.";
   if (error.message.includes("located at an active site")) return "Assign the equipment to an active site in this project first.";
   if (error.message.includes("No approved equipment rate")) return "Set an equipment rate covering the usage date first.";
   if (error.message.includes("exceeds 24 hours")) return "The equipment would exceed 24 recorded hours for this date.";
@@ -40,7 +40,8 @@ export async function setEquipmentRateAction(_: ProjectCostActionState, form: Fo
 }
 
 export async function postEquipmentUsageAction(_: ProjectCostActionState, form: FormData): Promise<ProjectCostActionState> {
-  try { await requireManager(); } catch { return fail("Only an administrator can post equipment usage."); }
+  const user = await requireUser();
+  if (!user.canManage && !user.roles.includes("foreman")) return fail("Only an Admin or assigned Foreman can record equipment hours.");
   const parsed = equipmentUsageSchema.safeParse({ idempotencyKey: value(form, "idempotencyKey"), projectId: value(form, "projectId"), assetId: value(form, "assetId"), useDate: value(form, "useDate"), hours: value(form, "hours"), workNote: value(form, "workNote") });
   if (!parsed.success) return fail("Review the equipment usage.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
@@ -48,7 +49,7 @@ export async function postEquipmentUsageAction(_: ProjectCostActionState, form: 
   const { error } = await supabase.rpc("post_project_equipment_usage", { p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId, p_asset_id: input.assetId, p_use_date: input.useDate, p_hours: input.hours, p_work_note: input.workNote });
   if (error) return fail(costError(error));
   update(input.projectId);
-  redirect(`/projects/${input.projectId}/costs?posted=equipment`);
+  return { ok: true, message: "Equipment hours recorded." };
 }
 
 export async function postAdditionalExpenseAction(_: ProjectCostActionState, form: FormData): Promise<ProjectCostActionState> {

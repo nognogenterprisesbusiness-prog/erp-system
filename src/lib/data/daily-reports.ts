@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireDailyReportViewer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
+import { readAllPages, readByIds } from "./read-all-pages";
 import type { DailyReportStatus } from "@/types/database";
 
 const PAGE_SIZE = 20;
@@ -13,40 +14,33 @@ const reportingRoles = ["engineer", "foreman"] as const;
 export async function getDailyReportChoices() {
   const user = await requireDailyReportViewer();
   const supabase = await createClient();
-  const assignments = user.canManage ? null : await supabase.from("project_assignments")
+  const assignments = user.canManage ? [] : await readAllPages((from, to) => supabase.from("project_assignments")
     .select("project_id,assignment_role").eq("user_id", user.userId).eq("status", "active")
-    .in("assignment_role", [...reportingRoles]).limit(1000);
-  if (assignments?.error) throw new Error("Unable to load your project assignments.");
-  const allowedIds = user.canManage ? null : [...new Set((assignments?.data ?? [])
+    .in("assignment_role", [...reportingRoles]).order("project_id").order("assignment_role").range(from, to), "report project assignments");
+  const allowedIds = user.canManage ? null : [...new Set(assignments
     .filter((item) => user.roles.includes(item.assignment_role))
     .map((item) => item.project_id))];
   if (allowedIds && allowedIds.length === 0) return { projects: [], sites: [] };
-  let projectQuery = supabase.from("projects")
-    .select("id,code,name,status,start_date,target_completion_date")
-    .is("archived_at", null).in("status", ["active", "on_hold"]).order("name").limit(1000);
-  if (allowedIds) projectQuery = projectQuery.in("id", allowedIds);
-  const { data: projects, error } = await projectQuery;
-  if (error) throw new Error("Unable to load available projects.");
-  const ids = (projects ?? []).map((project) => project.id);
+  const projects = allowedIds
+    ? await readByIds(allowedIds, (ids, from, to) => supabase.from("projects").select("id,code,name,status,start_date,target_completion_date").in("id", ids).is("archived_at", null).in("status", ["active", "on_hold"]).order("name").order("id").range(from, to), "available report projects")
+    : await readAllPages((from, to) => supabase.from("projects").select("id,code,name,status,start_date,target_completion_date").is("archived_at", null).in("status", ["active", "on_hold"]).order("name").order("id").range(from, to), "available report projects");
+  const ids = projects.map((project) => project.id);
   if (!ids.length) return { projects: [], sites: [] };
-  const { data: sites, error: siteError } = await supabase.from("project_sites")
-    .select("id,project_id,name,status").in("project_id", ids).eq("status", "active").order("name").limit(2000);
-  if (siteError) throw new Error("Unable to load project sites.");
-  return { projects: projects ?? [], sites: sites ?? [] };
+  const sites = await readByIds(ids, (batch, from, to) => supabase.from("project_sites")
+    .select("id,project_id,name,status").in("project_id", batch).eq("status", "active").order("name").order("id").range(from, to), "report project sites");
+  return { projects, sites };
 }
 
 export async function getDailyReportFilterChoices() {
   await requireDailyReportViewer();
   const supabase = await createClient();
-  const { data: projects, error } = await supabase.from("projects")
-    .select("id,code,name").order("name").limit(1000);
-  if (error) throw new Error("Unable to load report project filters.");
-  const ids = (projects ?? []).map((project) => project.id);
+  const projects = await readAllPages((from, to) => supabase.from("projects")
+    .select("id,code,name").order("name").order("id").range(from, to), "report project filters");
+  const ids = projects.map((project) => project.id);
   if (!ids.length) return { projects: [], sites: [] };
-  const { data: sites, error: siteError } = await supabase.from("project_sites")
-    .select("id,project_id,name").in("project_id", ids).order("name").limit(2000);
-  if (siteError) throw new Error("Unable to load report site filters.");
-  return { projects: projects ?? [], sites: sites ?? [] };
+  const sites = await readByIds(ids, (batch, from, to) => supabase.from("project_sites")
+    .select("id,project_id,name").in("project_id", batch).order("name").order("id").range(from, to), "report site filters");
+  return { projects, sites };
 }
 
 export type DailyReportFilters = {
@@ -71,7 +65,7 @@ export async function getDailyReports(filters: DailyReportFilters = {}) {
   if (filters.reportDateFrom && z.iso.date().safeParse(filters.reportDateFrom).success) query = query.gte("report_date", filters.reportDateFrom);
   if (filters.reportDateTo && z.iso.date().safeParse(filters.reportDateTo).success) query = query.lte("report_date", filters.reportDateTo);
   if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
-  const { data, count, error } = await query.order("report_date", { ascending: false }).order("created_at", { ascending: false })
+  const { data, count, error } = await query.order("report_date", { ascending: false }).order("created_at", { ascending: false }).order("id")
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   if (error) throw new Error("Unable to load daily reports.");
   const rows = data ?? [];
@@ -105,16 +99,13 @@ export async function getDailyReport(id: string) {
   const [project, site, events, preparer] = await Promise.all([
     supabase.from("projects").select("id,code,name,address,city_province").eq("id", report.project_id).single(),
     supabase.from("project_sites").select("id,project_id,name,address,status").eq("id", report.project_site_id).single(),
-    supabase.from("daily_report_events").select("*").eq("report_id", id).order("occurred_at", { ascending: false }).limit(200),
+    readAllPages((from, to) => supabase.from("daily_report_events").select("*").eq("report_id", id).order("occurred_at", { ascending: false }).order("id").range(from, to), "daily report events"),
     supabase.from("profiles").select("id,full_name").eq("id", report.prepared_by).single(),
   ]);
-  if (project.error || site.error || events.error) throw new Error("Unable to load daily report details.");
-  const actorIds = [...new Set((events.data ?? []).map((item) => item.actor_id))];
-  const { data: actors, error: actorsError } = actorIds.length
-    ? await supabase.from("profiles").select("id,full_name").in("id", actorIds)
-    : { data: [], error: null };
-  if (actorsError) throw new Error("Unable to load report history.");
-  const names = new Map((actors ?? []).map((actor) => [actor.id, actor.full_name]));
+  if (project.error || site.error) throw new Error("Unable to load daily report details.");
+  const actorIds = [...new Set(events.map((item) => item.actor_id))];
+  const actors = await readByIds(actorIds, (ids, from, to) => supabase.from("profiles").select("id,full_name").in("id", ids).order("id").range(from, to), "report history actors");
+  const names = new Map(actors.map((actor) => [actor.id, actor.full_name]));
   return { report, project: project.data!, site: site.data!, preparerName: preparer.data?.full_name ?? "Authorized reporter",
-    events: (events.data ?? []).map((event) => ({ ...event, actorName: names.get(event.actor_id) ?? "Authorized reporter" })) };
+    events: events.map((event) => ({ ...event, actorName: names.get(event.actor_id) ?? "Authorized reporter" })) };
 }

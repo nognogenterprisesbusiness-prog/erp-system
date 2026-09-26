@@ -4,6 +4,7 @@ import { uuidSchema } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
+import { readAllPages } from "./read-all-pages";
 import { getDailyReportChoices } from "./daily-reports";
 import type { MaterialRequestStatus } from "@/types/database";
 
@@ -116,20 +117,20 @@ export async function getMaterialRequest(id: string) {
   });
   const materialIds = [...new Set((linesResult.data ?? []).map((row) => row.material_id))];
   const actorIds = [...new Set([request.requested_by, request.decided_by, ...(eventsResult.data ?? []).map((row) => row.actor_id), ...(fulfillmentResult.data ?? []).map((row) => row.actor_id), ...(varianceResult.data ?? []).map((row) => row.approved_by)].filter((id): id is string => Boolean(id)))];
-  const [materialsResult, actorsResult, unitsResult] = await Promise.all([
+  const [materialsResult, actorsResult, units] = await Promise.all([
     materialIds.length ? supabase.from("materials").select("id,code,name,photo_path").in("id", materialIds) : Promise.resolve({ data: [], error: null }),
     actorIds.length ? supabase.from("profiles").select("id,full_name").in("id", actorIds) : Promise.resolve({ data: [], error: null }),
-    supabase.from("units_of_measure").select("id,symbol").limit(100),
+    readAllPages((from, to) => supabase.from("units_of_measure").select("id,symbol").order("id").range(from, to), "request units"),
   ]);
-  if (materialsResult.error || actorsResult.error || unitsResult.error) throw new Error("Unable to load material request references.");
+  if (materialsResult.error || actorsResult.error) throw new Error("Unable to load material request references.");
   const materials = new Map((materialsResult.data ?? []).map((row) => [row.id, row]));
   const actors = new Map((actorsResult.data ?? []).map((row) => [row.id, row.full_name]));
-  const units = new Map((unitsResult.data ?? []).map((row) => [row.id, row.symbol]));
+  const unitMap = new Map(units.map((row) => [row.id, row.symbol]));
   const reservations = new Map((reservationsResult.data ?? []).map((row) => [row.request_line_id, row]));
   const reservationLines = new Map((reservationsResult.data ?? []).map((row) => [row.id, (linesResult.data ?? []).find((line) => line.id === row.request_line_id)]));
   return {
     request, project: projectResult.data!, site: siteResult.data!, warehouse: { id: request.source_warehouse_id, name: request.source_warehouse_name },
-    lines: (linesResult.data ?? []).map((row) => ({ ...row, material: materials.get(row.material_id), unitSymbol: units.get(row.unit_of_measure_id) ?? "", reservation: reservations.get(row.id) ?? null })),
+    lines: (linesResult.data ?? []).map((row) => ({ ...row, material: materials.get(row.material_id), unitSymbol: unitMap.get(row.unit_of_measure_id) ?? "", reservation: reservations.get(row.id) ?? null })),
     events: (eventsResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user" })),
     fulfillmentEvents: (fulfillmentResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get((linesResult.data ?? []).find((line) => line.id === row.request_line_id)?.material_id ?? "")?.name ?? "Material" })),
     reservationEvents: (reservationEventsResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get(reservationLines.get(row.reservation_id)?.material_id ?? "")?.name ?? "Material" })),

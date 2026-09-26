@@ -1,4 +1,5 @@
 import { IntentLink as Link } from "@/components/layout/intent-link";
+import { randomUUID } from "node:crypto";
 import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { ArrowLeft01Icon, Building03Icon, Calendar03Icon, Download04Icon, Money03Icon, PackageIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MetricCard } from "@/components/ui/metric-card";
 import { ProjectCostBreakdown } from "@/components/projects/project-cost-breakdown";
+import { EquipmentUsageForm } from "@/components/projects/equipment-usage-form";
 import { ProjectForm } from "@/components/projects/project-form";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { ProjectLabourDistribution } from "@/components/projects/project-labour-distribution";
@@ -14,6 +16,7 @@ import { ProjectPersonnelSection, ProjectSitesSection } from "@/components/proje
 import { ShareProjectButton } from "@/components/projects/share-project-button";
 import { ProjectWorkforceSection } from "@/components/workforce/project-workforce-section";
 import { requireUser } from "@/lib/auth";
+import { getProjectEquipmentChoices } from "@/lib/data/assets";
 import { getProject } from "@/lib/data/projects";
 import { getProjectProfitability } from "@/lib/data/project-costs";
 import { getProjectMaterialCost } from "@/lib/data/inventory";
@@ -48,7 +51,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
   if (tab !== "overview") returnParams.set("tab", tab);
   if (tab === "documents" && reportPage > 1) returnParams.set("page", String(reportPage));
   const returnHref = `/projects/${id}${returnParams.size ? `?${returnParams}` : ""}`;
-  const [workerCount, progress, profitability, workforce, materialPlan, materialCosts, siteQrCodes, reports] = await Promise.all([
+  const [workerCount, progress, profitability, workforce, materialPlan, materialCosts, siteQrCodes, reports, equipmentChoices] = await Promise.all([
     getProjectWorkerCount(id),
     user.canViewDailyReports ? getProjectProgress(id) : Promise.resolve([]),
     user.canViewLaborRates ? getProjectProfitability(id) : Promise.resolve(null),
@@ -57,7 +60,9 @@ export default async function ProjectDetailPage({ params, searchParams }: {
     tab === "materials" && (user.canViewLaborRates || user.roles.includes("engineer")) ? getProjectMaterialCost(id) : Promise.resolve(null),
     tab === "sites" && user.canManage ? getActiveQrCodesForEntities("project_site", sites.map((site) => site.id)) : Promise.resolve([]),
     tab === "documents" ? getDailyReports({ projectId: id, page: reportPage }) : Promise.resolve(null),
+    user.roles.includes("foreman") && ["active", "on_hold"].includes(project.status) ? getProjectEquipmentChoices(id) : Promise.resolve([]),
   ]);
+  const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const completion = Number(progress[0]?.completion_percent ?? 0);
   const municipality = project.municipality_code ? findMunicipality(project.municipality_code) : undefined;
   const manager = profiles.find((profile) => profile.id === project.project_manager_id)?.full_name ?? "Unassigned";
@@ -72,7 +77,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
     <Link href="/projects" className="mb-4 inline-flex items-center gap-2 rounded-full text-sm text-slate-500 hover:text-cyan-700"><HugeiconsIcon icon={ArrowLeft01Icon} size={17} strokeWidth={1.5} />Projects</Link>
     <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
       <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-cyan-700">{project.code}</p><div className="mt-1.5 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{project.name}</h1><Badge variant={project.status === "active" || project.status === "completed" ? "active" : project.status === "on_hold" ? "review" : "neutral"}>{project.status.replace("_", " ")}</Badge></div><p className="mt-2 text-sm text-slate-500">{project.city_province}</p></div>
-      <div className="flex flex-wrap gap-2"><ShareProjectButton href={`/projects/${id}`} />{user.canViewLaborRates && <><Button variant="outline" asChild><a href={`/projects/${id}/costs/export?format=pdf`}><HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={1.5} />PDF</a></Button><Button variant="outline" asChild><a href={`/projects/${id}/costs/export?format=xlsx`}><HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={1.5} />Excel</a></Button></>}{user.canManage && <><RecordCreateDialog key={`${project.id}:${project.updated_at}`} title="Edit project" triggerLabel="Edit" triggerVariant="outline" initialOpen={filters.edit === "1"} closeHref={returnHref}><ProjectForm project={project} profiles={data.engineers} /></RecordCreateDialog><form action={archiveProjectAction}><input type="hidden" name="id" value={id} /><Button variant="outline" type="submit">Archive</Button></form></>}</div>
+      <div className="flex flex-wrap gap-2"><ShareProjectButton href={`/projects/${id}`} />{user.roles.includes("foreman") && ["active", "on_hold"].includes(project.status) && <RecordCreateDialog title="Record equipment hours" triggerLabel="Record equipment hours"><p className="mb-4 text-sm text-slate-500">Record the hours used at this project&apos;s site. An Admin manages rates; costs are calculated automatically.</p>{equipmentChoices.length ? <EquipmentUsageForm projectId={id} assets={equipmentChoices} initialKey={randomUUID()} today={today} /> : <EmptyState compact title="No equipment at an active project site" description="Ask an Admin to assign equipment and set its hourly rate first." />}</RecordCreateDialog>}{user.canViewLaborRates && <><Button variant="outline" asChild><a href={`/projects/${id}/costs/export?format=pdf`}><HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={1.5} />PDF</a></Button><Button variant="outline" asChild><a href={`/projects/${id}/costs/export?format=xlsx`}><HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={1.5} />Excel</a></Button></>}{user.canManage && <><RecordCreateDialog key={`${project.id}:${project.updated_at}`} title="Edit project" triggerLabel="Edit" triggerVariant="outline" initialOpen={filters.edit === "1"} closeHref={returnHref}><ProjectForm project={project} profiles={data.engineers} /></RecordCreateDialog><form action={archiveProjectAction}><input type="hidden" name="id" value={id} /><Button variant="outline" type="submit">Archive</Button></form></>}</div>
     </header>
     <div className="relative mt-6 grid h-44 place-items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 text-slate-400 sm:h-60">
       {project.photo_path ? <PhotoViewer src={recordPhotoUrl("projects", id, project.updated_at)} alt={`${project.name} project`} sizes="(max-width: 768px) 100vw, 1200px" /> : <HugeiconsIcon icon={Building03Icon} size={48} strokeWidth={1.3} aria-label="No project photo uploaded" />}

@@ -1,33 +1,24 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { adjustBudgetAction, postAdditionalExpenseAction, postEquipmentUsageAction, reverseProjectCostAction, setEquipmentRateAction, type ProjectCostActionState } from "@/app/(workspace)/projects/[id]/costs/actions";
+import { adjustBudgetAction, postAdditionalExpenseAction, reverseProjectCostAction, setEquipmentRateAction, type ProjectCostActionState } from "@/app/(workspace)/projects/[id]/costs/actions";
+import { EquipmentUsageForm, type EquipmentChoice } from "./equipment-usage-form";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { SelectPicker } from "@/components/ui/select-picker";
 
-type AssetChoice = { id: string; code: string; name: string; rate?: { hourly_rate: number; effective_start_date: string; effective_end_date: string | null } };
 const initialState: ProjectCostActionState = { message: "" };
 
-export function ProjectCostForms({ projectId, assets, keys, today }: { projectId: string; assets: AssetChoice[]; keys: { rate: string; usage: string; expense: string; budget: string }; today: string }) {
+export function ProjectCostForms({ projectId, assets, keys, today }: { projectId: string; assets: EquipmentChoice[]; keys: { rate: string; usage: string; expense: string; budget: string }; today: string }) {
   const [rateState, rateAction, ratePending] = useActionState(setEquipmentRateAction, initialState);
-  const [usageState, usageAction, usagePending] = useActionState(postEquipmentUsageAction, initialState);
   const [expenseState, expenseAction, expensePending] = useActionState(postAdditionalExpenseAction, initialState);
   const [budgetState, budgetAction, budgetPending] = useActionState(adjustBudgetAction, initialState);
-  const [assetId, setAssetId] = useState(assets[0]?.id ?? "");
   const [rateAssetId, setRateAssetId] = useState(assets[0]?.id ?? "");
   const [category, setCategory] = useState("permit");
   const options = assets.map((asset) => ({ value: asset.id, label: `${asset.code} · ${asset.name}${asset.rate ? ` · ₱${asset.rate.hourly_rate}/h` : " · no rate"}` }));
   return <section className="mt-7 grid gap-3 sm:grid-cols-2">
-    <details className="rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Record equipment use</summary><form action={usageAction} className="mt-5 space-y-4">
-      <input type="hidden" name="idempotencyKey" value={keys.usage} /><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="assetId" value={assetId} />
-      <FormField label="Equipment at this project site" htmlFor="usageAsset" error={usageState.fieldErrors?.assetId?.[0]}><SelectPicker label="Equipment" value={assetId} onValueChange={setAssetId} options={options} placeholder="Choose equipment" /></FormField>
-      <FormField label="Use date" htmlFor="useDate" error={usageState.fieldErrors?.useDate?.[0]}><DatePicker id="useDate" name="useDate" label="Use date" defaultValue={today} allowClear={false} required /></FormField>
-      <FormField label="Hours used" htmlFor="usageHours" error={usageState.fieldErrors?.hours?.[0]}><input id="usageHours" name="hours" className={fieldControlClass} inputMode="decimal" placeholder="8.00" required /></FormField>
-      <FormField label="Work note" htmlFor="usageNote" error={usageState.fieldErrors?.workNote?.[0]}><input id="usageNote" name="workNote" className={fieldControlClass} maxLength={500} placeholder="Equipment work performed" required /></FormField>
-      {usageState.message && <p role="alert" className="text-xs text-red-700">{usageState.message}</p>}<Button type="submit" disabled={usagePending || !assets.length}>{usagePending ? "Posting…" : "Post equipment use"}</Button>
-    </form></details>
+    <details className="rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Record equipment use</summary><div className="mt-5"><EquipmentUsageForm projectId={projectId} assets={assets} initialKey={keys.usage} today={today} showRates /></div></details>
     <details className="rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Set equipment hourly rate</summary><form action={rateAction} className="mt-5 space-y-4">
       <input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="assetId" value={rateAssetId} />
       <FormField label="Equipment" htmlFor="rateAsset" error={rateState.fieldErrors?.assetId?.[0]}><SelectPicker label="Equipment" value={rateAssetId} onValueChange={setRateAssetId} options={options} placeholder="Choose equipment" /></FormField>

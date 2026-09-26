@@ -65,10 +65,11 @@ export function LiveRouteRefresh({ userId }: { userId: string }) {
     document.addEventListener("close", onDialogClose, true);
     window.addEventListener("online", onOnline);
     window.addEventListener("erp:records-saved", onRecordsSaved);
-    // Realtime handles connected operational pages. Poll only as a fallback;
-    // analytics have no channel and retain their periodic refresh.
+    // Some project cost tables are intentionally Admin-only under RLS. Other roles
+    // must still see safe derived views refresh when those rows change.
+    const restrictedProjectView = pathname.startsWith("/projects/") || pathname === "/attendance";
     const poll = interval ? window.setInterval(() => {
-      if (!tables.length || !connected || pendingDeferred) refreshIfStale();
+      if (restrictedProjectView || !tables.length || !connected || pendingDeferred) refreshIfStale();
     }, interval) : undefined;
     if (shouldRefreshCachedRoute(previousVisit, Date.now())) scheduleRefresh();
 

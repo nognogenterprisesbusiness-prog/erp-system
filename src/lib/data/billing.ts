@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "@/lib/data/search";
+import { readAllPages, readByIds } from "@/lib/data/read-all-pages";
 
 const PAGE_SIZE = 20;
 
@@ -13,7 +14,7 @@ export async function getInvoices({ page = 1, query = "" }: { page?: number; que
   let request = supabase.from("client_invoices").select("id,invoice_number,project_id,project_code,project_name,client_name,description,issued_on,due_on,amount,status,created_at", { count: "exact" });
   const search = safeSearchTerm(query);
   if (search) request = request.or(`invoice_number.ilike.%${search}%,client_name.ilike.%${search}%,description.ilike.%${search}%`);
-  const { data, count, error } = await request.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
+  const { data, count, error } = await request.order("created_at", { ascending: false }).order("id").range(from, from + PAGE_SIZE - 1);
   if (error) throw new Error(`Unable to load invoices: ${error.message}`);
   const invoices = data ?? [];
   const ids = invoices.map((invoice) => invoice.id);
@@ -30,17 +31,14 @@ export async function getInvoice(id: string) {
   if (error) throw new Error(`Unable to load invoice: ${error.message}`, { cause: error });
   if (!invoice) notFound();
   const [paymentsResult, balanceResult] = await Promise.all([
-    supabase.from("client_payments").select("id,invoice_id,amount,paid_on,reference,recorded_by,created_at").eq("invoice_id", id).order("created_at", { ascending: false }),
+    readAllPages((from, to) => supabase.from("client_payments").select("id,invoice_id,amount,paid_on,reference,recorded_by,created_at").eq("invoice_id", id).order("created_at", { ascending: false }).order("id").range(from, to), "invoice payments"),
     supabase.rpc("get_client_invoice_balances", { p_invoice_ids: [id] }),
   ]);
-  if (paymentsResult.error || balanceResult.error) throw new Error("Unable to load invoice details.");
-  const payments = paymentsResult.data ?? [];
+  if (balanceResult.error) throw new Error("Unable to load invoice details.");
+  const payments = paymentsResult;
   const paymentIds = payments.map((payment) => payment.id);
-  const reversalsResult = paymentIds.length
-    ? await supabase.from("client_payment_reversals").select("payment_id,reason,reversed_at,reversed_by").in("payment_id", paymentIds)
-    : { data: [], error: null };
-  if (reversalsResult.error) throw new Error("Unable to load payment corrections.");
-  const reversals = new Map((reversalsResult.data ?? []).map((row) => [row.payment_id, row]));
+  const reversalsResult = await readByIds(paymentIds, (ids, from, to) => supabase.from("client_payment_reversals").select("id,payment_id,reason,reversed_at,reversed_by").in("payment_id", ids).order("id").range(from, to), "payment corrections");
+  const reversals = new Map(reversalsResult.map((row) => [row.payment_id, row]));
   return { invoice, balance: balanceResult.data?.[0], payments: payments.map((payment) => ({ ...payment, reversal: reversals.get(payment.id) })) };
 }
 

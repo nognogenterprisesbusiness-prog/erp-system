@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { requireUser } from "@/lib/auth";
+import { readAllPages } from "@/lib/data/read-all-pages";
 import { createClient } from "@/lib/supabase/server";
 
 const pageSize = 20;
@@ -28,20 +29,19 @@ export default async function EquipmentRequestsPage({ searchParams }: { searchPa
   const rawPage = Number(params.page);
   const page = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1;
   const supabase = await createClient();
-  const [{ data: projects, error: projectError }, { data: sites, error: siteError }] = await Promise.all([
-    supabase.from("projects").select("id,code,name,status").is("archived_at", null).order("code").limit(500),
-    supabase.from("project_sites").select("id,project_id,name,status").order("name").limit(500),
+  const [projects, sites] = await Promise.all([
+    readAllPages((from, to) => supabase.from("projects").select("id,code,name,status").is("archived_at", null).order("code").order("id").range(from, to), "equipment request projects"),
+    readAllPages((from, to) => supabase.from("project_sites").select("id,project_id,name,status").order("name").order("id").range(from, to), "equipment request sites"),
   ]);
-  if (projectError || siteError) throw new Error("Unable to load equipment request choices.");
-  const activeProjects = (projects ?? []).filter((item) => item.status === "active");
+  const activeProjects = projects.filter((item) => item.status === "active");
   const projectId = requestedProject.success && activeProjects.some((item) => item.id === requestedProject.data) ? requestedProject.data : "";
-  const activeSites = (sites ?? []).filter((item) => item.status === "active" && item.project_id === projectId);
+  const activeSites = sites.filter((item) => item.status === "active" && item.project_id === projectId);
   const siteId = requestedSite.success && activeSites.some((item) => item.id === requestedSite.data) ? requestedSite.data : "";
   const currentStatus = status.success ? status.data : "all";
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   let query = supabase.from("equipment_requests")
     .select("id,asset_id,asset_code,asset_name,project_id,project_site_id,requested_by,needed_on,expected_return_on,purpose,status,decided_by,decided_at,decision_note,source_location_id,checked_out_by,checked_out_at,returned_by,returned_at,return_note,created_at,updated_at", { count: "exact" })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false }).order("id");
   if (projectId) query = query.eq("project_id", projectId);
   if (requestedAsset.success) query = query.eq("asset_id", requestedAsset.data);
   if (currentStatus === "overdue") query = query.eq("status", "checked_out").lt("expected_return_on", today);
@@ -51,8 +51,8 @@ export default async function EquipmentRequestsPage({ searchParams }: { searchPa
     canRequest && projectId && siteId ? supabase.rpc("get_requestable_equipment", { p_project_id: projectId, p_project_site_id: siteId }) : Promise.resolve({ data: [], error: null }),
   ]);
   if (requestError || equipmentError) throw new Error("Unable to load equipment requests.");
-  const projectNames = new Map((projects ?? []).map((item) => [item.id, `${item.code} · ${item.name}`]));
-  const siteNames = new Map((sites ?? []).map((item) => [item.id, item.name]));
+  const projectNames = new Map(projects.map((item) => [item.id, `${item.code} · ${item.name}`]));
+  const siteNames = new Map(sites.map((item) => [item.id, item.name]));
   const total = count ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (projectId) next.set("project", projectId); if (siteId) next.set("site", siteId); if (requestedAsset.success) next.set("asset", requestedAsset.data); if (currentStatus !== "all") next.set("status", currentStatus); next.set("page", String(target)); return `/equipment/requests?${next}`; };

@@ -49,7 +49,6 @@ export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initial
     {error("lines") && <p role="alert" className="mt-2 text-xs text-red-700">{error("lines")}</p>}
     {state.message && <p role="alert" className="mt-5 text-sm text-red-700">{state.message}</p>}
     {!catalog.length && supplierId && <p role="status" className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Add an available supplier material and active PHP price before issuing this order.</p>}
-    {choices.pricePreviewLimited && <p className="mt-3 text-xs text-slate-500">Preview shows recent price history only. Saving verifies the exact supplier price for the purchase date.</p>}
     <RecordFormControls busy={pending} disabled={!supplierId || !warehouseId || !catalog.length || lines.some((line) => !line.supplierMaterialId || !line.quantity)} label="Save purchase" />
   </form>;
 }
