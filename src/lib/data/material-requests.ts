@@ -38,24 +38,20 @@ export async function getMaterialRequests(filters: { search?: string; status?: M
   const search = safeSearchTerm(filters.search);
   if (search) query = query.ilike("request_number", `%${search}%`);
   if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
-  const { data, count, error } = await query.order("requested_at", { ascending: false })
+  const { data, count, error } = await query.order("requested_at", { ascending: false }).order("id")
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   if (error) throw new Error("Unable to load material requests.");
   const rows = data ?? [];
   const requestIds = rows.map((row) => row.id);
-  const projectIds = [...new Set(rows.map((row) => row.project_id))];
-  const siteIds = [...new Set(rows.map((row) => row.project_site_id))];
-  const [projects, sites, lines] = await Promise.all([
-    projectIds.length ? supabase.from("projects").select("id,code,name").in("id", projectIds) : Promise.resolve({ data: [], error: null }),
-    siteIds.length ? supabase.from("project_sites").select("id,name").in("id", siteIds) : Promise.resolve({ data: [], error: null }),
+  const [contexts, lines] = await Promise.all([
+    requestIds.length ? supabase.rpc("get_material_request_context", { p_request_ids: requestIds }) : Promise.resolve({ data: [], error: null }),
     requestIds.length ? supabase.from("material_request_lines").select("id,request_id,material_id").in("request_id", requestIds).order("id") : Promise.resolve({ data: [], error: null }),
   ]);
-  if (projects.error || sites.error || lines.error) throw new Error("Unable to resolve request locations.");
+  if (contexts.error || lines.error || contexts.data?.length !== rows.length) throw new Error("Unable to resolve request locations.");
   const materialIds = [...new Set((lines.data ?? []).map((line) => line.material_id))];
   const materials = materialIds.length ? await supabase.from("materials").select("id,name,photo_path").in("id", materialIds) : { data: [], error: null };
   if (materials.error) throw new Error("Unable to load request materials.");
-  const projectMap = new Map((projects.data ?? []).map((row) => [row.id, row]));
-  const siteMap = new Map((sites.data ?? []).map((row) => [row.id, row.name]));
+  const contextMap = new Map((contexts.data ?? []).map((row) => [row.request_id, row]));
   const materialMap = new Map((materials.data ?? []).map((row) => [row.id, row]));
   const linesByRequest = new Map<string, { materialId: string; count: number }>();
   for (const line of lines.data ?? []) {
@@ -63,7 +59,19 @@ export async function getMaterialRequests(filters: { search?: string; status?: M
     linesByRequest.set(line.request_id, { materialId: current?.materialId ?? line.material_id, count: (current?.count ?? 0) + 1 });
   }
   return {
-    requests: rows.map((row) => { const preview = linesByRequest.get(row.id); return { ...row, project: projectMap.get(row.project_id), siteName: siteMap.get(row.project_site_id) ?? "Unavailable site", warehouseName: row.source_warehouse_name, materialPreview: preview ? { materialId: preview.materialId, name: materialMap.get(preview.materialId)?.name ?? "Material", photo_path: materialMap.get(preview.materialId)?.photo_path ?? null, count: preview.count } : null }; }),
+    requests: rows.map((row) => {
+      const preview = linesByRequest.get(row.id);
+      const context = contextMap.get(row.id);
+      if (!context) throw new Error("Unable to resolve request location.");
+      const material = preview ? materialMap.get(preview.materialId) : null;
+      return {
+        ...row,
+        project: { id: context.project_id, code: context.project_code, name: context.project_name },
+        siteName: context.site_name,
+        warehouseName: row.source_warehouse_name,
+        materialPreview: preview ? { materialId: preview.materialId, name: material?.name ?? "Material", photo_path: material?.photo_path ?? null, count: preview.count } : null,
+      };
+    }),
     count: count ?? 0, page, pageCount: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)),
   };
 }
@@ -75,14 +83,14 @@ export async function getMaterialRequest(id: string) {
   const { data: request, error } = await supabase.from("material_requests").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(`Unable to load material request: ${error.message}`, { cause: error });
   if (!request) notFound();
-  const [linesResult, eventsResult, projectResult, siteResult] = await Promise.all([
+  const [linesResult, eventsResult, contextResult] = await Promise.all([
     supabase.from("material_request_lines").select("*").eq("request_id", id).order("id"),
     supabase.from("material_request_events").select("*").eq("request_id", id).order("occurred_at", { ascending: false }),
-    supabase.from("projects").select("id,code,name").eq("id", request.project_id).single(),
-    supabase.from("project_sites").select("id,name").eq("id", request.project_site_id).single(),
+    supabase.rpc("get_material_request_context", { p_request_ids: [id] }),
   ]);
-  if (linesResult.error || eventsResult.error || projectResult.error || siteResult.error)
+  if (linesResult.error || eventsResult.error || contextResult.error || contextResult.data?.length !== 1)
     throw new Error("Unable to load the material request details.");
+  const context = contextResult.data[0];
   const lineIds = (linesResult.data ?? []).map((row) => row.id);
   const [dispatchesResult, fulfillmentResult, reservationsResult] = await Promise.all([
     lineIds.length ? supabase.from("material_request_dispatches").select("*").in("request_line_id", lineIds) : Promise.resolve({ data: [], error: null }),
@@ -129,7 +137,7 @@ export async function getMaterialRequest(id: string) {
   const reservations = new Map((reservationsResult.data ?? []).map((row) => [row.request_line_id, row]));
   const reservationLines = new Map((reservationsResult.data ?? []).map((row) => [row.id, (linesResult.data ?? []).find((line) => line.id === row.request_line_id)]));
   return {
-    request, project: projectResult.data!, site: siteResult.data!, warehouse: { id: request.source_warehouse_id, name: request.source_warehouse_name },
+    request, project: { id: context.project_id, code: context.project_code, name: context.project_name }, site: { id: context.site_id, name: context.site_name }, warehouse: { id: request.source_warehouse_id, name: request.source_warehouse_name },
     lines: (linesResult.data ?? []).map((row) => ({ ...row, material: materials.get(row.material_id), unitSymbol: unitMap.get(row.unit_of_measure_id) ?? "", reservation: reservations.get(row.id) ?? null })),
     events: (eventsResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user" })),
     fulfillmentEvents: (fulfillmentResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get((linesResult.data ?? []).find((line) => line.id === row.request_line_id)?.material_id ?? "")?.name ?? "Material" })),

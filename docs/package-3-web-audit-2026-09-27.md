@@ -1,6 +1,10 @@
 # Package 3 web ERP recheck — 2026-09-27
 
+Later evidence: the [initial authorized hosted four-role QA](erp-six-gap-verification-2026-09-27.md#authorized-hosted-four-role-qa-later-on-2026-09-27) found three database blockers. The [repair retest](erp-six-gap-verification-2026-09-27.md#authorized-staging-retest-after-database-repair) then passed 5/5 stock/valuation/cost/report checks and 9/9 access/pagination denials after the migration was applied. These selected checks do not constitute whole-system acceptance; the updated request loader still needs deployment and browser verification.
+
 ## Decision and evidence standard
+
+Subsequent repair: the user applied the forward-only migration to staging, where Warehouse visibility, both receipt commands, valuation reads, consumption costing and report links passed. Scoped request-loader changes remain local, so Warehouse browser list/detail behavior is still unverified. See the dated [repair and QA record](erp-six-gap-verification-2026-09-27.md#authorized-staging-retest-after-database-repair).
 
 **Not ready to certify for real operations.** The responsive web implementation covers much of the quoted scope, but implemented screens are not proof of working stock, permissions, uploads or money. No broad business feature is newly marked accepted in this audit.
 

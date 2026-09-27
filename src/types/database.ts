@@ -241,6 +241,7 @@ export type Database = {
       decide_material_request: { Args: { p_idempotency_key: string; p_request_id: string; p_decisions: Json; p_reason?: string | null }; Returns: string };
       cancel_material_request: { Args: { p_idempotency_key: string; p_request_id: string; p_reason: string }; Returns: string };
       get_requestable_warehouses: { Args: Record<string, never>; Returns: { project_id: string; warehouse_id: string; code: string; name: string }[] };
+      get_material_request_context: { Args: { p_request_ids: string[] }; Returns: { request_id: string; project_id: string; project_code: string; project_name: string; site_id: string; site_name: string }[] };
       get_approved_request_queue: { Args: { p_limit?: number; p_offset?: number }; Returns: ApprovedRequestQueueRow[] };
       dispatch_approved_request_line: { Args: { p_idempotency_key: string; p_request_line_id: string; p_quantity: number | string; p_transaction_date: string; p_remarks?: string | null }; Returns: string };
       receive_request_transfer: { Args: { p_idempotency_key: string; p_transfer_item_id: string; p_quantity: number | string; p_transaction_date: string; p_remarks?: string | null }; Returns: string };
