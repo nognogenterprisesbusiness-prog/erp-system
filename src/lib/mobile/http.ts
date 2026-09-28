@@ -18,6 +18,22 @@ export function bearerToken(header: string | null) {
     throw new MobileError(401, "Please sign in again.");
   return match[1];
 }
+function tokenSubject(token: string) {
+  try {
+    const payload: unknown = JSON.parse(
+      Buffer.from(token.split(".")[1] ?? "", "base64url").toString("utf8"),
+    );
+    if (
+      payload &&
+      typeof payload === "object" &&
+      "sub" in payload &&
+      typeof payload.sub === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.sub)
+    )
+      return payload.sub;
+  } catch {}
+  throw new MobileError(401, "Please sign in again.");
+}
 export async function mobileContext(request: Request, write: boolean) {
   const token = bearerToken(request.headers.get("authorization"));
   const env = getSupabaseEnv();
@@ -29,16 +45,21 @@ export async function mobileContext(request: Request, write: boolean) {
       detectSessionInUrl: false,
     },
   });
-  const { data: auth, error } = await client.auth.getUser(token);
-  if (error || !auth.user) throw new MobileError(401, "Please sign in again.");
-  const [profile, roleRows] = await Promise.all([
+  // The unverified subject only scopes the parallel reads below. PostgREST
+  // verifies the same bearer token for each of them, and getUser must confirm it.
+  const subject = tokenSubject(token);
+  const [{ data: auth, error }, profile, roleRows, allowed] = await Promise.all([
+    client.auth.getUser(token),
     client
       .from("profiles")
       .select("id,full_name,email,avatar_path,updated_at,is_active,onboarding_required")
-      .eq("id", auth.user.id)
+      .eq("id", subject)
       .maybeSingle(),
-    client.from("user_roles").select("role").eq("user_id", auth.user.id),
+    client.from("user_roles").select("role").eq("user_id", subject),
+    client.rpc("guard_mobile_api", { p_write: write }),
   ]);
+  if (error || !auth.user || auth.user.id !== subject)
+    throw new MobileError(401, "Please sign in again.");
   if (profile.error || roleRows.error)
     throw new MobileError(
       503,
@@ -57,7 +78,6 @@ export async function mobileContext(request: Request, write: boolean) {
       403,
       "This app is for active Foreman and Engineer accounts. Complete account setup in the web ERP if required.",
     );
-  const allowed = await client.rpc("guard_mobile_api", { p_write: write });
   if (allowed.error)
     throw new MobileError(
       503,

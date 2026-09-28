@@ -87,6 +87,7 @@ const requestLine = z.object({
   approved_quantity: number,
   name: z.string(),
   unit: z.string(),
+  photo_path: text.optional(),
 });
 const report = z.object({
   id: uuidSchema,
@@ -161,6 +162,7 @@ export const mobileResponseSchemas = {
       code: z.string(),
       unit_id: uuidSchema,
       unit: z.string(),
+      photo_path: text.optional(),
       on_hand: number,
       reserved: number,
       available: number,

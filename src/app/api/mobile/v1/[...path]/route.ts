@@ -36,7 +36,7 @@ export async function GET(request: Request, context: Context) {
       if (photo.error || !photo.data) throw new MobileError(404, "Profile photo not found.");
       return new Response(photo.data, { headers: {
         "Content-Type": "image/webp",
-        "Cache-Control": "private, no-store",
+        "Cache-Control": "private, max-age=300",
         "X-Content-Type-Options": "nosniff",
       } });
     }

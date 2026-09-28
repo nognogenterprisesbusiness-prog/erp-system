@@ -286,6 +286,7 @@ export async function readMobileResource(
           ...x,
           name: refs.materials.get(x.material_id)?.name ?? "Material",
           unit: refs.units.get(x.unit_of_measure_id) ?? "",
+          photo_path: refs.materials.get(x.material_id)?.photo_path ?? null,
         })),
         events: page(e.data ?? [], e.count, q),
         dispatches: d.map((x) => {
@@ -344,7 +345,7 @@ export async function readMobileResource(
       const m = rows.length
         ? await c
             .from("materials")
-            .select("id,name,code,base_unit_id")
+            .select("id,name,code,base_unit_id,photo_path")
             .in(
               "id",
               rows.map((x) => x.material_id),
@@ -368,6 +369,7 @@ export async function readMobileResource(
             code: material.code,
             unit_id: material.base_unit_id,
             unit: refs.units.get(material.base_unit_id) ?? "",
+            photo_path: material.photo_path,
             on_hand: x.quantity_on_hand,
             reserved: x.reserved_quantity,
             available: x.available_quantity,
