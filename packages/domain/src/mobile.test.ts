@@ -65,6 +65,8 @@ test("API pagination and identifiers are bounded and commands cannot set arbitra
     mobileQuerySchema.safeParse({ projectId: "not-an-id" }).success,
     false,
   );
+  assert.equal(mobileQuerySchema.safeParse({ transactionType: "MATERIAL_CONSUMPTION" }).success, true);
+  assert.equal(mobileQuerySchema.safeParse({ transactionType: "STOCK_IN" }).success, false);
   assert.equal(
     mobileCommandSchema.safeParse({
       action: "update-status",

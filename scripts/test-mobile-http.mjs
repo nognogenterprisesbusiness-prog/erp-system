@@ -31,3 +31,23 @@ for (const options of [
 console.log(
   "PASS mobile HTTP: missing/malformed bearer tokens and cookie-only authentication are rejected; unauthenticated commands return no data.",
 );
+const profileResponse = await fetch(new URL("/api/mobile/v1/profile", base), {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ fullName: "Unauthorized Name" }),
+  signal: AbortSignal.timeout(10_000),
+});
+assert.equal(profileResponse.status, 401);
+assert.match(profileResponse.headers.get("cache-control") ?? "", /no-store/);
+assert.equal((await profileResponse.json()).ok, false);
+console.log("PASS mobile HTTP: profile updates require bearer authentication.");
+for (const method of ["GET", "POST"]) {
+  const response = await fetch(new URL("/api/mobile/v1/profile/photo", base), {
+    method,
+    signal: AbortSignal.timeout(10_000),
+  });
+  assert.equal(response.status, 401);
+  assert.match(response.headers.get("cache-control") ?? "", /no-store/);
+  assert.equal((await response.json()).ok, false);
+}
+console.log("PASS mobile HTTP: profile photo reads and uploads require bearer authentication.");

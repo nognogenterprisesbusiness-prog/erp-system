@@ -31,6 +31,7 @@ export const mobileQuerySchema = z.object({
   siteId: uuidSchema.optional(),
   id: uuidSchema.optional(),
   date: z.iso.date().optional(),
+  transactionType: z.literal("MATERIAL_CONSUMPTION").optional(),
   linked: z.enum(["true", "false"]).default("true"),
   identifier: z.string().trim().max(200).optional(),
 });
@@ -113,6 +114,8 @@ export const mobileResponseSchemas = {
     id: uuidSchema,
     full_name: z.string(),
     email: z.string(),
+    avatar_path: z.string().nullable(),
+    updated_at: z.string(),
     roles: z.array(z.enum(mobileRoles)),
     unread: number,
   }),
@@ -147,6 +150,7 @@ export const mobileResponseSchemas = {
       name: z.string(),
       unit_id: uuidSchema,
       unit: z.string(),
+      photo_path: text,
     }),
   ),
   inventory: page(

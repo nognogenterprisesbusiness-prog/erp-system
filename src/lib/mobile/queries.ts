@@ -48,7 +48,7 @@ async function materialReferences(
     materialIds.length
       ? c
           .from("materials")
-          .select("id,name,code,base_unit_id")
+          .select("id,name,code,base_unit_id,photo_path")
           .in("id", [...new Set(materialIds)])
       : Promise.resolve({ data: [], error: null }),
     unitIds.length
@@ -316,7 +316,7 @@ export async function readMobileResource(
       const rows = r.data ?? [];
       const refs = await materialReferences(
         c,
-        [],
+        rows.map((x) => x.id),
         rows.map((x) => x.unit_id),
       );
       return page(
@@ -325,6 +325,7 @@ export async function readMobileResource(
           name: x.label,
           unit_id: x.unit_id,
           unit: refs.units.get(x.unit_id) ?? "",
+          photo_path: refs.materials.get(x.id)?.photo_path ?? null,
         })),
         rows[0]?.total_count ?? 0,
         q,
@@ -390,6 +391,7 @@ export async function readMobileResource(
         .order("transaction_date", { ascending: false })
         .order("id");
       if (q.date) query = query.eq("transaction_date", q.date);
+      if (q.transactionType) query = query.eq("transaction_type", q.transactionType);
       const r = await query.range(offset, offset + size - 1);
       if (r.error) databaseError(r.error);
       const rows = r.data ?? [];

@@ -34,7 +34,7 @@ export async function mobileContext(request: Request, write: boolean) {
   const [profile, roleRows] = await Promise.all([
     client
       .from("profiles")
-      .select("id,full_name,email,is_active,onboarding_required")
+      .select("id,full_name,email,avatar_path,updated_at,is_active,onboarding_required")
       .eq("id", auth.user.id)
       .maybeSingle(),
     client.from("user_roles").select("role").eq("user_id", auth.user.id),
