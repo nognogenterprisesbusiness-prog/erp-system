@@ -58,8 +58,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     <ListFilterBar viewKey="inventory" viewTitle="Inventory">
       <input type="hidden" name="location" value={data.selectedLocationId} />
       <SearchField name="q" defaultValue={query} label="Search materials" placeholder="Search materials" />
-      <label className="flex h-10 items-center gap-2 px-2 text-xs font-medium text-slate-600"><input type="checkbox" name="low" value="true" defaultChecked={lowStock} />Low stock</label>
-      <Link href="/materials" className="text-sm font-medium text-slate-600 hover:text-cyan-700">All materials</Link>
+      <label className="group relative inline-flex h-9 cursor-pointer items-center">
+        <input className="peer sr-only" type="checkbox" name="low" value="true" defaultChecked={lowStock} />
+        <span className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 peer-checked:border-[#07152d] peer-checked:bg-[#07152d] peer-checked:text-white peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-600 peer-focus-visible:ring-offset-2">Low stock</span>
+      </label>
+      <Button size="sm" variant="outline" asChild><Link href="/materials">All materials</Link></Button>
     </ListFilterBar>
     <HistoryPagination path="/inventory" page={page} count={data.count} pageSize={24} filters={{ q: query, location: data.selectedLocationId, low: String(lowStock) }} />
     <RecordListView storageKey="inventory" title="Inventory" columns={["Material", "Stock location", "On hand", "Reserved", "Available", "Minimum"]} rows={data.balances.map((item) => ({ id: item.id, cells: [

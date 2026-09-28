@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { IntentLink as Link } from "@/components/layout/intent-link";
-import { AssignmentsIcon, Building03Icon, Money03Icon, PackageIcon, PauseIcon, PlusSignIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Building03Icon, Money03Icon, PackageIcon, PauseIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,6 @@ export function DashboardOverview({ name, canManage, canViewRequests, canViewCon
   return <>
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div><h1 className="text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">Welcome, {name.split(" ")[0]}</h1><p className="mt-1 text-sm text-slate-500">Project and warehouse records available to your account.</p></div>
-      {canManage && <Button asChild><Link href="/projects/new"><HugeiconsIcon icon={PlusSignIcon} size={17} />New project</Link></Button>}
     </div>
     <section className={`mt-8 grid gap-5 sm:grid-cols-2 ${visibleCards.length === 4 ? "xl:grid-cols-4" : "xl:grid-cols-3"}`} aria-label="Overview metrics">{visibleCards.map((card) => <MetricCard key={card.label} {...card} />)}</section>
     <div className={`mt-5 grid items-stretch gap-5 ${canViewRequests ? "xl:grid-cols-2" : ""}`}>

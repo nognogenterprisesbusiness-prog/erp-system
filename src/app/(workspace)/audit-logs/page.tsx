@@ -35,11 +35,11 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Pr
   const actorNames = new Map<string, string>();
   const actorPhotos = new Map<string, string>();
   if (actorIds.length) {
-    const { data: profiles, error: profileError } = await supabase.from("profiles").select("id,full_name,avatar_path").in("id", actorIds);
+    const { data: profiles, error: profileError } = await supabase.from("profiles").select("id,full_name,avatar_path,updated_at").in("id", actorIds);
     if (profileError) throw new Error("Unable to load audit actors.");
     for (const profile of profiles ?? []) {
       actorNames.set(profile.id, profile.full_name);
-      if (profile.avatar_path) actorPhotos.set(profile.id, `/profile/avatar?userId=${profile.id}`);
+      if (profile.avatar_path) actorPhotos.set(profile.id, `/profile/avatar?userId=${encodeURIComponent(profile.id)}&v=${encodeURIComponent(profile.updated_at)}`);
     }
   }
   const rows = (logs ?? []).map((entry) => ({ id: String(entry.id), actor: entry.actor_id ? actorNames.get(entry.actor_id) ?? "Former account" : "System", actorPhoto: entry.actor_id ? actorPhotos.get(entry.actor_id) : undefined, action: entry.action, entity: entry.table_name, recordId: entry.record_id ?? "—", detail: `${entry.action} in ${entry.table_name.replaceAll("_", " ")}`, createdAt: entry.created_at }));
@@ -49,7 +49,7 @@ export default async function AuditLogsPage({ searchParams }: { searchParams: Pr
 
   return <>
     <PageHeader eyebrow="Account oversight" title="Audit logs" description="Recorded changes to connected ERP records." />
-    <ListFilterBar className="mt-6 flex flex-wrap items-center gap-3"><SearchField name="q" label="Search audited entity" defaultValue={query} maxLength={80} placeholder="Search record type" wrapperClassName="min-w-[210px] max-w-sm flex-1" /><div className="w-44"><SelectPicker name="entity" label="Audit record type" defaultValue={entity} options={entities.map((item) => ({ value: item, label: item === "all" ? "All records" : item.replaceAll("_", " ") }))} className="rounded-full" /></div><div className="w-44"><SelectPicker name="action" label="Audit action" defaultValue={action} options={actions.map((item) => ({ value: item, label: item === "all" ? "All actions" : item }))} className="rounded-full" /></div></ListFilterBar>
+    <ListFilterBar className="mt-6 flex flex-wrap items-center gap-3"><SearchField name="q" label="Search audited entity" defaultValue={query} maxLength={80} placeholder="Search record type" wrapperClassName="min-w-[210px] max-w-sm flex-1" /><div className="w-44"><SelectPicker name="entity" label="Audit record type" defaultValue={entity} options={entities.map((item) => ({ value: item, label: item === "all" ? "All records" : item.replaceAll("_", " ") }))} /></div><div className="w-44"><SelectPicker name="action" label="Audit action" defaultValue={action} options={actions.map((item) => ({ value: item, label: item === "all" ? "All actions" : item }))} /></div></ListFilterBar>
     <AuditLogTable rows={rows} total={total} />
     {pageCount > 1 && <nav aria-label="Audit log pages" className="mt-4 flex items-center justify-end gap-3">{page > 1 ? <Button size="sm" variant="outline" asChild><Link href={href(page - 1)}>Previous</Link></Button> : <Button size="sm" variant="outline" disabled>Previous</Button>}<span className="text-xs text-slate-500">Page {page} of {pageCount}</span>{page < pageCount ? <Button size="sm" variant="outline" asChild><Link href={href(page + 1)}>Next</Link></Button> : <Button size="sm" variant="outline" disabled>Next</Button>}</nav>}
   </>;
