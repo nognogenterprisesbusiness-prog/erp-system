@@ -1,6 +1,7 @@
-import { IntentLink as Link } from "@/components/layout/intent-link";
 import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { Button } from "@/components/ui/button";
+import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
+import { MaterialForm } from "@/components/materials/material-form";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -9,8 +10,8 @@ import { requireUser } from "@/lib/auth";
 import { getMaterial } from "@/lib/data/inventory";
 import { archiveMaterialAction } from "../actions";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
-export default async function MaterialPage({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; const [user, data] = await Promise.all([requireUser(), getMaterial(id)]); const { material, category, unit, balances } = data; return <>
-  <PageHeader eyebrow={material.code} title={material.name} description={material.description || "Material master record"} action={user.canManage && <div className="flex gap-2"><Button variant="outline" asChild><Link href={`/materials/${id}/edit`}>Edit</Link></Button><form action={archiveMaterialAction}><input type="hidden" name="id" value={id} /><Button variant="outline" type="submit">Archive</Button></form></div>} />
+export default async function MaterialPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }> }) { const { id } = await params; const editing = (await searchParams).edit === "1"; const [user, data] = await Promise.all([requireUser(), getMaterial(id)]); const { material, category, unit, balances } = data; return <>
+  <PageHeader eyebrow={material.code} title={material.name} description={material.description || "Material master record"} action={user.canManage && <div className="flex gap-2"><RecordCreateDialog key={material.updated_at} title="Edit material" triggerLabel="Edit" triggerVariant="outline" initialOpen={editing} closeHref={`/materials/${id}`}><MaterialForm material={material} {...data.references} /></RecordCreateDialog><form action={archiveMaterialAction}><input type="hidden" name="id" value={id} /><Button variant="outline" type="submit">Archive</Button></form></div>} />
   {material.photo_path && <div className="relative mt-7 h-56 max-w-xl overflow-hidden rounded-xl bg-slate-100"><PhotoViewer src={recordPhotoUrl("materials", id, material.updated_at)} alt={`${material.name} photo`} sizes="(max-width: 640px) 100vw, 576px" /></div>}
   <dl className="mt-7 grid gap-x-8 gap-y-5 border-y border-slate-200 bg-white px-5 py-6 sm:grid-cols-2 lg:grid-cols-4"><div><dt className="text-xs text-slate-400">Category</dt><dd className="mt-1 text-sm font-semibold">{category?.name ?? "Unavailable"}</dd></div><div><dt className="text-xs text-slate-400">Base unit</dt><dd className="mt-1 text-sm font-semibold">{unit ? `${unit.name} (${unit.symbol})` : "Unavailable"}</dd></div><div><dt className="text-xs text-slate-400">Minimum stock</dt><dd className="mt-1 text-sm font-semibold tabular-nums">{material.minimum_stock_level} {unit?.symbol}</dd></div><div><dt className="text-xs text-slate-400">Type / status</dt><dd className="mt-1 text-sm font-semibold capitalize">{material.material_kind} · {material.is_active ? "Active" : "Inactive"}</dd></div></dl>
   <EntityQrSection entityType="material" entityId={id} canManage={user.canManage} />

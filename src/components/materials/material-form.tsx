@@ -1,7 +1,8 @@
 "use client";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { saveMaterialAction, type MaterialActionState } from "@/app/(workspace)/materials/actions";
-import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
 import { SelectPicker } from "@/components/ui/select-picker";
@@ -12,9 +13,19 @@ const initialState: MaterialActionState = { ok: false, message: "" };
 export function MaterialForm({ material, categories, units }: { material?: MaterialRow; categories: MaterialCategoryRow[]; units: UnitRow[] }) {
   const [state, action, pending] = useActionState(saveMaterialAction, initialState);
   const [processingPhoto, setProcessingPhoto] = useState(false);
+  const dialog = useRecordDialog();
+  const router = useRouter();
+  const completed = useRef(false);
+  useEffect(() => {
+    if (!state.ok || completed.current) return;
+    completed.current = true;
+    // Editing closes the dialog in place; a new material opens its record.
+    if (material && dialog) dialog.complete();
+    else startTransition(() => router.replace(`/materials/${state.data.id}`));
+  }, [state, material, dialog, router]);
   const error = (field: string) => state.ok ? undefined : state.fieldErrors?.[field]?.[0];
   if (material?.material_kind === "reusable") return <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm"><p className="font-semibold">Legacy reusable material · read-only</p><p className="mt-2 text-slate-500">An Admin must reconcile existing stock and value before registering these tools in Equipment. Historical records are preserved; no automatic conversion is performed.</p></div>;
-  return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+  return <form action={action} className={dialog ? undefined : "rounded-xl border border-slate-200 bg-white p-5 sm:p-6"}>
     {material && <input type="hidden" name="id" value={material.id} />}
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="SKU / material code" htmlFor="code" error={error("code")}><input className={fieldControlClass} id="code" name="code" defaultValue={material?.code} placeholder="MAT-CEMENT" required /></FormField>

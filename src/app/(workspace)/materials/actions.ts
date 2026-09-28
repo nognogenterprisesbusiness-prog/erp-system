@@ -45,7 +45,7 @@ export async function saveMaterialAction(_: MaterialActionState, form: FormData)
     catch (cause) { return failure(cause instanceof Error ? cause.message : "The material was saved, but its photo could not be attached. Open the material again to retry."); }
   }
   revalidatePath("/materials"); revalidatePath("/inventory");
-  redirect(`/materials/${data}`);
+  return { ok: true, data: { id: data } };
 }
 
 export async function archiveMaterialAction(form: FormData) {
