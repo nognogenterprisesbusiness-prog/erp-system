@@ -82,7 +82,7 @@ export async function saveSupplierAction(_: SupplierActionState, form: FormData)
     }
   }
   revalidateSuppliers(data);
-  redirect(`/suppliers/${data}`);
+  return { ok: true, data: { id: data } };
 }
 
 export async function archiveSupplierAction(_: SupplierActionState, form: FormData): Promise<SupplierActionState> {

@@ -1,9 +1,10 @@
 "use client";
 import { SelectPicker } from "@/components/ui/select-picker";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { saveSupplierAction, type SupplierActionState } from "@/app/(workspace)/suppliers/actions";
-import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { LocationPicker } from "@/components/ui/location-picker";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
@@ -13,9 +14,20 @@ import type { SupplierCategoryRow, SupplierRow } from "@/types/database";
 const initialState: SupplierActionState = { ok: false, message: "" };
 export function SupplierForm({ supplier, categories }: { supplier?: SupplierRow; categories: SupplierCategoryRow[] }) {
   const [state, action, pending] = useActionState(saveSupplierAction, initialState);
+  const dialog = useRecordDialog();
+  const router = useRouter();
+  const completed = useRef(false);
+  useEffect(() => {
+    // A message means a partial save (e.g. photo failed): keep the form open to show it.
+    if (!state.ok || state.message || completed.current) return;
+    completed.current = true;
+    if (supplier && dialog) dialog.complete();
+    else if (state.data?.id) startTransition(() => router.replace(`/suppliers/${state.data?.id}`));
+  }, [state, dialog, router, supplier]);
+
   const [processingPhoto, setProcessingPhoto] = useState(false);
   const error = (field: string) => state.ok ? undefined : state.fieldErrors?.[field]?.[0];
-  return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+  return <form action={action} className={dialog ? undefined : "rounded-xl border border-slate-200 bg-white p-5 sm:p-6"}>
     {supplier && <input type="hidden" name="id" value={supplier.id} />}
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="Supplier code" htmlFor="code" error={error("code")}><input className={fieldControlClass} id="code" name="code" defaultValue={supplier?.code} placeholder="SUP-001" required /></FormField>
@@ -33,7 +45,7 @@ export function SupplierForm({ supplier, categories }: { supplier?: SupplierRow;
       <FormField label="Remarks" htmlFor="remarks" className="md:col-span-2" error={error("remarks")}><textarea className={`${fieldControlClass} h-auto py-3`} id="remarks" name="remarks" rows={3} defaultValue={supplier?.remarks ?? ""} /></FormField>
       <div className="md:col-span-2"><RecordPhotoInput label="Supplier photo (optional)" currentPhoto={supplier?.photo_path ? recordPhotoUrl("suppliers", supplier.id) : undefined} convertBeforeSubmit onProcessingChange={setProcessingPhoto} /></div>
     </div>
-    {state.message && <p role={state.ok ? "status" : "alert"} className={`mt-5 text-sm font-medium ${state.ok ? "text-amber-700" : "text-red-600"}`}>{state.message}{state.ok && state.data?.id ? <a href={`/suppliers/${state.data.id}/edit`} className="ml-2 underline">Open saved supplier</a> : null}</p>}
+    {state.message && <p role={state.ok ? "status" : "alert"} className={`mt-5 text-sm font-medium ${state.ok ? "text-amber-700" : "text-red-600"}`}>{state.message}{state.ok && state.data?.id ? <a href={`/suppliers/${state.data.id}`} className="ml-2 underline">Open saved supplier</a> : null}</p>}
     <RecordFormControls busy={pending || processingPhoto} />
   </form>;
 }

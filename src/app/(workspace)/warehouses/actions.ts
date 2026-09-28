@@ -1,6 +1,5 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { warehouseAssignmentInputSchema, warehouseInputSchema, warehouseUpdateSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireManager } from "@/lib/auth";
@@ -38,7 +37,7 @@ export async function saveWarehouseAction(_: WarehouseActionState, form: FormDat
     catch (error) { revalidatePath("/warehouses"); return { ok: true, data: { id: result.data.id }, message: error instanceof Error ? error.message : "The record was saved, but its photo could not be uploaded." }; }
   }
   revalidatePath("/dashboard"); revalidatePath("/warehouses");
-  redirect(`/warehouses/${result.data.id}`);
+  return { ok: true, data: { id: result.data.id } };
 }
 
 export async function assignWarehouseStaffAction(form: FormData) {

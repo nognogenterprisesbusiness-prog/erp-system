@@ -5,6 +5,10 @@ import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
+import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
+import { DailyReportForm } from "@/components/reports/daily-report-form";
+import { getDailyReportChoices } from "@/lib/data/daily-reports";
+import { todayInManila } from "@/lib/date";
 import { requireUser } from "@/lib/auth";
 import { getDailyReport } from "@/lib/data/daily-reports";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
@@ -27,12 +31,13 @@ function snapshotText(value: unknown, field: string) {
   return typeof candidate === "string" ? candidate : "";
 }
 
-export default async function DailyReportDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ linkedPage?: string; candidatePage?: string }> }) {
+export default async function DailyReportDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string; linkedPage?: string; candidatePage?: string }> }) {
   const { id } = await params;
   const filters = await searchParams;
   const [user, data, progress] = await Promise.all([requireUser(), getDailyReport(id), getReportProgress(id)]);
   const { report, project, site, preparerName, events } = data;
   const canEdit = report.status === "draft" && user.userId === report.prepared_by;
+  const choices = canEdit ? await getDailyReportChoices() : null;
   const canCorrect = report.status === "requires_revision" && user.userId === report.prepared_by;
   let canReview = report.status === "submitted" && user.userId !== report.prepared_by && user.canManage;
   if (!canReview && report.status === "submitted" && user.userId !== report.prepared_by && user.roles.includes("engineer")) {
@@ -49,7 +54,7 @@ export default async function DailyReportDetailPage({ params, searchParams }: { 
       .eq("status", "active").limit(1)).data?.length)));
   return <>
     <PageHeader eyebrow={report.report_number} title="Daily construction report" description={`${project.code} · ${project.name} · ${site.name}`}
-      action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${report.project_id}/reports`}>Project reports</Link></Button>{canEdit && <Button asChild><Link href={`/reports/daily/${id}/edit`}>Edit draft</Link></Button>}{canCorrect && <DailyReportCorrection reportId={id} />}</div>} />
+      action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${report.project_id}/reports`}>Project reports</Link></Button>{canEdit && choices && <RecordCreateDialog key={report.updated_at} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen={filters.edit === "1"} closeHref={`/reports/daily/${id}`}><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}{canCorrect && <DailyReportCorrection reportId={id} />}</div>} />
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       {report.photo_path && <div className="relative mb-6 h-56 overflow-hidden rounded-xl bg-slate-100 sm:h-72"><PhotoViewer src={recordPhotoUrl("daily-reports", report.id, report.updated_at)} alt={`Site photo for ${report.report_number}`} sizes="(max-width: 640px) 100vw, 960px" /></div>}
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold">Report details</h2><Badge variant={report.status === "draft" || report.status === "requires_revision" ? "review" : report.status === "approved" ? "active" : "neutral"}>{report.status.replaceAll("_", " ")}</Badge></div>

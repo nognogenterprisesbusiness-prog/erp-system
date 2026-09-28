@@ -1,8 +1,9 @@
 "use client";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { saveWarehouseAction, type WarehouseActionState } from "@/app/(workspace)/warehouses/actions";
-import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
 import { LocationPicker } from "@/components/ui/location-picker";
 import { SelectPicker } from "@/components/ui/select-picker";
@@ -13,11 +14,22 @@ const initialState: WarehouseActionState = { ok: false, message: "" };
 const inputClass = "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10";
 export function WarehouseForm({ warehouse, municipalityLabel = "" }: { warehouse?: WarehouseRow; municipalityLabel?: string }) {
   const [state, action, pending] = useActionState(saveWarehouseAction, initialState);
+  const dialog = useRecordDialog();
+  const router = useRouter();
+  const completed = useRef(false);
+  useEffect(() => {
+    // A message means a partial save (e.g. photo failed): keep the form open to show it.
+    if (!state.ok || "message" in state || completed.current) return;
+    completed.current = true;
+    if (warehouse && dialog) dialog.complete();
+    else if (state.data?.id) startTransition(() => router.replace(`/warehouses/${state.data?.id}`));
+  }, [state, dialog, router, warehouse]);
+
   const [photoBusy, setPhotoBusy] = useState(false);
   const [status, setStatus] = useState(warehouse?.status ?? "active");
   const fields = !state.ok ? state.fieldErrors : undefined;
   const field = (label: string, name: string, input: React.ReactNode) => <label htmlFor={name} className="space-y-2 text-sm font-medium text-slate-700"><span>{label}</span>{input}{fields?.[name]?.[0] && <span className="block text-xs text-red-600">{fields[name][0]}</span>}</label>;
-  return <form action={action} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">{warehouse && <input type="hidden" name="id" value={warehouse.id} />}<div className="grid gap-5 md:grid-cols-2">
+  return <form action={action} className={dialog ? undefined : "rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"}>{warehouse && <input type="hidden" name="id" value={warehouse.id} />}<div className="grid gap-5 md:grid-cols-2">
     {field("Warehouse code", "code", <input id="code" name="code" className={inputClass} defaultValue={warehouse?.code} placeholder="WH-CEBU-01" required />)}
     {field("Warehouse name", "name", <input id="name" name="name" className={inputClass} defaultValue={warehouse?.name} required />)}
     <div className="md:col-span-2"><RecordPhotoInput label="Warehouse photo" currentPhoto={warehouse?.photo_path ? recordPhotoUrl("warehouses", warehouse.id) : undefined} convertBeforeSubmit onProcessingChange={setPhotoBusy} /></div>

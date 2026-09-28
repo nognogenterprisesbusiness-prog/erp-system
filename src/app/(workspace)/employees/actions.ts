@@ -74,7 +74,7 @@ export async function saveEmployeeAction(_: WorkforceActionState, form: FormData
   });
   if (error) return failure(friendlyWorkforceError(error));
   revalidateWorkforce(data);
-  redirect(`/employees/${data}`);
+  return { ok: true, data: { id: data } };
 }
 
 export async function archiveEmployeeAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {

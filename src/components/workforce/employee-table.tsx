@@ -19,7 +19,7 @@ export function EmployeeTable({ employees, count, canManage }: { employees: Empl
         <td className="max-w-[220px] truncate px-4 py-4 text-slate-600">{employee.emailAddress ? <a href={`mailto:${employee.emailAddress}`} className="hover:text-cyan-700">{employee.emailAddress}</a> : "—"}</td>
         <td className="max-w-[220px] truncate px-4 py-4 text-xs text-slate-500">{employee.activeProjects.length ? employee.activeProjects.join(", ") : "Not assigned"}</td>
         <td className="px-4 py-4 text-right"><Badge variant={employee.status === "active" ? "active" : employee.status === "on_leave" ? "review" : "neutral"}>{employee.status.replace("_", " ")}</Badge></td>
-        <td className="px-5 py-4 text-right"><RecordActionMenu name={employee.fullName} actions={[{ label: "View", href: `/employees/${employee.id}` }, ...(canManage && employee.status !== "separated" ? [{ label: "Edit", href: `/employees/${employee.id}/edit` }, { label: "Archive", href: `/employees/${employee.id}` }] : [])]} /></td>
+        <td className="px-5 py-4 text-right"><RecordActionMenu name={employee.fullName} actions={[{ label: "View", href: `/employees/${employee.id}` }, ...(canManage && employee.status !== "separated" ? [{ label: "Edit", href: `/employees/${employee.id}?edit=1` }, { label: "Archive", href: `/employees/${employee.id}` }] : [])]} /></td>
       </tr>)}</tbody>
     </table>
   </DataTableShell><p className="mt-3 text-sm text-slate-500">{count} employee record{count === 1 ? "" : "s"}</p></>;

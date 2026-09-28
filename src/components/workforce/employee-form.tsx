@@ -1,10 +1,11 @@
 "use client";
 import { SelectPicker } from "@/components/ui/select-picker";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { saveEmployeeAction, type WorkforceActionState } from "@/app/(workspace)/employees/actions";
 import { DatePicker } from "@/components/ui/date-picker";
-import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import type { EmployeeCategoryRow, EmployeePrivateContactRow, EmployeeRow, ProfileRow } from "@/types/database";
 
@@ -17,9 +18,20 @@ export function EmployeeForm({ employee, contact, categories, profiles }: {
   profiles: Pick<ProfileRow, "id" | "full_name" | "email">[];
 }) {
   const [state, action, pending] = useActionState(saveEmployeeAction, initialState);
+  const dialog = useRecordDialog();
+  const router = useRouter();
+  const completed = useRef(false);
+  useEffect(() => {
+    // A message means a partial save (e.g. photo failed): keep the form open to show it.
+    if (!state.ok || state.message || completed.current) return;
+    completed.current = true;
+    if (employee && dialog) dialog.complete();
+    else if (state.data?.id) startTransition(() => router.replace(`/employees/${state.data?.id}`));
+  }, [state, dialog, router, employee]);
+
   const [profileId, setProfileId] = useState(employee?.profile_id ?? "unassigned");
   const error = (field: string) => state.ok ? undefined : state.fieldErrors?.[field]?.[0];
-  return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+  return <form action={action} className={dialog ? undefined : "rounded-xl border border-slate-200 bg-white p-5 sm:p-6"}>
     {employee && <input type="hidden" name="id" value={employee.id} />}
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="Employee code" htmlFor="code" error={error("code")}>

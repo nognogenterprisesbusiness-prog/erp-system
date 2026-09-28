@@ -64,7 +64,7 @@ export async function startDailyReportCorrectionAction(_: DailyReportActionState
   try { await executeSiteCommand(supabase, { action: "correct-report", input: { reportId: id } }); }
   catch (cause) { return { ok: false, message: cause instanceof Error ? cause.message : "The report could not be reopened." }; }
   revalidatePath(`/reports/daily/${id}`);
-  redirect(`/reports/daily/${id}/edit`);
+  redirect(`/reports/daily/${id}?edit=1`);
 }
 
 export async function recordProjectProgressAction(_: DailyReportActionState, form: FormData): Promise<DailyReportActionState> {

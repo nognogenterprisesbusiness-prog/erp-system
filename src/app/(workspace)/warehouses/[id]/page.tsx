@@ -1,20 +1,23 @@
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { PhotoViewer } from "@/components/ui/photo-viewer";
-import { PencilEdit02Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
+import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
+import { WarehouseForm } from "@/components/warehouses/warehouse-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EntityQrSection } from "@/components/qr/entity-qr-section";
 import { requireUser } from "@/lib/auth";
 import { getWarehouse } from "@/lib/data/warehouses";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
-import { findMunicipality } from "@/lib/locations";
+import { findMunicipality, municipalityDisplay } from "@/lib/locations";
 import { assignWarehouseStaffAction, endWarehouseAssignmentAction, linkWarehouseProjectAction } from "../actions";
 
 const inputClass = "h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm";
 
-export default async function WarehousePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function WarehousePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }> }) {
+  const editing = (await searchParams).edit === "1";
   const { id } = await params;
   const [user, data] = await Promise.all([requireUser(), getWarehouse(id)]);
   const { warehouse, assignments, profiles, projects, allProjects } = data;
@@ -24,7 +27,7 @@ export default async function WarehousePage({ params }: { params: Promise<{ id: 
   return <>
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">{warehouse.code}</p><div className="mt-1.5 flex items-center gap-3"><h1 className="text-3xl font-semibold tracking-[-0.035em]">{warehouse.name}</h1><Badge variant={warehouse.status === "active" ? "active" : "neutral"}>{warehouse.status}</Badge></div><p className="mt-1 text-sm text-slate-500">{warehouse.address}</p></div>
-      {user.canManage && <Button variant="outline" asChild><Link href={`/warehouses/${id}/edit`}><HugeiconsIcon icon={PencilEdit02Icon} size={17} /> Edit</Link></Button>}
+      {user.canManage && <RecordCreateDialog key={data.warehouse.updated_at} title="Edit warehouse" triggerLabel="Edit" triggerVariant="outline" initialOpen={editing} closeHref={`/warehouses/${id}`}><WarehouseForm warehouse={data.warehouse} municipalityLabel={municipalityDisplay(data.warehouse.municipality_code ?? undefined, "")} /></RecordCreateDialog>}
     </div>
     {warehouse.photo_path && <div className="relative mt-6 h-52 overflow-hidden rounded-2xl bg-slate-100 sm:h-64"><PhotoViewer src={recordPhotoUrl("warehouses", id, warehouse.updated_at)} alt={`${warehouse.name} warehouse`} sizes="(max-width: 768px) 100vw, 900px" /></div>}
     <EntityQrSection entityType="warehouse" entityId={id} canManage={user.canManage} />
