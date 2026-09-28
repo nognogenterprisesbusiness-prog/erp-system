@@ -1,3 +1,4 @@
+import { Invoice03Icon, Money03Icon } from "@hugeicons/core-free-icons";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { notFound } from "next/navigation";
 import { redirect } from "next/navigation";
@@ -7,22 +8,33 @@ import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { Button } from "@/components/ui/button";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { RecordActionMenu, type RecordAction } from "@/components/ui/record-action-menu";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { requireUser } from "@/lib/auth";
 import { getProject } from "@/lib/data/projects";
-import { getProjectMaterialPlan } from "@/lib/data/project-operations";
+import { getProjectMaterialEstimate, getProjectMaterialPlan } from "@/lib/data/project-operations";
+import { getProjectProfitability } from "@/lib/data/project-costs";
 import { getMaterialRequestChoices } from "@/lib/data/material-requests";
 
 const quantity = (value: number) => new Intl.NumberFormat("en-PH", { maximumFractionDigits: 4 }).format(value);
+const money = (amount: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(amount);
+const priceSourceLabel = { supplier: "Latest supplier price", stock: "Average stock cost" } as const;
 
 export default async function ProjectMaterialsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }> }) {
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) notFound();
   const user = await requireUser();
   if (!user.canViewDailyReports) redirect(`/projects/${id}`);
-  const [projectData, rows] = await Promise.all([getProject(id), getProjectMaterialPlan(id)]);
+  const [projectData, rows, estimates, profitability] = await Promise.all([
+    getProject(id),
+    getProjectMaterialPlan(id),
+    user.canManage ? getProjectMaterialEstimate(id) : Promise.resolve(null),
+    user.canManage ? getProjectProfitability(id) : Promise.resolve(null),
+  ]);
+  const estimatedTotal = estimates ? [...estimates.values()].reduce((sum, row) => sum + Number(row.estimated_cost ?? 0), 0) : 0;
+  const unpricedCount = estimates ? rows.filter((row) => estimates.get(row.id)?.unit_cost == null).length : 0;
   const canPlan = user.canManage || projectData.assignments.some((assignment) =>
     assignment.user_id === user.userId && assignment.assignment_role === "engineer" && assignment.status === "active");
   const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
@@ -35,8 +47,12 @@ export default async function ProjectMaterialsPage({ params, searchParams }: { p
       <h2 className="text-base font-semibold">Plan by site and source warehouse</h2>
       <p className="mt-1 text-sm text-slate-500">Shortage compares planned work with posted use, site stock, open requests and available warehouse stock. It does not reserve stock.</p>
     </section>
+    {estimates && profitability && rows.length > 0 && <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <MetricCard label="Estimated material cost" value={money(estimatedTotal)} detail={unpricedCount ? `${unpricedCount} material${unpricedCount === 1 ? " has" : "s have"} no supplier price or stock cost yet` : "Planned quantity × latest supplier price, else average stock cost"} icon={Invoice03Icon} tone="bg-cyan-50 text-cyan-700" />
+      <MetricCard label="Approved budget" value={money(Number(profitability.approved_budget))} detail={`${money(Math.abs(Number(profitability.approved_budget) - estimatedTotal))} ${Number(profitability.approved_budget) >= estimatedTotal ? "left after materials" : "over budget on materials"}`} icon={Money03Icon} tone="bg-emerald-50 text-emerald-600" />
+    </div>}
     <div className="mt-6"><DataTableShell empty={rows.length === 0 ? <EmptyState title="No planned materials" description="Add a material to see site needs and shortages." /> : undefined}>
-      <table className="w-full min-w-[1000px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">SKU / material</th><th className="px-4 py-3">Site / warehouse</th><th className="px-4 py-3 text-right">Planned</th><th className="px-4 py-3 text-right">Used / on site</th><th className="px-4 py-3 text-right">Available / requested</th><th className="px-4 py-3 text-right">Site need</th><th className="px-4 py-3 text-right">Purchase gap</th><th className="px-5 py-3 text-right">Next step</th></tr></thead>
+      <table className={`w-full ${estimates ? "min-w-[1200px]" : "min-w-[1000px]"} text-left text-sm`}><thead className={tableHeadClass}><tr><th className="px-5 py-3">SKU / material</th><th className="px-4 py-3">Site / warehouse</th><th className="px-4 py-3 text-right">Planned</th><th className="px-4 py-3 text-right">Used / on site</th><th className="px-4 py-3 text-right">Available / requested</th><th className="px-4 py-3 text-right">Site need</th><th className="px-4 py-3 text-right">Purchase gap</th>{estimates && <th className="px-4 py-3 text-right">Estimated cost</th>}<th className="px-5 py-3 text-right">Next step</th></tr></thead>
       <tbody className="divide-y divide-slate-100">{rows.map((row) => {
         const params = new URLSearchParams({ project: id, site: row.project_site_id, warehouse: row.warehouse_id, material: row.material_id, quantity: String(row.quantity_to_request), date: row.required_on });
         const purchaseParams = new URLSearchParams({ material: row.material_id, warehouse: row.warehouse_id, quantity: String(row.procurement_shortage) });
@@ -45,7 +61,8 @@ export default async function ProjectMaterialsPage({ params, searchParams }: { p
           ...(canRequest && row.quantity_to_request > 0 ? [{ label: `Request ${quantity(row.quantity_to_request)} ${row.unit_symbol}`, href: `/requests/new?${params}` }] : []),
           ...(user.canManage && row.procurement_shortage > 0 ? [{ label: `Purchase ${quantity(row.procurement_shortage)} ${row.unit_symbol}`, href: `/purchase-orders/new?${purchaseParams}` }] : []),
         ];
-        return <tr key={row.id}><td className="px-5 py-4"><p className="font-medium">{row.material_code} · {row.material_name}</p><p className="text-xs text-slate-500">Needed {row.required_on}</p></td><td className="px-4 py-4">{row.site_name}<span className="block text-xs text-slate-500">{row.warehouse_name}</span></td><td className="px-4 py-4 text-right tabular-nums">{quantity(row.planned_quantity)} {row.unit_symbol}</td><td className="px-4 py-4 text-right tabular-nums">{quantity(row.consumed_quantity)} / {quantity(row.site_on_hand)}</td><td className="px-4 py-4 text-right tabular-nums">{quantity(row.warehouse_available)} / {quantity(row.outstanding_request_quantity)}</td><td className="px-4 py-4 text-right font-medium tabular-nums">{quantity(row.quantity_to_request)} {row.unit_symbol}</td><td className="px-4 py-4 text-right font-medium tabular-nums">{quantity(row.procurement_shortage)} {row.unit_symbol}</td><td className="px-5 py-4 text-right"><RecordActionMenu name={row.material_name} actions={actions} /></td></tr>;
+        const estimate = estimates?.get(row.id);
+        return <tr key={row.id}><td className="px-5 py-4"><p className="font-medium">{row.material_code} · {row.material_name}</p><p className="text-xs text-slate-500">Needed {row.required_on}</p></td><td className="px-4 py-4">{row.site_name}<span className="block text-xs text-slate-500">{row.warehouse_name}</span></td><td className="px-4 py-4 text-right tabular-nums">{quantity(row.planned_quantity)} {row.unit_symbol}</td><td className="px-4 py-4 text-right tabular-nums">{quantity(row.consumed_quantity)} / {quantity(row.site_on_hand)}</td><td className="px-4 py-4 text-right tabular-nums">{quantity(row.warehouse_available)} / {quantity(row.outstanding_request_quantity)}</td><td className="px-4 py-4 text-right font-medium tabular-nums">{quantity(row.quantity_to_request)} {row.unit_symbol}</td><td className="px-4 py-4 text-right font-medium tabular-nums">{quantity(row.procurement_shortage)} {row.unit_symbol}</td>{estimates && <td className="px-4 py-4 text-right tabular-nums">{estimate?.unit_cost != null && estimate.price_source ? <><p className="font-medium">{money(Number(estimate.estimated_cost))}</p><p className="text-xs text-slate-500">{money(Number(estimate.unit_cost))}/{row.unit_symbol} · {priceSourceLabel[estimate.price_source]}</p></> : <span className="text-xs text-slate-500">No price yet</span>}</td>}<td className="px-5 py-4 text-right"><RecordActionMenu name={row.material_name} actions={actions} /></td></tr>;
       })}</tbody></table>
     </DataTableShell></div>
   </>;

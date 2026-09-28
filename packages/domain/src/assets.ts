@@ -7,6 +7,15 @@ export const assetStatuses = ["available", "assigned", "in_use", "under_maintena
 export const registryAssetStatuses = ["available", "under_maintenance", "out_of_service"] as const;
 export const standaloneAssetLocationKinds = ["maintenance_facility", "other"] as const;
 
+/** Vehicles share the equipment request and hours workflows, so pickers mark them. */
+export function vehicleTag(kind?: (typeof assetKinds)[number] | null) {
+  return kind === "vehicle" ? " · Vehicle" : "";
+}
+
+export function assetChoiceLabel(asset: { code: string; name: string; kind?: (typeof assetKinds)[number] | null }) {
+  return `${asset.code} · ${asset.name}${vehicleTag(asset.kind)}`;
+}
+
 export const assetCategoryInputSchema = z.object({
   id: uuidSchema.optional(),
   assetKind: z.enum(assetKinds),

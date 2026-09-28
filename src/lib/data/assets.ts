@@ -73,10 +73,10 @@ export async function getProjectEquipmentChoices(projectId: string) {
     const locations = await readAllPages((from, to) => supabase.from("asset_locations").select("id").is("archived_at", null).in("inventory_location_id", inventoryIds.slice(offset, offset + 100)).order("id").range(from, to), "equipment locations");
     assetLocationIds.push(...locations.map((location) => location.id));
   }
-  const assets: { id: string; code: string; name: string }[] = [];
+  const assets: { id: string; code: string; name: string; kind: AssetKind }[] = [];
   for (let offset = 0; offset < assetLocationIds.length; offset += 100) {
-    const rows = await readAllPages((from, to) => supabase.from("assets").select("id,code,name").eq("asset_kind", "equipment").is("archived_at", null).in("status", ["available", "assigned", "in_use"]).in("current_location_id", assetLocationIds.slice(offset, offset + 100)).order("code").order("id").range(from, to), "project equipment");
-    assets.push(...rows);
+    const rows = await readAllPages((from, to) => supabase.from("assets").select("id,code,name,asset_kind").is("archived_at", null).in("status", ["available", "assigned", "in_use"]).in("current_location_id", assetLocationIds.slice(offset, offset + 100)).order("code").order("id").range(from, to), "project equipment");
+    assets.push(...rows.map(({ asset_kind, ...asset }) => ({ ...asset, kind: asset_kind })));
   }
   return assets.sort((a, b) => a.code.localeCompare(b.code) || a.id.localeCompare(b.id));
 }

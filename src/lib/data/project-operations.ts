@@ -8,6 +8,14 @@ export async function getProjectMaterialPlan(projectId: string) {
   return data ?? [];
 }
 
+/** Admin-only: estimated cost per plan line, keyed by plan line id. */
+export async function getProjectMaterialEstimate(projectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_project_material_estimate", { p_project_id: projectId });
+  if (error) throw new Error("Unable to load the project material estimate.");
+  return new Map((data ?? []).map((row) => [row.plan_line_id, row]));
+}
+
 export async function getProjectProgress(projectId: string) {
   return (await getProjectProgressPage(projectId)).entries;
 }

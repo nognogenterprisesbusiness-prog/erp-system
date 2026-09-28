@@ -420,9 +420,8 @@ export async function readMobileResource(
       if (l.error) databaseError(l.error);
       let query = c
         .from("assets")
-        .select("id,code,name,status", { count: "exact" })
+        .select("id,code,name,status,asset_kind", { count: "exact" })
         .eq("current_location_id", l.data!.id)
-        .eq("asset_kind", "equipment")
         .is("archived_at", null)
         .order("name")
         .order("id");

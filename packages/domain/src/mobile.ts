@@ -7,7 +7,7 @@ import {
   cancelMaterialRequestSchema,
 } from "./material-requests";
 import { siteConsumptionInputSchema } from "./inventory";
-import { equipmentRequestInputSchema } from "./assets";
+import { assetKinds, equipmentRequestInputSchema } from "./assets";
 import { equipmentUsageSchema } from "./project-costs";
 import {
   dailyReportInputSchema,
@@ -183,10 +183,11 @@ export const mobileResponseSchemas = {
       code: z.string(),
       name: z.string(),
       status: z.string(),
+      asset_kind: z.enum(assetKinds).optional(),
     }),
   ),
   "equipment-options": page(
-    z.object({ id: uuidSchema, code: z.string(), name: z.string() }),
+    z.object({ id: uuidSchema, code: z.string(), name: z.string(), kind: z.enum(assetKinds).optional() }),
   ),
   "equipment-requests": page(
     z.object({

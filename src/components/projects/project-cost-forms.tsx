@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { SelectPicker } from "@/components/ui/select-picker";
+import { assetChoiceLabel } from "@nognog/domain";
 
 const initialState: ProjectCostActionState = { message: "" };
 
@@ -16,12 +17,12 @@ export function ProjectCostForms({ projectId, assets, keys, today }: { projectId
   const [budgetState, budgetAction, budgetPending] = useActionState(adjustBudgetAction, initialState);
   const [rateAssetId, setRateAssetId] = useState(assets[0]?.id ?? "");
   const [category, setCategory] = useState("permit");
-  const options = assets.map((asset) => ({ value: asset.id, label: `${asset.code} · ${asset.name}${asset.rate ? ` · ₱${asset.rate.hourly_rate}/h` : " · no rate"}` }));
+  const options = assets.map((asset) => ({ value: asset.id, label: `${assetChoiceLabel(asset)}${asset.rate ? ` · ₱${asset.rate.hourly_rate}/h` : " · no rate"}` }));
   return <section className="mt-7 grid gap-3 sm:grid-cols-2">
-    <details className="rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Record equipment use</summary><div className="mt-5"><EquipmentUsageForm projectId={projectId} assets={assets} initialKey={keys.usage} today={today} showRates /></div></details>
-    <details className="rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Set equipment hourly rate</summary><form action={rateAction} className="mt-5 space-y-4">
+    <details className="rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Record equipment or vehicle use</summary><div className="mt-5"><EquipmentUsageForm projectId={projectId} assets={assets} initialKey={keys.usage} today={today} showRates /></div></details>
+    <details className="rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Set equipment or vehicle hourly rate</summary><form action={rateAction} className="mt-5 space-y-4">
       <input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="assetId" value={rateAssetId} />
-      <FormField label="Equipment" htmlFor="rateAsset" error={rateState.fieldErrors?.assetId?.[0]}><SelectPicker label="Equipment" value={rateAssetId} onValueChange={setRateAssetId} options={options} placeholder="Choose equipment" /></FormField>
+      <FormField label="Equipment or vehicle" htmlFor="rateAsset" error={rateState.fieldErrors?.assetId?.[0]}><SelectPicker label="Equipment or vehicle" value={rateAssetId} onValueChange={setRateAssetId} options={options} placeholder="Choose equipment or vehicle" /></FormField>
       <FormField label="Hourly management charge (PHP)" htmlFor="hourlyRate" error={rateState.fieldErrors?.hourlyRate?.[0]}><input id="hourlyRate" name="hourlyRate" className={fieldControlClass} inputMode="decimal" placeholder="0.00" required /></FormField>
       <FormField label="Effective from" htmlFor="effectiveOn" error={rateState.fieldErrors?.effectiveOn?.[0]}><DatePicker id="effectiveOn" name="effectiveOn" label="Effective from" defaultValue={today} allowClear={false} required /></FormField>
       {rateState.message && <p role="alert" className="text-xs text-red-700">{rateState.message}</p>}<Button type="submit" disabled={ratePending || !assets.length}>{ratePending ? "Saving…" : "Save rate"}</Button>
@@ -33,7 +34,7 @@ export function ProjectCostForms({ projectId, assets, keys, today }: { projectId
       <FormField label="Description" htmlFor="expenseDescription" error={expenseState.fieldErrors?.description?.[0]}><input id="expenseDescription" name="description" className={fieldControlClass} maxLength={500} required /></FormField>
       <FormField label="Receipt / external reference" htmlFor="externalReference" error={expenseState.fieldErrors?.externalReference?.[0]}><input id="externalReference" name="externalReference" className={fieldControlClass} maxLength={120} required /></FormField>
       <FormField label="Amount (PHP)" htmlFor="expenseAmount" error={expenseState.fieldErrors?.amount?.[0]}><input id="expenseAmount" name="amount" className={fieldControlClass} inputMode="decimal" required /></FormField>
-      <p className="text-xs text-slate-500">Materials, labor, and equipment use already have separate cost postings; do not duplicate them here.</p>
+      <p className="text-xs text-slate-500">Materials, labor, and equipment or vehicle use already have separate cost postings; do not duplicate them here.</p>
       {expenseState.message && <p role="alert" className="text-xs text-red-700">{expenseState.message}</p>}<Button type="submit" disabled={expensePending}>{expensePending ? "Posting…" : "Post expense"}</Button>
     </form></details>
     <details className="rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Adjust approved budget</summary><form action={budgetAction} className="mt-5 space-y-4">
