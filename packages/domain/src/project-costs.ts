@@ -8,7 +8,8 @@ const hours = z.string().trim().regex(/^\d{1,2}(\.\d{1,2})?$/, "Enter up to two 
 export const equipmentRateSchema = z.object({ assetId: uuidSchema, hourlyRate: moneyInputSchema, effectiveOn: z.iso.date() });
 export const equipmentUsageSchema = z.object({
   idempotencyKey: uuidSchema, projectId: uuidSchema, assetId: uuidSchema,
-  useDate: z.iso.date(), hours, workNote: z.string().trim().min(3).max(500),
+  useDate: z.iso.date().refine((value) => value <= new Date().toISOString().slice(0, 10), "Equipment use date cannot be in the future."),
+  hours, workNote: z.string().trim().min(3).max(500),
 });
 export const additionalExpenseSchema = z.object({
   idempotencyKey: uuidSchema, projectId: uuidSchema, expenseDate: z.iso.date(),

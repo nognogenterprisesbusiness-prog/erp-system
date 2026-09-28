@@ -96,7 +96,7 @@ Other observed UX issues: failed attendance submissions cleared entered selectio
 
 Keep posted history intact; no company reset or hard delete occurred. MR-00000001/TRF-00000001 retain 10 bags in transit pending the receipt repair. PO-2026-000001 retains two received bags (Main Warehouse now 92 on hand), QA supplier/category/catalog and price versions. DR-1 is approved with three resource links and the 2% progress update; DR-2 is a Realtime-test draft. The equipment request is returned; its PHP 400 usage and PHP 200/hour test rate remain. The test invoice/payment remain labeled; concurrent/Realtime test attendance was reversed, not deleted. Joel/Nico's PHP 1,100 attendance remains to reconcile DR-1. These staging effects must not be mistaken for real company transactions.
 
-Executable evidence: `scripts/qa-hosted-role-workflow.mjs`. Password comes only from `QA_ACCOUNT_PASSWORD`; `--confirmed-staging` and exact QA target marker are mandatory. Base mode posts attendance/equipment/billing tests; `--extended-only` creates new supplier/PO fixtures and tests reports/Realtime; `--negative-only` runs denial/paging reads. `--receipt-existing` is a one-time checkpoint for the recorded order (now received), not a reusable fresh-fixture test. Failures set a nonzero exit code. Do not replay posting modes casually or run them against production.
+The hosted QA runner used for this historical pass has been retired after the staging checks completed; it depended on fixed IDs and included one-time repair/receipt branches. The executed results and retained QA data are documented above. The separate repeatable local test suites remain under `scripts/` and are wired to package commands.
 
 ![Verified report resource records](qa-report-resources-20260927.png)
 

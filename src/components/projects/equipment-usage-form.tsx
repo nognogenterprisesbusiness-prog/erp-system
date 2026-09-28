@@ -19,7 +19,7 @@ export function EquipmentUsageForm({ projectId, assets, initialKey, today, showR
   return <form action={action} className="space-y-4">
     <input ref={keyInput} type="hidden" name="idempotencyKey" defaultValue={initialKey} /><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="assetId" value={assetId} />
     <FormField label="Equipment at this project site" htmlFor="usageAsset" error={state.fieldErrors?.assetId?.[0]}><SelectPicker label="Equipment" value={assetId} onValueChange={setAssetId} options={options} placeholder="Choose equipment" /></FormField>
-    <FormField label="Use date" htmlFor="useDate" error={state.fieldErrors?.useDate?.[0]}><DatePicker id="useDate" name="useDate" label="Use date" defaultValue={today} allowClear={false} required /></FormField>
+    <FormField label="Use date" htmlFor="useDate" error={state.fieldErrors?.useDate?.[0]}><DatePicker id="useDate" name="useDate" label="Use date" defaultValue={today} maxDate={today} allowClear={false} required /></FormField>
     <FormField label="Hours used" htmlFor="usageHours" error={state.fieldErrors?.hours?.[0]}><input id="usageHours" name="hours" className={fieldControlClass} inputMode="decimal" placeholder="8.00" required /></FormField>
     <FormField label="Work note" htmlFor="usageNote" error={state.fieldErrors?.workNote?.[0]}><input id="usageNote" name="workNote" className={fieldControlClass} minLength={3} maxLength={500} placeholder="Equipment work performed" required /></FormField>
     {state.message && <p role={state.ok ? "status" : "alert"} className={`text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}
