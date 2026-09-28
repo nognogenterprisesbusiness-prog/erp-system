@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { AppRole, ProfileRow } from "@/types/database";
 
@@ -31,18 +31,18 @@ export async function requireManager() {
 
 export async function requireProcurementViewer() {
   const context = await requireUser();
-  if (!context.canViewProcurement) throw new Error("You do not have permission to view supplier and pricing records.");
+  if (!context.canViewProcurement) notFound();
   return context;
 }
 
 export async function requireFinanceViewer() {
   const context = await requireUser();
-  if (!context.canViewLaborRates) throw new Error("You do not have permission to view financial records.");
+  if (!context.canViewLaborRates) notFound();
   return context;
 }
 
 export async function requireDailyReportViewer() {
   const context = await requireUser();
-  if (!context.canViewDailyReports) throw new Error("You do not have permission to view daily project reports.");
+  if (!context.canViewDailyReports) notFound();
   return context;
 }

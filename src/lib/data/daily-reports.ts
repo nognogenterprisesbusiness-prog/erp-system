@@ -14,12 +14,17 @@ const reportingRoles = ["engineer", "foreman"] as const;
 export async function getDailyReportChoices() {
   const user = await requireDailyReportViewer();
   const supabase = await createClient();
-  const assignments = user.canManage ? [] : await readAllPages((from, to) => supabase.from("project_assignments")
+  const [assignments, assignedSites] = user.canManage ? [[], []] : await Promise.all([readAllPages((from, to) => supabase.from("project_assignments")
     .select("project_id,assignment_role").eq("user_id", user.userId).eq("status", "active")
-    .in("assignment_role", [...reportingRoles]).order("project_id").order("assignment_role").range(from, to), "report project assignments");
-  const allowedIds = user.canManage ? null : [...new Set(assignments
-    .filter((item) => user.roles.includes(item.assignment_role))
-    .map((item) => item.project_id))];
+    .in("assignment_role", [...reportingRoles]).order("project_id").order("assignment_role").range(from, to), "report project assignments"),
+    readAllPages((from, to) => supabase.from("project_sites")
+      .select("project_id").eq("status", "active")
+      .or(`engineer_id.eq.${user.userId},foreman_id.eq.${user.userId}`)
+      .order("project_id").order("id").range(from, to), "assigned report sites")]);
+  const allowedIds = user.canManage ? null : [...new Set([
+    ...assignments.filter((item) => user.roles.includes(item.assignment_role)).map((item) => item.project_id),
+    ...assignedSites.map((item) => item.project_id),
+  ])];
   if (allowedIds && allowedIds.length === 0) return { projects: [], sites: [] };
   const projects = allowedIds
     ? await readByIds(allowedIds, (ids, from, to) => supabase.from("projects").select("id,code,name,status,start_date,target_completion_date").in("id", ids).is("archived_at", null).in("status", ["active", "on_hold"]).order("name").order("id").range(from, to), "available report projects")

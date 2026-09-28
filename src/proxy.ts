@@ -12,7 +12,9 @@ function secureResponse(response: NextResponse): NextResponse {
 }
 
 export async function proxy(request: NextRequest) {
-  const response = await updateSession(request);
+  const response = request.nextUrl.pathname.startsWith("/api/mobile/v1/")
+    ? NextResponse.next({ request })
+    : await updateSession(request);
   response.headers.set("Content-Security-Policy", "base-uri 'self'; object-src 'none'; frame-ancestors 'none'");
   return secureResponse(response);
 }

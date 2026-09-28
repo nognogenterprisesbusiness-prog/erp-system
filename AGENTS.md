@@ -2,7 +2,7 @@
 
 ## Mission
 
-Build and maintain the agreed **web-first Construction ERP** described in [`README.md`](./README.md). The responsive web application is the only active client; keep shared domain/database contracts suitable for a future mobile client without adding Expo or React Native yet. The top-priority vertical slice is: **foreman requests material → authorized approval → warehouse dispatch → site receipt → foreman records actual consumption → per-project cost/report**. Equipment and labor flows must feed project costing without double-counting.
+Build and maintain the agreed **Construction ERP** described in [`README.md`](./README.md). The user approved the limited Foreman/Engineer Expo SDK 57 companion in `../nognog-mobile`; see [`docs/mobile-app.md`](./docs/mobile-app.md) for its scope and unverified release gates. The top-priority vertical slice is: **foreman requests material → authorized approval → warehouse dispatch → site receipt → foreman records actual consumption → per-project cost/report**. Equipment and labor flows must feed project costing without double-counting.
 
 Read README sections 0–3, 5, 9, 15–17 before changes to inventory, roles, expenses or request flows. The README is a proposed scope/backlog; distinguish confirmed needs from decisions awaiting client sign-off. Never mark a checkbox `[x]` unless implemented **and tested**.
 

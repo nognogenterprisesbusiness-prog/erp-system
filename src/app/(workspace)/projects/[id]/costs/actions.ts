@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireManager, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { executeSiteCommand } from "@/lib/mobile/commands";
 
 export type ProjectCostActionState = { ok?: boolean; message: string; fieldErrors?: Record<string, string[]> };
 const value = (form: FormData, key: string) => String(form.get(key) ?? "");
@@ -46,8 +47,8 @@ export async function postEquipmentUsageAction(_: ProjectCostActionState, form: 
   if (!parsed.success) return fail("Review the equipment usage.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.rpc("post_project_equipment_usage", { p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId, p_asset_id: input.assetId, p_use_date: input.useDate, p_hours: input.hours, p_work_note: input.workNote });
-  if (error) return fail(costError(error));
+  try { await executeSiteCommand(supabase, { action: "record-equipment", input }); }
+  catch (cause) { return fail(cause instanceof Error ? cause.message : "Equipment usage could not be saved."); }
   update(input.projectId);
   return { ok: true, message: "Equipment hours recorded." };
 }

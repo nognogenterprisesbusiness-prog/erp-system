@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { requireUser } from "@/lib/auth";
-import { ForemanProjectAttendance } from "@/components/workforce/foreman-project-attendance";
+import { ProjectSiteAttendance } from "@/components/workforce/project-site-attendance";
 import { pageNumber } from "@/lib/data/pagination";
 import { HistoryPagination } from "@/components/ui/history-pagination";
 import { getProjectAttendance } from "@/lib/data/project-attendance";
@@ -24,8 +24,9 @@ export default async function ProjectAttendancePage({ params, searchParams }: { 
   if (!uuidSchema.safeParse(id).success) notFound();
   const page = pageNumber((await searchParams).page);
   if (!user.canManage) {
-    if (!user.roles.includes("foreman")) notFound();
-    return <ForemanProjectAttendance projectId={id} page={page} />;
+    const canViewAttendance = user.roles.some((role) => ["engineer", "foreman"].includes(role));
+    if (!canViewAttendance) notFound();
+    return <ProjectSiteAttendance projectId={id} page={page} canRecord={user.roles.includes("foreman")} />;
   }
   const supabase = await createClient();
   const [summaryResult, data] = await Promise.all([

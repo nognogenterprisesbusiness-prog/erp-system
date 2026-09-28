@@ -6,6 +6,7 @@ import { cancelMaterialRequestSchema, decideMaterialRequestSchema, dispatchReque
 import type { ActionResult } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { executeSiteCommand } from "@/lib/mobile/commands";
 
 export type RequestActionState = ActionResult<{ id: string }>;
 const failure = (message: string, fieldErrors?: Record<string, string[]>): RequestActionState => ({ ok: false, message, fieldErrors });
@@ -58,12 +59,9 @@ export async function submitMaterialRequestAction(_: RequestActionState, form: F
   if (!parsed.success) return failure("Review the material request details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("submit_material_request", {
-    p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId,
-    p_project_site_id: input.siteId, p_source_warehouse_id: input.warehouseId,
-    p_required_date: input.requiredDate, p_purpose: input.purpose, p_lines: input.lines,
-  });
-  if (error) return failure(requestError(error));
+  let data: string | undefined;
+  try { data = (await executeSiteCommand(supabase, { action: "request-materials", input })).id; }
+  catch (cause) { return failure(cause instanceof Error ? cause.message : "The request could not be saved."); }
   revalidatePath("/requests");
   redirect(`/requests/${data}`);
 }
@@ -82,11 +80,9 @@ export async function decideMaterialRequestAction(_: RequestActionState, form: F
   if (!parsed.success) return failure("Review the approval details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("decide_material_request", {
-    p_idempotency_key: input.idempotencyKey, p_request_id: input.requestId,
-    p_decisions: input.decisions, p_reason: input.reason || null,
-  });
-  if (error) return failure(requestError(error));
+  let data: string | undefined;
+  try { data = (await executeSiteCommand(supabase, { action: "decide-materials", input })).id; }
+  catch (cause) { return failure(cause instanceof Error ? cause.message : "The decision could not be saved."); }
   revalidatePath("/requests");
   revalidatePath(`/requests/${data}`);
   revalidatePath("/inventory");
@@ -134,11 +130,8 @@ export async function receiveRequestTransferAction(_: RequestActionState, form: 
   if (!parsed.success) return failure("Review the receipt details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.rpc("receive_request_transfer", {
-    p_idempotency_key: input.idempotencyKey, p_transfer_item_id: input.transferItemId,
-    p_quantity: input.quantity, p_transaction_date: input.transactionDate, p_remarks: input.remarks || null,
-  });
-  if (error) return failure(fulfillmentError(error));
+  try { await executeSiteCommand(supabase, { action: "receive-materials", input }); }
+  catch (cause) { return failure(cause instanceof Error ? cause.message : "Receipt could not be saved."); }
   revalidatePath("/requests"); revalidatePath(`/requests/${input.requestId}`); revalidatePath("/inventory/transfers"); revalidatePath("/inventory");
   return { ok: true, data: { id: input.requestId } };
 }

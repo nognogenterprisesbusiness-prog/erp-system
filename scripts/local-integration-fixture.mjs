@@ -15,10 +15,11 @@ export async function withLocalFixture(test) {
   if (!/^erp_test_[0-9a-f]{32}$/.test(database)) throw new Error("Invalid isolated database name.");
   // Copy into a disposable database: commands never mutate the original local database.
   execFileSync("docker", ["inspect", container], { stdio: "pipe", timeout: 15000 });
-  const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", "postgres", "-d", "postgres", "--no-owner"], { maxBuffer: 128 * 1024 * 1024, timeout: 60000 });
-  execFileSync("docker", ["exec", container, "createdb", "-U", "postgres", database], { timeout: 15000 });
+  const databaseAdmin = "supabase_admin";
+  const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", databaseAdmin, "-d", "postgres", "--no-owner"], { maxBuffer: 128 * 1024 * 1024, timeout: 60000 });
+  execFileSync("docker", ["exec", container, "createdb", "-U", databaseAdmin, database], { timeout: 15000 });
   const sql = async (statement) => {
-    const child = execFile("docker", ["exec", "-i", container, "psql", "-X", "-U", "postgres", "-d", database, "-v", "ON_ERROR_STOP=1", "-At"], { maxBuffer: 16 * 1024 * 1024, timeout: 60000 });
+    const child = execFile("docker", ["exec", "-i", container, "psql", "-X", "-U", databaseAdmin, "-d", database, "-v", "ON_ERROR_STOP=1", "-At"], { maxBuffer: 16 * 1024 * 1024, timeout: 60000 });
     child.stdin.end(statement);
     return await new Promise((resolve, reject) => { let output="", error=""; child.stdout.on("data", (d) => output+=d); child.stderr.on("data", (d) => error+=d); child.on("error", reject); child.on("close", (code) => code === 0 ? resolve(output.trim()) : reject(new Error(error))); });
   };
@@ -39,6 +40,6 @@ export async function withLocalFixture(test) {
     await test({ sql, as, users, result });
   } finally {
     // The exact generated test database is disposable; production/local company data is untouched.
-    await run("docker", ["exec", container, "dropdb", "-U", "postgres", "--force", database], { timeout: 15000 });
+    await run("docker", ["exec", container, "dropdb", "-U", databaseAdmin, "--force", database], { timeout: 15000 });
   }
 }

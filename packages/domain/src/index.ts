@@ -13,3 +13,4 @@ export * from "./procurement";
 export * from "./attendance";
 export * from "./project-costs";
 export * from "./project-operations";
+export * from "./mobile";

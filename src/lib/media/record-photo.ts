@@ -2,6 +2,8 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { RecordPhotoKind } from "./record-photo-url";
 import { verifyRecordPhoto } from "./verify-record-photo";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 
 
 export async function prepareRecordPhoto(value: FormDataEntryValue | null): Promise<Buffer | undefined> {
@@ -12,8 +14,8 @@ export async function prepareRecordPhoto(value: FormDataEntryValue | null): Prom
   return verifyRecordPhoto(Buffer.from(await value.arrayBuffer()));
 }
 
-export async function saveRecordPhoto(kind: RecordPhotoKind, id: string, bytes: Buffer) {
-  const supabase = await createClient();
+export async function saveRecordPhoto(kind: RecordPhotoKind, id: string, bytes: Buffer, client?: SupabaseClient<Database>) {
+  const supabase = client ?? await createClient();
   const path = `${kind}/${id}/cover.webp`;
   const { error: uploadError } = await supabase.storage.from("erp-record-photos").upload(path, bytes, { contentType: "image/webp", upsert: true, cacheControl: "0" });
   if (uploadError) {

@@ -16,13 +16,12 @@ type Choices = Awaited<ReturnType<typeof getMaterialRequestChoices>>;
 type Line = { key: string; materialId: string; quantity: string };
 const initialState: RequestActionState = { ok: false, message: "" };
 
-export function MaterialRequestForm({ choices, initialMaterialId = "", initialProjectId, initialSiteId, initialWarehouseId, initialQuantity, initialDate }: { choices: Choices; initialMaterialId?: string; initialProjectId?: string; initialSiteId?: string; initialWarehouseId?: string; initialQuantity?: string; initialDate?: string }) {
+export function MaterialRequestForm({ choices, idempotencyKey, initialLineKey, initialMaterialId = "", initialProjectId, initialSiteId, initialWarehouseId, initialQuantity, initialDate }: { choices: Choices; idempotencyKey: string; initialLineKey: string; initialMaterialId?: string; initialProjectId?: string; initialSiteId?: string; initialWarehouseId?: string; initialQuantity?: string; initialDate?: string }) {
   const [state, action, pending] = useActionState(submitMaterialRequestAction, initialState);
-  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [projectId, setProjectId] = useState(initialProjectId ?? choices.projects[0]?.id ?? "");
   const [siteId, setSiteId] = useState(initialSiteId ?? "");
   const [warehouseId, setWarehouseId] = useState(initialWarehouseId ?? "");
-  const [lines, setLines] = useState<Line[]>(() => [{ key: crypto.randomUUID(), materialId: initialMaterialId, quantity: initialQuantity ?? "" }]);
+  const [lines, setLines] = useState<Line[]>([{ key: initialLineKey, materialId: initialMaterialId, quantity: initialQuantity ?? "" }]);
   const sites = choices.sites.filter((item) => item.project_id === projectId);
   const warehouses = choices.warehouses.filter((item) => item.project_id === projectId);
   const selectedSite = sites.some((item) => item.id === siteId) ? siteId : sites[0]?.id ?? "";

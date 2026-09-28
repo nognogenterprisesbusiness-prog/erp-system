@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { MaterialRequestForm } from "@/components/requests/material-request-form";
@@ -21,5 +22,5 @@ export default async function NewMaterialRequestPage({ searchParams }: { searchP
   const initialQuantity = /^\d+(\.\d{1,4})?$/.test(query.quantity ?? "") && Number(query.quantity) > 0 ? query.quantity : undefined;
   const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(query.date ?? "") ? query.date : undefined;
   return <><PageHeader title="New material request" description="Request materials for an assigned project and site. A manager reviews quantities before stock is released." />
-    <div className="mt-7 max-w-4xl"><MaterialRequestForm choices={choices} initialMaterialId={initialMaterialId} initialProjectId={initialProjectId} initialSiteId={initialSiteId} initialWarehouseId={initialWarehouseId} initialQuantity={initialQuantity} initialDate={initialDate} /></div></>;
+    <div className="mt-7 max-w-4xl"><MaterialRequestForm choices={choices} idempotencyKey={randomUUID()} initialLineKey={randomUUID()} initialMaterialId={initialMaterialId} initialProjectId={initialProjectId} initialSiteId={initialSiteId} initialWarehouseId={initialWarehouseId} initialQuantity={initialQuantity} initialDate={initialDate} /></div></>;
 }

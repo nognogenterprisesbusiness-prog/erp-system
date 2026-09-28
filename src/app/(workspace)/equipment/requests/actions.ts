@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { equipmentRequestDecisionSchema, equipmentRequestInputSchema, equipmentReturnInputSchema, uuidSchema } from "@nognog/domain";
 import { requireManager, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { submitSiteEquipmentRequest } from '@/lib/mobile/equipment-request';
 
 export type EquipmentRequestActionState = { ok: boolean; message: string };
 const failure = (message: string): EquipmentRequestActionState => ({ ok: false, message });
@@ -30,11 +31,8 @@ export async function submitEquipmentRequestAction(_: EquipmentRequestActionStat
   if (!parsed.success) return failure("Choose equipment, an active site, valid dates, and a purpose of at least 3 characters.");
   const input = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.rpc("submit_equipment_request", {
-    p_asset_id: input.assetId, p_project_id: input.projectId, p_project_site_id: input.siteId,
-    p_needed_on: input.neededOn, p_expected_return_on: input.expectedReturnOn, p_purpose: input.purpose,
-  });
-  if (error) return failure(messageFor(error));
+  try { await submitSiteEquipmentRequest(supabase, input); }
+  catch(cause) { return failure(cause instanceof Error ? cause.message : 'The equipment request could not be saved.'); }
   revalidatePath("/equipment/requests");
   redirect("/equipment/requests");
 }

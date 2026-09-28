@@ -5,6 +5,7 @@ import { legacyTransitValueInputSchema, openingValueInputSchema, reversalInputSc
 import type { ActionResult } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { executeSiteCommand } from "@/lib/mobile/commands";
 
 export type InventoryActionState = ActionResult<{ id: string }>;
 const value = (form: FormData, key: string) => String(form.get(key) ?? "");
@@ -89,14 +90,9 @@ export async function consumeSiteMaterialAction(_: InventoryActionState, form: F
   if (!parsed.success) return failure("Review the site consumption details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("consume_site_material", {
-    p_idempotency_key: input.idempotencyKey, p_material_id: input.materialId,
-    p_site_location_id: input.siteLocationId, p_project_id: input.projectId,
-    p_quantity: input.quantity, p_unit_id: input.unitId,
-    p_reference_document: input.referenceNumber, p_transaction_date: input.transactionDate,
-    p_remarks: input.remarks || null,
-  });
-  if (error) return failure(friendlyInventoryError(error));
+  let data: string | undefined;
+  try { data = (await executeSiteCommand(supabase, { action: "consume-materials", input })).id; }
+  catch (cause) { return failure(cause instanceof Error ? cause.message : "Usage could not be saved."); }
   revalidatePath("/inventory"); revalidatePath("/inventory/transactions"); revalidatePath(`/projects/${input.projectId}`);
   redirect(`/inventory/transactions?posted=${data}`);
 }

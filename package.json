@@ -6,6 +6,9 @@
     "packages/*"
   ],
   "scripts": {
+    "test:mobile": "tsx --test packages/domain/src/mobile.test.ts src/lib/mobile/http.test.ts",
+    "test:mobile-http": "node scripts/test-mobile-http.mjs",
+    "test:mobile-integration": "node scripts/test-mobile-integration.mjs",
     "test:all": "tsx --test packages/domain/src/*.test.ts src/lib/**/*.test.ts src/components/ui/*.test.ts",
     "test:migrations": "node scripts/check-migration-versions.mjs",
     "test:erp-gaps": "tsx --test packages/domain/src/attendance.test.ts src/lib/data/pagination.test.ts",
