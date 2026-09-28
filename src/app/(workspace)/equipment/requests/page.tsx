@@ -9,13 +9,17 @@ import { Button } from "@/components/ui/button";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { SearchField } from "@/components/ui/search-field";
+import { SelectPicker } from "@/components/ui/select-picker";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { requireUser } from "@/lib/auth";
 import { readAllPages } from "@/lib/data/read-all-pages";
+import { safeSearchTerm } from "@/lib/data/search";
 import { createClient } from "@/lib/supabase/server";
 
 const pageSize = 20;
 const statuses = ["all", "submitted", "approved", "checked_out", "overdue", "returned", "rejected"] as const;
+const statusLabels: Record<(typeof statuses)[number], string> = { all: "All statuses", submitted: "Submitted", approved: "Approved", checked_out: "Checked out", overdue: "Overdue", returned: "Returned", rejected: "Rejected" };
 
 export default async function EquipmentRequestsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
@@ -26,6 +30,7 @@ export default async function EquipmentRequestsPage({ searchParams }: { searchPa
   const requestedSite = uuidSchema.safeParse(params.site);
   const requestedAsset = uuidSchema.safeParse(params.asset);
   const status = z.enum(statuses).safeParse(params.status);
+  const search = typeof params.q === "string" ? params.q.slice(0, 100) : "";
   const rawPage = Number(params.page);
   const page = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1;
   const supabase = await createClient();
@@ -44,6 +49,8 @@ export default async function EquipmentRequestsPage({ searchParams }: { searchPa
     .order("created_at", { ascending: false }).order("id");
   if (projectId) query = query.eq("project_id", projectId);
   if (requestedAsset.success) query = query.eq("asset_id", requestedAsset.data);
+  const term = safeSearchTerm(search);
+  if (term) query = query.or(`asset_name.ilike.%${term}%,asset_code.ilike.%${term}%`);
   if (currentStatus === "overdue") query = query.eq("status", "checked_out").lt("expected_return_on", today);
   else if (currentStatus !== "all") query = query.eq("status", currentStatus);
   const [{ data: requests, count, error: requestError }, { data: equipment, error: equipmentError }] = await Promise.all([
@@ -59,15 +66,16 @@ export default async function EquipmentRequestsPage({ searchParams }: { searchPa
   const siteNames = new Map(sites.map((item) => [item.id, item.name]));
   const total = count ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const pageHref = (target: number) => { const next = new URLSearchParams(); if (projectId) next.set("project", projectId); if (siteId) next.set("site", siteId); if (requestedAsset.success) next.set("asset", requestedAsset.data); if (currentStatus !== "all") next.set("status", currentStatus); next.set("page", String(target)); return `/equipment/requests?${next}`; };
+  const pageHref = (target: number) => { const next = new URLSearchParams(); if (projectId) next.set("project", projectId); if (siteId) next.set("site", siteId); if (requestedAsset.success) next.set("asset", requestedAsset.data); if (currentStatus !== "all") next.set("status", currentStatus); if (search) next.set("q", search); next.set("page", String(target)); return `/equipment/requests?${next}`; };
   return <>
     <PageHeader title={canRequest ? "Equipment requests" : "Equipment handovers"} description={canRequest ? "Request equipment or a vehicle for an assigned project and follow its handover." : "Review equipment and vehicle requests, approve handovers, and record returns."} action={<Button variant="outline" asChild><Link href="/equipment">Equipment registry</Link></Button>} />
     {requestedAsset.success && <p className="mt-3 text-sm text-slate-600">Showing requests for the scanned asset. <Link href="/equipment/requests" className="font-semibold text-cyan-700 hover:underline">Clear asset filter</Link></p>}
-    <ListFilterBar action="/equipment/requests" className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1.2fr_170px_auto] lg:items-end">
+    <ListFilterBar>
       {requestedAsset.success && <input type="hidden" name="asset" value={requestedAsset.data} />}
-      <label className="grid gap-1 text-xs font-medium text-slate-600">Project<select name="project" defaultValue={projectId} className="h-10 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm"><option value="">All projects</option>{activeProjects.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select></label>
-      <label className="grid gap-1 text-xs font-medium text-slate-600">Site<select name="site" defaultValue={siteId} className="h-10 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm"><option value="">Select site</option>{activeSites.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      <label className="grid gap-1 text-xs font-medium text-slate-600">Status<select name="status" defaultValue={currentStatus} className="h-10 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm">{statuses.map((item) => <option key={item} value={item}>{item === "all" ? "All statuses" : item.replaceAll("_", " ")}</option>)}</select></label>
+      <SearchField name="q" label="Search equipment or vehicle" defaultValue={search} placeholder="Search equipment or vehicle" />
+      <div className="min-w-[220px]"><SelectPicker name="project" label="Project" defaultValue={projectId || "all"} options={[{ value: "all", label: "All projects" }, ...activeProjects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))]} /></div>
+      {canRequest && projectId && <div className="min-w-[180px]"><SelectPicker name="site" label="Site" defaultValue={siteId || "all"} options={[{ value: "all", label: "Select site" }, ...activeSites.map((item) => ({ value: item.id, label: item.name }))]} /></div>}
+      <div className="min-w-[180px]"><SelectPicker name="status" label="Status" defaultValue={currentStatus} options={statuses.map((value) => ({ value, label: statusLabels[value] }))} /></div>
     </ListFilterBar>
     {canRequest && projectId && siteId && <EquipmentRequestForm key={`${projectId}:${siteId}`} projectId={projectId} siteId={siteId} equipment={equipment ?? []} initialAssetId={requestedAsset.success ? requestedAsset.data : ""} />}
     <div className="mt-5"><DataTableShell empty={(requests ?? []).length === 0 ? <EmptyState kind="items" title="No equipment requests" /> : undefined}>

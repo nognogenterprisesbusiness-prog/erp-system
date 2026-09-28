@@ -20,15 +20,24 @@ export async function readRecordPhoto(
     return new Response(null, { status: 404 });
   const { table, archivable } = photoTables[kind as keyof typeof photoTables];
   const path = `${kind}/${id}/cover.webp`;
-  let record = client.from(table).select("photo_path").eq("id", id);
-  if (archivable) record = record.is("archived_at", null);
+  // Asset photos include requestable warehouse assets outside the caller's registry view.
+  const lookup = async () => {
+    if (kind === "assets") {
+      const r = await client.rpc("get_asset_photo_paths", { p_asset_ids: [id] });
+      return { error: r.error, photoPath: r.data?.[0]?.photo_path };
+    }
+    let record = client.from(table).select("photo_path").eq("id", id);
+    if (archivable) record = record.is("archived_at", null);
+    const r = await record.maybeSingle();
+    return { error: r.error, photoPath: r.data?.photo_path };
+  };
   // The record check and the private download run together; the photo is only
-  // returned when the RLS-visible record still points at this exact path.
+  // returned when the visible record still points at this exact path.
   const [result, photo] = await Promise.all([
-    record.maybeSingle(),
+    lookup(),
     client.storage.from("erp-record-photos").download(path),
   ]);
-  if (result.error || result.data?.photo_path !== path || photo.error || !photo.data)
+  if (result.error || result.photoPath !== path || photo.error || !photo.data)
     return new Response(null, { status: 404 });
   return new Response(await photo.data.arrayBuffer(), {
     headers: {

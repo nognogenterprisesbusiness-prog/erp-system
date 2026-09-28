@@ -1,3 +1,7 @@
+-- Policies on storage.objects need an exclusive lock; fail fast instead of
+-- deadlocking with live photo reads. Re-run if it times out.
+set local lock_timeout = '5s';
+
 -- Storage uploads insert with RETURNING, so the new object must also pass a
 -- SELECT policy. Material and supplier photos were only readable once the
 -- record's photo_path pointed at them, but photo_path is attached only after a

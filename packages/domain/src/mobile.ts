@@ -186,10 +186,11 @@ export const mobileResponseSchemas = {
       name: z.string(),
       status: z.string(),
       asset_kind: z.enum(assetKinds).optional(),
+      photo_path: text.optional(),
     }),
   ),
   "equipment-options": page(
-    z.object({ id: uuidSchema, code: z.string(), name: z.string(), kind: z.enum(assetKinds).optional() }),
+    z.object({ id: uuidSchema, code: z.string(), name: z.string(), kind: z.enum(assetKinds).optional(), photo_path: text.optional() }),
   ),
   "equipment-requests": page(
     z.object({
@@ -204,6 +205,7 @@ export const mobileResponseSchemas = {
       expected_return_on: z.string(),
       purpose: z.string(),
       requested_by: uuidSchema,
+      photo_path: text.optional(),
     }),
   ),
   "equipment-history": page(

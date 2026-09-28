@@ -39,6 +39,19 @@ async function siteLocation(c: Client, q: MobileQuery) {
   if (r.error) databaseError(r.error);
   return r.data!.id;
 }
+/** Photo paths for assets the caller may see, including requestable warehouse assets. */
+async function assetPhotos(c: Client, assetIds: string[]) {
+  const ids = [...new Set(assetIds)];
+  if (!ids.length) return new Map<string, string>();
+  const r = await c.rpc("get_asset_photo_paths", { p_asset_ids: ids });
+  // Photos are optional: a failed lookup (e.g. migration not yet applied) must
+  // not block the list, so rows fall back to their icon.
+  if (r.error) {
+    console.error("Asset photo lookup failed:", r.error.message);
+    return new Map<string, string>();
+  }
+  return new Map((r.data ?? []).map((x) => [x.asset_id, x.photo_path]));
+}
 async function materialReferences(
   c: Client,
   materialIds: string[],
@@ -422,7 +435,7 @@ export async function readMobileResource(
       if (l.error) databaseError(l.error);
       let query = c
         .from("assets")
-        .select("id,code,name,status,asset_kind", { count: "exact" })
+        .select("id,code,name,status,asset_kind,photo_path", { count: "exact" })
         .eq("current_location_id", l.data!.id)
         .is("archived_at", null)
         .order("name")
@@ -446,8 +459,13 @@ export async function readMobileResource(
         ...(q.date ? { p_date: q.date } : {}),
       });
       if (r.error) databaseError(r.error);
+      const records = (r.data ?? []).map((x) => x.record as Record<string, unknown>);
+      const photos =
+        resource === "equipment-options"
+          ? await assetPhotos(c, records.map((x) => String(x.id)))
+          : null;
       return page(
-        (r.data ?? []).map((x) => x.record),
+        photos ? records.map((x) => ({ ...x, photo_path: photos.get(String(x.id)) ?? null })) : records,
         r.data?.[0]?.total_count ?? 0,
         q,
       );
@@ -465,7 +483,12 @@ export async function readMobileResource(
       if (search) query = query.ilike("asset_name", `%${search}%`);
       const r = await query.range(offset, offset + size - 1);
       if (r.error) databaseError(r.error);
-      return page(r.data ?? [], r.count, q);
+      const photos = await assetPhotos(c, (r.data ?? []).map((x) => x.asset_id));
+      return page(
+        (r.data ?? []).map((x) => ({ ...x, photo_path: photos.get(x.asset_id) ?? null })),
+        r.count,
+        q,
+      );
     }
     case "reports": {
       let query = c

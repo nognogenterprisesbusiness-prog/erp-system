@@ -306,6 +306,7 @@ export type Database = {
       get_dashboard_totals: { Args: Record<string, never>; Returns: { total_sales: number; total_expenses: number | null; total_material_value: number | null; unvalued_stock: number; unvalued_expenses: number }[] };
       get_project_material_plan: { Args: { p_project_id: string }; Returns: ProjectMaterialPlanView[] };
       get_project_material_estimate: { Args: { p_project_id: string }; Returns: ProjectMaterialEstimateView[] };
+      get_asset_photo_paths: { Args: { p_asset_ids: string[] }; Returns: { asset_id: string; photo_path: string }[] };
       save_project_material_plan_line: { Args: { p_project_id: string; p_site_id: string; p_warehouse_id: string; p_material_id: string; p_quantity: number | string; p_required_on: string; p_note: string }; Returns: string };
       record_project_progress: { Args: { p_report_id: string; p_percent: number | string; p_summary: string }; Returns: string };
       record_inventory_stock_count: { Args: { p_key: string; p_material_id: string; p_location_id: string; p_counted: number | string; p_reason_type: "physical_count" | "damaged" | "missing"; p_reason: string }; Returns: string };
