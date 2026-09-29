@@ -13,13 +13,13 @@ import { HistoryLink } from "@/components/layout/history-link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { cn } from "@/lib/utils";
 
-export type ShellNavItem = { href: string; label: string; icon: IconSvgElement; group?: string };
+export type ShellNavItem = { href: string; label: string; icon: IconSvgElement; group?: string; nested?: boolean };
 type FooterAction = { label: string; icon: IconSvgElement; onClick: () => void };
 type NavigationMode = "client" | "document" | "history";
 
 function SidebarLink({ item, active, compact, navigationMode, onNavigate }: { item: ShellNavItem; active: boolean; compact: boolean; navigationMode: NavigationMode; onNavigate?: () => void }) {
-  const className = cn("flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400", compact && "justify-center px-0", active ? "bg-cyan-400/12 font-medium text-cyan-200" : "hover:bg-white/6 hover:text-white");
-  const content = <><HugeiconsIcon icon={item.icon} size={19} strokeWidth={1.7} className="shrink-0" /><span className={compact ? "sr-only" : "truncate"}>{item.label}</span></>;
+  const className = cn("flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400", item.nested && !compact && "pl-10 text-[13px]", compact && "justify-center px-0", active ? "bg-cyan-400/12 font-medium text-cyan-200" : "hover:bg-white/6 hover:text-white");
+  const content = <><HugeiconsIcon icon={item.icon} size={item.nested ? 16 : 19} strokeWidth={1.7} className="shrink-0" /><span className={compact ? "sr-only" : "truncate"}>{item.label}</span></>;
   return navigationMode === "document"
     ? <a href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined} aria-label={compact ? item.label : undefined} title={compact ? item.label : undefined} className={className}>{content}</a>
     : navigationMode === "history"

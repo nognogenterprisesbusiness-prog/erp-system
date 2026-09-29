@@ -22,10 +22,10 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const pageHref = (target: number) => `/billing?${new URLSearchParams({ ...(query ? { q: query } : {}), page: String(target) })}`;
   return <>
     <PageHeader title="Client billing" description="Issued project invoices, partial payments, and outstanding balances." action={<Button asChild><Link href="/billing/new"><HugeiconsIcon icon={PlusSignIcon} size={17} /> New invoice</Link></Button>} />
-    <ListFilterBar className="mt-7 flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-4">
-      <SearchField name="q" label="Search invoices" defaultValue={query} placeholder="Search invoice, client, or description" wrapperClassName="min-w-[220px] flex-1" />
+    <ListFilterBar className="mt-7">
+      <SearchField name="q" label="Search invoices" defaultValue={query} placeholder="Search invoice, client, or description" wrapperClassName="w-full max-w-sm" />
     </ListFilterBar>
-    <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No invoices found" description="Issue an invoice or change the search." /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} invoice{result.count === 1 ? "" : "s"}</span>}>
+    <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No invoices found" description="Issue an invoice or change the search." /> : undefined}>
       <table className="w-full min-w-[790px] text-left text-sm"><thead className={tableHeadClass}><tr>
         <th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / client</th><th className="px-4 py-3">Issued / due</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Outstanding</th><th className="px-5 py-3">Status</th>
       </tr></thead><tbody className="divide-y divide-slate-100">{result.rows.map((row) => <tr key={row.id} className="hover:bg-slate-50/70">
@@ -36,6 +36,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${row.status === "void" ? "bg-slate-100 text-slate-600" : row.balance?.outstanding_amount === 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{row.status === "void" ? "Void" : row.balance?.outstanding_amount === 0 ? "Paid" : "Open"}</span></td>
       </tr>)}</tbody></table>
     </DataTableShell>
+    <p className="mt-2 text-right text-xs text-slate-500">{result.count} invoice{result.count === 1 ? "" : "s"}</p>
     {result.pageCount > 1 && <nav aria-label="Invoice pages" className="mt-4 flex items-center justify-end gap-2">
       {result.page > 1 ? <Button variant="outline" size="sm" asChild><Link href={pageHref(result.page - 1)}>Previous</Link></Button> : <Button variant="outline" size="sm" disabled>Previous</Button>}
       <span className="px-2 text-xs text-slate-500">Page {result.page} of {result.pageCount}</span>

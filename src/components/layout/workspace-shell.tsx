@@ -1,6 +1,6 @@
 "use client";
 
-import { AssignmentsIcon, Audit01Icon, Building03Icon, Car01Icon, DashboardSquare01Icon, DeliveryTruck01Icon, ExcavatorIcon, File02Icon, FilePenLineIcon, Logout01Icon, QrCodeIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Audit01Icon, Building03Icon, Car01Icon, DashboardSquare01Icon, DeliveryTruck01Icon, ExcavatorIcon, File02Icon, FilePenLineIcon, Logout01Icon, QrCodeIcon, SearchDollarIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { logoutAction } from "@/app/auth/actions";
@@ -25,8 +25,12 @@ const navItems = [
   { href: "/vehicles", label: "Vehicles", icon: Car01Icon, group: "Materials & assets" },
   { href: "/qr-codes", label: "QR tools", icon: QrCodeIcon, group: "Materials & assets" },
   { href: "/suppliers", label: "Suppliers & purchases", icon: Store02Icon, procurement: true, group: "Purchasing & finance" },
+  { href: "/suppliers/prices", label: "Compare prices", icon: SearchDollarIcon, procurement: true, nested: true, group: "Purchasing & finance" },
+  { href: "/suppliers/categories", label: "Categories", icon: Tag01Icon, manager: true, nested: true, group: "Purchasing & finance" },
   { href: "/billing", label: "Billing & payments", icon: File02Icon, finance: true, group: "Purchasing & finance" },
   { href: "/employees", label: "Employees", icon: UserGroupIcon, group: "People & administration" },
+  { href: "/attendance", label: "Attendance", icon: AssignmentsIcon, nested: true, group: "People & administration" },
+  { href: "/employees/categories", label: "Categories", icon: Tag01Icon, manager: true, nested: true, group: "People & administration" },
   { href: "/users", label: "Users", icon: UserGroupIcon, manager: true, group: "People & administration" },
   { href: "/audit-logs", label: "Audit logs", icon: Audit01Icon, manager: true, group: "People & administration" },
 ] as const;
@@ -34,7 +38,7 @@ const navItems = [
 export function WorkspaceShell({ children, userId, name, avatar, roleLabel, canViewProcurement, canViewFinance, canViewDailyReports, canViewRequests, canDispatchRequests, canManage }: { children: React.ReactNode; userId: string; name: string; avatar?: string; roleLabel: string; canViewProcurement: boolean; canViewFinance: boolean; canViewDailyReports: boolean; canViewRequests: boolean; canDispatchRequests: boolean; canManage: boolean }) {
   const pathname = usePathname();
   const items = navItems.filter((item) => (!("procurement" in item) || canViewProcurement) && (!("finance" in item) || canViewFinance) && (!("reports" in item) || canViewDailyReports) && (!("requests" in item) || canViewRequests || canDispatchRequests) && (!("manager" in item) || canManage)).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item);
-  const activeHref = pathname.startsWith("/materials") ? "/inventory" : pathname.startsWith("/purchase-orders") ? "/suppliers" : pathname.startsWith("/attendance") ? "/employees" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
+  const activeHref = pathname.startsWith("/materials") ? "/inventory" : pathname.startsWith("/purchase-orders") ? "/suppliers" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
   return <><Suspense fallback={null}><LiveRouteRefresh userId={userId} /></Suspense><AppShell name={name} avatar={avatar} roleLabel={roleLabel} items={items} activeHref={activeHref} footerItems={[{ href: "/profile", label: "My profile", icon: UserCircleIcon }, { href: "/notifications", label: "Notifications", icon: Notification01Icon }, { href: "/help", label: "Help centre", icon: HelpCircleIcon }]} homeHref="/dashboard" headerSearch={<HeaderSearch />} headerActions={<>
     <NotificationBell userId={userId} />
   </>} profileActions={<><Link href="/profile" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-normal text-slate-700 hover:bg-slate-50"><HugeiconsIcon icon={UserCircleIcon} size={17} strokeWidth={1.7} />My profile</Link><form action={logoutAction}><Button variant="ghost" className="w-full justify-start gap-2 px-3 text-sm font-normal" type="submit"><HugeiconsIcon icon={Logout01Icon} size={17} strokeWidth={1.7} />Sign out</Button></form></>}>{children}</AppShell></>;
