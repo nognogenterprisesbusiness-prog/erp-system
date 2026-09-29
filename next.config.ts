@@ -9,10 +9,11 @@ const nextConfig: NextConfig = {
       {
         source: "/api/mobile/:path*",
         headers: [
-          { key: "Access-Control-Allow-Origin", value: "http://localhost:8083" },
+          // Dev only: Expo web runs on any local port or LAN IP. Mobile auth is a
+          // bearer token, not cookies, so a wildcard origin exposes nothing.
+          { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
           { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type" },
-          { key: "Vary", value: "Origin" },
         ],
       },
     ];
