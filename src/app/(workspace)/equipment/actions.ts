@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { assetCategoryInputSchema, assetLocationInputSchema, equipmentInputSchema, vehicleInputSchema, uuidSchema } from "@nognog/domain";
+import { assetCategoryInputSchema,equipmentInputSchema, vehicleInputSchema, uuidSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireManager } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -110,22 +110,4 @@ export async function archiveAssetCategoryAction(form: FormData) {
   if (error) throw new Error(friendlyAssetError(error));
   revalidatePath("/equipment/categories"); revalidatePath("/equipment"); revalidatePath("/vehicles");
   redirect(`/equipment/categories?kind=${kind}`);
-}
-
-export async function saveAssetLocationAction(_: AssetActionState, form: FormData): Promise<AssetActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to manage asset locations."); }
-  const parsed = assetLocationInputSchema.safeParse({ id: value(form, "id") || undefined, locationKind: value(form, "locationKind"), name: value(form, "name"), address: value(form, "address") });
-  if (!parsed.success) return failure("Review the location details.", parsed.error.flatten().fieldErrors);
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("save_asset_location", { p_id: parsed.data.id ?? null, p_location_kind: parsed.data.locationKind, p_name: parsed.data.name, p_address: parsed.data.address });
-  if (error) return failure(friendlyAssetError(error));
-  revalidatePath("/equipment/locations"); revalidatePath("/equipment"); revalidatePath("/vehicles");
-  redirect("/equipment/locations");
-}
-
-export async function archiveAssetLocationAction(form: FormData) {
-  await requireManager();
-  const supabase = await createClient(); const { error } = await supabase.rpc("archive_asset_location", { p_id: value(form, "id") });
-  if (error) throw new Error(friendlyAssetError(error));
-  revalidatePath("/equipment/locations"); revalidatePath("/equipment"); revalidatePath("/vehicles");
 }

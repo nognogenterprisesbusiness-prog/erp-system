@@ -5,7 +5,6 @@ export const assetKinds = ["equipment", "vehicle"] as const;
 export const assetOwnershipTypes = ["company_owned", "rented", "leased"] as const;
 export const assetStatuses = ["available", "assigned", "in_use", "under_maintenance", "out_of_service", "retired"] as const;
 export const registryAssetStatuses = ["available", "under_maintenance", "out_of_service"] as const;
-export const standaloneAssetLocationKinds = ["maintenance_facility", "other"] as const;
 
 /** Vehicles share the equipment request and hours workflows, so pickers mark them. */
 export function vehicleTag(kind?: (typeof assetKinds)[number] | null) {
@@ -21,13 +20,6 @@ export const assetCategoryInputSchema = z.object({
   assetKind: z.enum(assetKinds),
   name: z.string().trim().min(2).max(120),
   description: optionalTextSchema,
-});
-
-export const assetLocationInputSchema = z.object({
-  id: uuidSchema.optional(),
-  locationKind: z.enum(standaloneAssetLocationKinds),
-  name: z.string().trim().min(2).max(160),
-  address: z.string().trim().min(3).max(300),
 });
 
 const decimalMoneySchema = z.string().trim().regex(/^\d+(\.\d{1,2})?$/, "Enter a non-negative amount with up to two decimal places");
@@ -83,6 +75,5 @@ export const equipmentReturnInputSchema = z.object({
 });
 
 export type AssetCategoryInput = z.infer<typeof assetCategoryInputSchema>;
-export type AssetLocationInput = z.infer<typeof assetLocationInputSchema>;
 export type EquipmentInput = z.infer<typeof equipmentInputSchema>;
 export type VehicleInput = z.infer<typeof vehicleInputSchema>;

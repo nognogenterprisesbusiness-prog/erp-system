@@ -1,20 +1,16 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { IntentLink as Link } from "@/components/layout/intent-link";
-import { notFound } from "next/navigation";
 import Image from "next/image";
 import { uuidSchema } from "@nognog/domain";
 import { z } from "zod";
 import { EquipmentRequestActions } from "@/components/assets/equipment-request-actions";
 import { EquipmentRequestForm } from "@/components/assets/equipment-request-form";
-import { RequestTypeNav } from "@/components/requests/request-type-nav";
 import { Button } from "@/components/ui/button";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
-import { requireUser } from "@/lib/auth";
 import { readAllPages } from "@/lib/data/read-all-pages";
 import { safeSearchTerm } from "@/lib/data/search";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
@@ -55,10 +51,8 @@ function HandoverRow({ item, isVehicle, photoPath, projectName, siteName, canMan
   </tr>;
 }
 
-export async function EquipmentRequestsView({ params, kind }: { params: Record<string, string | string[] | undefined>; kind: "equipment" | "vehicle" }) {
-  const user = await requireUser();
-  const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
-  if (!user.canManage && !canRequest) notFound();
+/** Equipment or vehicle request list; the requests page authorizes access and renders the header. */
+export async function EquipmentRequestsView({ params, kind, canManage, canRequest }: { params: Record<string, string | string[] | undefined>; kind: "equipment" | "vehicle"; canManage: boolean; canRequest: boolean }) {
   const requestedProject = uuidSchema.safeParse(params.project);
   const requestedSite = uuidSchema.safeParse(params.site);
   const requestedAsset = uuidSchema.safeParse(params.asset);
@@ -102,8 +96,6 @@ export async function EquipmentRequestsView({ params, kind }: { params: Record<s
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const pageHref = (target: number) => { const next = new URLSearchParams(); next.set("type", kind); if (projectId) next.set("project", projectId); if (siteId) next.set("site", siteId); if (requestedAsset.success) next.set("asset", requestedAsset.data); if (currentStatus !== "all") next.set("status", currentStatus); if (search) next.set("q", search); next.set("page", String(target)); return `/requests?${next}`; };
   return <>
-    <PageHeader title="Requests" description={kind === "vehicle" ? "Request vehicles and follow their approval and handover." : "Request equipment and follow its approval and handover."} />
-    <RequestTypeNav active={kind} />
     {requestedAsset.success && <p className="mt-3 text-sm text-slate-600">Showing requests for the scanned asset. <Link href={`/requests?type=${kind}`} className="font-semibold text-cyan-700 hover:underline">Clear asset filter</Link></p>}
     <ListFilterBar>
       <input type="hidden" name="type" value={kind} />
@@ -116,9 +108,9 @@ export async function EquipmentRequestsView({ params, kind }: { params: Record<s
     {canRequest && projectId && siteId && <EquipmentRequestForm key={`${projectId}:${siteId}:${kind}`} projectId={projectId} siteId={siteId} equipment={(equipment ?? []).filter((item) => item.asset_kind === kind)} kind={kind} initialAssetId={requestedAsset.success ? requestedAsset.data : ""} />}
     <div className="mt-5"><DataTableShell empty={(requests ?? []).length === 0 ? <EmptyState kind="items" title={`No ${kind} requests`} /> : undefined}>
       <table className="w-full min-w-[960px] text-left text-sm">
-        <thead className={tableHeadClass}><tr><th className="px-5 py-3">Equipment / vehicle</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Needed / return</th><th className="px-4 py-3">Purpose</th><th className="px-4 py-3">Status</th>{user.canManage && <th className="px-5 py-3 text-right">Actions</th>}</tr></thead>
+        <thead className={tableHeadClass}><tr><th className="px-5 py-3">Equipment / vehicle</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Needed / return</th><th className="px-4 py-3">Purpose</th><th className="px-4 py-3">Status</th>{canManage && <th className="px-5 py-3 text-right">Actions</th>}</tr></thead>
         <tbody className="divide-y divide-slate-100">{(requests ?? []).map((item) => (
-          <HandoverRow key={item.id} item={item} isVehicle={kind === "vehicle"} photoPath={photoPaths.get(item.asset_id) ?? null} projectName={projectNames.get(item.project_id) ?? "Project"} siteName={siteNames.get(item.project_site_id) ?? "Site"} canManage={user.canManage} today={today} />
+          <HandoverRow key={item.id} item={item} isVehicle={kind === "vehicle"} photoPath={photoPaths.get(item.asset_id) ?? null} projectName={projectNames.get(item.project_id) ?? "Project"} siteName={siteNames.get(item.project_site_id) ?? "Site"} canManage={canManage} today={today} />
         ))}</tbody>
       </table>
     </DataTableShell></div>
