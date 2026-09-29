@@ -6,13 +6,13 @@ import { safeSearchTerm } from "./search";
 import type { AppRole, ProjectStatus } from "@/types/database";
 
 const PAGE_SIZE = 20;
-export type ProjectListParams = { query?: string; status?: ProjectStatus | "all"; sort?: "newest" | "name" | "target" | "code" | "budget" | "client" | "status"; direction?: "asc" | "desc"; page?: number; includeProgress?: boolean };
+export type ProjectListParams = { query?: string; status?: ProjectStatus | "all"; sort?: "newest" | "name" | "target" | "code" | "client" | "status"; direction?: "asc" | "desc"; page?: number; includeProgress?: boolean };
 
 export async function getProjects(params: ProjectListParams = {}) {
   const supabase = await createClient();
   const page = Math.max(1, params.page ?? 1);
   const from = (page - 1) * PAGE_SIZE;
-  let query = supabase.from("projects").select("id,code,name,photo_path,client_name,city_province,start_date,target_completion_date,status,initial_budget,created_at,updated_at", { count: "exact" }).is("archived_at", null);
+  let query = supabase.from("projects").select("id,code,name,photo_path,client_name,city_province,start_date,target_completion_date,status,created_at,updated_at", { count: "exact" }).is("archived_at", null);
   const search = safeSearchTerm(params.query);
   if (search) query = query.or(`name.ilike.%${search}%,code.ilike.%${search}%,client_name.ilike.%${search}%`);
   if (params.status && params.status !== "all") query = query.eq("status", params.status);
@@ -20,7 +20,6 @@ export async function getProjects(params: ProjectListParams = {}) {
   if (params.sort === "name") query = query.order("name", { ascending });
   else if (params.sort === "target") query = query.order("target_completion_date", { ascending });
   else if (params.sort === "code") query = query.order("code", { ascending });
-  else if (params.sort === "budget") query = query.order("initial_budget", { ascending });
   else if (params.sort === "client") query = query.order("client_name", { ascending });
   else if (params.sort === "status") query = query.order("status", { ascending });
   else query = query.order("created_at", { ascending });

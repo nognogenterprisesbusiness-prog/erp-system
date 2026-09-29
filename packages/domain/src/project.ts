@@ -22,7 +22,6 @@ const projectFields = z.object({
   targetCompletionDate: z.iso.date(),
   actualCompletionDate: z.iso.date().optional().or(z.literal("")),
   contractAmount: moneySchema,
-  initialBudget: moneySchema,
   status: projectStatusSchema,
   projectManagerId: uuidSchema.optional().or(z.literal("")),
 });

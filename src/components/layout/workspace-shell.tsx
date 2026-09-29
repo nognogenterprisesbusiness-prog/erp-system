@@ -16,6 +16,7 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: DashboardSquare01Icon, group: "Projects & operations" },
   { href: "/projects", label: "Projects", icon: Building03Icon, group: "Projects & operations" },
+  { href: "/documents", label: "Documents", icon: File02Icon, reports: true, group: "Projects & operations" },
   { href: "/reports/daily", label: "Daily reports", icon: FilePenLineIcon, reports: true, group: "Projects & operations" },
   { href: "/inventory", label: "Inventory", icon: Package01Icon, group: "Materials & assets" },
   { href: "/warehouses", label: "Warehouses", icon: WarehouseIcon, group: "Materials & assets" },

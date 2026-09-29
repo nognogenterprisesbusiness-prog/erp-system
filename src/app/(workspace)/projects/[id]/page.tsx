@@ -22,7 +22,6 @@ import { getProjectProfitability } from "@/lib/data/project-costs";
 import { getProjectMaterialCost } from "@/lib/data/inventory";
 import { getProjectMaterialPlan, getProjectProgress } from "@/lib/data/project-operations";
 import { getProjectWorkerCount, getProjectWorkforce } from "@/lib/data/workforce";
-import { getDailyReports } from "@/lib/data/daily-reports";
 import { getActiveQrCodesForEntities } from "@/lib/data/qr-codes";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
 import { findMunicipality } from "@/lib/locations";
@@ -34,24 +33,22 @@ const date = (value: string | null) => value ? new Intl.DateTimeFormat("en-PH", 
 const tabs = [
   { key: "overview", label: "Overview" }, { key: "sites", label: "Sites" },
   { key: "labour", label: "Labour" }, { key: "materials", label: "Materials" },
-  { key: "finance", label: "Finance" }, { key: "documents", label: "Documents" },
+  { key: "finance", label: "Finance" },
 ] as const;
 
 export default async function ProjectDetailPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; page?: string; edit?: string }>;
+  searchParams: Promise<{ tab?: string; edit?: string }>;
 }) {
   const [{ id }, filters, user] = await Promise.all([params, searchParams, requireUser()]);
   const data = await getProject(id);
   const { project, sites, profiles } = data;
-  const visibleTabs = tabs.filter((tab) => tab.key === "finance" ? user.canViewLaborRates : ["materials", "documents"].includes(tab.key) ? user.canViewDailyReports : true);
+  const visibleTabs = tabs.filter((tab) => tab.key === "finance" ? user.canViewLaborRates : tab.key === "materials" ? user.canViewDailyReports : true);
   const tab = visibleTabs.find((item) => item.key === filters.tab)?.key ?? "overview";
-  const reportPage = Math.max(1, Math.min(10000, Number.parseInt(filters.page ?? "1", 10) || 1));
   const returnParams = new URLSearchParams();
   if (tab !== "overview") returnParams.set("tab", tab);
-  if (tab === "documents" && reportPage > 1) returnParams.set("page", String(reportPage));
   const returnHref = `/projects/${id}${returnParams.size ? `?${returnParams}` : ""}`;
-  const [workerCount, progress, profitability, workforce, materialPlan, materialCosts, siteQrCodes, reports, equipmentChoices] = await Promise.all([
+  const [workerCount, progress, profitability, workforce, materialPlan, materialCosts, siteQrCodes, equipmentChoices] = await Promise.all([
     getProjectWorkerCount(id),
     user.canViewDailyReports ? getProjectProgress(id) : Promise.resolve([]),
     user.canViewLaborRates ? getProjectProfitability(id) : Promise.resolve(null),
@@ -59,7 +56,6 @@ export default async function ProjectDetailPage({ params, searchParams }: {
     tab === "materials" ? getProjectMaterialPlan(id) : Promise.resolve([]),
     tab === "materials" && (user.canViewLaborRates || user.roles.includes("engineer")) ? getProjectMaterialCost(id) : Promise.resolve(null),
     tab === "sites" && user.canManage ? getActiveQrCodesForEntities("project_site", sites.map((site) => site.id)) : Promise.resolve([]),
-    tab === "documents" ? getDailyReports({ projectId: id, page: reportPage }) : Promise.resolve(null),
     user.roles.includes("foreman") && ["active", "on_hold"].includes(project.status) ? getProjectEquipmentChoices(id) : Promise.resolve([]),
   ]);
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -88,6 +84,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
       <MetricCard label="Workers" value={workerCount} detail="Active project assignments" icon={UserGroupIcon} tone="bg-amber-50 text-amber-600" />
       <MetricCard label="Progress" value={user.canViewDailyReports ? `${completion}%` : "—"} detail={!user.canViewDailyReports ? "Available to project reporting roles" : progress[0] ? `Updated ${date(progress[0].progress_date)}` : "No progress update recorded"} icon={Building03Icon} tone="bg-violet-50 text-violet-600" />
     </section>
+    {(user.canManage || user.canViewDailyReports) && <div className="mt-4 flex justify-end"><Button variant="outline" size="sm" asChild><Link href={`/documents?project=${id}`}>Project documents</Link></Button></div>}
     <nav aria-label="Project sections" className="mt-6 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 sm:flex sm:rounded-full">{visibleTabs.map((item) => <Link key={item.key} href={`/projects/${id}${item.key === "overview" ? "" : `?tab=${item.key}`}`} scroll={false} aria-current={tab === item.key ? "page" : undefined} className={`min-w-0 flex-1 rounded-full px-3 py-2.5 text-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 ${tab === item.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{item.label}</Link>)}</nav>
     <div className="mt-6">
       {tab === "overview" && <div className="space-y-5">
@@ -106,7 +103,6 @@ export default async function ProjectDetailPage({ params, searchParams }: {
         {materialCosts && <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex justify-between gap-3"><h2 className="text-base font-semibold">Posted material consumption</h2><span className="text-sm font-semibold tabular-nums">{money.format(totalMaterialCost)}</span></div>{materialCosts.length === 0 ? <EmptyState compact title="No material consumption posted" /> : <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[480px] text-left text-sm"><thead className="border-b border-slate-100 text-slate-500"><tr><th className="py-3 font-medium">SKU</th><th className="py-3 font-medium">Material</th><th className="py-3 text-right font-medium">Used</th><th className="py-3 text-right font-medium">Cost</th></tr></thead><tbody className="divide-y divide-slate-100">{materialCosts.map((row) => <tr key={row.material_id}><td className="py-3">{row.material_code}</td><td className="py-3">{row.material_name}</td><td className="py-3 text-right tabular-nums">{quantity.format(Number(row.quantity))} {row.unit_symbol}</td><td className="py-3 text-right font-medium tabular-nums">{money.format(Number(row.cost_total))}</td></tr>)}</tbody></table></div>}</section>}
       </div>}
       {tab === "finance" && profitability && <div className="space-y-5"><div className="flex flex-wrap justify-end gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>Manage costs & budget</Link></Button><Button variant="outline" asChild><Link href="/billing">Client invoices & payments</Link></Button></div><section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Project financial summary</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[["Contract value", profitability.contract_value], ["Approved budget", profitability.approved_budget], ["Posted costs", profitability.total_posted_cost], ["Estimated gross profit", profitability.estimated_gross_profit], ["Issued invoices", profitability.invoiced_amount], ["Payments received", profitability.cash_received], ["Outstanding invoices", profitability.receivables]].map(([label, amount]) => <div key={String(label)}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{money.format(Number(amount))}</dd></div>)}</dl><p className="mt-5 text-xs leading-5 text-slate-500">Estimated gross profit is contract value less posted costs, not final accounting profit. Invoices and collections are reported separately.</p></section>{costBreakdown}</div>}
-      {tab === "documents" && reports && <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold">Project reports & documents</h2><Button variant="outline" asChild><Link href={`/projects/${id}/reports`}>Daily reports</Link></Button></div>{reports.reports.length === 0 ? <EmptyState compact title="No daily reports recorded" /> : <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[480px] text-left text-sm"><thead className="border-b border-slate-100 text-slate-500"><tr><th className="py-3 font-medium">Code</th><th className="py-3 font-medium">Date</th><th className="py-3 font-medium">Site</th><th className="py-3 font-medium">Status</th></tr></thead><tbody className="divide-y divide-slate-100">{reports.reports.map((report) => <tr key={report.id}><td className="py-4"><Link href={`/reports/daily/${report.id}`} className="font-medium hover:text-cyan-700">{report.report_number}</Link></td><td className="py-4">{date(report.report_date)}</td><td className="py-4">{report.siteName}</td><td className="py-4"><Badge variant={report.status === "approved" ? "active" : "neutral"}>{report.status}</Badge></td></tr>)}</tbody></table></div>}<footer className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500"><span>{reports.count} report{reports.count === 1 ? "" : "s"}</span><div className="flex gap-2">{reports.page > 1 && <Button variant="outline" size="sm" asChild><Link href={`/projects/${id}?tab=documents&page=${reports.page - 1}`} scroll={false}>Previous</Link></Button>}{reports.page < reports.pageCount && <Button variant="outline" size="sm" asChild><Link href={`/projects/${id}?tab=documents&page=${reports.page + 1}`} scroll={false}>Next</Link></Button>}</div></footer></section>}
     </div>
   </>;
 }

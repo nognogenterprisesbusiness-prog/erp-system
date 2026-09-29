@@ -16,7 +16,6 @@ const project = {
   targetCompletionDate: "2026-09-02",
   actualCompletionDate: "",
   contractAmount: "100",
-  initialBudget: "80",
   status: "draft",
   projectManagerId: "",
 } as const;

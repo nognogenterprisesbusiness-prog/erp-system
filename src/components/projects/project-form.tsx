@@ -1,5 +1,6 @@
 "use client";
 import { startTransition, useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { saveProjectAction, type ProjectActionState } from "@/app/(workspace)/projects/actions";
 import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
@@ -23,10 +24,15 @@ function Field({ label, name, error, children }: { label: string; name: string; 
 export function ProjectForm({ project, profiles }: { project?: ProjectRow; profiles: Pick<ProfileRow, "id" | "full_name">[] }) {
   const [state, action, pending] = useActionState(saveProjectAction, initialState);
   const dialog = useRecordDialog();
+  const router = useRouter();
   const completed = useRef(false);
   useEffect(() => {
-    if (state.ok && !completed.current) { completed.current = true; dialog?.complete(); }
-  }, [state.ok, dialog]);
+    if (state.ok && !completed.current) {
+      completed.current = true;
+      if (project) dialog?.complete();
+      else router.push(`/documents?project=${state.data.id}&upload=1`);
+    }
+  }, [state, project, dialog, router]);
   const preparedPhoto = useRef<File | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -58,12 +64,11 @@ export function ProjectForm({ project, profiles }: { project?: ProjectRow; profi
       <div className="md:col-span-2"><Field label="Address" name="address" error={error("address")}><input id="address" name="address" className={inputClass} defaultValue={project?.address} required /></Field></div>
       <div className="md:col-span-2"><Field label="Description" name="description" error={error("description")}><textarea id="description" name="description" rows={4} className={`${inputClass} h-auto py-3`} defaultValue={project?.description ?? ""} /></Field></div>
     </div></section>
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="font-semibold">Schedule and budget</h2><div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="font-semibold">Schedule and contract</h2><div className="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       <Field label="Start date" name="startDate" error={error("startDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="startDate" name="startDate" label="Start date" value={startDate} onValueChange={setStartDate} maxDate={latestValidStart} required allowClear={false} /></Field>
       <Field label="Target completion" name="targetCompletionDate" error={error("targetCompletionDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="targetCompletionDate" name="targetCompletionDate" label="Target completion" value={targetCompletionDate} onValueChange={setTargetCompletionDate} minDate={startDate || undefined} required allowClear={false} /></Field>
       <Field label="Actual completion" name="actualCompletionDate" error={error("actualCompletionDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="actualCompletionDate" name="actualCompletionDate" label="Actual completion" value={actualCompletionDate} onValueChange={setActualCompletionDate} minDate={startDate || undefined} /></Field>
       <div><PesoAmountInput name="contractAmount" label="Contract amount" defaultValue={String(project?.contract_amount ?? "")} submitUngrouped required />{error("contractAmount")?.[0] && <p role="alert" className="mt-1 text-xs text-red-600">{error("contractAmount")?.[0]}</p>}</div>
-      <div><PesoAmountInput name="initialBudget" label="Initial budget" defaultValue={String(project?.initial_budget ?? "")} submitUngrouped required />{error("initialBudget")?.[0] && <p role="alert" className="mt-1 text-xs text-red-600">{error("initialBudget")?.[0]}</p>}</div>
       <Field label="Status" name="status" error={error("status")}><SelectPicker id="status" className="h-11" label="Status" name="status" defaultValue={project?.status ?? "draft"} options={[{ value: "draft", label: "Draft" }, { value: "active", label: "Active" }, { value: "on_hold", label: "On hold" }, { value: "completed", label: "Completed" }, { value: "cancelled", label: "Cancelled" }]} /></Field>
       <Field label="Lead engineer" name="projectManagerId" error={error("projectManagerId")}><input type="hidden" name="projectManagerId" value={engineerId === "unassigned" ? "" : engineerId} /><SelectPicker id="projectManagerId" className="h-11" label="Lead engineer" value={engineerId} onValueChange={setEngineerId} options={[{ value: "unassigned", label: "Not assigned" }, ...profiles.map((profile) => ({ value: profile.id, label: profile.full_name }))]} /></Field>
     </div></section>

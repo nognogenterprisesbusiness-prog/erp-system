@@ -24,8 +24,6 @@ const sorts = [
   { value: "client:desc", label: "Client Z–A" },
   { value: "target:asc", label: "Target earliest" },
   { value: "target:desc", label: "Target latest" },
-  { value: "budget:asc", label: "Budget low–high" },
-  { value: "budget:desc", label: "Budget high–low" },
   { value: "status:asc", label: "Status A–Z" },
   { value: "status:desc", label: "Status Z–A" },
 ] as const;

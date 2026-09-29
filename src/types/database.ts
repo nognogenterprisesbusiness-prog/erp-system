@@ -9,6 +9,7 @@ type Table<Row, Insert, Update = Partial<Insert>> = {
 
 export type AppRole = "admin" | "engineer" | "foreman" | "warehouse_staff";
 export type ProjectStatus = "draft" | "active" | "on_hold" | "completed" | "cancelled";
+export type ProjectDocumentCategory = "initial" | "other";
 export type AssignmentRole = "engineer" | "foreman";
 export type AssignmentStatus = "active" | "inactive";
 export type WarehouseStatus = "active" | "inactive";
@@ -57,6 +58,7 @@ export type ProjectRow = {
   estimated_duration_days: number; contract_amount: number; initial_budget: number; status: ProjectStatus; project_manager_id: string | null;
   created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string;
 };
+export type ProjectDocumentRow = { id: string; project_id: string; category: ProjectDocumentCategory; file_name: string; content_type: string; file_size: number; storage_path: string; uploaded_by: string; created_at: string };
 export type WarehouseRow = {
   id: string; code: string; name: string; photo_path: string | null; description: string | null; address: string; municipality_code: string | null; contact_person: string | null; contact_number: string | null;
   status: WarehouseStatus; created_by: string; updated_by: string; created_at: string; updated_at: string;
@@ -134,6 +136,7 @@ export type Database = {
       geo_barangays: Table<{ code: string; name: string; municipality_code: string }, never>;
       projects: Table<ProjectRow, Omit<ProjectRow, "id" | "photo_path" | "municipality_code" | "estimated_duration_days" | "archived_at" | "archived_by" | "created_at" | "updated_at"> & { id?: string; photo_path?: string | null; municipality_code?: string | null; archived_at?: string | null; archived_by?: string | null }>;
       project_assignments: Table<ProjectAssignmentRow, Omit<ProjectAssignmentRow, "id" | "status" | "ended_at" | "ended_by" | "created_at" | "updated_at"> & { id?: string; status?: AssignmentStatus }, Partial<ProjectAssignmentRow>>;
+      project_documents: Table<ProjectDocumentRow, Omit<ProjectDocumentRow, "created_at">, never>;
       warehouses: Table<WarehouseRow, Omit<WarehouseRow, "id" | "photo_path" | "municipality_code" | "created_at" | "updated_at"> & { id?: string; photo_path?: string | null; municipality_code?: string | null }>;
       warehouse_assignments: Table<WarehouseAssignmentRow, Omit<WarehouseAssignmentRow, "id" | "status" | "ended_at" | "ended_by" | "created_at" | "updated_at"> & { id?: string; status?: AssignmentStatus }, Partial<WarehouseAssignmentRow>>;
       project_sites: Table<ProjectSiteRow, Omit<ProjectSiteRow, "id" | "created_at" | "updated_at"> & { id?: string }>;
@@ -330,7 +333,7 @@ export type Database = {
       mark_all_notifications_read: { Args: Record<string, never>; Returns: number };
       mark_all_notifications_unread: { Args: Record<string, never>; Returns: number };
     };
-    Enums: { app_role: AppRole; project_status: ProjectStatus; assignment_role: AssignmentRole; assignment_status: AssignmentStatus; warehouse_status: WarehouseStatus; site_status: "active" | "inactive"; inventory_location_type: "warehouse" | "project_site"; material_kind: MaterialKind; uom_dimension: UnitRow["dimension"]; inventory_transaction_type: InventoryTransactionType; material_request_status: MaterialRequestStatus; transfer_status: InventoryTransferRow["status"]; transfer_phase: "dispatch" | "receipt"; asset_kind: AssetKind; asset_ownership_type: AssetOwnershipType; asset_status: AssetStatus; asset_location_kind: AssetLocationKind; asset_event_type: AssetEventType; employee_status: EmployeeStatus; workforce_assignment_status: WorkforceAssignmentStatus; labor_rate_type: LaborRateType; employee_event_type: EmployeeEventType; supplier_status: SupplierStatus; material_availability_status: MaterialAvailabilityStatus; supplier_event_type: SupplierEventType; daily_report_status: DailyReportStatus; daily_report_event_type: DailyReportEventType; qr_entity_type: QrEntityType; qr_status: QrStatus; qr_event_type: QrEventRow["event_type"]; notification_priority: NotificationPriority; notification_outbox_status: NotificationOutboxStatus };
+    Enums: { app_role: AppRole; project_status: ProjectStatus; project_document_category: ProjectDocumentCategory; assignment_role: AssignmentRole; assignment_status: AssignmentStatus; warehouse_status: WarehouseStatus; site_status: "active" | "inactive"; inventory_location_type: "warehouse" | "project_site"; material_kind: MaterialKind; uom_dimension: UnitRow["dimension"]; inventory_transaction_type: InventoryTransactionType; material_request_status: MaterialRequestStatus; transfer_status: InventoryTransferRow["status"]; transfer_phase: "dispatch" | "receipt"; asset_kind: AssetKind; asset_ownership_type: AssetOwnershipType; asset_status: AssetStatus; asset_location_kind: AssetLocationKind; asset_event_type: AssetEventType; employee_status: EmployeeStatus; workforce_assignment_status: WorkforceAssignmentStatus; labor_rate_type: LaborRateType; employee_event_type: EmployeeEventType; supplier_status: SupplierStatus; material_availability_status: MaterialAvailabilityStatus; supplier_event_type: SupplierEventType; daily_report_status: DailyReportStatus; daily_report_event_type: DailyReportEventType; qr_entity_type: QrEntityType; qr_status: QrStatus; qr_event_type: QrEventRow["event_type"]; notification_priority: NotificationPriority; notification_outbox_status: NotificationOutboxStatus };
     CompositeTypes: Record<string, never>;
   };
 };
