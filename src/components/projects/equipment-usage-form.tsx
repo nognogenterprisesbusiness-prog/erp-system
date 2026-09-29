@@ -8,6 +8,7 @@ import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { assetChoiceLabel } from "@nognog/domain";
 import type { AssetKind } from "@/types/database";
+import { RecordPhotoInput } from "@/components/ui/record-photo-input";
 
 export type EquipmentChoice = { id: string; code: string; name: string; kind?: AssetKind; rate?: { hourly_rate: number; effective_start_date: string; effective_end_date: string | null } };
 
@@ -24,6 +25,10 @@ export function EquipmentUsageForm({ projectId, assets, initialKey, today, showR
     <FormField label="Use date" htmlFor="useDate" error={state.fieldErrors?.useDate?.[0]}><DatePicker id="useDate" name="useDate" label="Use date" defaultValue={today} maxDate={today} allowClear={false} required /></FormField>
     <FormField label="Hours used" htmlFor="usageHours" error={state.fieldErrors?.hours?.[0]}><input id="usageHours" name="hours" className={fieldControlClass} inputMode="decimal" placeholder="8.00" required /></FormField>
     <FormField label="Work note" htmlFor="usageNote" error={state.fieldErrors?.workNote?.[0]}><input id="usageNote" name="workNote" className={fieldControlClass} minLength={3} maxLength={500} placeholder="Work or trips performed" required /></FormField>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <RecordPhotoInput label="Start photo" inputName="startPhoto" convertBeforeSubmit forceConvert required />
+      <RecordPhotoInput label="After photo" inputName="endPhoto" convertBeforeSubmit forceConvert required />
+    </div>
     {state.message && <p role={state.ok ? "status" : "alert"} className={`text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}
     <Button type="submit" disabled={pending || !assets.length}>{pending ? "Recording…" : "Record equipment hours"}</Button>
   </form>;

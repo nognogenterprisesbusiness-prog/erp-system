@@ -3,6 +3,7 @@ export * from "./warehouse";
 export * from "./common";
 export * from "./inventory";
 export * from "./material-requests";
+export * from "./material-sourcing";
 export * from "./assets";
 export * from "./workforce";
 export * from "./suppliers";

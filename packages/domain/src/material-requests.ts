@@ -40,6 +40,18 @@ const fulfillmentFields = {
 
 export const dispatchRequestLineSchema = z.object({ ...fulfillmentFields, requestLineId: uuidSchema });
 export const receiveRequestTransferSchema = z.object({ ...fulfillmentFields, transferItemId: uuidSchema, requestId: uuidSchema });
+export const dispatchRequestWithManifestSchema = dispatchRequestLineSchema.extend({
+  vehicleAssetId: z.union([uuidSchema, z.literal("")]),
+  vehicleLabel: z.string().trim().max(120),
+  driverName: z.string().trim().min(2).max(120),
+  deliveryReference: z.string().trim().min(2).max(120),
+}).refine((input) => input.vehicleAssetId !== "" || input.vehicleLabel.length >= 2,
+  { path: ["vehicleLabel"], message: "Enter a vehicle or transport description." });
+export const receiveRequestWithInspectionSchema = receiveRequestTransferSchema.extend({
+  condition: z.enum(["accepted", "accepted_with_note"]),
+  qualityNote: z.string().trim().max(500),
+}).refine((input) => input.condition === "accepted_with_note" ? input.qualityNote.length >= 3 : input.qualityNote.length === 0,
+  { path: ["qualityNote"], message: "Add a note for this acceptance." });
 
 export type SubmitMaterialRequest = z.infer<typeof submitMaterialRequestSchema>;
 export type DecideMaterialRequest = z.infer<typeof decideMaterialRequestSchema>;

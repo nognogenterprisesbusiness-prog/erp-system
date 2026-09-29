@@ -18,6 +18,7 @@ import { executeSiteCommand } from "@/lib/mobile/commands";
 import { authorizeMobileCommand } from "@/lib/mobile/authorization";
 import { readRecordPhoto } from "@/lib/media/read-record-photo";
 import { prepareRecordPhoto, saveRecordPhoto } from "@/lib/media/record-photo";
+import { storeEquipmentEvidence } from "@/lib/media/equipment-evidence";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
@@ -70,6 +71,43 @@ export async function POST(request: Request, context: Context) {
   try {
     const { path } = await context.params;
     const { client, user } = await mobileContext(request, true);
+    if (path.length === 2 && path[0] === "equipment" && path[1] === "evidence") {
+      if (!request.headers.get("content-type")?.startsWith("multipart/form-data"))
+        throw new MobileError(415, "Send the equipment entry with two photos.");
+      const bytes = await boundedBody(request, 6_300_000);
+      const form = await new Request(request.url, {
+        method: "POST",
+        headers: { "Content-Type": request.headers.get("content-type") ?? "" },
+        body: new Uint8Array(bytes).buffer,
+      }).formData();
+      let input: unknown;
+      try {
+        input = JSON.parse(String(form.get("command") ?? ""));
+      } catch {
+        throw new MobileError(400, "Equipment entry is invalid.");
+      }
+      const command = mobileCommandSchema.safeParse(input);
+      if (!command.success || command.data.action !== "record-equipment")
+        throw new MobileError(422, "Review the equipment hours and date.");
+      await authorizeMobileCommand(client, command.data);
+      let photos: [Buffer, Buffer];
+      try {
+        const [start, end] = await Promise.all([
+          prepareRecordPhoto(form.get("startPhoto")),
+          prepareRecordPhoto(form.get("endPhoto")),
+        ]);
+        if (!start || !end) throw new Error("Photos required");
+        photos = [start, end];
+      } catch {
+        throw new MobileError(422, "Choose a start and after photo under 3 MB each.");
+      }
+      try {
+        await storeEquipmentEvidence(client, user.id, command.data.input.idempotencyKey, photos);
+      } catch {
+        throw new MobileError(503, "Equipment photos could not be uploaded. Retry this entry.");
+      }
+      return success(await executeSiteCommand(client, command.data));
+    }
     if (path.length === 2 && path[0] === "profile" && path[1] === "photo") {
       if (!request.headers.get("content-type")?.startsWith("multipart/form-data"))
         throw new MobileError(415, "Send a photo upload.");

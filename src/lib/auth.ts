@@ -20,7 +20,8 @@ export const requireUser = cache(async function requireUser(): Promise<UserConte
   if (profile.onboarding_required) redirect("/auth/accept-invite");
   if (!profile.is_active || roles.length === 0) redirect("/?error=account");
   const canManage = roles.includes("admin");
-  return { userId, profile, roles, canManage, canOperateInventory: canManage || roles.includes("warehouse_staff"), canViewLaborRates: canManage, canViewProcurement: canManage, canViewDailyReports: canManage || roles.some((role) => role === "engineer" || role === "foreman") };
+  const canViewFinance = canManage || roles.includes("finance");
+  return { userId, profile, roles, canManage, canOperateInventory: canManage || roles.includes("warehouse_staff"), canViewLaborRates: canViewFinance, canViewProcurement: canManage, canViewDailyReports: canManage || roles.some((role) => role === "engineer" || role === "foreman") };
 });
 
 export async function requireManager() {

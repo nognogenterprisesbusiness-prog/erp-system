@@ -282,7 +282,7 @@ export async function readMobileResource(
               c
                 .from("inventory_transfer_items")
                 .select(
-                  "id,dispatched_quantity,received_quantity,variance_quantity",
+                  "id,transfer_id,dispatched_quantity,received_quantity,variance_quantity",
                 )
                 .in("id", batch)
                 .order("id")
@@ -293,6 +293,12 @@ export async function readMobileResource(
       const transferById = new Map(
         transfers.map((transfer) => [transfer.id, transfer]),
       );
+      const manifests = transfers.length ? await c.from("material_delivery_manifests")
+        .select("transfer_id,vehicle_label,driver_name,delivery_reference")
+        .in("transfer_id", [...new Set(transfers.map((item) => item.transfer_id))])
+        : { data: [], error: null };
+      if (manifests.error) databaseError(manifests.error);
+      const manifestByTransfer = new Map((manifests.data ?? []).map((item) => [item.transfer_id, item]));
       return {
         request: r.data,
         lines: lines.map((x) => ({
@@ -306,6 +312,7 @@ export async function readMobileResource(
           const t = transferById.get(x.transfer_item_id);
           if (!t)
             throw new MobileError(503, "Delivery details could not be loaded.");
+          const manifest = manifestByTransfer.get(t.transfer_id);
           return {
             id: x.transfer_item_id,
             request_line_id: x.request_line_id,
@@ -316,12 +323,17 @@ export async function readMobileResource(
             dispatched: t.dispatched_quantity,
             received: t.received_quantity,
             variance: t.variance_quantity,
+            vehicle_label: manifest?.vehicle_label ?? null,
+            driver_name: manifest?.driver_name ?? null,
+            delivery_reference: manifest?.delivery_reference ?? null,
           };
         }),
       };
     }
     case "materials": {
-      const r = await c.rpc("search_material_choices", {
+      const r = await c.rpc("search_requestable_warehouse_stock", {
+        p_project_id: required(q.projectId),
+        p_warehouse_id: required(q.warehouseId),
         p_search: q.search,
         p_offset: offset,
         p_limit: size,
@@ -340,6 +352,7 @@ export async function readMobileResource(
           unit_id: x.unit_id,
           unit: refs.units.get(x.unit_id) ?? "",
           photo_path: refs.materials.get(x.id)?.photo_path ?? null,
+          available_quantity: x.available_quantity,
         })),
         rows[0]?.total_count ?? 0,
         q,

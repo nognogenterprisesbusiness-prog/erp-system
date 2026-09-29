@@ -75,6 +75,16 @@ test("API pagination and identifiers are bounded and commands cannot set arbitra
     false,
   );
 });
+test("missing material reports accept a scoped request and reject malformed quantities", () => {
+  const input = {
+    key: randomUUID(), projectId: randomUUID(), siteId: randomUUID(), warehouseId: randomUUID(),
+    name: "Cement", unit: "bag", quantity: "12.5000", neededOn: "2026-10-01",
+    reason: "Not available in the source warehouse",
+  };
+  assert.equal(mobileCommandSchema.safeParse({ action: "report-missing-material", input }).success, true);
+  for (const quantity of ["0", "-1", "1.12345", "1000000001"])
+    assert.equal(mobileCommandSchema.safeParse({ action: "report-missing-material", input: { ...input, quantity } }).success, false);
+});
 test("operational responses strip accidental wage and cost fields", () => {
   const result = mobileResponseSchemas.attendance.parse({
     items: [

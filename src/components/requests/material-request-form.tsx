@@ -38,13 +38,13 @@ export function MaterialRequestForm({ choices, idempotencyKey, initialLineKey, i
     <input type="hidden" name="lines" value={JSON.stringify(payload)} />
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="Project" htmlFor="requestProject" error={error("projectId")}>
-        <SelectPicker label="Project" value={projectId} onValueChange={(next) => { setProjectId(next); setSiteId(""); setWarehouseId(""); }} options={choices.projects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} />
+        <SelectPicker label="Project" value={projectId} onValueChange={(next) => { setProjectId(next); setSiteId(""); setWarehouseId(""); setLines((current) => current.map((line) => ({ ...line, materialId: "" }))); }} options={choices.projects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} />
       </FormField>
       <FormField label="Site" htmlFor="requestSite" error={error("siteId")}>
         <SelectPicker label="Site" value={selectedSite} onValueChange={setSiteId} options={sites.map((item) => ({ value: item.id, label: item.name }))} placeholder="Select site" />
       </FormField>
       <FormField label="Source warehouse" htmlFor="requestWarehouse" error={error("warehouseId")} hint="Only warehouses linked to the project can supply this request.">
-        <SelectPicker label="Source warehouse" value={selectedWarehouse} onValueChange={setWarehouseId} options={warehouses.map((item) => ({ value: item.warehouse_id, label: `${item.code} · ${item.name}` }))} placeholder="Select warehouse" />
+        <SelectPicker label="Source warehouse" value={selectedWarehouse} onValueChange={(next) => { setWarehouseId(next); setLines((current) => current.map((line) => ({ ...line, materialId: "" }))); }} options={warehouses.map((item) => ({ value: item.warehouse_id, label: `${item.code} · ${item.name}` }))} placeholder="Select warehouse" />
       </FormField>
       <FormField label="Needed by" htmlFor="requiredDate" error={error("requiredDate")}>
         <input className={fieldControlClass} id="requiredDate" name="requiredDate" type="date" defaultValue={initialDate ?? todayInManila()} required />
@@ -61,7 +61,7 @@ export function MaterialRequestForm({ choices, idempotencyKey, initialLineKey, i
     </div>
     <div className="mt-4 grid gap-3">{lines.map((line, index) => <div key={line.key} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[minmax(0,1fr)_150px_auto] sm:items-end">
       <FormField label={`Material ${index + 1}`} htmlFor={`material-${line.key}`}>
-        <PagedReferencePicker kind="material" label={`Material ${index + 1}`} value={line.materialId} onValueChange={(materialId) => updateLine(line.key, { materialId })} initialOptions={choices.materials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}`, unitId: item.base_unit_id }))} disabledValues={lines.filter((other) => other.key !== line.key).map((other) => other.materialId)} />
+        <PagedReferencePicker key={`${projectId}:${selectedWarehouse}`} kind="request_material" projectId={projectId} warehouseId={selectedWarehouse} label={`Material ${index + 1}`} value={line.materialId} onValueChange={(materialId) => updateLine(line.key, { materialId })} initialOptions={selectedWarehouse === choices.initialStockWarehouseId ? choices.requestableMaterials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name} · ${item.availableQuantity} available`, unitId: item.base_unit_id, availableQuantity: item.availableQuantity })) : []} disabledValues={lines.filter((other) => other.key !== line.key).map((other) => other.materialId)} />
       </FormField>
       <FormField label="Quantity" htmlFor={`quantity-${line.key}`}><input id={`quantity-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(line.key, { quantity: event.target.value })} placeholder="0.0000" required /></FormField>
       <Button type="button" variant="ghost" size="icon" aria-label={`Remove material ${index + 1}`} disabled={lines.length === 1 || pending} onClick={() => setLines((current) => current.filter((item) => item.key !== line.key))}><HugeiconsIcon icon={Remove01Icon} size={17} /></Button>

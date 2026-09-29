@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cancelMaterialRequestSchema, decideMaterialRequestSchema, dispatchRequestLineSchema, receiveRequestTransferSchema, submitMaterialRequestSchema } from "./material-requests";
+import { cancelMaterialRequestSchema, decideMaterialRequestSchema, dispatchRequestLineSchema, dispatchRequestWithManifestSchema, receiveRequestTransferSchema, receiveRequestWithInspectionSchema, submitMaterialRequestSchema } from "./material-requests";
 
 const projectId = "01234567-89ab-4cde-8123-456789abcdef";
 const siteId = "11234567-89ab-4cde-8123-456789abcdef";
@@ -42,4 +42,18 @@ test("cancellation requires a valid request, retry key, and explanation", () => 
   assert.equal(cancelMaterialRequestSchema.safeParse({ idempotencyKey: key, requestId, reason: "Project no longer needs this stock" }).success, true);
   assert.equal(cancelMaterialRequestSchema.safeParse({ idempotencyKey: key, requestId, reason: "No" }).success, false);
   assert.equal(cancelMaterialRequestSchema.safeParse({ idempotencyKey: key, requestId: "another-project", reason: "Project no longer needs this stock" }).success, false);
+});
+
+test("delivery details require a vehicle, driver and reference", () => {
+  const movement = { idempotencyKey: key, requestLineId: materialId, quantity: "2", transactionDate: "2026-09-25", remarks: "" };
+  assert.equal(dispatchRequestWithManifestSchema.safeParse({ ...movement, vehicleAssetId: "", vehicleLabel: "Truck ABC 123", driverName: "Juan Cruz", deliveryReference: "TRIP-101" }).success, true);
+  assert.equal(dispatchRequestWithManifestSchema.safeParse({ ...movement, vehicleAssetId: "", vehicleLabel: "", driverName: "Juan Cruz", deliveryReference: "TRIP-101" }).success, false);
+  assert.equal(dispatchRequestWithManifestSchema.safeParse({ ...movement, vehicleAssetId: "", vehicleLabel: "Truck ABC 123", driverName: "", deliveryReference: "TRIP-101" }).success, false);
+});
+
+test("site acceptance requires a note for quality concerns", () => {
+  const movement = { idempotencyKey: key, transferItemId: siteId, requestId, quantity: "2", transactionDate: "2026-09-25", remarks: "" };
+  assert.equal(receiveRequestWithInspectionSchema.safeParse({ ...movement, condition: "accepted", qualityNote: "" }).success, true);
+  assert.equal(receiveRequestWithInspectionSchema.safeParse({ ...movement, condition: "accepted_with_note", qualityNote: "Packaging dented; contents usable" }).success, true);
+  assert.equal(receiveRequestWithInspectionSchema.safeParse({ ...movement, condition: "accepted_with_note", qualityNote: "" }).success, false);
 });

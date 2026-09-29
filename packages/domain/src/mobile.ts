@@ -3,12 +3,13 @@ import { uuidSchema } from "./common";
 import {
   submitMaterialRequestSchema,
   decideMaterialRequestSchema,
-  receiveRequestTransferSchema,
+  receiveRequestWithInspectionSchema,
   cancelMaterialRequestSchema,
 } from "./material-requests";
 import { siteConsumptionInputSchema } from "./inventory";
 import { assetKinds, equipmentRequestInputSchema } from "./assets";
 import { equipmentUsageSchema } from "./project-costs";
+import { materialSourcingSchema } from "./material-sourcing";
 import {
   dailyReportInputSchema,
   dailyReportReviewSchema,
@@ -28,6 +29,7 @@ export const mobileQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(10000).default(1),
   search: z.string().trim().max(100).default(""),
   projectId: uuidSchema.optional(),
+  warehouseId: uuidSchema.optional(),
   siteId: uuidSchema.optional(),
   id: uuidSchema.optional(),
   date: z.iso.date().optional(),
@@ -141,6 +143,9 @@ export const mobileResponseSchemas = {
         dispatched: number,
         received: number,
         variance: number,
+        vehicle_label: text,
+        driver_name: text,
+        delivery_reference: text,
       }),
     ),
     events: page(event),
@@ -152,6 +157,7 @@ export const mobileResponseSchemas = {
       unit_id: uuidSchema,
       unit: z.string(),
       photo_path: text,
+      available_quantity: number,
     }),
   ),
   inventory: page(
@@ -332,8 +338,9 @@ const command = <A extends string, T extends z.ZodType>(action: A, input: T) =>
   z.object({ action: z.literal(action), input });
 export const mobileCommandSchema = z.discriminatedUnion("action", [
   command("request-materials", submitMaterialRequestSchema),
+  command("report-missing-material", materialSourcingSchema),
   command("decide-materials", decideMaterialRequestSchema),
-  command("receive-materials", receiveRequestTransferSchema),
+  command("receive-materials", receiveRequestWithInspectionSchema),
   command("cancel-materials", cancelMaterialRequestSchema),
   command("consume-materials", siteConsumptionInputSchema),
   command("request-equipment", idempotentEquipmentRequestSchema),

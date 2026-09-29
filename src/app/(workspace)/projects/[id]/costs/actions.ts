@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireManager, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { executeSiteCommand } from "@/lib/mobile/commands";
+import { verifyRecordPhoto } from "@/lib/media/verify-record-photo";
+import { storeEquipmentEvidence } from "@/lib/media/equipment-evidence";
 
 export type ProjectCostActionState = { ok?: boolean; message: string; fieldErrors?: Record<string, string[]> };
 const value = (form: FormData, key: string) => String(form.get(key) ?? "");
@@ -46,11 +47,34 @@ export async function postEquipmentUsageAction(_: ProjectCostActionState, form: 
   const parsed = equipmentUsageSchema.safeParse({ idempotencyKey: value(form, "idempotencyKey"), projectId: value(form, "projectId"), assetId: value(form, "assetId"), useDate: value(form, "useDate"), hours: value(form, "hours"), workNote: value(form, "workNote") });
   if (!parsed.success) return fail("Review the equipment usage.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
+  const start = form.get("startPhoto");
+  const end = form.get("endPhoto");
+  if (!(start instanceof File) || !(end instanceof File) || start.size === 0 || end.size === 0
+    || start.size > 2_000_000 || end.size > 2_000_000)
+    return fail("Add a start and after photo. Each processed image must be under 2 MB.");
+  let photos: [Buffer, Buffer];
+  try {
+    photos = await Promise.all([
+      verifyRecordPhoto(Buffer.from(await start.arrayBuffer())),
+      verifyRecordPhoto(Buffer.from(await end.arrayBuffer())),
+    ]);
+  } catch (cause) {
+    return fail(cause instanceof Error ? cause.message : "The photos could not be verified.");
+  }
   const supabase = await createClient();
-  try { await executeSiteCommand(supabase, { action: "record-equipment", input }); }
-  catch (cause) { return fail(cause instanceof Error ? cause.message : "Equipment usage could not be saved."); }
+  try {
+    await storeEquipmentEvidence(supabase, user.userId, input.idempotencyKey, photos);
+  } catch (cause) {
+    return fail(cause instanceof Error ? cause.message : "Equipment photos could not be uploaded.");
+  }
+  const { error } = await supabase.rpc("post_project_equipment_usage_with_photos", {
+    p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId,
+    p_asset_id: input.assetId, p_use_date: input.useDate,
+    p_hours: input.hours, p_work_note: input.workNote,
+  });
+  if (error) return fail(costError(error));
   update(input.projectId);
-  return { ok: true, message: "Equipment hours recorded." };
+  return { ok: true, message: "Equipment hours and photos recorded." };
 }
 
 export async function postAdditionalExpenseAction(_: ProjectCostActionState, form: FormData): Promise<ProjectCostActionState> {

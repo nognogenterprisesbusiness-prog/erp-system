@@ -6,10 +6,13 @@ import { convertImageToWebp, detectSourceImage, IMAGE_POLICY } from "@/lib/media
 
 const directUploadLimit = 3_000_000;
 
-export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = false, onProcessingChange, onPreparedFile, onPreparationError }: {
+export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = false, forceConvert = false, inputName = "photo", required = false, onProcessingChange, onPreparedFile, onPreparationError }: {
   label: string;
   currentPhoto?: string;
   convertBeforeSubmit?: boolean;
+  forceConvert?: boolean;
+  inputName?: string;
+  required?: boolean;
   onProcessingChange?: (processing: boolean) => void;
   onPreparedFile?: (file: File | null) => void;
   onPreparationError?: (message: string | null) => void;
@@ -33,7 +36,7 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
       if (file.size === 0 || file.size > IMAGE_POLICY.maxSourceBytes) throw new Error("Choose a PNG or JPEG under 12 MB.");
       const signature = new Uint8Array(await file.slice(0, 12).arrayBuffer());
       if (!detectSourceImage(signature)) throw new Error("Choose a genuine PNG or JPEG image.");
-      const prepared = file.size <= directUploadLimit
+      const prepared = !forceConvert && file.size <= directUploadLimit
         ? file
         : await convertImageToWebp(file, { targetDimension: 1600, maxOutputBytes: 700_000 });
       if (prepared !== file && !onPreparedFile) {
@@ -63,7 +66,7 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
           {preview || (currentPhoto && !currentPhotoFailed) ? <Image src={preview ?? currentPhoto ?? ""} alt="Selected record photo" fill sizes="80px" unoptimized className="object-cover" onError={() => { if (!preview) setCurrentPhotoFailed(true); }} /> : processing ? "Processing…" : "No photo"}
         </span>
         <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-slate-700">{processing ? "Processing photo…" : "Choose PNG or JPEG"}</span><span className="mt-1 block text-xs font-normal text-slate-500">Verified and converted to WebP when saved</span></span>
-        <input name="photo" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" className="sr-only" onChange={(event) => void choose(event.currentTarget)} />
+        <input name={inputName} type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" required={required} className="sr-only" onChange={(event) => void choose(event.currentTarget)} />
       </span>
     </label>
     <input type="hidden" name="photoSelected" value={photoSelected ? "1" : "0"} />

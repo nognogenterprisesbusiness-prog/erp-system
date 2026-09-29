@@ -18,6 +18,17 @@ export async function executeSiteCommand(
     );
   const command = parsed.data;
   switch (command.action) {
+    case "report-missing-material": {
+      const i = command.input;
+      const r = await client.rpc("submit_material_sourcing_request", {
+        p_key: i.key, p_project_id: i.projectId, p_site_id: i.siteId,
+        p_warehouse_id: i.warehouseId, p_material_name: i.name,
+        p_unit_name: i.unit, p_quantity: Number(i.quantity),
+        p_needed_on: i.neededOn, p_reason: i.reason,
+      });
+      if (r.error) databaseError(r.error);
+      return { id: r.data!, message: "Missing material sent to Admin for review." };
+    }
     case "request-materials": {
       const i = command.input;
       const r = await client.rpc("submit_material_request", {
@@ -62,12 +73,14 @@ export async function executeSiteCommand(
       if (line.error) databaseError(line.error);
       if (!line.data)
         throw new MobileError(403, "Delivery does not belong to this request.");
-      const r = await client.rpc("receive_request_transfer", {
+      const r = await client.rpc("receive_request_transfer_with_inspection", {
         p_idempotency_key: i.idempotencyKey,
         p_transfer_item_id: i.transferItemId,
         p_quantity: i.quantity,
         p_transaction_date: i.transactionDate,
         p_remarks: i.remarks || null,
+        p_condition: i.condition,
+        p_quality_note: i.qualityNote || null,
       });
       if (r.error) databaseError(r.error);
       return { id: r.data!, message: "Materials received." };
@@ -108,7 +121,7 @@ export async function executeSiteCommand(
     }
     case "record-equipment": {
       const i = command.input;
-      const r = await client.rpc("post_project_equipment_usage", {
+      const r = await client.rpc("post_project_equipment_usage_with_photos", {
         p_idempotency_key: i.idempotencyKey,
         p_project_id: i.projectId,
         p_asset_id: i.assetId,

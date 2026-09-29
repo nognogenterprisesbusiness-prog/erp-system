@@ -7,7 +7,7 @@ type Table<Row, Insert, Update = Partial<Insert>> = {
   Relationships: [];
 };
 
-export type AppRole = "admin" | "engineer" | "foreman" | "warehouse_staff";
+export type AppRole = "admin" | "engineer" | "foreman" | "warehouse_staff" | "finance";
 export type ProjectStatus = "draft" | "active" | "on_hold" | "completed" | "cancelled";
 export type ProjectDocumentCategory = "initial" | "other";
 export type AssignmentRole = "engineer" | "foreman";
@@ -17,11 +17,14 @@ export type MaterialKind = "consumable" | "reusable";
 export type InventoryTransactionType = "OPENING_BALANCE" | "STOCK_IN" | "STOCK_OUT" | "WAREHOUSE_TRANSFER" | "SITE_TRANSFER" | "MATERIAL_CONSUMPTION" | "MATERIAL_RETURN" | "INVENTORY_ADJUSTMENT" | "REVERSAL";
 export type MaterialRequestStatus = "submitted" | "approved" | "partially_approved" | "rejected" | "cancelled";
 export type MaterialRequestRow = { id: string; request_number: string; submission_key: string; submission_hash: string; project_id: string; project_site_id: string; source_warehouse_id: string; source_warehouse_name: string; required_date: string; purpose: string; status: MaterialRequestStatus; requested_by: string; requested_at: string; decided_by: string | null; decided_at: string | null; decision_reason: string | null };
+export type MaterialSourcingRequestRow = { id: string; idempotency_key: string; payload_hash: string; project_id: string; project_site_id: string; source_warehouse_id: string; project_name: string; site_name: string; warehouse_name: string; material_name: string; unit_name: string; requested_quantity: number; needed_on: string; reason: string; status: "submitted" | "resolved" | "dismissed"; catalog_material_id: string | null; resolution_note: string | null; requested_by: string; resolved_by: string | null; resolved_at: string | null; created_at: string };
 export type MaterialRequestLineRow = { id: string; request_id: string; material_id: string; unit_of_measure_id: string; requested_quantity: number; approved_quantity: number };
 export type MaterialRequestReservationRow = { id: string; request_line_id: string; material_id: string; inventory_location_id: string; original_quantity: number; remaining_quantity: number; status: "active" | "fulfilled" | "released"; reserved_by: string; reserved_at: string; released_at: string | null };
 export type MaterialRequestReservationEventRow = { id: string; reservation_id: string; event_type: "reserved" | "dispatched" | "released"; quantity: number; actor_id: string; occurred_at: string };
 export type MaterialRequestEventRow = { id: string; request_id: string; event_type: MaterialRequestStatus; actor_id: string; details: Json; occurred_at: string };
 export type MaterialRequestDispatchRow = { id: string; request_line_id: string; transfer_item_id: string; created_at: string };
+export type MaterialDeliveryManifestRow = { transfer_id: string; vehicle_asset_id: string | null; vehicle_label: string; driver_name: string; delivery_reference: string; payload_hash: string; dispatched_by: string; created_at: string };
+export type MaterialDeliveryAcceptanceRow = { inventory_transaction_id: string; transfer_item_id: string; received_quantity: number; condition: "accepted" | "accepted_with_note"; quality_note: string | null; inspection_payload_hash: string | null; received_by: string; created_at: string };
 export type MaterialRequestFulfillmentEventRow = { id: string; request_line_id: string; transfer_item_id: string; event_type: "dispatched" | "received"; quantity: number; actor_id: string; occurred_at: string };
 export type ApprovedRequestQueueRow = { request_line_id: string; request_id: string; request_number: string; project_code: string; project_name: string; site_name: string; warehouse_id: string; warehouse_name: string; material_code: string; material_name: string; approved_quantity: number; dispatched_quantity: number; available_quantity: number; reserved_quantity: number; unit_symbol: string; total_count: number };
 export type AssetKind = "equipment" | "vehicle";
@@ -107,7 +110,7 @@ export type PurchaseOrderReceiptRow = { id: string; purchase_order_id: string; p
 export type ProjectAttendanceRow = { id: string; employee_id: string; assignment_id: string; project_id: string; project_site_id: string; work_date: string; attendance_status: "present" | "absent"; hours_worked: number; billable_units: number; rate_id: string | null; rate_type: LaborRateType | null; rate_snapshot: number | null; cost_total: number; note: string; recorded_by: string; idempotency_key: string; command_payload: Json; created_at: string };
 export type ProjectAttendanceReversalRow = { id: string; attendance_id: string; reason: string; reversed_by: string; reversed_at: string; idempotency_key: string; command_payload: Json };
 export type EquipmentHourRateRow = { id: string; asset_id: string; hourly_rate: number; effective_start_date: string; effective_end_date: string | null; approved_by: string; created_at: string };
-export type ProjectEquipmentUsageRow = { id: string; project_id: string; asset_id: string; asset_code: string; asset_name: string; use_date: string; hours_used: number; rate_id: string; hourly_rate_snapshot: number; cost_total: number; work_note: string; recorded_by: string; idempotency_key: string; command_payload: Json; created_at: string };
+export type ProjectEquipmentUsageRow = { id: string; project_id: string; asset_id: string; asset_code: string; asset_name: string; use_date: string; hours_used: number; rate_id: string; hourly_rate_snapshot: number; cost_total: number; work_note: string; start_photo_path: string | null; end_photo_path: string | null; recorded_by: string; idempotency_key: string; command_payload: Json; created_at: string };
 export type ProjectEquipmentUsageReversalRow = { id: string; usage_id: string; reason: string; reversed_by: string; reversed_at: string; idempotency_key: string; command_payload: Json };
 export type ProjectAdditionalExpenseRow = { id: string; project_id: string; expense_date: string; category: "permit" | "subcontract" | "utilities" | "other"; description: string; external_reference: string; amount: number; recorded_by: string; idempotency_key: string; command_payload: Json; created_at: string };
 export type ProjectExpenseReversalRow = { id: string; expense_id: string; reason: string; reversed_by: string; reversed_at: string; idempotency_key: string; command_payload: Json };
@@ -157,11 +160,14 @@ export type Database = {
       valuation_command_receipts: Table<{ idempotency_key: string; actor_id: string; command_name: string; payload_hash: string; result_id: string; created_at: string }, never>;
       inventory_command_receipts: Table<{ idempotency_key: string; actor_id: string; command_name: string; result_id: string; created_at: string }, never>;
       material_requests: Table<MaterialRequestRow, never>;
+      material_sourcing_requests: Table<MaterialSourcingRequestRow, never>;
       material_request_lines: Table<MaterialRequestLineRow, never>;
       material_request_reservations: Table<MaterialRequestReservationRow, never>;
       material_request_reservation_events: Table<MaterialRequestReservationEventRow, never>;
       material_request_events: Table<MaterialRequestEventRow, never>;
       material_request_dispatches: Table<MaterialRequestDispatchRow, never>;
+      material_delivery_manifests: Table<MaterialDeliveryManifestRow, never>;
+      material_delivery_acceptances: Table<MaterialDeliveryAcceptanceRow, never>;
       material_request_fulfillment_events: Table<MaterialRequestFulfillmentEventRow, never>;
       material_request_decision_receipts: Table<{ idempotency_key: string; request_id: string; actor_id: string; payload_hash: string; created_at: string }, never>;
       material_request_cancellation_receipts: Table<{ idempotency_key: string; request_id: string; actor_id: string; payload_hash: string; created_at: string }, never>;
@@ -219,6 +225,12 @@ export type Database = {
       get_mobile_site_operations: { Args: { p_kind: string; p_project_id: string; p_site_id: string; p_date?: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { record: Json; total_count: number }[] };
       guard_mobile_api: { Args: { p_write: boolean }; Returns: boolean };
       search_site_material_choices: { Args: { p_location_id: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; label: string; unit_id: string; available_quantity: number; total_count: number }[] };
+      search_requestable_warehouse_stock: { Args: { p_project_id: string; p_warehouse_id: string; p_search?: string; p_offset?: number; p_limit?: number; p_material_id?: string | null }; Returns: { id: string; label: string; unit_id: string; available_quantity: number; total_count: number }[] };
+      submit_material_sourcing_request: { Args: { p_key: string; p_project_id: string; p_site_id: string; p_warehouse_id: string; p_material_name: string; p_unit_name: string; p_quantity: number | string; p_needed_on: string; p_reason: string }; Returns: string };
+      resolve_material_sourcing_request: { Args: { p_id: string; p_action: "resolved" | "dismissed"; p_material_id: string | null; p_note: string }; Returns: string };
+      get_delivery_vehicle_choices: { Args: Record<string, never>; Returns: { id: string; label: string }[] };
+      dispatch_approved_request_line_with_manifest: { Args: { p_idempotency_key: string; p_request_line_id: string; p_quantity: number | string; p_transaction_date: string; p_remarks: string | null; p_vehicle_asset_id: string | null; p_vehicle_label: string; p_driver_name: string; p_delivery_reference: string }; Returns: string };
+      receive_request_transfer_with_inspection: { Args: { p_idempotency_key: string; p_transfer_item_id: string; p_quantity: number | string; p_transaction_date: string; p_remarks: string | null; p_condition: "accepted" | "accepted_with_note"; p_quality_note: string | null }; Returns: string };
       search_material_choices: { Args: { p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; label: string; unit_id: string; total_count: number }[] };
       search_attendance_assignment_choices: { Args: { p_project_id: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; label: string; unit_id: string | null; total_count: number }[] };
       list_supplier_price_history: { Args: { p_supplier_id: string; p_offset?: number; p_limit?: number }; Returns: { record: Json; total_count: number }[] };
@@ -300,6 +312,7 @@ export type Database = {
       get_project_labor_cost: { Args: { p_project_id: string }; Returns: number };
       set_equipment_hour_rate: { Args: { p_asset_id: string; p_hourly_rate: number | string; p_effective_start_date: string }; Returns: string };
       post_project_equipment_usage: { Args: { p_idempotency_key: string; p_project_id: string; p_asset_id: string; p_use_date: string; p_hours: number | string; p_work_note: string }; Returns: string };
+      post_project_equipment_usage_with_photos: { Args: { p_idempotency_key: string; p_project_id: string; p_asset_id: string; p_use_date: string; p_hours: number | string; p_work_note: string }; Returns: string };
       post_project_additional_expense: { Args: { p_idempotency_key: string; p_project_id: string; p_expense_date: string; p_category: string; p_description: string; p_external_reference: string; p_amount: number | string }; Returns: string };
       adjust_project_budget: { Args: { p_idempotency_key: string; p_project_id: string; p_change_amount: number | string; p_reason: string }; Returns: string };
       reverse_project_cost_entry: { Args: { p_idempotency_key: string; p_kind: "equipment" | "expense"; p_entry_id: string; p_reason: string }; Returns: string };

@@ -35,6 +35,7 @@ export async function authorizeMobileCommand(
 ) {
   switch (command.action) {
     case "request-materials":
+    case "report-missing-material":
     case "record-attendance":
       return requireMobileSite(
         client,

@@ -10,10 +10,10 @@ import type { MaterialRequestStatus } from "@/types/database";
 
 const PAGE_SIZE = 20;
 
-export async function getMaterialRequestChoices() {
+export async function getMaterialRequestChoices(preferred?: { projectId: string; warehouseId: string; materialId?: string }) {
   const user = await requireUser();
   if (!user.canManage && !user.roles.some((role) => ["engineer", "foreman"].includes(role)))
-    return { projects: [], sites: [], warehouses: [], links: [], materials: [] };
+    return { projects: [], sites: [], warehouses: [], materials: [], requestableMaterials: [], initialStockWarehouseId: "" };
   const supabase = await createClient();
   const [reportChoices, warehousesResult, materialsResult] = await Promise.all([
     getDailyReportChoices(),
@@ -21,12 +21,39 @@ export async function getMaterialRequestChoices() {
     supabase.from("materials").select("id,code,name,base_unit_id").eq("is_active", true).eq("material_kind", "consumable").is("archived_at", null).order("name").order("id").range(0, 19),
   ]);
   if (warehousesResult.error || materialsResult.error) throw new Error("Unable to load material request choices.");
-  const projectIds = new Set(reportChoices.projects.filter((row) => row.status === "active").map((row) => row.id));
+  const projects = reportChoices.projects.filter((row) => row.status === "active");
+  const projectIds = new Set(projects.map((row) => row.id));
+  const warehouses = (warehousesResult.data ?? []).filter((row) => projectIds.has(row.project_id));
+  const initialWarehouse = warehouses.find((row) => row.project_id === preferred?.projectId && row.warehouse_id === preferred.warehouseId)
+    ?? warehouses.find((row) => row.project_id === projects[0]?.id);
+  const initialStock = initialWarehouse
+    ? await supabase.rpc("search_requestable_warehouse_stock", { p_project_id: initialWarehouse.project_id, p_warehouse_id: initialWarehouse.warehouse_id, p_limit: 20 })
+    : { data: [], error: null };
+  if (initialStock.error) throw new Error("Unable to load available warehouse materials.");
+  const stockRows = [...(initialStock.data ?? [])];
+  if (initialWarehouse && preferred?.materialId && !stockRows.some((row) => row.id === preferred.materialId)) {
+    const prefilled = await supabase.rpc("search_requestable_warehouse_stock", {
+      p_project_id: initialWarehouse.project_id, p_warehouse_id: initialWarehouse.warehouse_id,
+      p_material_id: preferred.materialId, p_limit: 1,
+    });
+    if (prefilled.error) throw new Error("Unable to verify the requested material.");
+    stockRows.push(...(prefilled.data ?? []));
+  }
+  const requestableDetails = stockRows.length
+    ? await supabase.from("materials").select("id,code,name,base_unit_id").in("id", stockRows.map((row) => row.id))
+    : { data: [], error: null };
+  if (requestableDetails.error) throw new Error("Unable to load warehouse material details.");
+  const materialById = new Map((requestableDetails.data ?? []).map((row) => [row.id, row]));
   return {
-    projects: reportChoices.projects.filter((row) => row.status === "active"),
+    projects,
     sites: reportChoices.sites.filter((row) => projectIds.has(row.project_id)),
-    warehouses: (warehousesResult.data ?? []).filter((row) => projectIds.has(row.project_id)),
+    warehouses,
+    initialStockWarehouseId: initialWarehouse?.warehouse_id ?? "",
     materials: materialsResult.data ?? [],
+    requestableMaterials: stockRows.flatMap((row) => {
+      const material = materialById.get(row.id);
+      return material ? [{ ...material, availableQuantity: row.available_quantity }] : [];
+    }),
   };
 }
 
@@ -116,15 +143,21 @@ export async function getMaterialRequest(id: string) {
     ? await supabase.from("inventory_transfers").select("id,transfer_number,status,dispatched_at").in("id", transferIds)
     : { data: [], error: null };
   if (transfersResult.error) throw new Error("Unable to load request transfers.");
+  const [manifestsResult, acceptancesResult] = await Promise.all([
+    transferIds.length ? supabase.from("material_delivery_manifests").select("transfer_id,vehicle_label,driver_name,delivery_reference,dispatched_by,created_at").in("transfer_id", transferIds) : Promise.resolve({ data: [], error: null }),
+    itemIds.length ? supabase.from("material_delivery_acceptances").select("inventory_transaction_id,transfer_item_id,received_quantity,condition,quality_note,received_by,created_at").in("transfer_item_id", itemIds).order("created_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (manifestsResult.error || acceptancesResult.error) throw new Error("Unable to load delivery checks.");
   const itemMap = new Map((itemsResult.data ?? []).map((row) => [row.id, row]));
   const transferMap = new Map((transfersResult.data ?? []).map((row) => [row.id, row]));
+  const manifestMap = new Map((manifestsResult.data ?? []).map((row) => [row.transfer_id, row]));
   const dispatches = (dispatchesResult.data ?? []).flatMap((row) => {
     const item = itemMap.get(row.transfer_item_id);
     const transfer = item ? transferMap.get(item.transfer_id) : null;
-    return item && transfer ? [{ ...row, item, transfer, remainingQuantity: item.dispatched_quantity - item.received_quantity - item.variance_quantity }] : [];
+    return item && transfer ? [{ ...row, item, transfer, manifest: manifestMap.get(transfer.id), acceptances: (acceptancesResult.data ?? []).filter((entry) => entry.transfer_item_id === item.id), remainingQuantity: item.dispatched_quantity - item.received_quantity - item.variance_quantity }] : [];
   });
   const materialIds = [...new Set((linesResult.data ?? []).map((row) => row.material_id))];
-  const actorIds = [...new Set([request.requested_by, request.decided_by, ...(eventsResult.data ?? []).map((row) => row.actor_id), ...(fulfillmentResult.data ?? []).map((row) => row.actor_id), ...(varianceResult.data ?? []).map((row) => row.approved_by)].filter((id): id is string => Boolean(id)))];
+  const actorIds = [...new Set([request.requested_by, request.decided_by, ...(eventsResult.data ?? []).map((row) => row.actor_id), ...(fulfillmentResult.data ?? []).map((row) => row.actor_id), ...(varianceResult.data ?? []).map((row) => row.approved_by), ...(acceptancesResult.data ?? []).map((row) => row.received_by)].filter((id): id is string => Boolean(id)))];
   const [materialsResult, actorsResult, units] = await Promise.all([
     materialIds.length ? supabase.from("materials").select("id,code,name,photo_path").in("id", materialIds) : Promise.resolve({ data: [], error: null }),
     actorIds.length ? supabase.from("profiles").select("id,full_name").in("id", actorIds) : Promise.resolve({ data: [], error: null }),
@@ -143,7 +176,7 @@ export async function getMaterialRequest(id: string) {
     fulfillmentEvents: (fulfillmentResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get((linesResult.data ?? []).find((line) => line.id === row.request_line_id)?.material_id ?? "")?.name ?? "Material" })),
     reservationEvents: (reservationEventsResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get(reservationLines.get(row.reservation_id)?.material_id ?? "")?.name ?? "Material" })),
     varianceEvents: (varianceResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.approved_by) ?? "Administrator", materialName: materials.get((linesResult.data ?? []).find((line) => (dispatchesResult.data ?? []).some((dispatch) => dispatch.request_line_id === line.id && dispatch.transfer_item_id === row.transfer_item_id))?.material_id ?? "")?.name ?? "Material" })),
-    dispatches,
+    dispatches: dispatches.map((dispatch) => ({ ...dispatch, acceptances: dispatch.acceptances.map((entry) => ({ ...entry, receiverName: actors.get(entry.received_by) ?? "Authorized recipient" })) })),
     requesterName: actors.get(request.requested_by) ?? "Authorized user",
     approverName: request.decided_by ? actors.get(request.decided_by) ?? "Authorized manager" : null,
   };

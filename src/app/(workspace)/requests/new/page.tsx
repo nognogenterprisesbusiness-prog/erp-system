@@ -9,10 +9,14 @@ import { getMaterialRequestChoices } from "@/lib/data/material-requests";
 export default async function NewMaterialRequestPage({ searchParams }: { searchParams: Promise<{ material?: string; project?: string; site?: string; warehouse?: string; quantity?: string; date?: string }> }) {
   const user = await requireUser();
   if (user.canManage || !user.roles.some((role) => ["engineer", "foreman"].includes(role))) redirect("/requests");
-  const choices = await getMaterialRequestChoices();
   const query = await searchParams;
+  const preferredProject = uuidSchema.safeParse(query.project);
+  const preferredWarehouse = uuidSchema.safeParse(query.warehouse);
+  const choices = await getMaterialRequestChoices(preferredProject.success && preferredWarehouse.success
+    ? { projectId: preferredProject.data, warehouseId: preferredWarehouse.data, materialId: uuidSchema.safeParse(query.material).success ? query.material : undefined }
+    : undefined);
   const requestedMaterial = uuidSchema.safeParse(query.material);
-  const initialMaterialId = requestedMaterial.success && choices.materials.some((item) => item.id === requestedMaterial.data) ? requestedMaterial.data : "";
+  const initialMaterialId = requestedMaterial.success && choices.requestableMaterials.some((item) => item.id === requestedMaterial.data) ? requestedMaterial.data : "";
   const project = uuidSchema.safeParse(query.project);
   const initialProjectId = project.success && choices.projects.some((item) => item.id === project.data) ? project.data : undefined;
   const site = uuidSchema.safeParse(query.site);

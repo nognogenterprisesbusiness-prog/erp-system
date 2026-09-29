@@ -21,9 +21,14 @@ import { RecordActionMenu } from "@/components/ui/record-action-menu";
 import { requireUser } from "@/lib/auth";
 import { getInventoryBalances, getMaterialReferences, getInventoryOptions, getSiteConsumptionOptions } from "@/lib/data/inventory";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
+import { InventoryTypeTabs } from "@/components/inventory/inventory-type-tabs";
+import { AssetRegistryPage } from "@/components/assets/asset-registry-page";
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
+  if (params.type === "equipment" || params.type === "vehicle") {
+    return <AssetRegistryPage kind={params.type} searchParams={Promise.resolve(params)} inventoryMode />;
+  }
   const query = typeof params.q === "string" ? params.q : "";
   const locationId = typeof params.location === "string" ? params.location : "";
   const lowStock = params.low === "true";
@@ -43,6 +48,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const selectedLocationName = data.locations.find((item) => item.id === data.selectedLocationId)?.name;
 
   return <>
+    <InventoryTypeTabs active="materials" />
     <PageHeader eyebrow="Materials control" title="Inventory" description={selectedLocationName ? `${selectedLocationName} stock balances` : "Stock balances"} action={<div className="flex flex-wrap items-center gap-2">
       <InventoryLocationPicker locations={data.locations} value={data.selectedLocationId} />
       <Button variant="outline" asChild><a href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export CSV</a></Button>
