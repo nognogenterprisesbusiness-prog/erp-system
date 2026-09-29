@@ -2,41 +2,59 @@
 -- Stock posting, procurement, budget/rate changes, and corrections stay Admin-only.
 begin;
 
+drop policy if exists projects_finance_select on public.projects;
 create policy projects_finance_select on public.projects for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists project_sites_finance_select on public.project_sites;
 create policy project_sites_finance_select on public.project_sites for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists employees_finance_select on public.employees;
 create policy employees_finance_select on public.employees for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists employee_categories_finance_select on public.employee_categories;
 create policy employee_categories_finance_select on public.employee_categories for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists employee_events_finance_select on public.employee_events;
 create policy employee_events_finance_select on public.employee_events for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists employee_assignments_finance_select on public.employee_project_assignments;
 create policy employee_assignments_finance_select on public.employee_project_assignments for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists labor_rates_finance_select on public.labor_rates;
 create policy labor_rates_finance_select on public.labor_rates for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
 
+drop policy if exists client_invoices_finance_role_select on public.client_invoices;
 create policy client_invoices_finance_role_select on public.client_invoices for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists client_payments_finance_role_select on public.client_payments;
 create policy client_payments_finance_role_select on public.client_payments for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists client_payment_reversals_finance_role_select on public.client_payment_reversals;
 create policy client_payment_reversals_finance_role_select on public.client_payment_reversals for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists project_attendance_finance_role_select on public.project_attendance;
 create policy project_attendance_finance_role_select on public.project_attendance for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists project_attendance_reversals_finance_role_select on public.project_attendance_reversals;
 create policy project_attendance_reversals_finance_role_select on public.project_attendance_reversals for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists equipment_hour_rates_finance_role_select on public.equipment_hour_rates;
 create policy equipment_hour_rates_finance_role_select on public.equipment_hour_rates for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists project_equipment_usage_finance_role_select on public.project_equipment_usage;
 create policy project_equipment_usage_finance_role_select on public.project_equipment_usage for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists project_equipment_usage_reversals_finance_role_select on public.project_equipment_usage_reversals;
 create policy project_equipment_usage_reversals_finance_role_select on public.project_equipment_usage_reversals for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists project_additional_expenses_finance_role_select on public.project_additional_expenses;
 create policy project_additional_expenses_finance_role_select on public.project_additional_expenses for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists project_expense_reversals_finance_role_select on public.project_expense_reversals;
 create policy project_expense_reversals_finance_role_select on public.project_expense_reversals for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
+drop policy if exists project_budget_changes_finance_role_select on public.project_budget_changes;
 create policy project_budget_changes_finance_role_select on public.project_budget_changes for select to authenticated
 using (private.has_any_role(array['finance']::public.app_role[]));
 

@@ -1,18 +1,26 @@
 -- Two immutable photos document the start and end of an equipment or vehicle
 -- use entry. Cost posting still uses the existing rate snapshot command.
+begin;
+
 alter table public.project_equipment_usage
-  add column start_photo_path text,
-  add column end_photo_path text,
-  add constraint equipment_usage_photo_pair check (
+  add column if not exists start_photo_path text,
+  add column if not exists end_photo_path text;
+
+do $$ begin
+  if not exists (select 1 from pg_catalog.pg_constraint where conrelid = 'public.project_equipment_usage'::regclass and conname = 'equipment_usage_photo_pair') then
+    alter table public.project_equipment_usage add constraint equipment_usage_photo_pair check (
     (start_photo_path is null and end_photo_path is null)
     or (start_photo_path ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/start[.]webp$'
       and end_photo_path ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}/end[.]webp$')
-  );
+    );
+  end if;
+end $$;
 
 insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
 values ('erp-equipment-evidence','erp-equipment-evidence',false,2000000,array['image/webp'])
 on conflict (id) do nothing;
 
+drop policy if exists equipment_evidence_insert on storage.objects;
 create policy equipment_evidence_insert on storage.objects for insert to authenticated
 with check (
   bucket_id = 'erp-equipment-evidence'
@@ -20,6 +28,7 @@ with check (
   and split_part(name,'/',1) = auth.uid()::text
   and private.has_any_role(array['admin','foreman']::public.app_role[])
 );
+drop policy if exists equipment_evidence_select on storage.objects;
 create policy equipment_evidence_select on storage.objects for select to authenticated
 using (
   bucket_id = 'erp-equipment-evidence'
@@ -34,7 +43,7 @@ using (
   )
 );
 
-create function public.post_project_equipment_usage_with_photos(
+create or replace function public.post_project_equipment_usage_with_photos(
   p_idempotency_key uuid, p_project_id uuid, p_asset_id uuid, p_use_date date,
   p_hours numeric, p_work_note text
 ) returns uuid language plpgsql security definer set search_path = '' as $$
@@ -76,3 +85,5 @@ $$;
 revoke all on function public.post_project_equipment_usage_with_photos(uuid,uuid,uuid,date,numeric,text) from public, anon;
 grant execute on function public.post_project_equipment_usage_with_photos(uuid,uuid,uuid,date,numeric,text) to authenticated;
 revoke execute on function public.post_project_equipment_usage(uuid,uuid,uuid,date,numeric,text) from authenticated;
+
+commit;

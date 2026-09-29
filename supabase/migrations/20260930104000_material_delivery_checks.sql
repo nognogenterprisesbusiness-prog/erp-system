@@ -1,6 +1,8 @@
 -- Delivery transport and site acceptance are posted in the same transaction
 -- as the existing idempotent stock commands.
-create table public.material_delivery_manifests (
+begin;
+
+create table if not exists public.material_delivery_manifests (
   transfer_id uuid primary key references public.inventory_transfers(id) on delete restrict,
   vehicle_asset_id uuid references public.assets(id) on delete restrict,
   vehicle_label text not null check (char_length(trim(vehicle_label)) between 2 and 120),
@@ -10,9 +12,9 @@ create table public.material_delivery_manifests (
   dispatched_by uuid not null references public.profiles(id) on delete restrict,
   created_at timestamptz not null default now()
 );
-create index material_delivery_manifests_vehicle_idx on public.material_delivery_manifests(vehicle_asset_id, created_at desc);
+create index if not exists material_delivery_manifests_vehicle_idx on public.material_delivery_manifests(vehicle_asset_id, created_at desc);
 
-create table public.material_delivery_acceptances (
+create table if not exists public.material_delivery_acceptances (
   inventory_transaction_id uuid primary key references public.inventory_transactions(id) on delete restrict,
   transfer_item_id uuid not null references public.inventory_transfer_items(id) on delete restrict,
   received_quantity numeric(20,4) not null check (received_quantity > 0),
@@ -26,12 +28,13 @@ create table public.material_delivery_acceptances (
     or (condition = 'accepted_with_note' and char_length(trim(quality_note)) between 3 and 500)
   )
 );
-create index material_delivery_acceptances_item_idx on public.material_delivery_acceptances(transfer_item_id, created_at desc);
+create index if not exists material_delivery_acceptances_item_idx on public.material_delivery_acceptances(transfer_item_id, created_at desc);
 
 alter table public.material_delivery_manifests enable row level security;
 alter table public.material_delivery_acceptances enable row level security;
 revoke all on public.material_delivery_manifests, public.material_delivery_acceptances from public, anon, authenticated;
 grant select on public.material_delivery_manifests, public.material_delivery_acceptances to authenticated;
+drop policy if exists material_delivery_manifests_scoped_read on public.material_delivery_manifests;
 create policy material_delivery_manifests_scoped_read on public.material_delivery_manifests
 for select to authenticated using (exists (
   select 1 from public.inventory_transfer_items item
@@ -40,6 +43,7 @@ for select to authenticated using (exists (
   where item.transfer_id = material_delivery_manifests.transfer_id
     and private.can_view_material_request(line.request_id)
 ));
+drop policy if exists material_delivery_acceptances_scoped_read on public.material_delivery_acceptances;
 create policy material_delivery_acceptances_scoped_read on public.material_delivery_acceptances
 for select to authenticated using (exists (
   select 1 from public.material_request_dispatches dispatch
@@ -48,7 +52,7 @@ for select to authenticated using (exists (
     and private.can_view_material_request(line.request_id)
 ));
 
-create function private.record_request_site_acceptance()
+create or replace function private.record_request_site_acceptance()
 returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   if new.transfer_phase = 'receipt' and new.transfer_item_id is not null
@@ -60,12 +64,13 @@ begin
   return new;
 end;
 $$;
+drop trigger if exists material_delivery_acceptance_after_receipt on public.inventory_transactions;
 create trigger material_delivery_acceptance_after_receipt
 after insert on public.inventory_transactions for each row
 execute function private.record_request_site_acceptance();
 revoke all on function private.record_request_site_acceptance() from public, anon, authenticated;
 
-create function public.get_delivery_vehicle_choices()
+create or replace function public.get_delivery_vehicle_choices()
 returns table(id uuid, label text)
 language plpgsql stable security definer set search_path = '' as $$
 begin
@@ -79,7 +84,7 @@ begin
 end;
 $$;
 
-create function public.dispatch_approved_request_line_with_manifest(
+create or replace function public.dispatch_approved_request_line_with_manifest(
   p_idempotency_key uuid, p_request_line_id uuid, p_quantity numeric,
   p_transaction_date date, p_remarks text,
   p_vehicle_asset_id uuid, p_vehicle_label text, p_driver_name text,
@@ -128,7 +133,7 @@ begin
 end;
 $$;
 
-create function public.receive_request_transfer_with_inspection(
+create or replace function public.receive_request_transfer_with_inspection(
   p_idempotency_key uuid, p_transfer_item_id uuid, p_quantity numeric,
   p_transaction_date date, p_remarks text, p_condition text, p_quality_note text
 ) returns uuid language plpgsql security definer set search_path = '' as $$
@@ -171,3 +176,5 @@ grant execute on function public.get_delivery_vehicle_choices(),
   public.receive_request_transfer_with_inspection(uuid,uuid,numeric,date,text,text,text)
   to authenticated;
 revoke execute on function public.dispatch_approved_request_line(uuid,uuid,numeric,date,text) from authenticated;
+
+commit;

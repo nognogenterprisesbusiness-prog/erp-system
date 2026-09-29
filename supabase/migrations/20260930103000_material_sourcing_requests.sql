@@ -1,6 +1,8 @@
 -- A site employee may report missing stock without creating a catalog SKU or
 -- posting a stock receipt. Admin closes the report after sourcing or review.
-create table public.material_sourcing_requests (
+begin;
+
+create table if not exists public.material_sourcing_requests (
   id uuid primary key default gen_random_uuid(),
   idempotency_key uuid not null unique,
   payload_hash text not null,
@@ -28,20 +30,22 @@ create table public.material_sourcing_requests (
     or (status = 'dismissed' and resolved_by is not null and resolved_at is not null and catalog_material_id is null and char_length(trim(resolution_note)) between 3 and 500)
   )
 );
-create index material_sourcing_requests_project_idx on public.material_sourcing_requests(project_id, created_at desc);
-create index material_sourcing_requests_status_idx on public.material_sourcing_requests(status, created_at desc);
+create index if not exists material_sourcing_requests_project_idx on public.material_sourcing_requests(project_id, created_at desc);
+create index if not exists material_sourcing_requests_status_idx on public.material_sourcing_requests(status, created_at desc);
 alter table public.material_sourcing_requests enable row level security;
 revoke all on public.material_sourcing_requests from public, anon, authenticated;
 grant select on public.material_sourcing_requests to authenticated;
+drop policy if exists material_sourcing_requests_scoped_read on public.material_sourcing_requests;
 create policy material_sourcing_requests_scoped_read on public.material_sourcing_requests
 for select to authenticated using (
   requested_by = auth.uid() or private.can_access_project_site(project_id, project_site_id)
 );
+drop trigger if exists material_sourcing_requests_audit on public.material_sourcing_requests;
 create trigger material_sourcing_requests_audit
 after insert or update on public.material_sourcing_requests
 for each row execute function private.audit_row_change();
 
-create function public.submit_material_sourcing_request(
+create or replace function public.submit_material_sourcing_request(
   p_key uuid, p_project_id uuid, p_site_id uuid, p_warehouse_id uuid,
   p_material_name text, p_unit_name text, p_quantity numeric,
   p_needed_on date, p_reason text
@@ -99,7 +103,7 @@ begin
 end;
 $$;
 
-create function public.resolve_material_sourcing_request(
+create or replace function public.resolve_material_sourcing_request(
   p_id uuid, p_action text, p_material_id uuid, p_note text
 ) returns uuid language plpgsql security definer set search_path = '' as $$
 declare v_row public.material_sourcing_requests%rowtype;
@@ -139,3 +143,5 @@ revoke all on function public.submit_material_sourcing_request(uuid,uuid,uuid,uu
   public.resolve_material_sourcing_request(uuid,text,uuid,text) from public, anon;
 grant execute on function public.submit_material_sourcing_request(uuid,uuid,uuid,uuid,text,text,numeric,date,text),
   public.resolve_material_sourcing_request(uuid,text,uuid,text) to authenticated;
+
+commit;

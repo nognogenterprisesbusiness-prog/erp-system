@@ -1,6 +1,10 @@
 -- Show project staff only the stock currently available in a linked source warehouse.
 -- Approval remains the atomic reservation boundary; this read is advisory.
-create function public.search_requestable_warehouse_stock(
+begin;
+
+-- An early manual run may have created the five-argument version.
+drop function if exists public.search_requestable_warehouse_stock(uuid,uuid,text,integer,integer);
+create or replace function public.search_requestable_warehouse_stock(
   p_project_id uuid, p_warehouse_id uuid, p_search text default '',
   p_offset integer default 0, p_limit integer default 20,
   p_material_id uuid default null
@@ -37,3 +41,5 @@ end;
 $$;
 revoke all on function public.search_requestable_warehouse_stock(uuid,uuid,text,integer,integer,uuid) from public, anon;
 grant execute on function public.search_requestable_warehouse_stock(uuid,uuid,text,integer,integer,uuid) to authenticated;
+
+commit;
