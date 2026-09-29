@@ -1,6 +1,6 @@
 "use client";
 
-import { AssignmentsIcon, Audit01Icon, Building03Icon, Car01Icon, DashboardSquare01Icon, DeliveryTruck01Icon, ExcavatorIcon, File02Icon, FilePenLineIcon, Logout01Icon, QrCodeIcon, SearchDollarIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Audit01Icon, Building03Icon, Car01Icon, DashboardSquare01Icon, ExcavatorIcon, File02Icon, FilePenLineIcon, Logout01Icon, Package01Icon, QrCodeIcon, SearchDollarIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { logoutAction } from "@/app/auth/actions";
@@ -17,7 +17,7 @@ const navItems = [
   { href: "/dashboard", label: "Overview", icon: DashboardSquare01Icon, group: "Projects & operations" },
   { href: "/projects", label: "Projects", icon: Building03Icon, group: "Projects & operations" },
   { href: "/reports/daily", label: "Daily reports", icon: FilePenLineIcon, reports: true, group: "Projects & operations" },
-  { href: "/inventory", label: "Inventory", icon: DeliveryTruck01Icon, group: "Materials & assets" },
+  { href: "/inventory", label: "Inventory", icon: Package01Icon, group: "Materials & assets" },
   { href: "/warehouses", label: "Warehouses", icon: WarehouseIcon, group: "Materials & assets" },
   { href: "/requests", label: "Requests", icon: AssignmentsIcon, requests: true, group: "Materials & assets" },
   { href: "/equipment", label: "Equipment", icon: ExcavatorIcon, group: "Materials & assets" },

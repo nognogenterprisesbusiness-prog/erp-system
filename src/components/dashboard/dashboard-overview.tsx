@@ -39,9 +39,9 @@ export function DashboardOverview({ name, canManage, canViewRequests, canViewCon
 
   ];
   const visibleCards = financialTotals !== undefined ? [cards[0],
-    { label: "Total sales", value: money(financialTotals?.total_sales), detail: financialTotals ? "All-time issued invoices · not collections" : "Totals migration required", icon: Money03Icon, tone: "bg-emerald-50 text-emerald-700" },
-    { label: "Total expenses", value: money(financialTotals?.total_expenses), detail: financialTotals?.unvalued_expenses ? "Complete missing cost valuations" : financialTotals ? "All-time posted project costs · not cash paid" : "Totals migration required", icon: Money03Icon, tone: "bg-amber-50 text-amber-700" },
-    { label: "Total material value", value: money(financialTotals?.total_material_value), detail: financialTotals?.unvalued_stock ? "Verify opening stock values" : financialTotals ? "On-hand warehouse and site stock · excludes transit" : "Totals migration required", icon: PackageIcon, tone: "bg-violet-50 text-violet-700" },
+    { label: "Total sales", value: money(financialTotals?.total_sales), detail: financialTotals ? "Invoices issued to date" : "Sales totals are unavailable", icon: Money03Icon, tone: "bg-emerald-50 text-emerald-700" },
+    { label: "Total expenses", value: money(financialTotals?.total_expenses), detail: financialTotals?.unvalued_expenses ? "Add costs to expenses that are missing them" : financialTotals ? "Project costs recorded to date" : "Expense totals are unavailable", icon: Money03Icon, tone: "bg-amber-50 text-amber-700" },
+    { label: "Total material value", value: money(financialTotals?.total_material_value), detail: financialTotals?.unvalued_stock ? "Add values for starting stock" : financialTotals ? "Stock currently at warehouses and sites" : "Stock totals are unavailable", icon: PackageIcon, tone: "bg-violet-50 text-violet-700" },
   ] : cards;
   return <>
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
