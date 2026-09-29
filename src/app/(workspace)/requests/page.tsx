@@ -1,4 +1,6 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
+import { EquipmentRequestsView } from "@/components/assets/equipment-requests-view";
+import { RequestTypeNav } from "@/components/requests/request-type-nav";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -20,6 +22,7 @@ const statusLabels = { submitted: "For approval", approved: "Approved", partiall
 
 export default async function MaterialRequestsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
+  if (params.type === "equipment" || params.type === "vehicle") return <EquipmentRequestsView params={params} kind={params.type} />;
   const search = typeof params.q === "string" ? params.q.slice(0, 80) : "";
   const status = z.enum([...statuses, "all"]).safeParse(params.status);
   const page = typeof params.page === "string" ? Number(params.page) : 1;
@@ -28,7 +31,8 @@ export default async function MaterialRequestsPage({ searchParams }: { searchPar
   const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (search) next.set("q", search); if (filters.status !== "all") next.set("status", filters.status); next.set("page", String(target)); return `/requests?${next}`; };
   return <>
-    <PageHeader title="Material requests" description="Review site demand, manager decisions, and delivery progress." action={<div className="flex flex-wrap gap-2">{canRequest && <Button asChild><Link href="/requests/new"><HugeiconsIcon icon={PlusSignIcon} size={17} />New request</Link></Button>}</div>} />
+    <PageHeader title="Requests" description="Review material demand, manager decisions, and delivery progress." action={<div className="flex flex-wrap gap-2">{canRequest && <Button asChild><Link href="/requests/new"><HugeiconsIcon icon={PlusSignIcon} size={17} />New material request</Link></Button>}</div>} />
+    <RequestTypeNav active="material" showAssets={user.canManage || canRequest} />
     <ListFilterBar>
       <SearchField name="q" label="Search request number" defaultValue={search} placeholder="Search request number" />
       <div className="min-w-[180px]"><SelectPicker name="status" label="Status" defaultValue={filters.status} options={[{ value: "all", label: "All statuses" }, ...statuses.map((value) => ({ value, label: statusLabels[value] }))]} /></div>

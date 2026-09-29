@@ -36,7 +36,7 @@ export async function resolveScannedCode(rawIdentifier: string): Promise<ScanRes
     }
     if (user.canOperateInventory) actions.push({ label: "Transfer stock", href: `/inventory/transfers?new=1&material=${id}` });
   } else if (resolution.entity_type === "equipment") {
-    if (user.canManage || canRequest) actions.push({ label: "Equipment requests and returns", href: `/equipment/requests?asset=${id}` });
+    if (user.canManage || canRequest) actions.push({ label: "Equipment requests and returns", href: `/requests?type=equipment&asset=${id}` });
   } else if (resolution.entity_type === "warehouse") {
     const supabase = await createClient();
     const { data } = await supabase.from("inventory_locations").select("id").eq("warehouse_id", resolution.entity_id).maybeSingle();
