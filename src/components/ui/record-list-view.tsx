@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useSyncExternalStore, type ReactNode } from "react";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
 type ViewMode = "cards" | "table";
 const changeEvent = "erp:list-view-changed";
@@ -36,4 +37,10 @@ export function RecordListView({ storageKey, title, columns, rows, children }: {
   return <>
     {mode === "cards" || !rows.length ? children : <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><caption className="sr-only">{title}</caption><thead className="bg-slate-50 text-xs font-medium text-slate-500"><tr>{columns.map((column) => <th key={column} scope="col" className="whitespace-nowrap px-5 py-3">{column}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row) => <tr key={row.id} className="hover:bg-slate-50/60">{row.cells.map((cell, index) => <td key={index} className="px-5 py-4 align-middle">{cell}</td>)}</tr>)}</tbody></table></div></div>}
   </>;
+}
+
+export function RecordListSkeleton({ storageKey, columns = 6, rows = 6 }: { storageKey: string; columns?: number; rows?: number }) {
+  const { mode } = useRecordView(storageKey);
+  if (mode === "table") return <TableSkeleton columns={columns} rows={rows} filters={0} />;
+  return <div role="status" aria-live="polite" className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3"><span className="sr-only">Loading records</span>{Array.from({ length: rows }, (_, index) => <div key={index} aria-hidden className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white p-5 motion-reduce:animate-none"><div className="h-28 rounded-lg bg-slate-100" /><div className="mt-4 h-4 w-3/4 rounded-full bg-slate-100" /><div className="mt-3 h-3 w-1/2 rounded-full bg-slate-100" /><div className="mt-5 h-3 w-full rounded-full bg-slate-100" /></div>)}</div>;
 }

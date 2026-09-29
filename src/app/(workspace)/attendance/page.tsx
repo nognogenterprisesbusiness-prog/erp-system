@@ -1,10 +1,12 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
+import { Suspense } from "react";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { uuidSchema } from "@nognog/domain";
 import { AttendanceOverviewTable } from "@/components/workforce/attendance-overview-table";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PageHeader } from "@/components/ui/page-header";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { requireFinanceViewer } from "@/lib/auth";
 import { getAttendanceOverview } from "@/lib/data/attendance-overview";
@@ -26,13 +28,16 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const requestedPage = typeof params.page === "string" ? Number(params.page) : 1;
   const page = Number.isSafeInteger(requestedPage) && requestedPage >= 1 ? requestedPage : 1;
   const supabase = await createClient();
-  const [projects, result] = await Promise.all([
-    readAllPages((from, to) => supabase.from("projects").select("id,code,name").is("archived_at", null).order("name").order("id").range(from, to), "attendance projects"),
-    getAttendanceOverview(date, projectId, page),
-  ]);
+  const resultPromise = getAttendanceOverview(date, projectId, page);
+  const projects = await readAllPages((from, to) => supabase.from("projects").select("id,code,name").is("archived_at", null).order("name").order("id").range(from, to), "attendance projects");
   return <>
     <PageHeader title="Attendance" description="Review dated worker attendance, work hours, and posted project labor cost." action={user.canManage && projectId && <Button asChild><Link href={`/projects/${projectId}/attendance`}>Mark attendance</Link></Button>} />
     <ListFilterBar className="mt-6 flex flex-wrap items-center gap-3"><div className="w-full sm:w-48"><DatePicker key={date} label="Attendance date" name="date" defaultValue={date} allowClear={false} required /></div><div className="w-full sm:w-64"><SelectPicker key={projectId ?? "all"} label="Project" name="project" defaultValue={projectId ?? "all"} options={[{ value: "all", label: "All projects" }, ...projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))]} /></div></ListFilterBar>
-    <AttendanceOverviewTable rows={result.rows} count={result.count} page={result.page} pageCount={result.pageCount} date={date} projectId={projectId} canManage={user.canManage} />
+    <Suspense key={`${date}:${projectId}:${page}`} fallback={<TableSkeleton columns={user.canManage ? 7 : 6} filters={0} />}><AttendanceResults resultPromise={resultPromise} date={date} projectId={projectId} canManage={user.canManage} /></Suspense>
   </>;
+}
+
+async function AttendanceResults({ resultPromise, date, projectId, canManage }: { resultPromise: ReturnType<typeof getAttendanceOverview>; date: string; projectId: string | null; canManage: boolean }) {
+  const result = await resultPromise;
+  return <AttendanceOverviewTable rows={result.rows} count={result.count} page={result.page} pageCount={result.pageCount} date={date} projectId={projectId} canManage={canManage} />;
 }

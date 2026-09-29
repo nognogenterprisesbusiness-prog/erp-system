@@ -1,3 +1,4 @@
-import { ListPageSkeleton } from "@/components/ui/table-skeleton";
+import { BillingListShell } from "@/components/billing/billing-list-shell";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 
-export default function Loading() { return <ListPageSkeleton title="Client billing" description="Issued project invoices, partial payments, and outstanding balances." columns={6} />; }
+export default function Loading() { return <><BillingListShell /><TableSkeleton columns={7} filters={0} /></>; }

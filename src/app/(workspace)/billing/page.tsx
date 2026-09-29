@@ -1,12 +1,10 @@
-import { ListFilterBar } from "@/components/ui/list-filter-bar";
+import { Suspense } from "react";
+import { BillingListShell } from "@/components/billing/billing-list-shell";
 import { IntentLink as Link } from "@/components/layout/intent-link";
-import { PlusSignIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
-import { SearchField } from "@/components/ui/search-field";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { requireFinanceViewer } from "@/lib/auth";
 import { getInvoices } from "@/lib/data/billing";
@@ -18,13 +16,13 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q.slice(0, 80) : "";
   const page = typeof params.page === "string" ? Number(params.page) : 1;
+  return <><BillingListShell query={query} /><Suspense key={`${query}:${page}`} fallback={<TableSkeleton columns={7} filters={0} />}><BillingResults query={query} page={page} /></Suspense></>;
+}
+
+async function BillingResults({ query, page }: { query: string; page: number }) {
   const result = await getInvoices({ page, query });
   const pageHref = (target: number) => `/billing?${new URLSearchParams({ ...(query ? { q: query } : {}), page: String(target) })}`;
   return <>
-    <PageHeader title="Client billing" description="Issued project invoices, partial payments, and outstanding balances." action={<Button asChild><Link href="/billing/new"><HugeiconsIcon icon={PlusSignIcon} size={17} /> New invoice</Link></Button>} />
-    <ListFilterBar className="mt-7">
-      <SearchField name="q" label="Search invoices" defaultValue={query} placeholder="Search invoice, client, or description" wrapperClassName="w-full max-w-sm" />
-    </ListFilterBar>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No invoices found" description="Issue an invoice or change the search." /> : undefined}>
       <table className="w-full min-w-[790px] text-left text-sm"><thead className={tableHeadClass}><tr>
         <th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / client</th><th className="px-4 py-3">Issued / due</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Outstanding</th><th className="px-5 py-3">Status</th>

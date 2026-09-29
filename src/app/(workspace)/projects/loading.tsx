@@ -1,4 +1,5 @@
-import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { ProjectListControls, projectListHeader } from "@/components/projects/project-list-controls";
+import { PageHeader } from "@/components/ui/page-header";
+import { RecordListSkeleton } from "@/components/ui/record-list-view";
 
-// The list renders its own title, so only the records are placeholders.
-export default function Loading() { return <TableSkeleton filters={2} />; }
+export default function Loading() { return <><PageHeader {...projectListHeader} /><ProjectListControls /><RecordListSkeleton storageKey="projects" /></>; }
