@@ -1,6 +1,6 @@
 "use client";
 
-import { AssignmentsIcon, Audit01Icon, Building03Icon, Car01Icon, DashboardSquare01Icon, DeliveryTruck01Icon, ExcavatorIcon, File02Icon, FilePenLineIcon, Logout01Icon, QrCodeIcon, Store02Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Audit01Icon, Building03Icon, Car01Icon, DashboardSquare01Icon, DeliveryTruck01Icon, ExcavatorIcon, File02Icon, FilePenLineIcon, Logout01Icon, QrCodeIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { logoutAction } from "@/app/auth/actions";
@@ -21,6 +21,7 @@ const navItems = [
   { href: "/warehouses", label: "Warehouses", icon: WarehouseIcon, group: "Materials & assets" },
   { href: "/requests", label: "Requests", icon: AssignmentsIcon, requests: true, group: "Materials & assets" },
   { href: "/equipment", label: "Equipment", icon: ExcavatorIcon, group: "Materials & assets" },
+  { href: "/equipment/categories", label: "Classifications", icon: Tag01Icon, manager: true, group: "Materials & assets" },
   { href: "/vehicles", label: "Vehicles", icon: Car01Icon, group: "Materials & assets" },
   { href: "/qr-codes", label: "QR tools", icon: QrCodeIcon, group: "Materials & assets" },
   { href: "/suppliers", label: "Suppliers & purchases", icon: Store02Icon, procurement: true, group: "Purchasing & finance" },
