@@ -6,7 +6,9 @@ test("operational routes subscribe only to their related data", () => {
   assert.deepEqual(liveTablesForPath("/requests/assigned-request"), ["material_requests", "material_request_lines", "inventory_balances", "inventory_transfers", "inventory_transfer_items"]);
   assert.deepEqual(liveTablesForPath("/inventory/transactions"), ["inventory_transactions"]);
   assert.deepEqual(liveTablesForPath("/inventory/counts"), ["inventory_stock_counts", "inventory_balances"]);
-  assert.deepEqual(liveTablesForPath("/equipment/requests"), ["equipment_requests", "assets"]);
+  assert.deepEqual(liveTablesForPath("/requests", "equipment"), ["equipment_requests", "assets"]);
+  assert.deepEqual(liveTablesForPath("/requests", "vehicle"), ["equipment_requests", "assets"]);
+  assert.deepEqual(liveTablesForPath("/requests"), ["material_requests", "material_request_lines", "inventory_balances", "inventory_transfers", "inventory_transfer_items"]);
   assert.deepEqual(liveTablesForPath("/reports/daily/record-id"), ["daily_reports", "project_progress_entries", "daily_report_resource_links", "project_attendance", "project_equipment_usage", "inventory_transactions"]);
   assert.ok(liveTablesForPath("/projects/record-id").includes("project_attendance"));
   assert.ok(liveTablesForPath("/projects/record-id").includes("project_equipment_usage"));

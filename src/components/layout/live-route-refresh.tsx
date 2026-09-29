@@ -1,24 +1,28 @@
 "use client";
 
 import { startTransition, useEffect, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { liveTablesForPath, refreshIntervalForPath } from "@/lib/realtime/route-sources";
 import { ROUTE_CACHE_MS as routeCacheMs, markOtherRoutesStale, shouldRefreshCachedRoute } from "@/lib/realtime/navigation-cache";
 
 export function LiveRouteRefresh({ userId }: { userId: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const visits = useRef(new Map<string, number>());
+  const selectedType = pathname === "/requests" ? searchParams.get("type") : null;
+  const requestType = selectedType === "equipment" || selectedType === "vehicle" ? selectedType : null;
+  const routeKey = requestType ? `${pathname}?type=${requestType}` : pathname;
 
   useEffect(() => {
-    const tables = liveTablesForPath(pathname);
-    const interval = refreshIntervalForPath(pathname);
-    const previousVisit = visits.current.get(pathname);
+    const tables = liveTablesForPath(pathname, requestType);
+    const interval = refreshIntervalForPath(pathname, requestType);
+    const previousVisit = visits.current.get(routeKey);
     const age = previousVisit === undefined ? Infinity : Date.now() - previousVisit;
     // An expired/unseen route is already fetching its page during navigation.
     let lastRefresh = age >= routeCacheMs ? Date.now() : previousVisit!;
-    visits.current.set(pathname, lastRefresh);
+    visits.current.set(routeKey, lastRefresh);
     if (visits.current.size > 100) {
       const oldest = visits.current.keys().next().value;
       if (oldest !== undefined) visits.current.delete(oldest);
@@ -37,7 +41,7 @@ export function LiveRouteRefresh({ userId }: { userId: string }) {
       }
       pendingDeferred = false;
       lastRefresh = Date.now();
-      visits.current.set(pathname, lastRefresh);
+      visits.current.set(routeKey, lastRefresh);
       // Keep the current page visible while the new server data arrives.
       startTransition(() => router.refresh());
     };
@@ -56,7 +60,7 @@ export function LiveRouteRefresh({ userId }: { userId: string }) {
       // The saving dialog refreshes this page. Other cached destinations need
       // fresh data when revisited, without discarding their reusable screen.
       const now = Date.now();
-      markOtherRoutesStale(visits.current, pathname, now);
+      markOtherRoutesStale(visits.current, routeKey, now);
       lastRefresh = now;
       pendingDeferred = false;
       clearTimeout(debounce);
@@ -74,7 +78,7 @@ export function LiveRouteRefresh({ userId }: { userId: string }) {
     if (shouldRefreshCachedRoute(previousVisit, Date.now())) scheduleRefresh();
 
     const supabase = tables.length ? createClient() : null;
-    const channel = supabase?.channel(`workspace-live-${userId}-${pathname}`);
+    const channel = supabase?.channel(`workspace-live-${userId}-${routeKey}`);
     for (const table of tables) {
       channel?.on("postgres_changes", {
         event: "*", schema: "public", table,
@@ -99,7 +103,7 @@ export function LiveRouteRefresh({ userId }: { userId: string }) {
       window.removeEventListener("erp:records-saved", onRecordsSaved);
       if (channel && supabase) void supabase.removeChannel(channel);
     };
-  }, [pathname, router, userId]);
+  }, [pathname, requestType, routeKey, router, userId]);
 
   return null;
 }

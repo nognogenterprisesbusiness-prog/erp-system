@@ -34,7 +34,6 @@ export async function submitEquipmentRequestAction(_: EquipmentRequestActionStat
   try { await submitSiteEquipmentRequest(supabase, input); }
   catch(cause) { return failure(cause instanceof Error ? cause.message : 'The equipment request could not be saved.'); }
   const { data: asset } = await supabase.from("assets").select("asset_kind").eq("id", input.assetId).single();
-  revalidatePath("/equipment/requests");
   revalidatePath("/requests");
   redirect(`/requests?type=${asset?.asset_kind === "vehicle" ? "vehicle" : "equipment"}`);
 }
@@ -47,7 +46,6 @@ export async function decideEquipmentRequestAction(_: EquipmentRequestActionStat
   const supabase = await createClient();
   const { error } = await supabase.rpc("decide_equipment_request", { p_id: parsed.data.id, p_approve: parsed.data.decision === "approve", p_note: parsed.data.note });
   if (error) return failure(messageFor(error));
-  revalidatePath("/equipment/requests");
   revalidatePath("/requests");
   return { ok: true, message: "Decision recorded." };
 }
@@ -59,7 +57,8 @@ export async function checkoutEquipmentRequestAction(_: EquipmentRequestActionSt
   const supabase = await createClient();
   const { error } = await supabase.rpc("checkout_equipment_request", { p_id: id.data });
   if (error) return failure(messageFor(error));
-  revalidatePath("/equipment/requests"); revalidatePath("/equipment"); revalidatePath(`/equipment/${id.data}`);
+  revalidatePath("/equipment"); revalidatePath("/vehicles");
+  revalidatePath("/equipment/[id]", "page"); revalidatePath("/vehicles/[id]", "page");
   revalidatePath("/requests");
   return { ok: true, message: "Equipment checked out." };
 }
@@ -73,7 +72,8 @@ export async function returnEquipmentRequestAction(_: EquipmentRequestActionStat
     p_id: parsed.data.id, p_needs_maintenance: parsed.data.needsMaintenance, p_note: parsed.data.note,
   });
   if (error) return failure(messageFor(error));
-  revalidatePath("/equipment/requests"); revalidatePath("/equipment");
+  revalidatePath("/equipment"); revalidatePath("/vehicles");
+  revalidatePath("/equipment/[id]", "page"); revalidatePath("/vehicles/[id]", "page");
   revalidatePath("/requests");
   return { ok: true, message: "Equipment return recorded." };
 }
