@@ -8,7 +8,7 @@ Login → Home → select an accessible project/site → record site activity. F
 
 Material requests retain source warehouse, required date, remarks and line quantities. Engineers review another requester's submission; warehouse release remains web-based. Foremen/Engineers confirm partial/full receipts. Foremen post multi-worker attendance and authorized equipment hours. Engineers view operational attendance, independently review daily reports and record progress from an approved report.
 
-Reports retain the existing draft/submission/review/correction lifecycle. A single optional photo is processed through the ERP's verified private WebP pipeline. Existing material, attendance and equipment postings are linked to the draft; report submission does not post their costs again.
+Reports retain the server-side draft/submission/review/correction lifecycle. Opening today's report reads posted material use, attendance and equipment hours without creating a record. On Submit, the app creates an internal draft, links selected activity, uploads an optional photo through the ERP's verified private WebP pipeline, and submits for Engineer review. The mobile screen has no separate Save Draft action; a failed upload leaves an editable record for retry. Report submission does not post activity costs again.
 
 ## Server interface
 
