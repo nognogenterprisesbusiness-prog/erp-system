@@ -423,6 +423,11 @@ export async function readMobileResource(
       const r = await query.range(offset, offset + size - 1);
       if (r.error) databaseError(r.error);
       const rows = r.data ?? [];
+      const reversals = rows.length
+        ? await c.from("inventory_transactions").select("reversal_of").in("reversal_of", rows.map((x) => x.id))
+        : { data: [], error: null };
+      if (reversals.error) databaseError(reversals.error);
+      const reversed = new Set((reversals.data ?? []).map((x) => x.reversal_of));
       const refs = await materialReferences(
         c,
         rows.map((x) => x.material_id),
@@ -433,6 +438,7 @@ export async function readMobileResource(
           ...x,
           name: refs.materials.get(x.material_id)?.name ?? "Material",
           unit: refs.units.get(x.unit_of_measure_id) ?? "",
+          reversed: reversed.has(x.id),
         })),
         r.count,
         q,

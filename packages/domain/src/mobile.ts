@@ -183,6 +183,7 @@ export const mobileResponseSchemas = {
       quantity: number,
       unit: z.string(),
       remarks: text,
+      reversed: z.boolean(),
     }),
   ),
   equipment: page(

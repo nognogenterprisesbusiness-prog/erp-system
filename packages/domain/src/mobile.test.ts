@@ -109,3 +109,14 @@ test("operational responses strip accidental wage and cost fields", () => {
   assert.equal("rate_snapshot" in result.items[0], false);
   assert.equal("cost_total" in result.items[0], false);
 });
+
+test("material history marks reversals without exposing costs", () => {
+  const record = {
+    id: randomUUID(), transaction_type: "MATERIAL_CONSUMPTION", transaction_date: "2026-09-30",
+    name: "Cement", quantity: 4, unit: "bags", remarks: null, reversed: true, cost_total: 400,
+  };
+  const result = mobileResponseSchemas["inventory-history"].parse({ items: [record], count: 1, page: 1, pageSize: 20 });
+  assert.equal(result.items[0].reversed, true);
+  assert.equal("cost_total" in result.items[0], false);
+  assert.equal(mobileResponseSchemas["inventory-history"].safeParse({ items: [{ ...record, reversed: undefined }], count: 1, page: 1, pageSize: 20 }).success, false);
+});
