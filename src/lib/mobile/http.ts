@@ -46,10 +46,12 @@ export async function mobileContext(request: Request, write: boolean) {
     },
   });
   // The unverified subject only scopes the parallel reads below. PostgREST
-  // verifies the same bearer token for each of them, and getUser must confirm it.
+  // verifies the same bearer token for each of them, and getClaims must confirm
+  // it. The project signs with asymmetric keys, so getClaims verifies locally
+  // against the cached JWKS instead of a round trip to Supabase Auth.
   const subject = tokenSubject(token);
   const [{ data: auth, error }, profile, roleRows, allowed] = await Promise.all([
-    client.auth.getUser(token),
+    client.auth.getClaims(token),
     client
       .from("profiles")
       .select("id,full_name,email,avatar_path,updated_at,is_active,onboarding_required")
@@ -58,7 +60,7 @@ export async function mobileContext(request: Request, write: boolean) {
     client.from("user_roles").select("role").eq("user_id", subject),
     client.rpc("guard_mobile_api", { p_write: write }),
   ]);
-  if (error || !auth.user || auth.user.id !== subject)
+  if (error || !auth || auth.claims.sub !== subject)
     throw new MobileError(401, "Please sign in again.");
   if (profile.error || roleRows.error)
     throw new MobileError(
