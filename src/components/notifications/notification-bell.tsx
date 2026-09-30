@@ -37,14 +37,22 @@ export function NotificationBell({ userId }: { userId: string }) {
     };
     void refresh();
     refreshMenu.current = () => { void refresh(true); };
+    // Realtime is the primary signal; polling only covers a dropped channel.
+    let connected = false;
+    let subscribedBefore = false;
     const channel = supabase.channel(`notifications-${userId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `recipient_id=eq.${userId}` }, () => { void refresh(menuOpen.current); })
-      .subscribe();
+      .subscribe((status) => {
+        connected = status === "SUBSCRIBED";
+        // Changes made while disconnected were not delivered; catch up once.
+        if (connected && subscribedBefore) void refresh(menuOpen.current);
+        if (connected) subscribedBefore = true;
+      });
     const onReconnect = () => { void refresh(menuOpen.current); };
     const onVisibility = () => { if (document.visibilityState === "visible") void refresh(menuOpen.current); };
     window.addEventListener("online", onReconnect);
     document.addEventListener("visibilitychange", onVisibility);
-    const poll = window.setInterval(onVisibility, 300_000);
+    const poll = window.setInterval(() => { if (!connected) onVisibility(); }, 60_000);
     return () => {
       mounted = false;
       window.clearInterval(poll);
