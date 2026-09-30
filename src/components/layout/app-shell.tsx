@@ -31,10 +31,10 @@ function Sidebar({ items, footerItems = [], footerAction, homeHref, pathname, na
   const navigationId = useId();
   const groups = [...new Set(items.map((item) => item.group ?? "Workspace"))];
   const brand = navigationMode === "document"
-    ? <a href={homeHref} aria-label="Nognog Enterprises home" className={cn("flex min-w-0 items-center gap-3", compact ? "justify-center" : "px-2")} onClick={onNavigate}><Brand compact={compact} /></a>
+    ? <a href={homeHref} aria-label="Nognog home" className={cn("flex min-w-0 items-center gap-3", compact ? "justify-center" : "px-2")} onClick={onNavigate}><Brand compact={compact} /></a>
     : navigationMode === "history"
-      ? <HistoryLink href={homeHref} aria-label="Nognog Enterprises home" className={cn("flex min-w-0 items-center gap-3", compact ? "justify-center" : "px-2")} onClick={onNavigate}><Brand compact={compact} /></HistoryLink>
-      : <Link href={homeHref} aria-label="Nognog Enterprises home" className={cn("flex min-w-0 items-center gap-3", compact ? "justify-center" : "px-2")} onClick={onNavigate}><Brand compact={compact} /></Link>;
+      ? <HistoryLink href={homeHref} aria-label="Nognog home" className={cn("flex min-w-0 items-center gap-3", compact ? "justify-center" : "px-2")} onClick={onNavigate}><Brand compact={compact} /></HistoryLink>
+      : <Link href={homeHref} aria-label="Nognog home" className={cn("flex min-w-0 items-center gap-3", compact ? "justify-center" : "px-2")} onClick={onNavigate}><Brand compact={compact} /></Link>;
   return <aside data-erp-sidebar className={cn("flex h-full w-full flex-col overflow-y-auto overscroll-contain bg-[#061228] py-5 text-slate-300", compact ? "px-3" : "px-4")}>
     <div className={cn("flex shrink-0", compact ? "flex-col items-center gap-3" : "items-center justify-between")}>
       {brand}
@@ -64,8 +64,8 @@ function Sidebar({ items, footerItems = [], footerAction, homeHref, pathname, na
 
 function Brand({ compact }: { compact: boolean }) {
   return <>
-      <Image src="/logo-nognog.webp" alt="Nognog Enterprises" width={38} height={38} priority />
-      {!compact && <div><p className="text-sm font-semibold tracking-[0.1em] text-white">NOGNOG</p><p className="text-[9px] font-medium tracking-[0.27em] text-cyan-300">ENTERPRISES</p></div>}
+      <Image src="/logo-nognog.webp" alt="Nognog" width={38} height={38} priority />
+      {!compact && <p className="text-sm font-semibold tracking-[0.1em] text-white">NOGNOG</p>}
     </>;
 }
 

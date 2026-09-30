@@ -9,11 +9,8 @@ export default function LoginPage() {
       <div className="absolute right-5 top-5"><ThemeToggle /></div>
       <section className="w-full max-w-[400px]" aria-labelledby="login-title">
         <div className="mb-10 flex items-center justify-center gap-3">
-          <Image src="/logo-nognog.webp" alt="Nognog Enterprises" width={48} height={48} priority />
-          <div>
-            <p className="text-sm font-bold tracking-[0.12em] text-[#061228]">NOGNOG</p>
-            <p className="text-[9px] font-semibold tracking-[0.28em] text-cyan-700">ENTERPRISES</p>
-          </div>
+          <Image src="/logo-nognog.webp" alt="Nognog" width={48} height={48} priority />
+          <p className="text-sm font-bold tracking-[0.12em] text-[#061228]">NOGNOG</p>
         </div>
 
         <div className="mb-8 text-center">
@@ -24,7 +21,7 @@ export default function LoginPage() {
         <LoginForm />
 
 
-        <p className="mt-8 text-center text-xs text-slate-400">Authorized Nognog Enterprises personnel only.</p>
+        <p className="mt-8 text-center text-xs text-slate-400">Authorized Nognog personnel only.</p>
       </section>
     </main>
   );

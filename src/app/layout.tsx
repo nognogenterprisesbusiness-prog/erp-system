@@ -12,7 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Nognog Operations | Construction ERP",
   description:
-    "Nognog Enterprises designs and builds houses for private clients and delivers public works across the Philippines. PCAB Category A contractor based in Cebu.",
+    "Nognog designs and builds houses for private clients and delivers public works across the Philippines. PCAB Category A contractor based in Cebu.",
   metadataBase: new URL("https://www.nognogenterprises.com"),
   robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
 };

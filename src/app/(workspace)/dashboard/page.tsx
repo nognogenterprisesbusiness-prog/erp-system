@@ -3,7 +3,7 @@ import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
 import { requireUser } from "@/lib/auth";
 import { getDashboardData } from "@/lib/data/dashboard";
 
-export const metadata: Metadata = { title: "Operations Dashboard | Nognog Enterprises", description: "Live construction operations overview." };
+export const metadata: Metadata = { title: "Operations Dashboard | Nognog", description: "Live construction operations overview." };
 export default async function DashboardPage() {
   const user = await requireUser();
   const canViewConsumption = user.canOperateInventory || user.roles.some((role) => ["engineer", "foreman"].includes(role));
