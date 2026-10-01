@@ -121,6 +121,8 @@ export type DashboardMonthlyCostRow = { month_start: string; material_cost: numb
 export type ProjectMaterialPlanRow = { id: string; project_id: string; project_site_id: string; warehouse_id: string; material_id: string; planned_quantity: number; required_on: string; note: string; updated_by: string; created_at: string; updated_at: string };
 export type ProjectMaterialPlanView = { id: string; project_site_id: string; site_name: string; warehouse_id: string; warehouse_name: string; material_id: string; material_code: string; material_name: string; unit_symbol: string; planned_quantity: number; required_on: string; note: string; consumed_quantity: number; site_on_hand: number; warehouse_available: number; outstanding_request_quantity: number; quantity_to_request: number; procurement_shortage: number };
 export type ProjectMaterialEstimateView = { plan_line_id: string; unit_cost: number | null; price_source: "supplier" | "stock" | null; estimated_cost: number | null };
+export type WarehouseReceivableLine = { line_id: string; order_id: string; po_number: string; supplier_name: string; warehouse_id: string; warehouse_name: string; ordered_on: string; expected_on: string | null; material_code: string; material_name: string; unit_symbol: string; ordered_quantity: number; received_quantity: number; remaining_quantity: number };
+export type MaterialCostBatchRow = { location_id: string; location_name: string; location_type: "warehouse" | "project_site"; batch_number: number; batch_date: string; unit_cost: number; remaining_quantity: number; remaining_value: number; use_order: number };
 export type ProjectProgressRow = { id: string; project_id: string; project_site_id: string; daily_report_id: string; progress_date: string; completion_percent: number; summary: string; recorded_by: string; recorded_at: string };
 export type InventoryStockCountRow = { id: string; idempotency_key: string; material_id: string; inventory_location_id: string; expected_quantity: number; expected_reserved: number; expected_value: number; counted_quantity: number; reason_type: "physical_count" | "damaged" | "missing"; reason: string; status: "pending" | "approved" | "rejected"; counted_by: string; counted_at: string; decided_by: string | null; decided_at: string | null; decision_note: string | null; transaction_id: string | null };
 export type LegacyTransitValueRow = { id: string; transfer_item_id: string; verified_dispatched_total_cost: number; verified_received_total_cost: number; supporting_reference: string; reason: string; verified_by: string; verified_at: string; idempotency_key: string; command_payload: Json };
@@ -139,7 +141,7 @@ export type Database = {
       geo_barangays: Table<{ code: string; name: string; municipality_code: string }, never>;
       projects: Table<ProjectRow, Omit<ProjectRow, "id" | "photo_path" | "municipality_code" | "estimated_duration_days" | "archived_at" | "archived_by" | "created_at" | "updated_at"> & { id?: string; photo_path?: string | null; municipality_code?: string | null; archived_at?: string | null; archived_by?: string | null }>;
       project_assignments: Table<ProjectAssignmentRow, Omit<ProjectAssignmentRow, "id" | "status" | "ended_at" | "ended_by" | "created_at" | "updated_at"> & { id?: string; status?: AssignmentStatus }, Partial<ProjectAssignmentRow>>;
-      project_documents: Table<ProjectDocumentRow, Omit<ProjectDocumentRow, "created_at">, never>;
+      project_documents: Table<ProjectDocumentRow, Omit<ProjectDocumentRow, "created_at">, Partial<Pick<ProjectDocumentRow, "file_name" | "category">>>;
       warehouses: Table<WarehouseRow, Omit<WarehouseRow, "id" | "photo_path" | "municipality_code" | "created_at" | "updated_at"> & { id?: string; photo_path?: string | null; municipality_code?: string | null }>;
       warehouse_assignments: Table<WarehouseAssignmentRow, Omit<WarehouseAssignmentRow, "id" | "status" | "ended_at" | "ended_by" | "created_at" | "updated_at"> & { id?: string; status?: AssignmentStatus }, Partial<WarehouseAssignmentRow>>;
       project_sites: Table<ProjectSiteRow, Omit<ProjectSiteRow, "id" | "created_at" | "updated_at"> & { id?: string }>;
@@ -305,7 +307,8 @@ export type Database = {
       get_client_invoice_balances: { Args: { p_invoice_ids: string[] }; Returns: ClientInvoiceBalanceRow[] };
       get_billable_projects: { Args: Record<string, never>; Returns: { id: string; code: string; name: string; client_name: string; contract_amount: number; status: ProjectStatus }[] };
       issue_purchase_order: { Args: { p_idempotency_key: string; p_supplier_id: string; p_warehouse_id: string; p_ordered_on: string; p_expected_on: string; p_purpose: string; p_lines: Json }; Returns: string };
-      receive_purchase_order_line: { Args: { p_idempotency_key: string; p_line_id: string; p_quantity: number | string; p_goods_total_cost: number | string; p_delivery_reference: string; p_received_on: string; p_cost_variance_reason?: string | null }; Returns: string };
+      receive_purchase_order_line: { Args: { p_idempotency_key: string; p_line_id: string; p_quantity: number | string; p_goods_total_cost: number | string | null; p_delivery_reference: string; p_received_on: string; p_cost_variance_reason?: string | null }; Returns: string };
+      get_warehouse_receivable_po_lines: { Args: Record<string, never>; Returns: WarehouseReceivableLine[] };
       cancel_purchase_order: { Args: { p_order_id: string; p_reason: string }; Returns: undefined };
       post_project_attendance: { Args: { p_idempotency_key: string; p_assignment_id: string; p_work_date: string; p_status: "present" | "absent"; p_hours: number | string; p_rate_type: LaborRateType | null; p_day_fraction: number | string | null; p_note: string }; Returns: string };
       reverse_project_attendance: { Args: { p_idempotency_key: string; p_attendance_id: string; p_reason: string }; Returns: string };
@@ -322,6 +325,7 @@ export type Database = {
       get_dashboard_totals: { Args: Record<string, never>; Returns: { total_sales: number; total_expenses: number | null; total_material_value: number | null; unvalued_stock: number; unvalued_expenses: number }[] };
       get_project_material_plan: { Args: { p_project_id: string }; Returns: ProjectMaterialPlanView[] };
       get_project_material_estimate: { Args: { p_project_id: string }; Returns: ProjectMaterialEstimateView[] };
+      get_material_cost_batches: { Args: { p_material_id: string }; Returns: MaterialCostBatchRow[] };
       get_asset_photo_paths: { Args: { p_asset_ids: string[] }; Returns: { asset_id: string; photo_path: string }[] };
       save_project_material_plan_line: { Args: { p_project_id: string; p_site_id: string; p_warehouse_id: string; p_material_id: string; p_quantity: number | string; p_required_on: string; p_note: string }; Returns: string };
       record_project_progress: { Args: { p_report_id: string; p_percent: number | string; p_summary: string }; Returns: string };

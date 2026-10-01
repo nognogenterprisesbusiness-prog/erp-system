@@ -20,7 +20,7 @@ export function OpeningValueForm({ materialId, locationId, quantity }: { materia
     <FormField label="Verified total value (PHP)" htmlFor={valueId} error={!state.ok ? state.fieldErrors?.totalValue?.[0] : undefined}>
       <input className={fieldControlClass} id={valueId} name="totalValue" type="number" min="0" step="0.01" required />
     </FormField>
-    <FormField label="Evidence / reconciliation reason" htmlFor={reasonId} error={!state.ok ? state.fieldErrors?.reason?.[0] : undefined}>
+    <FormField label="Reason or evidence" htmlFor={reasonId} error={!state.ok ? state.fieldErrors?.reason?.[0] : undefined}>
       <input className={fieldControlClass} id={reasonId} name="reason" minLength={3} maxLength={500} required placeholder="Count sheet or approved opening statement" />
     </FormField>
     <Button type="submit" disabled={pending}>{pending ? "Verifying…" : "Verify value"}</Button>

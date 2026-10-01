@@ -80,6 +80,16 @@ export async function getMaterial(id: string) {
   return { material, category, unit, references, balances: balances.map((balance) => ({ ...balance, location: locationMap.get(balance.inventory_location_id) })) };
 }
 
+// Admin and Finance only; the RPC enforces the same rule.
+export async function getMaterialCostBatches(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_material_cost_batches", { p_material_id: id });
+  // PGRST202: the batch-costing migration is not applied yet; hide the section.
+  if (error?.code === "PGRST202") return null;
+  if (error) throw new Error(`Unable to load stock batch prices: ${error.message}`, { cause: error });
+  return data ?? [];
+}
+
 export async function getInventoryOptions() {
   const supabase = await createClient();
   const [materials, locations, references] = await Promise.all([

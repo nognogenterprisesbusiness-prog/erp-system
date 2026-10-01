@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
+// Bundled so builds and dev never depend on reaching Google Fonts (a failed
+// download silently switched the whole app to a heavier fallback font).
+const inter = localFont({
+  src: "./fonts/InterVariable.woff2",
+  weight: "100 900",
   display: "swap",
   variable: "--font-inter",
 });

@@ -23,7 +23,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: { par
 
     <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
-        <div><h2 className="font-semibold">Project assignments</h2><p className="mt-1 text-xs text-slate-500">Current and past positions by project site. Assignments do not grant application access.</p></div>
+        <div><h2 className="font-semibold">Project assignments</h2><p className="mt-1 text-xs text-slate-500">Current and past workers by site.</p></div>
         {user.canManage && employee.status === "active" && <RecordCreateDialog title="Assign employee" triggerLabel="Assign to project"><WorkforceAssignmentForm fixedEmployeeId={id} employees={[{ id, fullName: employee.fullName }]} projects={references.projects} sites={references.sites} /></RecordCreateDialog>}
       </div>
       {assignments.length === 0 ? <EmptyState compact kind="items" title="No project assignments" /> : (

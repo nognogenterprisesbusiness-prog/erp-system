@@ -34,7 +34,7 @@ export default async function DailyReportsPage({ searchParams }: { searchParams:
   const [choices, filterChoices] = await Promise.all([getDailyReportChoices(), getDailyReportFilterChoices()]);
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (search) next.set("q", search); if (filters.projectId) next.set("project", filters.projectId); if (filters.siteId) next.set("site", filters.siteId); if (filters.reportDateFrom) next.set("from", filters.reportDateFrom); if (filters.reportDateTo) next.set("to", filters.reportDateTo); if (filters.status !== "all") next.set("status", filters.status); next.set("page", String(target)); return `/reports/daily?${next}`; };
   return <>
-    <PageHeader eyebrow="Site reporting" title="Daily reports" description="Record site work and preserve submitted report history for assigned projects."
+    <PageHeader eyebrow="Site reporting" title="Daily reports" description="Daily site reports for your assigned projects."
       action={<div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
         <ReportDateRangeFilter key={`${filters.reportDateFrom}:${filters.reportDateTo}`} startDate={filters.reportDateFrom} endDate={filters.reportDateTo} search={search} projectId={filters.projectId} siteId={filters.siteId} status={filters.status} />
         {choices.sites.length > 0 && <RecordCreateDialog title="Add daily report" triggerLabel="Add report" initialOpen={params.create === "1"} closeHref="/reports/daily"><DailyReportForm initialId={randomUUID()} initialProjectId={filters.projectId || undefined} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}

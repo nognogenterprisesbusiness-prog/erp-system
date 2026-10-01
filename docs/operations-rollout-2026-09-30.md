@@ -24,4 +24,4 @@
 
 ## Cost decision
 
-The current ledger uses moving weighted-average stock value, and supplier prices dated to new purchase orders. The client has not chosen a different stock valuation method. Changing historical stock to the latest supplier quote would alter past valuation and requires a separate signed decision and migration.
+Superseded on 2026-10-01: the client chose purchase batches used newest first. See [batch costing](batch-costing-2026-10-01.md). Supplier quotes still never reprice stock; only received purchase costs create batches.

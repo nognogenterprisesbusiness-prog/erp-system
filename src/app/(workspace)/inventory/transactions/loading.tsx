@@ -1,3 +1,3 @@
 import { ListPageSkeleton } from "@/components/ui/table-skeleton";
 
-export default function Loading() { return <ListPageSkeleton title="Stock history" description="Stock in, stock out, transfers and usage are recorded automatically. Corrections preserve the original record." columns={7} filters={3} />; }
+export default function Loading() { return <ListPageSkeleton title="Stock history" description="Every stock in, stock out, transfer and use. Corrections keep the original entry." columns={7} filters={3} />; }

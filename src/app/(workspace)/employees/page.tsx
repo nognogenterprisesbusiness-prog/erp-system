@@ -26,7 +26,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const [user, references] = await Promise.all([requireUser(), getWorkforceReferences()]);
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (query) next.set("q", query); if (categoryId) next.set("category", categoryId); if (projectId) next.set("project", projectId); if (status !== "all") next.set("status", status); next.set("page", String(target)); return `/employees?${next}`; };
   return <>
-    <PageHeader eyebrow="Labor and workforce" title="Employees" description="A secure worker registry with project history, optional user-account links, and versioned labor rates." action={user.canManage && <RecordCreateDialog title="Add employee" initialOpen={params.create === "1"} closeHref={pageHref(page)}><EmployeeForm categories={references.categories} profiles={references.profiles} /></RecordCreateDialog>} />
+    <PageHeader eyebrow="Labor and workforce" title="Employees" description="Workers, their project assignments and labor rates." action={user.canManage && <RecordCreateDialog title="Add employee" initialOpen={params.create === "1"} closeHref={pageHref(page)}><EmployeeForm categories={references.categories} profiles={references.profiles} /></RecordCreateDialog>} />
     <ListFilterBar>
       <SearchField key={query} name="q" label="Search employees" defaultValue={query} placeholder="Search name, code, or employment type" />
       <SelectPicker name="category" label="Employee category" defaultValue={categoryId || "all"} options={[{ value: "all", label: "All categories" }, ...references.categories.map((item) => ({ value: item.id, label: item.name }))]} />

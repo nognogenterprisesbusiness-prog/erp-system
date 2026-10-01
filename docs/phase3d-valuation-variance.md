@@ -1,5 +1,7 @@
 # Phase 3D — connected inventory valuation and transit variance
 
+> **2026-10-01:** stock now leaves each location newest purchase batch first instead of at the weighted average. See [batch costing](batch-costing-2026-10-01.md). The rest of this record describes the earlier rule.
+
 Status: **coded, unapplied and not database-verified**. These migrations are deliberately left unapplied because there is no isolated staging Supabase project and the local Docker database is stopped. Passing TypeScript/domain tests does not prove the SQL, RLS or accounting behavior. Do not post live inventory or report project margin from this slice yet.
 
 Later connected billing, procurement, attendance, equipment and opening-transit changes are tracked in `connected-web-workflows-2026-09-24.md`; this Phase 3D note describes the earlier valuation slice and is not the complete current backlog.

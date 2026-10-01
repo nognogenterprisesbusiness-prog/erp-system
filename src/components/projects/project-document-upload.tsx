@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { useRecordDialog } from "@/components/ui/record-create-dialog";
 import { attachProjectDocumentsAction } from "@/app/(workspace)/projects/document-actions";
@@ -35,6 +36,9 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
   const input = useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = useState(projects.some((project) => project.id === initialProjectId) ? initialProjectId : "");
   const [category, setCategory] = useState<ProjectDocumentCategory>("initial");
+  // Each chosen file needs a name typed by the uploader; the file name is only a hint.
+  const [selected, setSelected] = useState<File[]>([]);
+  const [names, setNames] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
@@ -42,7 +46,7 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const files = [...(input.current?.files ?? [])];
+    const files = selected;
     setMessage("");
     setError(false);
 
@@ -62,8 +66,16 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
       return;
     }
 
+    const missing = names.findIndex((name) => !name.trim());
+    if (missing >= 0) {
+      setError(true);
+      setMessage(`Enter a document name for ${files[missing].name}.`);
+      document.getElementById(`documentName-${missing}`)?.focus();
+      return;
+    }
+
     const documents: UploadDocument[] = [];
-    for (const file of files) {
+    for (const [index, file] of files.entries()) {
       const contentType = contentTypeFor(file);
       if (!contentType) {
         setError(true);
@@ -75,7 +87,7 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
         setMessage(`${file.name} must be smaller than 10 MB.`);
         return;
       }
-      documents.push({ id: crypto.randomUUID(), fileName: file.name, contentType, fileSize: file.size });
+      documents.push({ id: crypto.randomUUID(), fileName: names[index].trim(), contentType, fileSize: file.size });
     }
 
     setUploading(true);
@@ -124,6 +136,8 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
     }
 
     if (input.current) input.current.value = "";
+    setSelected([]);
+    setNames([]);
     setUploading(false);
     setMessage(result.message);
     router.refresh();
@@ -141,10 +155,18 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
       </div>
       <div>
         <label htmlFor="projectDocuments" className="mb-2 block text-sm font-medium text-slate-700">Files</label>
-        <input ref={input} id="projectDocuments" type="file" multiple accept={projectDocumentAccept} disabled={uploading} className="block min-h-10 w-full rounded-lg border border-slate-200 bg-white text-sm text-slate-600 file:mr-3 file:h-10 file:border-0 file:bg-slate-100 file:px-3 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 disabled:opacity-50" />
+        <input ref={input} id="projectDocuments" type="file" multiple accept={projectDocumentAccept} disabled={uploading} onChange={(event) => { const files = [...(event.currentTarget.files ?? [])]; setSelected(files); setNames(files.map(() => "")); setMessage(""); setError(false); }} className="block min-h-10 w-full rounded-lg border border-slate-200 bg-white text-sm text-slate-600 file:mr-3 file:h-10 file:border-0 file:bg-slate-100 file:px-3 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 disabled:opacity-50" />
         <p className="mt-1.5 text-xs text-slate-500">PDF, Word, Excel, CSV, text, or PNG/JPG · up to 10 files, 10 MB each</p>
       </div>
     </div>
+    {selected.length > 0 && <fieldset className="space-y-3">
+      <legend className="mb-2 text-sm font-medium text-slate-700">Document names</legend>
+      {selected.map((file, index) => <div key={`${file.name}-${file.size}-${index}`}>
+        <label htmlFor={`documentName-${index}`} className="sr-only">Name for {file.name}</label>
+        <Input id={`documentName-${index}`} value={names[index] ?? ""} onChange={(event) => { const value = event.currentTarget.value; setNames((current) => current.map((name, position) => position === index ? value : name)); }} maxLength={180} required disabled={uploading} placeholder="e.g. Signed contract, Site plan v2" />
+        <p className="mt-1 truncate text-xs text-slate-500" title={file.name}>File: {file.name}</p>
+      </div>)}
+    </fieldset>}
     <div className="flex justify-end"><Button type="submit" disabled={uploading || projects.length === 0}>{uploading ? "Uploading…" : "Upload documents"}</Button></div>
     {message && <p role={error ? "alert" : "status"} aria-live="polite" className={`mt-3 text-sm ${error ? "text-red-700" : "text-slate-600"}`}>{message}</p>}
   </form>;

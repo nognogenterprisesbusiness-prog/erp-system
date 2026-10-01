@@ -54,7 +54,7 @@ export function MaterialRequestForm({ choices, idempotencyKey, initialLineKey, i
       </FormField>
     </div>
     <div className="mt-7 flex items-center justify-between gap-3 border-t border-slate-100 pt-6">
-      <div><h2 className="text-base font-semibold text-slate-900">Materials</h2><p className="mt-1 text-xs text-slate-500">Use one line per SKU. Approval reserves available stock; dispatch moves it.</p></div>
+      <div><h2 className="text-base font-semibold text-slate-900">Materials</h2><p className="mt-1 text-xs text-slate-500">One line per material.</p></div>
       <Button type="button" variant="outline" size="sm" disabled={lines.length >= 20 || pending} onClick={() => setLines((current) => [...current, { key: crypto.randomUUID(), materialId: "", quantity: "" }])}>
         <HugeiconsIcon icon={PlusSignIcon} size={16} />Add line
       </Button>

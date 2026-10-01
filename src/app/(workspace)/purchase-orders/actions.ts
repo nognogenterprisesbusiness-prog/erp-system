@@ -3,7 +3,7 @@
 import { cancelPurchaseOrderSchema, issuePurchaseOrderSchema, receivePurchaseOrderLineSchema } from "@nognog/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireManager } from "@/lib/auth";
+import { requireManager, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export type PurchaseActionState = { message: string; fieldErrors?: Record<string, string[]> };
@@ -68,6 +68,30 @@ export async function receivePurchaseOrderLineAction(_: PurchaseActionState, for
   revalidatePath(`/purchase-orders/${input.orderId}`);
   revalidatePath("/inventory");
   redirect(`/purchase-orders/${input.orderId}?posted=receipt`);
+}
+
+// Warehouse Staff (and Admin) record a delivery at the PO price; no cost is sent.
+const warehouseDeliverySchema = receivePurchaseOrderLineSchema.omit({ goodsTotalCost: true, costVarianceReason: true });
+
+export async function receiveWarehouseDeliveryAction(_: PurchaseActionState, form: FormData): Promise<PurchaseActionState> {
+  const user = await requireUser();
+  if (!user.canOperateInventory) return fail("Only assigned warehouse staff or an administrator can receive deliveries.");
+  const parsed = warehouseDeliverySchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), orderId: value(form, "orderId"), lineId: value(form, "lineId"),
+    quantity: value(form, "quantity"), deliveryReference: value(form, "deliveryReference"), receivedOn: value(form, "receivedOn"),
+  });
+  if (!parsed.success) return fail("Review the delivery details.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("receive_purchase_order_line", {
+    p_idempotency_key: input.idempotencyKey, p_line_id: input.lineId, p_quantity: input.quantity,
+    p_goods_total_cost: null, p_delivery_reference: input.deliveryReference, p_received_on: input.receivedOn,
+  });
+  if (error) return fail(error.code === "42501" ? "You are not assigned to this purchase order's warehouse." : purchaseError(error));
+  revalidatePath("/purchase-orders/receive");
+  revalidatePath(`/purchase-orders/${input.orderId}`);
+  revalidatePath("/inventory");
+  redirect("/purchase-orders/receive?posted=1");
 }
 
 export async function cancelPurchaseOrderAction(_: PurchaseActionState, form: FormData): Promise<PurchaseActionState> {

@@ -1,12 +1,12 @@
 "use client";
 
-import { Archivo } from "next/font/google";
+import localFont from "next/font/local";
 
 import { ErrorState } from "@/components/ui/error-state";
 import "./globals.css";
 
-const archivo = Archivo({ subsets: ["latin"], display: "swap", variable: "--font-archivo" });
+const inter = localFont({ src: "./fonts/InterVariable.woff2", weight: "100 900", display: "swap", variable: "--font-inter" });
 
 export default function GlobalError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
-  return <html lang="en"><body className={archivo.variable}><ErrorState code={500} onRetry={retry} /></body></html>;
+  return <html lang="en"><body className={inter.variable}><ErrorState code={500} onRetry={retry} /></body></html>;
 }

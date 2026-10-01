@@ -27,7 +27,7 @@ export default async function StockCountsPage({ searchParams }: { searchParams: 
   const canCount = user.canManage || (selected?.location_type === "warehouse" && user.roles.includes("warehouse_staff"))
     || (selected?.location_type === "project_site" && user.roles.some((role) => ["engineer", "foreman"].includes(role)));
   return <>
-    <PageHeader title="Stock counts" description="Record physical quantities; an administrator reviews a shortage before stock and value change." action={<Button variant="outline" asChild><Link href="/inventory">Back to inventory</Link></Button>} />
+    <PageHeader title="Stock counts" description="Count what is on hand. An Admin reviews any shortage before stock changes." action={<Button variant="outline" asChild><Link href="/inventory">Back to inventory</Link></Button>} />
     <InventoryLocationPicker locations={inventory.locations} value={inventory.selectedLocationId} />
     <section className="mt-7"><h2 className="text-base font-semibold">{selected?.name ?? "Location"} · current stock</h2>
       <DataTableShell empty={inventory.balances.length === 0 ? <EmptyState title="No stock to count" description="Choose a location with verified stock balances." /> : undefined}>

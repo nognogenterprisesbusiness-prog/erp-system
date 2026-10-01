@@ -34,7 +34,7 @@ export function ProjectCostForms({ projectId, assets, keys, today }: { projectId
       <FormField label="Description" htmlFor="expenseDescription" error={expenseState.fieldErrors?.description?.[0]}><input id="expenseDescription" name="description" className={fieldControlClass} maxLength={500} required /></FormField>
       <FormField label="Receipt / external reference" htmlFor="externalReference" error={expenseState.fieldErrors?.externalReference?.[0]}><input id="externalReference" name="externalReference" className={fieldControlClass} maxLength={120} required /></FormField>
       <FormField label="Amount (PHP)" htmlFor="expenseAmount" error={expenseState.fieldErrors?.amount?.[0]}><input id="expenseAmount" name="amount" className={fieldControlClass} inputMode="decimal" required /></FormField>
-      <p className="text-xs text-slate-500">Materials, labor, and equipment or vehicle use already have separate cost postings; do not duplicate them here.</p>
+      <p className="text-xs text-slate-500">Materials, labor and equipment are costed automatically. Add only other expenses here.</p>
       {expenseState.message && <p role="alert" className="text-xs text-red-700">{expenseState.message}</p>}<Button type="submit" disabled={expensePending}>{expensePending ? "Posting…" : "Post expense"}</Button>
     </form></details>
     <details className="rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-semibold text-slate-900">Adjust approved budget</summary><form action={budgetAction} className="mt-5 space-y-4">

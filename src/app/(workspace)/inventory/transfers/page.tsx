@@ -29,7 +29,7 @@ export default async function TransfersPage({ searchParams }: { searchParams: Pr
   const variance = !receiving && user.canManage && params.variance ? transfers.find((item) => item.item?.id === params.variance && !item.requestBound && item.status !== "received" && item.status !== "cancelled") : undefined;
 
   return <>
-    <PageHeader eyebrow="Inventory movement" title="Transfers" description="Dispatch leaves the source immediately; destination stock updates only after receipt. Approved request deliveries are received on the request." action={<div className="flex flex-wrap gap-2">
+    <PageHeader eyebrow="Inventory movement" title="Transfers" description="Stock leaves the source when it is sent and arrives when the destination receives it." action={<div className="flex flex-wrap gap-2">
       <Button variant="outline" asChild><Link href="/inventory">Back</Link></Button>
       {user.canManage && <Button variant="outline" asChild><Link href={params.siteReturn ? pageHref : `${pageHref}&siteReturn=1`}>{params.siteReturn ? "Close return" : "Return site stock"}</Link></Button>}
       {user.canOperateInventory && <Button asChild><Link href={params.new ? pageHref : `${pageHref}&new=1`}>{params.new ? "Close form" : "New transfer"}</Link></Button>}

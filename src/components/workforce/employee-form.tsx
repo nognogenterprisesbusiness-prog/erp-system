@@ -49,22 +49,22 @@ export function EmployeeForm({ employee, contact, categories, profiles }: {
       <FormField label="Last name" htmlFor="lastName" error={error("lastName")}>
         <input className={fieldControlClass} id="lastName" name="lastName" defaultValue={employee?.last_name} autoComplete="family-name" required />
       </FormField>
-      <FormField label="Contact number" htmlFor="contactNumber" hint="Visible only to authorized workforce/finance roles and the linked employee." error={error("contactNumber")}>
+      <FormField label="Contact number" htmlFor="contactNumber" hint="Private. Only Admin, Finance and this employee can see it." error={error("contactNumber")}>
         <input className={fieldControlClass} id="contactNumber" name="contactNumber" defaultValue={contact?.contact_number} inputMode="tel" autoComplete="tel" required />
       </FormField>
-      <FormField label="Email address" htmlFor="emailAddress" hint="Optional; visible to authorized workforce/finance roles and the linked employee." error={error("emailAddress")}>
+      <FormField label="Email address" htmlFor="emailAddress" hint="Optional. Only Admin, Finance and this employee can see it." error={error("emailAddress")}>
         <input className={fieldControlClass} id="emailAddress" name="emailAddress" type="email" maxLength={320} defaultValue={contact?.email_address ?? ""} autoComplete="email" />
       </FormField>
-      <FormField label="Employment type" htmlFor="employmentType" hint="Validated text until the client approves a controlled employment-type list." error={error("employmentType")}>
+      <FormField label="Employment type" htmlFor="employmentType" error={error("employmentType")}>
         <input className={fieldControlClass} id="employmentType" name="employmentType" defaultValue={employee?.employment_type} placeholder="Regular, project-based, contractor…" required />
       </FormField>
       <FormField label="Hire date" htmlFor="hireDate" error={error("hireDate")}>
         <DatePicker id="hireDate" name="hireDate" label="Hire date" defaultValue={employee?.hire_date} required allowClear={false} />
       </FormField>
-      <FormField label="Employment status" htmlFor="status" hint="Separated employees are created through the archive workflow." error={error("status")}>
+      <FormField label="Employment status" htmlFor="status" error={error("status")}>
         <SelectPicker id="status" name="status" label="Employment status" defaultValue={employee?.status === "separated" ? "inactive" : employee?.status ?? "active"} options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }, { value: "on_leave", label: "On leave" }]} />
       </FormField>
-      <FormField label="Optional user account" htmlFor="profileId" hint="Linking is optional and does not automatically grant project access." error={error("profileId")}>
+      <FormField label="Optional user account" htmlFor="profileId" hint="Optional. This does not give project access." error={error("profileId")}>
         <><input type="hidden" name="profileId" value={profileId === "unassigned" ? "" : profileId} /><SelectPicker id="profileId" label="Optional user account" value={profileId} onValueChange={setProfileId} options={[{ value: "unassigned", label: "No user account" }, ...profiles.map((profile) => ({ value: profile.id, label: `${profile.full_name} · ${profile.email}` }))]} /></>
       </FormField>
     </div>

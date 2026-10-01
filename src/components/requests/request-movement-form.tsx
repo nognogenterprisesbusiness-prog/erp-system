@@ -52,7 +52,7 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
           <SelectPicker label="Material check" value={condition} onValueChange={(next) => setCondition(next as typeof condition)} options={[{ value: "accepted", label: "Quantity and condition accepted" }, { value: "accepted_with_note", label: "Accepted with quality note" }]} />
         </FormField>
         {condition === "accepted_with_note" && <FormField label="Quality note" htmlFor={`quality-note-${id}`}><input id={`quality-note-${id}`} name="qualityNote" className={fieldControlClass} maxLength={500} placeholder="Describe the issue with accepted stock" required /></FormField>}
-        <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">Receive only usable quantity. Report damaged or missing pieces through variance review.</p>
+        <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">Enter only the usable quantity. Report damaged or missing pieces to Admin.</p>
       </>}
       <RecordFormControls busy={pending} label={label} />
       {state.ok && <p role="status" className="text-sm text-emerald-700 sm:col-span-2 lg:col-span-4">{mode === "dispatch" ? "Materials released." : "Receipt recorded."}</p>}

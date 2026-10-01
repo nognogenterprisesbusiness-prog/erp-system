@@ -31,7 +31,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const resultPromise = getAttendanceOverview(date, projectId, page);
   const projects = await readAllPages((from, to) => supabase.from("projects").select("id,code,name").is("archived_at", null).order("name").order("id").range(from, to), "attendance projects");
   return <>
-    <PageHeader title="Attendance" description="Review dated worker attendance, work hours, and posted project labor cost." action={user.canManage && projectId && <Button asChild><Link href={`/projects/${projectId}/attendance`}>Mark attendance</Link></Button>} />
+    <PageHeader title="Attendance" description="Worker attendance, hours and labor cost by date." action={user.canManage && projectId && <Button asChild><Link href={`/projects/${projectId}/attendance`}>Mark attendance</Link></Button>} />
     <ListFilterBar className="mt-6 flex flex-wrap items-center gap-3"><div className="w-full sm:w-48"><DatePicker key={date} label="Attendance date" name="date" defaultValue={date} allowClear={false} required /></div><div className="w-full sm:w-64"><SelectPicker key={projectId ?? "all"} label="Project" name="project" defaultValue={projectId ?? "all"} options={[{ value: "all", label: "All projects" }, ...projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))]} /></div></ListFilterBar>
     <Suspense key={`${date}:${projectId}:${page}`} fallback={<TableSkeleton columns={user.canManage ? 7 : 6} filters={0} />}><AttendanceResults resultPromise={resultPromise} date={date} projectId={projectId} canManage={user.canManage} /></Suspense>
   </>;

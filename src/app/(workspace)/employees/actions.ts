@@ -36,7 +36,7 @@ function friendlyWorkforceError(error: { code?: string; message: string }) {
 function revalidateWorkforce(employeeId?: string, projectId?: string) {
   revalidatePath("/employees");
   if (employeeId) revalidatePath(`/employees/${employeeId}`);
-  if (projectId) revalidatePath(`/projects/${projectId}`);
+  if (projectId) { revalidatePath(`/projects/${projectId}`); revalidatePath(`/projects/${projectId}/workforce`); }
 }
 
 export async function saveEmployeeAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {

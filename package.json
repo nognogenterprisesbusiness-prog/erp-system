@@ -32,7 +32,9 @@
     "test:material-reservations": "node scripts/test-material-reservations.mjs",
     "test:requests": "tsx --test packages/domain/src/material-requests.test.ts",
     "test:daily-reports": "tsx --test packages/domain/src/daily-reports.test.ts",
-    "test:inventory-domain": "tsx --test packages/domain/src/inventory-valuation.test.ts"
+    "test:inventory-domain": "tsx --test packages/domain/src/inventory-valuation.test.ts",
+    "test:batch-costing": "node scripts/test-batch-costing.mjs",
+    "test:warehouse-receipts": "node scripts/test-warehouse-receipts.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",
@@ -56,6 +58,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.16",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",

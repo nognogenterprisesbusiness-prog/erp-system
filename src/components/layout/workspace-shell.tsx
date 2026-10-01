@@ -1,6 +1,6 @@
 "use client";
 
-import { AssignmentsIcon, Audit01Icon, Building03Icon, DashboardSquare01Icon, File02Icon, FilePenLineIcon, Logout01Icon, Package01Icon, QrCodeIcon, SearchDollarIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Audit01Icon, Building03Icon, DashboardSquare01Icon, File02Icon, FilePenLineIcon, Logout01Icon, Package01Icon, PackageReceiveIcon, QrCodeIcon, SearchDollarIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { logoutAction } from "@/app/auth/actions";
@@ -21,6 +21,7 @@ const navItems = [
   { href: "/inventory", label: "Inventory", icon: Package01Icon, group: "Materials & assets" },
   { href: "/warehouses", label: "Warehouses", icon: WarehouseIcon, group: "Materials & assets" },
   { href: "/requests", label: "Requests", icon: AssignmentsIcon, requests: true, group: "Materials & assets" },
+  { href: "/purchase-orders/receive", label: "Receive deliveries", icon: PackageReceiveIcon, receiving: true, group: "Materials & assets" },
   { href: "/equipment/categories", label: "Asset classifications", icon: Tag01Icon, manager: true, nested: true, group: "Materials & assets" },
   { href: "/qr-codes", label: "QR tools", icon: QrCodeIcon, group: "Materials & assets" },
   { href: "/suppliers", label: "Suppliers & purchases", icon: Store02Icon, procurement: true, group: "Purchasing & finance" },
@@ -36,8 +37,8 @@ const navItems = [
 
 export function WorkspaceShell({ children, userId, name, avatar, roleLabel, canViewProcurement, canViewFinance, canViewDailyReports, canViewRequests, canDispatchRequests, canManage }: { children: React.ReactNode; userId: string; name: string; avatar?: string; roleLabel: string; canViewProcurement: boolean; canViewFinance: boolean; canViewDailyReports: boolean; canViewRequests: boolean; canDispatchRequests: boolean; canManage: boolean }) {
   const pathname = usePathname();
-  const items = navItems.filter((item) => (!("procurement" in item) || canViewProcurement) && (!("finance" in item) || canViewFinance) && (!("reports" in item) || canViewDailyReports) && (!("requests" in item) || canViewRequests || canDispatchRequests) && (!("manager" in item) || canManage)).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item);
-  const activeHref = pathname.startsWith("/materials") || pathname.startsWith("/equipment") || pathname.startsWith("/vehicles") ? "/inventory" : pathname.startsWith("/purchase-orders") ? "/suppliers" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
+  const items = navItems.filter((item) => (!("procurement" in item) || canViewProcurement) && (!("finance" in item) || canViewFinance) && (!("reports" in item) || canViewDailyReports) && (!("requests" in item) || canViewRequests || canDispatchRequests) && (!("receiving" in item) || canDispatchRequests) && (!("manager" in item) || canManage)).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item);
+  const activeHref = pathname.startsWith("/materials") || pathname.startsWith("/equipment") || pathname.startsWith("/vehicles") ? "/inventory" : pathname.startsWith("/purchase-orders/receive") ? "/purchase-orders/receive" : pathname.startsWith("/purchase-orders") ? "/suppliers" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
   return <><Suspense fallback={null}><LiveRouteRefresh userId={userId} /></Suspense><AppShell name={name} avatar={avatar} roleLabel={roleLabel} items={items} activeHref={activeHref} footerItems={[{ href: "/profile", label: "My profile", icon: UserCircleIcon }, { href: "/notifications", label: "Notifications", icon: Notification01Icon }, { href: "/help", label: "Help centre", icon: HelpCircleIcon }]} homeHref="/dashboard" headerSearch={<HeaderSearch />} headerActions={<>
     <NotificationBell userId={userId} />
   </>} profileActions={<><Link href="/profile" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-normal text-slate-700 hover:bg-slate-50"><HugeiconsIcon icon={UserCircleIcon} size={17} strokeWidth={1.7} />My profile</Link><form action={logoutAction}><Button variant="ghost" className="w-full justify-start gap-2 px-3 text-sm font-normal" type="submit"><HugeiconsIcon icon={Logout01Icon} size={17} strokeWidth={1.7} />Sign out</Button></form></>}>{children}</AppShell></>;

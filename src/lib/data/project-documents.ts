@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
+import { projectDocumentFileKinds, type ProjectDocumentFileKind } from "@/lib/project-documents";
 import type { ProjectDocumentCategory } from "@/types/database";
 
 const PAGE_SIZE = 20;
@@ -12,6 +13,7 @@ export type DocumentFilters = {
   query: string;
   projectId: string;
   category: ProjectDocumentCategory | "all";
+  fileKind: ProjectDocumentFileKind | "all";
   page: number;
 };
 
@@ -31,13 +33,14 @@ export const getDocumentProjects = cache(async function getDocumentProjects() {
   }
 });
 
-export async function getDocumentPage({ query, projectId, category, page }: DocumentFilters) {
+export async function getDocumentPage({ query, projectId, category, fileKind, page }: DocumentFilters) {
   const supabase = await createClient();
   const from = (page - 1) * PAGE_SIZE;
   let request = supabase.from("project_documents")
     .select("id,project_id,category,file_name,content_type,file_size,uploaded_by,created_at", { count: "exact" });
   if (projectId) request = request.eq("project_id", projectId);
   if (category !== "all") request = request.eq("category", category);
+  if (fileKind !== "all") request = request.in("content_type", [...projectDocumentFileKinds[fileKind].types]);
   const search = safeSearchTerm(query);
   if (search) request = request.ilike("file_name", `%${search}%`);
   const { data, count, error } = await request
@@ -48,13 +51,17 @@ export async function getDocumentPage({ query, projectId, category, page }: Docu
 
   const documents = data ?? [];
   const projectIds = [...new Set(documents.map((document) => document.project_id))];
-  const { data: projects, error: projectError } = projectIds.length
-    ? await supabase.from("projects").select("id,code,name").in("id", projectIds)
-    : { data: [], error: null };
+  const uploaderIds = [...new Set(documents.map((document) => document.uploaded_by))];
+  const [{ data: projects, error: projectError }, { data: uploaders }] = await Promise.all([
+    projectIds.length ? supabase.from("projects").select("id,code,name").in("id", projectIds) : Promise.resolve({ data: [], error: null }),
+    // Profile visibility is role-scoped; a hidden uploader simply shows no name.
+    uploaderIds.length ? supabase.from("profiles").select("id,full_name").in("id", uploaderIds) : Promise.resolve({ data: [] }),
+  ]);
   if (projectError) throw new Error(`Unable to load document projects: ${projectError.message}`, { cause: projectError });
   const names = new Map((projects ?? []).map((project) => [project.id, project]));
+  const uploaderNames = new Map((uploaders ?? []).map((profile) => [profile.id, profile.full_name]));
   return {
-    documents: documents.map((document) => ({ ...document, project: names.get(document.project_id) ?? null })),
+    documents: documents.map((document) => ({ ...document, project: names.get(document.project_id) ?? null, uploaderName: uploaderNames.get(document.uploaded_by) ?? null })),
     count: count ?? 0,
     page,
     pageCount: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)),

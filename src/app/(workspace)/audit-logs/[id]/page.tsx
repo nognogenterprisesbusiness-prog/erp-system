@@ -30,7 +30,7 @@ export default async function AuditLogDetailPage({ params }: { params: Promise<{
       <p className="mt-2"><span className="font-semibold text-slate-700">Actor ID:</span> <span className="break-all font-mono text-xs">{log.actor_id ?? "System"}</span></p>
     </div>
     <section className="mt-7"><h2 className="mb-3 text-lg font-semibold text-slate-900">Changed fields</h2>
-      <DataTableShell empty={changes.length === 0 ? <EmptyState compact kind="items" title="No visible field changes" description="Sensitive contact fields are excluded from audit snapshots." /> : undefined}>
+      <DataTableShell empty={changes.length === 0 ? <EmptyState compact kind="items" title="No visible field changes" description="Contact details are not stored in the audit log." /> : undefined}>
         <table className="w-full min-w-[720px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Field</th><th className="px-4 py-3">Before</th><th className="px-5 py-3">After</th></tr></thead>
           <tbody className="divide-y divide-slate-100">{changes.map((change) => <tr key={change.field} className="align-top"><th scope="row" className="px-5 py-3 font-medium text-slate-800">{change.field.replaceAll("_", " ")}</th><td className="max-w-sm break-words px-4 py-3 font-mono text-xs text-slate-600">{change.before}</td><td className="max-w-sm break-words px-5 py-3 font-mono text-xs text-slate-800">{change.after}</td></tr>)}</tbody>
         </table>

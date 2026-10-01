@@ -73,7 +73,7 @@ export async function assignProjectMemberAction(form: FormData) {
   if (roleError || !matchingRole) throw new Error("The selected account does not have this project role.");
   const { error } = await supabase.from("project_assignments").insert({ project_id: parsed.data.projectId, user_id: parsed.data.userId, assignment_role: parsed.data.role, assigned_on: parsed.data.assignedOn, assigned_by: actor.userId });
   if (error) throw new Error(error.code === "23505" ? "This person already has that active role." : `Unable to assign personnel: ${error.message}`);
-  revalidatePath(`/projects/${parsed.data.projectId}`);
+  revalidatePath(`/projects/${parsed.data.projectId}`); revalidatePath(`/projects/${parsed.data.projectId}/workforce`);
 }
 
 export async function endProjectAssignmentAction(form: FormData) {
@@ -82,7 +82,7 @@ export async function endProjectAssignmentAction(form: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.from("project_assignments").update({ status: "inactive", ended_at: new Date().toISOString(), ended_by: actor.userId }).eq("id", id);
   if (error) throw new Error(`Unable to end assignment: ${error.message}`);
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}`); revalidatePath(`/projects/${projectId}/workforce`);
 }
 
 export async function createProjectSiteAction(form: FormData) {
@@ -92,5 +92,5 @@ export async function createProjectSiteAction(form: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.from("project_sites").insert({ project_id: parsed.data.projectId, name: parsed.data.name, address: parsed.data.address, description: parsed.data.description || null, engineer_id: parsed.data.engineerId || null, foreman_id: parsed.data.foremanId || null, status: parsed.data.status, created_by: actor.userId, updated_by: actor.userId });
   if (error) throw new Error(`Unable to create site: ${error.message}`);
-  revalidatePath(`/projects/${parsed.data.projectId}`);
+  revalidatePath(`/projects/${parsed.data.projectId}`); revalidatePath(`/projects/${parsed.data.projectId}/workforce`);
 }

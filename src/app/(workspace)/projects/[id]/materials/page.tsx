@@ -20,7 +20,7 @@ import { getMaterialRequestChoices } from "@/lib/data/material-requests";
 
 const quantity = (value: number) => new Intl.NumberFormat("en-PH", { maximumFractionDigits: 4 }).format(value);
 const money = (amount: number) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(amount);
-const priceSourceLabel = { supplier: "Latest supplier price", stock: "Average stock cost" } as const;
+const priceSourceLabel = { supplier: "Latest supplier price", stock: "Next stock batch price" } as const;
 
 export default async function ProjectMaterialsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }> }) {
   const { id } = await params;
@@ -45,10 +45,10 @@ export default async function ProjectMaterialsPage({ params, searchParams }: { p
     <PageHeader title="Material plan" description={`${projectData.project.code} · ${projectData.project.name}`} action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}?tab=materials`}>Back to project</Link></Button>{canPlan && choices && <RecordCreateDialog key={editing?.id ?? "new"} title={editing ? "Edit material plan" : "Add material plan"} initialOpen={Boolean(editing)} closeHref={`/projects/${id}/materials`}><ProjectMaterialPlanForm projectId={id} choices={choices} initial={editing ? { siteId: editing.project_site_id, warehouseId: editing.warehouse_id, materialId: editing.material_id, quantity: String(editing.planned_quantity), requiredOn: editing.required_on, note: editing.note } : undefined} /></RecordCreateDialog>}</div>} />
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       <h2 className="text-base font-semibold">Plan by site and source warehouse</h2>
-      <p className="mt-1 text-sm text-slate-500">Shortage compares planned work with posted use, site stock, open requests and available warehouse stock. It does not reserve stock.</p>
+      <p className="mt-1 text-sm text-slate-500">Shortage compares the plan with use so far, site stock, open requests and warehouse stock.</p>
     </section>
     {estimates && profitability && rows.length > 0 && <div className="mt-5 grid gap-3 sm:grid-cols-2">
-      <MetricCard label="Estimated material cost" value={money(estimatedTotal)} detail={unpricedCount ? `${unpricedCount} material${unpricedCount === 1 ? " has" : "s have"} no supplier price or stock cost yet` : "Planned quantity × latest supplier price, else average stock cost"} icon={Invoice03Icon} tone="bg-cyan-50 text-cyan-700" />
+      <MetricCard label="Estimated material cost" value={money(estimatedTotal)} detail={unpricedCount ? `${unpricedCount} material${unpricedCount === 1 ? " has" : "s have"} no supplier price or stock cost yet` : "Planned quantity × latest supplier price, else the next stock batch price"} icon={Invoice03Icon} tone="bg-cyan-50 text-cyan-700" />
       <MetricCard label="Approved budget" value={money(Number(profitability.approved_budget))} detail={`${money(Math.abs(Number(profitability.approved_budget) - estimatedTotal))} ${Number(profitability.approved_budget) >= estimatedTotal ? "left after materials" : "over budget on materials"}`} icon={Money03Icon} tone="bg-emerald-50 text-emerald-600" />
     </div>}
     <div className="mt-6"><DataTableShell empty={rows.length === 0 ? <EmptyState title="No planned materials" description="Add a material to see site needs and shortages." /> : undefined}>

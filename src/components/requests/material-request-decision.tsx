@@ -18,7 +18,7 @@ export function MaterialRequestDecision({ requestId, lines }: { requestId: strin
     <input type="hidden" name="requestId" value={requestId} />
     <input type="hidden" name="decisions" value={JSON.stringify(quantities)} />
     <h2 className="text-base font-semibold text-slate-900">Manager decision</h2>
-    <p className="mt-1 text-sm text-slate-500">Approve each quantity or enter zero to reject a line. Approved quantities reserve warehouse stock immediately; dispatch is a separate step.</p>
+    <p className="mt-1 text-sm text-slate-500">Approve each quantity, or enter zero to reject a line. Approved stock is set aside for this request until it is released.</p>
     <div className="mt-5 grid gap-3">{lines.map((line) => <FormField key={line.id} label={`${line.code} · ${line.name} (requested ${line.requested_quantity} ${line.unitSymbol})`} htmlFor={`approved-${line.id}`}>
       <input id={`approved-${line.id}`} className={fieldControlClass} inputMode="decimal" value={quantities[line.id] ?? ""} onChange={(event) => setQuantities((current) => ({ ...current, [line.id]: event.target.value }))} required />
     </FormField>)}</div>

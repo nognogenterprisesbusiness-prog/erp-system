@@ -10,14 +10,15 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { ProjectCostBreakdown } from "@/components/projects/project-cost-breakdown";
 import { EquipmentUsageForm } from "@/components/projects/equipment-usage-form";
 import { ProjectForm } from "@/components/projects/project-form";
+import { ProjectDocumentList } from "@/components/projects/project-document-list";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
-import { ProjectLabourDistribution } from "@/components/projects/project-labour-distribution";
-import { ProjectPersonnelSection, ProjectSitesSection } from "@/components/projects/project-people-and-sites";
+import { ProjectLabourDistribution, ProjectWorkerList } from "@/components/projects/project-labour-distribution";
+import { ProjectSitesSection } from "@/components/projects/project-people-and-sites";
 import { ShareProjectButton } from "@/components/projects/share-project-button";
-import { ProjectWorkforceSection } from "@/components/workforce/project-workforce-section";
 import { requireUser } from "@/lib/auth";
 import { getProjectEquipmentChoices } from "@/lib/data/assets";
 import { getProject } from "@/lib/data/projects";
+import { getDocumentPage } from "@/lib/data/project-documents";
 import { getProjectProfitability } from "@/lib/data/project-costs";
 import { getProjectMaterialCost } from "@/lib/data/inventory";
 import { getProjectMaterialPlan, getProjectProgress } from "@/lib/data/project-operations";
@@ -33,22 +34,23 @@ const date = (value: string | null) => value ? new Intl.DateTimeFormat("en-PH", 
 const tabs = [
   { key: "overview", label: "Overview" }, { key: "sites", label: "Sites" },
   { key: "labour", label: "Labour" }, { key: "materials", label: "Materials" },
-  { key: "finance", label: "Finance" },
+  { key: "finance", label: "Finance" }, { key: "documents", label: "Documents" },
 ] as const;
 
 export default async function ProjectDetailPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; edit?: string }>;
+  searchParams: Promise<{ tab?: string; edit?: string; page?: string }>;
 }) {
   const [{ id }, filters, user] = await Promise.all([params, searchParams, requireUser()]);
   const data = await getProject(id);
   const { project, sites, profiles } = data;
-  const visibleTabs = tabs.filter((tab) => tab.key === "finance" ? user.canViewLaborRates : tab.key === "materials" ? user.canViewDailyReports : true);
+  const visibleTabs = tabs.filter((tab) => tab.key === "finance" ? user.canViewLaborRates : tab.key === "materials" ? user.canViewDailyReports : tab.key === "documents" ? user.canManage || user.canViewDailyReports : true);
   const tab = visibleTabs.find((item) => item.key === filters.tab)?.key ?? "overview";
   const returnParams = new URLSearchParams();
   if (tab !== "overview") returnParams.set("tab", tab);
   const returnHref = `/projects/${id}${returnParams.size ? `?${returnParams}` : ""}`;
-  const [workerCount, progress, profitability, workforce, materialPlan, materialCosts, siteQrCodes, equipmentChoices] = await Promise.all([
+  const documentPage = Math.min(10000, Math.max(1, Number.parseInt(filters.page ?? "", 10) || 1));
+  const [workerCount, progress, profitability, workforce, materialPlan, materialCosts, siteQrCodes, equipmentChoices, documents] = await Promise.all([
     getProjectWorkerCount(id),
     user.canViewDailyReports ? getProjectProgress(id) : Promise.resolve([]),
     user.canViewLaborRates ? getProjectProfitability(id) : Promise.resolve(null),
@@ -57,6 +59,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
     tab === "materials" && (user.canViewLaborRates || user.roles.includes("engineer")) ? getProjectMaterialCost(id) : Promise.resolve(null),
     tab === "sites" && user.canManage ? getActiveQrCodesForEntities("project_site", sites.map((site) => site.id)) : Promise.resolve([]),
     user.roles.includes("foreman") && ["active", "on_hold"].includes(project.status) ? getProjectEquipmentChoices(id) : Promise.resolve([]),
+    tab === "documents" ? getDocumentPage({ query: "", projectId: id, category: "all", fileKind: "all", page: documentPage }) : Promise.resolve(null),
   ]);
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const completion = Number(progress[0]?.completion_percent ?? 0);
@@ -84,9 +87,14 @@ export default async function ProjectDetailPage({ params, searchParams }: {
       <MetricCard label="Workers" value={workerCount} detail="Active project assignments" icon={UserGroupIcon} tone="bg-amber-50 text-amber-600" />
       <MetricCard label="Progress" value={user.canViewDailyReports ? `${completion}%` : "—"} detail={!user.canViewDailyReports ? "Available to project reporting roles" : progress[0] ? `Updated ${date(progress[0].progress_date)}` : "No progress update recorded"} icon={Building03Icon} tone="bg-violet-50 text-violet-600" />
     </section>
-    {(user.canManage || user.canViewDailyReports) && <div className="mt-4 flex justify-end"><Button variant="outline" size="sm" asChild><Link href={`/documents?project=${id}`}>Project documents</Link></Button></div>}
     <nav aria-label="Project sections" className="mt-6 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 sm:flex sm:rounded-full">{visibleTabs.map((item) => <Link key={item.key} href={`/projects/${id}${item.key === "overview" ? "" : `?tab=${item.key}`}`} scroll={false} aria-current={tab === item.key ? "page" : undefined} className={`min-w-0 flex-1 rounded-full px-3 py-2.5 text-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 ${tab === item.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{item.label}</Link>)}</nav>
     <div className="mt-6">
+      {tab === "documents" && documents && <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6" aria-label="Project documents">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-base font-semibold">Project documents</h2><p className="mt-1 text-xs text-slate-500">{documents.count} document{documents.count === 1 ? "" : "s"} · view or download</p></div>
+          {user.canManage && <Button variant="outline" size="sm" asChild><Link href={`/documents?project=${id}`}>Manage on Documents page</Link></Button>}</div>
+        {documents.documents.length === 0 ? <EmptyState kind="items" title="No documents yet" description="Documents uploaded for this project on the Documents page appear here." /> : <ProjectDocumentList documents={documents.documents} showProject={false} />}
+        {documents.pageCount > 1 && <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500"><span>Page {documents.page} of {documents.pageCount}</span><div className="flex gap-2">{documents.page > 1 && <Button variant="outline" size="sm" asChild><Link href={`/projects/${id}?tab=documents&page=${documents.page - 1}`} scroll={false}>Previous</Link></Button>}{documents.page < documents.pageCount && <Button variant="outline" size="sm" asChild><Link href={`/projects/${id}?tab=documents&page=${documents.page + 1}`} scroll={false}>Next</Link></Button>}</div></div>}
+      </section>}
       {tab === "overview" && <div className="space-y-5">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Project overview</h2>{project.description && <p className="mt-3 text-sm leading-6 text-slate-600">{project.description}</p>}<dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{[["Client", project.client_name], ["Lead engineer", manager], ["Address", project.address], ["City / municipality", municipality ? `${municipality.displayName}, ${municipality.province}` : project.city_province], ["Actual completion", date(project.actual_completion_date)]].map(([label, value]) => <div key={label}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-sm font-medium">{value}</dd></div>)}</dl></section>
         <div className="grid items-start gap-5 xl:grid-cols-2">
@@ -95,14 +103,14 @@ export default async function ProjectDetailPage({ params, searchParams }: {
         </div>
       </div>}
       {tab === "sites" && <ProjectSitesSection data={data} canManage={user.canManage} qrCodes={siteQrCodes} />}
-      {tab === "labour" && workforce && <><div className="mb-4 flex flex-wrap justify-end gap-2">{(user.canManage || user.roles.includes("foreman")) && <Button variant="outline" asChild><Link href={`/projects/${id}/attendance`}>{user.canManage ? "Attendance & labour cost" : "Mark attendance"}</Link></Button>}</div><ProjectLabourDistribution workforce={workforce} canViewRates={user.canViewLaborRates} /><ProjectWorkforceSection projectId={id} projectName={project.name} workforce={workforce} canManage={user.canManage} canViewRates={user.canViewLaborRates} /><ProjectPersonnelSection data={data} canManage={user.canManage} /></>}
+      {tab === "labour" && workforce && <><div className="mb-4 flex flex-wrap justify-end gap-2">{user.canManage && <Button variant="outline" asChild><Link href={`/projects/${id}/workforce`}>Manage workers</Link></Button>}{(user.canManage || user.roles.includes("foreman")) && <Button variant="outline" asChild><Link href={`/projects/${id}/attendance`}>{user.canManage ? "Attendance & labour cost" : "Mark attendance"}</Link></Button>}</div><ProjectLabourDistribution workforce={workforce} canViewRates={user.canViewLaborRates} /><ProjectWorkerList workforce={workforce} canViewRates={user.canViewLaborRates} /></>}
       {tab === "materials" && <div className="space-y-5">
         <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold">Material inventory</h2><div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}/materials`}>Material plan</Link></Button>{(user.canManage || user.roles.some((role) => ["engineer", "foreman"].includes(role))) && <Button variant="outline" asChild><Link href={`/inventory/consume?project=${id}`}>Record use</Link></Button>}</div></div>
           {materialPlan.length === 0 ? <EmptyState compact title="No materials planned" /> : <div className="mt-6 space-y-6">{materialPlan.map((line) => { const used = Number(line.consumed_quantity); const planned = Number(line.planned_quantity); const percent = planned > 0 ? Math.min(100, used / planned * 100) : 0; return <article key={line.id}><div className="flex items-start gap-3"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-500"><HugeiconsIcon icon={PackageIcon} size={20} strokeWidth={1.4} /></span><div className="min-w-0 flex-1"><h3 className="text-sm font-medium">{line.material_code} · {line.material_name}</h3><p className="mt-1 text-xs text-slate-500">{quantity.format(used)} / {quantity.format(planned)} {line.unit_symbol} used · {line.site_name}</p></div><Badge variant={Number(line.quantity_to_request) > 0 ? "review" : "active"}>{Number(line.quantity_to_request) > 0 ? "Shortage" : "Covered"}</Badge></div><div role="progressbar" aria-label={`${line.material_name} used against plan at ${line.site_name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-cyan-600" style={{ width: `${percent}%` }} /></div><div className="mt-2 flex flex-wrap justify-between gap-2 text-xs text-slate-500"><span>At site: {quantity.format(Number(line.site_on_hand))} {line.unit_symbol}</span><span>To request: {quantity.format(Number(line.quantity_to_request))} {line.unit_symbol}</span><span>Purchase shortage: {quantity.format(Number(line.procurement_shortage))} {line.unit_symbol}</span></div></article>; })}</div>}
         </section>
         {materialCosts && <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex justify-between gap-3"><h2 className="text-base font-semibold">Posted material consumption</h2><span className="text-sm font-semibold tabular-nums">{money.format(totalMaterialCost)}</span></div>{materialCosts.length === 0 ? <EmptyState compact title="No material consumption posted" /> : <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[480px] text-left text-sm"><thead className="border-b border-slate-100 text-slate-500"><tr><th className="py-3 font-medium">SKU</th><th className="py-3 font-medium">Material</th><th className="py-3 text-right font-medium">Used</th><th className="py-3 text-right font-medium">Cost</th></tr></thead><tbody className="divide-y divide-slate-100">{materialCosts.map((row) => <tr key={row.material_id}><td className="py-3">{row.material_code}</td><td className="py-3">{row.material_name}</td><td className="py-3 text-right tabular-nums">{quantity.format(Number(row.quantity))} {row.unit_symbol}</td><td className="py-3 text-right font-medium tabular-nums">{money.format(Number(row.cost_total))}</td></tr>)}</tbody></table></div>}</section>}
       </div>}
-      {tab === "finance" && profitability && <div className="space-y-5"><div className="flex flex-wrap justify-end gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>Manage costs & budget</Link></Button><Button variant="outline" asChild><Link href="/billing">Client invoices & payments</Link></Button></div><section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Project financial summary</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[["Contract value", profitability.contract_value], ["Approved budget", profitability.approved_budget], ["Posted costs", profitability.total_posted_cost], ["Estimated gross profit", profitability.estimated_gross_profit], ["Issued invoices", profitability.invoiced_amount], ["Payments received", profitability.cash_received], ["Outstanding invoices", profitability.receivables]].map(([label, amount]) => <div key={String(label)}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{money.format(Number(amount))}</dd></div>)}</dl><p className="mt-5 text-xs leading-5 text-slate-500">Estimated gross profit is contract value less posted costs, not final accounting profit. Invoices and collections are reported separately.</p></section>{costBreakdown}</div>}
+      {tab === "finance" && profitability && <div className="space-y-5"><div className="flex flex-wrap justify-end gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>Manage costs & budget</Link></Button><Button variant="outline" asChild><Link href="/billing">Client invoices & payments</Link></Button></div><section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Project financial summary</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[["Contract value", profitability.contract_value], ["Approved budget", profitability.approved_budget], ["Posted costs", profitability.total_posted_cost], ["Estimated gross profit", profitability.estimated_gross_profit], ["Issued invoices", profitability.invoiced_amount], ["Payments received", profitability.cash_received], ["Outstanding invoices", profitability.receivables]].map(([label, amount]) => <div key={String(label)}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{money.format(Number(amount))}</dd></div>)}</dl><p className="mt-5 text-xs leading-5 text-slate-500">Estimated profit is the contract value minus recorded costs. Invoices and payments are shown separately.</p></section>{costBreakdown}</div>}
     </div>
   </>;
 }

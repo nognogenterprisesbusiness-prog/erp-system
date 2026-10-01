@@ -1,3 +1,3 @@
 import { ListPageSkeleton } from "@/components/ui/table-skeleton";
 
-export default function Loading() { return <ListPageSkeleton eyebrow="Inventory movement" title="Transfers" description="Dispatch leaves the source immediately; destination stock updates only after receipt. Approved request deliveries are received on the request." columns={6} />; }
+export default function Loading() { return <ListPageSkeleton eyebrow="Inventory movement" title="Transfers" description="Stock leaves the source when it is sent and arrives when the destination receives it." columns={6} />; }

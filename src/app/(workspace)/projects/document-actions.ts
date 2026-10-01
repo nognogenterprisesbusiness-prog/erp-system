@@ -70,3 +70,35 @@ export async function attachProjectDocumentsAction(form: FormData): Promise<Docu
   revalidatePath("/documents");
   return { ok: true, message: `${rows.length} document${rows.length === 1 ? "" : "s"} uploaded.` };
 }
+
+function revalidateDocuments(projectId: string) {
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/documents");
+}
+
+export async function updateProjectDocumentAction(form: FormData): Promise<DocumentResult> {
+  try { await requireManager(); } catch { return { ok: false, message: "Only an administrator can edit project documents." }; }
+  const id = String(form.get("id") ?? "");
+  const name = safeFileName(form.get("name"));
+  const category = String(form.get("category") ?? "") as ProjectDocumentCategory;
+  if (!uuidPattern.test(id) || !validCategories.has(category)) return { ok: false, message: "The document details are invalid. Refresh and try again." };
+  if (!name) return { ok: false, message: "Enter a document name." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("project_documents").update({ file_name: name, category }).eq("id", id).select("project_id").maybeSingle();
+  if (error || !data) return { ok: false, message: "The document could not be updated. Please try again." };
+  revalidateDocuments(data.project_id);
+  return { ok: true, message: "Document updated." };
+}
+
+export async function deleteProjectDocumentAction(form: FormData): Promise<DocumentResult> {
+  try { await requireManager(); } catch { return { ok: false, message: "Only an administrator can delete project documents." }; }
+  const id = String(form.get("id") ?? "");
+  if (!uuidPattern.test(id)) return { ok: false, message: "The document could not be found. Refresh and try again." };
+  const supabase = await createClient();
+  // Delete the record first: a leftover file is harmless, a record without its file is not.
+  const { data, error } = await supabase.from("project_documents").delete().eq("id", id).select("project_id,storage_path").maybeSingle();
+  if (error || !data) return { ok: false, message: "The document could not be deleted. Please try again." };
+  await supabase.storage.from("erp-project-documents").remove([data.storage_path]);
+  revalidateDocuments(data.project_id);
+  return { ok: true, message: "Document deleted." };
+}
