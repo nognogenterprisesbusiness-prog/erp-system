@@ -1,24 +1,25 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { issueInvoiceAction, recordPaymentAction, reversePaymentAction, voidInvoiceAction, type BillingActionState } from "@/app/(workspace)/billing/actions";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
-import { SelectPicker } from "@/components/ui/select-picker";
+import { PagedReferencePicker } from "@/components/ui/paged-reference-picker";
 
 const initialState: BillingActionState = { message: "" };
 type BillableProject = { id: string; code: string; name: string; client_name: string; contract_amount: number };
 
 export function IssueInvoiceForm({ projects, idempotencyKey, today }: { projects: BillableProject[]; idempotencyKey: string; today: string }) {
   const [state, action, pending] = useActionState(issueInvoiceAction, initialState);
+  const [projectId, setProjectId] = useState("");
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
     <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="Project" htmlFor="projectId" error={error("projectId")}
         hint="Invoices for a project cannot exceed its contract value.">
-        <SelectPicker name="projectId" label="Project" options={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name} · ${project.client_name}` }))} placeholder="Choose project" />
+        <input type="hidden" name="projectId" value={projectId} /><PagedReferencePicker kind="billable_project" label="Project" value={projectId} onValueChange={setProjectId} initialOptions={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name} · ${project.client_name}` }))} />
       </FormField>
       <FormField label="Amount (PHP)" htmlFor="amount" error={error("amount")}>
         <input id="amount" name="amount" type="text" inputMode="decimal" className={fieldControlClass} placeholder="0.00" required />
@@ -30,7 +31,7 @@ export function IssueInvoiceForm({ projects, idempotencyKey, today }: { projects
       </FormField>
     </div>
     {state.message && <p role="alert" className="mt-4 text-sm text-red-700">{state.message}</p>}
-    <div className="mt-6 flex justify-end"><Button type="submit" disabled={pending || projects.length === 0}>{pending ? "Issuing…" : "Issue invoice"}</Button></div>
+    <div className="mt-6 flex justify-end"><Button type="submit" disabled={pending || !projectId}>{pending ? "Issuing…" : "Issue invoice"}</Button></div>
   </form>;
 }
 

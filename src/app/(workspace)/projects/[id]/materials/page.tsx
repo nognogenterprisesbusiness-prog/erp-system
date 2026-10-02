@@ -12,6 +12,7 @@ import { MetricCard } from "@/components/ui/metric-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { RecordActionMenu, type RecordAction } from "@/components/ui/record-action-menu";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
+import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { getProject } from "@/lib/data/projects";
 import { getProjectMaterialEstimate, getProjectMaterialPlan } from "@/lib/data/project-operations";
@@ -35,12 +36,15 @@ export default async function ProjectMaterialsPage({ params, searchParams }: { p
   ]);
   const estimatedTotal = estimates ? [...estimates.values()].reduce((sum, row) => sum + Number(row.estimated_cost ?? 0), 0) : 0;
   const unpricedCount = estimates ? rows.filter((row) => estimates.get(row.id)?.unit_cost == null).length : 0;
-  const canPlan = user.canManage || projectData.assignments.some((assignment) =>
-    assignment.user_id === user.userId && assignment.assignment_role === "engineer" && assignment.status === "active");
+  const { data: reviewSites, error: reviewError } = await (await createClient()).rpc("get_project_review_sites", { p_project_id: id });
+  if (reviewError) throw new Error("Unable to verify material plan access.");
+  const allowedSites = new Set(reviewSites ?? []);
+  const canPlan = allowedSites.size > 0;
   const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
-  const choices = canPlan ? await getMaterialRequestChoices() : null;
+  const unfilteredChoices = canPlan ? await getMaterialRequestChoices() : null;
+  const choices = unfilteredChoices ? { ...unfilteredChoices, sites: unfilteredChoices.sites.filter((s) => allowedSites.has(s.id)) } : null;
   const editId = (await searchParams).edit;
-  const editing = canPlan ? rows.find((row) => row.id === editId) : undefined;
+  const editing = canPlan ? rows.find((row) => row.id === editId && allowedSites.has(row.project_site_id)) : undefined;
   return <>
     <PageHeader title="Material plan" description={`${projectData.project.code} · ${projectData.project.name}`} action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}?tab=materials`}>Back to project</Link></Button>{canPlan && choices && <RecordCreateDialog key={editing?.id ?? "new"} title={editing ? "Edit material plan" : "Add material plan"} initialOpen={Boolean(editing)} closeHref={`/projects/${id}/materials`}><ProjectMaterialPlanForm projectId={id} choices={choices} initial={editing ? { siteId: editing.project_site_id, warehouseId: editing.warehouse_id, materialId: editing.material_id, quantity: String(editing.planned_quantity), requiredOn: editing.required_on, note: editing.note } : undefined} /></RecordCreateDialog>}</div>} />
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
@@ -57,7 +61,7 @@ export default async function ProjectMaterialsPage({ params, searchParams }: { p
         const params = new URLSearchParams({ project: id, site: row.project_site_id, warehouse: row.warehouse_id, material: row.material_id, quantity: String(row.quantity_to_request), date: row.required_on });
         const purchaseParams = new URLSearchParams({ material: row.material_id, warehouse: row.warehouse_id, quantity: String(row.procurement_shortage) });
         const actions: RecordAction[] = [
-          ...(canPlan ? [{ label: "Edit", href: `?edit=${row.id}` }] : []),
+          ...(allowedSites.has(row.project_site_id) ? [{ label: "Edit", href: `?edit=${row.id}` }] : []),
           ...(canRequest && row.quantity_to_request > 0 ? [{ label: `Request ${quantity(row.quantity_to_request)} ${row.unit_symbol}`, href: `/requests/new?${params}` }] : []),
           ...(user.canManage && row.procurement_shortage > 0 ? [{ label: `Purchase ${quantity(row.procurement_shortage)} ${row.unit_symbol}`, href: `/purchase-orders/new?${purchaseParams}` }] : []),
         ];

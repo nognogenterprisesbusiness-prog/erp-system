@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { searchReferenceChoices, type ReferenceChoice } from "@/app/(workspace)/references/actions";
+import { searchReferenceChoices, type ReferenceChoice, type ReferenceKind } from "@/app/(workspace)/references/actions";
 import { SelectPicker } from "./select-picker";
 import { Button } from "./button";
 import { fieldControlClass } from "./form-field";
-export function PagedReferencePicker({ kind, projectId = "", warehouseId = "", label, value, onValueChange, initialOptions, disabledValues = [], onPick }: { kind: "material" | "attendance" | "site_material" | "request_material"; projectId?: string; warehouseId?: string; label: string; value: string; onValueChange: (value: string) => void; initialOptions: ReferenceChoice[]; disabledValues?: string[]; onPick?: (choice: ReferenceChoice) => void }) {
+export function PagedReferencePicker({ kind, projectId = "", warehouseId = "", label, value, onValueChange, initialOptions, disabledValues = [], onPick }: { kind: ReferenceKind; projectId?: string; warehouseId?: string; label: string; value: string; onValueChange: (value: string) => void; initialOptions: ReferenceChoice[]; disabledValues?: string[]; onPick?: (choice: ReferenceChoice) => void }) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [activeSearch, setActiveSearch] = useState(kind === "request_material");
+  const [activeSearch, setActiveSearch] = useState(["request_material", "billable_project", "delivery_vehicle"].includes(kind));
   const [result, setResult] = useState<{ choices: ReferenceChoice[]; count: number }>({ choices: initialOptions, count: initialOptions.length });
   const [selected, setSelected] = useState<ReferenceChoice | undefined>(initialOptions.find((o) => o.value === value));
   const [message, setMessage] = useState("");

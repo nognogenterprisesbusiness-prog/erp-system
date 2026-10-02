@@ -4,7 +4,7 @@ import { uuidSchema } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
-import { readAllPages } from "./read-all-pages";
+import { readAllPages, readByIds } from "./read-all-pages";
 import { getDailyReportChoices } from "./daily-reports";
 import type { MaterialRequestStatus } from "@/types/database";
 
@@ -150,6 +150,8 @@ export async function getMaterialRequest(id: string) {
   if (manifestsResult.error || acceptancesResult.error) throw new Error("Unable to load delivery checks.");
   const itemMap = new Map((itemsResult.data ?? []).map((row) => [row.id, row]));
   const transferMap = new Map((transfersResult.data ?? []).map((row) => [row.id, row]));
+  const corrections = await readByIds((acceptancesResult.data ?? []).map((r) => r.inventory_transaction_id), (ids, from, to) => supabase.from("inventory_corrections").select("original_transaction_id,reason,actor_id,created_at").in("original_transaction_id", ids).order("original_transaction_id").range(from, to), "receipt corrections");
+  const correctionMap = new Map(corrections.map((c) => [c.original_transaction_id, c]));
   const manifestMap = new Map((manifestsResult.data ?? []).map((row) => [row.transfer_id, row]));
   const dispatches = (dispatchesResult.data ?? []).flatMap((row) => {
     const item = itemMap.get(row.transfer_item_id);
@@ -157,7 +159,7 @@ export async function getMaterialRequest(id: string) {
     return item && transfer ? [{ ...row, item, transfer, manifest: manifestMap.get(transfer.id), acceptances: (acceptancesResult.data ?? []).filter((entry) => entry.transfer_item_id === item.id), remainingQuantity: item.dispatched_quantity - item.received_quantity - item.variance_quantity }] : [];
   });
   const materialIds = [...new Set((linesResult.data ?? []).map((row) => row.material_id))];
-  const actorIds = [...new Set([request.requested_by, request.decided_by, ...(eventsResult.data ?? []).map((row) => row.actor_id), ...(fulfillmentResult.data ?? []).map((row) => row.actor_id), ...(varianceResult.data ?? []).map((row) => row.approved_by), ...(acceptancesResult.data ?? []).map((row) => row.received_by)].filter((id): id is string => Boolean(id)))];
+  const actorIds = [...new Set([request.requested_by, request.decided_by, ...(eventsResult.data ?? []).map((row) => row.actor_id), ...(fulfillmentResult.data ?? []).map((row) => row.actor_id), ...(varianceResult.data ?? []).map((row) => row.approved_by), ...(acceptancesResult.data ?? []).map((row) => row.received_by), ...corrections.map((c) => c.actor_id)].filter((id): id is string => Boolean(id)))];
   const [materialsResult, actorsResult, units] = await Promise.all([
     materialIds.length ? supabase.from("materials").select("id,code,name,photo_path").in("id", materialIds) : Promise.resolve({ data: [], error: null }),
     actorIds.length ? supabase.from("profiles").select("id,full_name").in("id", actorIds) : Promise.resolve({ data: [], error: null }),
@@ -176,7 +178,8 @@ export async function getMaterialRequest(id: string) {
     fulfillmentEvents: (fulfillmentResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get((linesResult.data ?? []).find((line) => line.id === row.request_line_id)?.material_id ?? "")?.name ?? "Material" })),
     reservationEvents: (reservationEventsResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get(reservationLines.get(row.reservation_id)?.material_id ?? "")?.name ?? "Material" })),
     varianceEvents: (varianceResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.approved_by) ?? "Administrator", materialName: materials.get((linesResult.data ?? []).find((line) => (dispatchesResult.data ?? []).some((dispatch) => dispatch.request_line_id === line.id && dispatch.transfer_item_id === row.transfer_item_id))?.material_id ?? "")?.name ?? "Material" })),
-    dispatches: dispatches.map((dispatch) => ({ ...dispatch, acceptances: dispatch.acceptances.map((entry) => ({ ...entry, receiverName: actors.get(entry.received_by) ?? "Authorized recipient" })) })),
+    correctionEvents: corrections.map((c) => ({ ...c, actorName: actors.get(c.actor_id) ?? "Administrator" })),
+    dispatches: dispatches.map((dispatch) => ({ ...dispatch, acceptances: dispatch.acceptances.map((entry) => ({ ...entry, receiverName: actors.get(entry.received_by) ?? "Authorized recipient", correctionReason: correctionMap.get(entry.inventory_transaction_id)?.reason })) })),
     requesterName: actors.get(request.requested_by) ?? "Authorized user",
     approverName: request.decided_by ? actors.get(request.decided_by) ?? "Authorized manager" : null,
   };

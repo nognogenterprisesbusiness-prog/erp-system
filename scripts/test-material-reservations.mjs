@@ -1,16 +1,11 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { withLocalFixture } from "./local-integration-fixture.mjs";
 const project = "20000000-0000-0000-0000-000000000001";
 const site = "40000000-0000-0000-0000-000000000001";
 const warehouse = "30000000-0000-0000-0000-000000000001";
 const material = "60000000-0000-0000-0000-000000000001";
 await withLocalFixture(async ({ sql, as, result, users }) => {
-  // Apply only inside the disposable clone, twice to verify the forward repair is repeatable.
-  const repair = readFileSync(new URL("../supabase/migrations/20260927160000_repair_request_receipt_access.sql", import.meta.url), "utf8");
-  await sql(repair);
-  await sql(repair);
   await as("admin", "select count(*) from public.inventory_valuations");
   await as("foreman", "do $$ begin if private.can_manage_inventory() then raise exception 'Foreman gained inventory administration'; end if; end $$");
   const reservedBefore = Number(await sql(`select reserved_quantity from public.inventory_balances b join public.inventory_locations l on l.id=b.inventory_location_id where b.material_id='${material}' and l.warehouse_id='${warehouse}'`));
@@ -41,18 +36,18 @@ await withLocalFixture(async ({ sql, as, result, users }) => {
   const reserved = await sql(`select reserved_quantity from public.inventory_balances b join public.inventory_locations l on l.id=b.inventory_location_id where b.material_id='${material}' and l.warehouse_id='${warehouse}'`);
   assert.equal(Number(reserved),reservedBefore+20);
   const dispatchKey=randomUUID();
-  const dispatch=`select public.dispatch_approved_request_line('${dispatchKey}','${line}',8,current_date,'Integration test')`;
+  const dispatch=`select public.dispatch_approved_request_line_with_manifest('${dispatchKey}','${line}',8,current_date,'Integration test',null,'Test truck','Test Driver','TEST-TRIP')`;
   const transfer = result(await as("warehouse_staff",dispatch));
   assert.equal(transfer,result(await as("warehouse_staff",dispatch)));
   const remaining = await sql(`select reserved_quantity from public.inventory_balances b join public.inventory_locations l on l.id=b.inventory_location_id where b.material_id='${material}' and l.warehouse_id='${warehouse}'`);
   assert.equal(Number(remaining),reservedBefore+12);
   const item = result(await sql(`select id from public.inventory_transfer_items where transfer_id='${transfer}'`));
-  await assert.rejects(as("warehouse_staff", `select public.receive_request_transfer('${randomUUID()}','${item}',1,current_date,null)`));
-  const receipt = `select public.receive_request_transfer('${randomUUID()}','${item}',3,current_date,'Partial delivery')`;
+  await assert.rejects(as("warehouse_staff", `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',1,current_date,null,'accepted',null)`));
+  const receipt = `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',3,current_date,'Partial delivery','accepted',null)`;
   assert.equal(result(await as("foreman",receipt)),result(await as("foreman",receipt)));
   assert.equal(await sql(`select status from public.inventory_transfers where id='${transfer}'`), "partially_received");
-  await assert.rejects(as("foreman", `select public.receive_request_transfer('${randomUUID()}','${item}',6,current_date,null)`));
-  await as("foreman", `select public.receive_request_transfer('${randomUUID()}','${item}',5,current_date,'Complete delivery')`);
+  await assert.rejects(as("foreman", `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',6,current_date,null,'accepted',null)`));
+  await as("foreman", `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',5,current_date,'Complete delivery','accepted',null)`);
   assert.equal(await sql(`select status from public.inventory_transfers where id='${transfer}'`), "received");
   assert.equal(Number(await sql(`select received_quantity from public.inventory_transfer_items where id='${item}'`)),8);
   assert.equal(Number(await sql(`select count(*) from public.inventory_transactions where transfer_item_id='${item}' and transfer_phase='receipt'`)),2);

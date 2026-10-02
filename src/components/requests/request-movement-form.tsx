@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useRecordDialog, RecordFormControls } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { todayInManila } from "@/lib/date";
+import { PagedReferencePicker } from "@/components/ui/paged-reference-picker";
 import { SelectPicker } from "@/components/ui/select-picker";
 
 const initialState: RequestActionState = { ok: false, message: "" };
@@ -22,6 +23,7 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
   useEffect(() => { if (pending) { completed.current = false; return; } if (state.ok && !completed.current) { completed.current = true; if (complete) complete(); else router.refresh(); } }, [state, pending, complete, router]);
   const [key] = useState(() => crypto.randomUUID());
   const [vehicleId, setVehicleId] = useState("");
+  const [companyTransport, setCompanyTransport] = useState(false);
   const [condition, setCondition] = useState<"accepted" | "accepted_with_note">("accepted");
   const label = mode === "dispatch" ? "Release materials" : "Confirm receipt";
   const form = <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.5fr_auto] lg:items-end">
@@ -40,7 +42,8 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
       {mode === "dispatch" && <>
         <input type="hidden" name="vehicleAssetId" value={vehicleId} />
         <FormField label="Delivery vehicle" htmlFor={`vehicle-${id}`}>
-          <SelectPicker label="Delivery vehicle" value={vehicleId || "other"} onValueChange={(next) => setVehicleId(next === "other" ? "" : next)} options={[{ value: "other", label: "Other / external transport" }, ...vehicles.map((item) => ({ value: item.id, label: item.label }))]} />
+          <SelectPicker label="Transport type" value={companyTransport ? "company" : "other"} onValueChange={(next) => { setCompanyTransport(next === "company"); setVehicleId(""); }} options={[{ value: "other", label: "Other / external transport" }, { value: "company", label: "Company vehicle" }]} />
+          {companyTransport && <PagedReferencePicker kind="delivery_vehicle" label="Delivery vehicle" value={vehicleId} onValueChange={setVehicleId} initialOptions={vehicles.map((item) => ({ value: item.id, label: item.label }))} />}
         </FormField>
         {!vehicleId && <FormField label="Vehicle or transport description" htmlFor={`vehicle-label-${id}`}><input id={`vehicle-label-${id}`} name="vehicleLabel" className={fieldControlClass} maxLength={120} placeholder="Plate number or transport type" required /></FormField>}
         <FormField label="Driver" htmlFor={`driver-${id}`}><input id={`driver-${id}`} name="driverName" className={fieldControlClass} maxLength={120} required /></FormField>
@@ -54,7 +57,7 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
         {condition === "accepted_with_note" && <FormField label="Quality note" htmlFor={`quality-note-${id}`}><input id={`quality-note-${id}`} name="qualityNote" className={fieldControlClass} maxLength={500} placeholder="Describe the issue with accepted stock" required /></FormField>}
         <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">Enter only the usable quantity. Report damaged or missing pieces to Admin.</p>
       </>}
-      <RecordFormControls busy={pending} label={label} />
+      <RecordFormControls busy={pending} disabled={mode === "dispatch" && companyTransport && !vehicleId} label={label} />
       {state.ok && <p role="status" className="text-sm text-emerald-700 sm:col-span-2 lg:col-span-4">{mode === "dispatch" ? "Materials released." : "Receipt recorded."}</p>}
       {!state.ok && state.message && <p role="alert" className="text-sm text-red-600 sm:col-span-2 lg:col-span-4">{state.message}</p>}
     </form>;

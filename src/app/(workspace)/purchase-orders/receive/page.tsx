@@ -1,5 +1,9 @@
+import { HistoryPagination } from "@/components/ui/history-pagination";
+import { ListFilterBar } from "@/components/ui/list-filter-bar";
+import { SearchField } from "@/components/ui/search-field";
+import { pageNumber } from "@/lib/data/pagination";
 import { randomUUID } from "node:crypto";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ReceiveWarehouseDeliveryForm } from "@/components/purchase-orders/purchase-order-forms";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -13,18 +17,28 @@ const quantity = new Intl.NumberFormat("en-PH", { maximumFractionDigits: 4 });
 
 // Deliveries expected at the warehouses this user is assigned to. Prices stay hidden;
 // the stock is valued at the PO price that Admin issued.
-export default async function ReceiveDeliveriesPage({ searchParams }: { searchParams: Promise<{ posted?: string }> }) {
+export default async function ReceiveDeliveriesPage({ searchParams }: { searchParams: Promise<{ posted?: string; q?: string; page?: string }> }) {
   const user = await requireUser();
   if (!user.canOperateInventory) notFound();
-  const posted = (await searchParams).posted === "1";
+  const filters = await searchParams;
+  const posted = filters.posted === "1";
+  const page = pageNumber(filters.page);
+  const search = (filters.q ?? "").slice(0, 100);
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_warehouse_receivable_po_lines");
+  const { data, error } = await supabase.rpc("get_warehouse_receivable_po_lines", { p_search: search, p_offset: (page - 1) * 20, p_limit: 20 });
   if (error) throw new Error(`Unable to load expected deliveries: ${error.message}`, { cause: error });
   const lines = data ?? [];
+  if (page > 1 && lines.length === 0) {
+    const first = await supabase.rpc("get_warehouse_receivable_po_lines", { p_search: search, p_offset: 0, p_limit: 1 });
+    if (first.error) throw new Error("Unable to verify the delivery page.");
+    const lastPage = Math.max(1, Math.ceil((first.data?.[0]?.total_count ?? 0) / 20));
+    redirect(`/purchase-orders/receive?${new URLSearchParams({ page: String(lastPage), ...(search ? { q: search } : {}), ...(posted ? { posted: "1" } : {}) })}`);
+  }
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   return <>
     <PageHeader eyebrow="Warehouse" title="Receive deliveries" description="Count what arrived for a purchase order issued by an administrator and add it to your warehouse stock. The price comes from the purchase order." />
     {posted && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Delivery received. The stock is now in the warehouse inventory.</p>}
+    <ListFilterBar><SearchField label="Search deliveries" name="q" defaultValue={search} maxLength={100} placeholder="PO, supplier, warehouse or material" /></ListFilterBar>
     <DataTableShell empty={lines.length === 0 ? <EmptyState kind="items" title="No deliveries waiting" description="Purchase orders for your warehouses appear here once an administrator issues them." /> : undefined} footer={lines.length ? <span className="text-xs text-slate-500">{lines.length} material line{lines.length === 1 ? "" : "s"} waiting</span> : undefined}>
       <table className="w-full min-w-[760px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Purchase order</th><th className="px-4 py-3">Material</th><th className="px-4 py-3">Warehouse</th><th className="px-4 py-3 text-right">Ordered</th><th className="px-4 py-3 text-right">Still expected</th><th className="px-5 py-3 text-right"><span className="sr-only">Action</span></th></tr></thead>
         <tbody className="divide-y divide-slate-100">{lines.map((line) => <tr key={line.line_id}>
@@ -36,5 +50,6 @@ export default async function ReceiveDeliveriesPage({ searchParams }: { searchPa
           <td className="px-5 py-4 text-right"><RecordCreateDialog title="Receive delivery" triggerLabel="Receive" triggerVariant="outline"><p className="mb-4 text-sm text-slate-600">{line.po_number} · {line.material_name} → {line.warehouse_name}</p><ReceiveWarehouseDeliveryForm orderId={line.order_id} lineId={line.line_id} remaining={Number(line.remaining_quantity)} unitSymbol={line.unit_symbol} idempotencyKey={randomUUID()} today={today} /></RecordCreateDialog></td>
         </tr>)}</tbody></table>
     </DataTableShell>
+    <HistoryPagination path="/purchase-orders/receive" page={page} count={lines[0]?.total_count ?? 0} filters={search ? { q: search } : {}} />
   </>;
 }

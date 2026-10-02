@@ -30,7 +30,10 @@ export async function getPurchaseOrder(id: string) {
     readAllPages((from, to) => supabase.from("purchase_order_lines").select("*").eq("purchase_order_id", id).order("material_code").order("id").range(from, to), "purchase order lines"),
     readAllPages((from, to) => supabase.from("purchase_order_receipts").select("id,purchase_order_id,purchase_order_line_id,inventory_transaction_id,quantity,goods_total_cost,expected_total_cost,cost_variance_reason,delivery_reference,received_on,received_by,created_at").eq("purchase_order_id", id).order("created_at", { ascending: false }).order("id").range(from, to), "purchase receipts"),
   ]);
-  return { order, lines: linesResult, receipts: receiptsResult };
+  const correctionIds = receiptsResult.map((r) => r.inventory_transaction_id);
+  const corrections = await readByIds(correctionIds, (ids, from, to) => supabase.from("inventory_corrections").select("original_transaction_id,reason").in("original_transaction_id", ids).order("original_transaction_id").range(from, to), "receipt corrections");
+  const reasons = new Map(corrections.map((c) => [c.original_transaction_id, c.reason]));
+  return { order, lines: linesResult, receipts: receiptsResult.map((r) => ({ ...r, correctionReason: reasons.get(r.inventory_transaction_id) })) };
 }
 
 export async function getPurchaseOrderChoices() {

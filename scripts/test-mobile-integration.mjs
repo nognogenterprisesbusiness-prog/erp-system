@@ -151,7 +151,7 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
     `select public.decide_material_request('${randomUUID()}','${requestId}','{"${line}":"8"}'::jsonb,null)`,
   );
   const releaseKey = randomUUID();
-  const release = `select public.dispatch_approved_request_line('${releaseKey}','${line}',8,'2026-09-28','Mobile flow release')`;
+  const release = `select public.dispatch_approved_request_line_with_manifest('${releaseKey}','${line}',8,'2026-09-28','Mobile flow release',null,'Test truck','Test Driver','TEST-TRIP')`;
   const transfer = result(await as("warehouse_staff", release));
   assert.equal(result(await as("warehouse_staff", release)), transfer);
   const item = result(
@@ -170,7 +170,7 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
     ),
   );
   const receiptKey = randomUUID();
-  const receipt = `select public.receive_request_transfer('${receiptKey}','${item}',3,'2026-09-28','Mobile partial receipt')`;
+  const receipt = `select public.receive_request_transfer_with_inspection('${receiptKey}','${item}',3,'2026-09-28','Mobile partial receipt','accepted',null)`;
   assert.equal(
     result(await as("foreman", receipt)),
     result(await as("foreman", receipt)),
@@ -178,12 +178,12 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
   await assert.rejects(
     as(
       "foreman",
-      `select public.receive_request_transfer('${randomUUID()}','${item}',6,'2026-09-28',null)`,
+      `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',6,'2026-09-28',null,'accepted',null)`,
     ),
   );
   await as(
     "foreman",
-    `select public.receive_request_transfer('${randomUUID()}','${item}',5,'2026-09-28','Mobile full receipt')`,
+    `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',5,'2026-09-28','Mobile full receipt','accepted',null)`,
   );
   assert.equal(
     Number(

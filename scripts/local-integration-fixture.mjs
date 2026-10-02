@@ -1,6 +1,7 @@
 import { execFileSync, execFile } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
 import { promisify } from "node:util";
+import { readFileSync } from "node:fs";
 
 const container = "supabase_db_nognog-enterprises";
 const run = promisify(execFile);
@@ -19,25 +20,34 @@ export async function withLocalFixture(test) {
   const dump = execFileSync("docker", ["exec", container, "pg_dump", "-U", databaseAdmin, "-d", "postgres", "--no-owner"], { maxBuffer: 128 * 1024 * 1024, timeout: 60000 });
   execFileSync("docker", ["exec", container, "createdb", "-U", databaseAdmin, database], { timeout: 15000 });
   const sql = async (statement) => {
-    const child = execFile("docker", ["exec", "-i", container, "psql", "-X", "-U", databaseAdmin, "-d", database, "-v", "ON_ERROR_STOP=1", "-At"], { maxBuffer: 16 * 1024 * 1024, timeout: 60000 });
+    const child = execFile("docker", ["exec", "-i", container, "psql", "-X", "-U", databaseAdmin, "-d", database, "-v", "ON_ERROR_STOP=1", "-Atq"], { maxBuffer: 16 * 1024 * 1024, timeout: 60000 });
     child.stdin.end(statement);
     return await new Promise((resolve, reject) => { let output="", error=""; child.stdout.on("data", (d) => output+=d); child.stderr.on("data", (d) => error+=d); child.on("error", reject); child.on("close", (code) => code === 0 ? resolve(output.trim()) : reject(new Error(error))); });
   };
   try {
     await sql(dump);
-    const users = Object.fromEntries(["admin", "engineer", "foreman", "warehouse_staff"].map((role) => [role, randomUUID()]));
+    const forward = [
+      ["20261003100000_role_permission_consistency.sql", "select to_regprocedure('public.get_project_site_capabilities(uuid,uuid)') is null"],
+      ["20261003110000_searchable_operation_choices.sql", "select to_regprocedure('public.get_billable_projects()') is not null"],
+      ["20261003120000_audited_inventory_corrections.sql", "select to_regclass('public.inventory_corrections') is null"],
+    ];
+    for (const [migration, required] of forward) {
+      if (await sql(required) === "t") await sql(readFileSync(new URL(`../supabase/migrations/${migration}`, import.meta.url), "utf8"));
+    }
+    const users = Object.fromEntries(["admin", "engineer", "foreman", "warehouse_staff", "finance"].map((role) => [role, randomUUID()]));
     const seeded = { admin: "10000000-0000-0000-0000-000000000001", engineer: "10000000-0000-0000-0000-000000000003", foreman: "10000000-0000-0000-0000-000000000004", warehouse_staff: "10000000-0000-0000-0000-000000000005" };
     for (const [role, id] of Object.entries(users)) {
       const password = randomBytes(32).toString("hex");
       await sql(`insert into auth.users(id,email,encrypted_password,raw_user_meta_data,created_at,updated_at) values('${id}','${id}@integration.local',extensions.crypt('${password}',extensions.gen_salt('bf')),'{"full_name":"Integration ${role}"}',now(),now());
         update public.profiles set onboarding_required=false where id='${id}';
         insert into public.user_roles(user_id,role,granted_by) values('${id}','${role}','${users.admin}');`);
-      if (role !== "admin") await sql(`insert into public.project_assignments(project_id,user_id,assignment_role,assigned_on,assigned_by) select project_id,'${id}',assignment_role,assigned_on,'${users.admin}' from public.project_assignments where user_id='${seeded[role]}' and status='active';`);
+      if (seeded[role] && role !== "admin") await sql(`insert into public.project_assignments(project_id,user_id,assignment_role,assigned_on,assigned_by) select project_id,'${id}',assignment_role,assigned_on,'${users.admin}' from public.project_assignments where user_id='${seeded[role]}' and status='active';`);
       if (role === "warehouse_staff") await sql(`insert into public.warehouse_assignments(warehouse_id,user_id,assigned_on,assigned_by) select warehouse_id,'${id}',assigned_on,'${users.admin}' from public.warehouse_assignments where user_id='${seeded[role]}' and status='active';`);
     }
     const as = (role, statement) => sql(`begin; set local role authenticated; select set_config('request.jwt.claim.sub','${users[role]}',true); ${statement}; commit;`);
     const result = (output) => output.split("\n").filter((line) => /^[0-9a-f-]{36}$/.test(line)).at(-1);
-    await test({ sql, as, users, result });
+    const scalar = (output) => output.split("\n").at(-1);
+    await test({ sql, as, users, result, scalar });
   } finally {
     // The exact generated test database is disposable; production/local company data is untouched.
     await run("docker", ["exec", container, "dropdb", "-U", databaseAdmin, "--force", database], { timeout: 15000 });

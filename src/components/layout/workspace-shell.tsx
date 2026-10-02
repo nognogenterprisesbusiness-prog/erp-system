@@ -29,7 +29,7 @@ const navItems = [
   { href: "/suppliers/categories", label: "Categories", icon: Tag01Icon, manager: true, nested: true, group: "Purchasing & finance" },
   { href: "/billing", label: "Billing & payments", icon: File02Icon, finance: true, group: "Purchasing & finance" },
   { href: "/employees", label: "Employees", icon: UserGroupIcon, group: "People & administration" },
-  { href: "/attendance", label: "Attendance", icon: AssignmentsIcon, nested: true, group: "People & administration" },
+  { href: "/attendance", label: "Attendance", icon: AssignmentsIcon, finance: true, nested: true, group: "People & administration" },
   { href: "/employees/categories", label: "Categories", icon: Tag01Icon, manager: true, nested: true, group: "People & administration" },
   { href: "/users", label: "Users", icon: UserGroupIcon, manager: true, group: "People & administration" },
   { href: "/audit-logs", label: "Audit logs", icon: Audit01Icon, manager: true, group: "People & administration" },

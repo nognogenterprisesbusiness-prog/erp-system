@@ -23,6 +23,9 @@ function friendlyInventoryError(error: { code?: string; message: string }) {
   if (error.message.includes("verified value") || error.message.includes("verified opening value")) return "An administrator must verify this stock's opening value before it can move.";
   if (error.message.includes("insufficient site stock")) return "There is not enough available stock at this project site.";
   if (error.message.includes("quantity and valuation do not reconcile")) return "Stock and valuation do not reconcile. Ask an administrator to investigate.";
+  if (error.message.includes("reverse downstream") || error.message.includes("original receipt batch has been used")) return "Restore used or reserved receipt stock by correcting downstream postings first.";
+  if (error.message.includes("snapshots are unavailable")) return "This older receipt needs an audited batch reconciliation before it can be corrected.";
+  if (error.message.includes("transaction is not reversible")) return "This posting is already reversed or does not support this correction.";
   return "The inventory transaction could not be posted.";
 }
 async function requireOperator() { const user = await requireUser(); if (!user.canOperateInventory) throw new Error("Not authorized"); return user; }
@@ -176,5 +179,5 @@ export async function reverseTransactionAction(_: InventoryActionState, form: Fo
   if (!parsed.success) return failure("A valid reversal reason is required.", parsed.error.flatten().fieldErrors);
   const supabase = await createClient(); const { data, error } = await supabase.rpc("reverse_inventory_transaction", { p_idempotency_key: parsed.data.idempotencyKey, p_transaction_id: parsed.data.transactionId, p_reason: parsed.data.reason });
   if (error) return failure(friendlyInventoryError(error));
-  revalidatePath("/inventory"); revalidatePath("/inventory/transfers"); revalidatePath("/inventory/transactions"); redirect(`/inventory/transactions?reversed=${data}`);
+  revalidatePath("/", "layout"); redirect(`/inventory/transactions?reversed=${data}`);
 }

@@ -23,7 +23,7 @@ export default async function ProjectAttendancePage({ params, searchParams }: { 
   const id = (await params).id;
   if (!uuidSchema.safeParse(id).success) notFound();
   const page = pageNumber((await searchParams).page);
-  if (!user.canManage) {
+  if (!user.canViewLaborRates) {
     const canViewAttendance = user.roles.some((role) => ["engineer", "foreman"].includes(role));
     if (!canViewAttendance) notFound();
     return <ProjectSiteAttendance projectId={id} page={page} canRecord={user.roles.includes("foreman")} />;

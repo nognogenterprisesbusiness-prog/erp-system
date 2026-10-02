@@ -114,12 +114,13 @@ export async function getInventoryBalances(params: { query?: string; locationId?
   return { balances, materials: balances.map((b) => b.material), locations, selectedLocationId, count: data?.[0]?.total_count ?? 0 };
 }
 
-export async function getInventoryTransactions(params: { type?: InventoryTransactionType | "all"; locationId?: string; page?: number } = {}) {
+export async function getInventoryTransactions(params: { type?: InventoryTransactionType | "all"; locationId?: string; transactionId?: string; page?: number } = {}) {
   const supabase = await createClient();
   const requestedPage = params.page ?? 1;
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 10000) : 1;
   const pageSize = 50;
-  let request = supabase.from("inventory_transactions").select("id,material_id,quantity,unit_of_measure_id,source_location_id,destination_location_id,transaction_type,transfer_id,transfer_item_id,transfer_phase,reference_document,project_id,responsible_user_id,transaction_date,remarks,reversal_of,created_at", { count: "exact" }).order("created_at", { ascending: false }).order("id");
+  let request = supabase.from("inventory_transactions").select("id,material_id,quantity,unit_of_measure_id,source_location_id,destination_location_id,transaction_type,transfer_id,transfer_item_id,transfer_phase,reference_document,project_id,responsible_user_id,transaction_date,remarks,reversal_of,cost_total,created_at", { count: "exact" }).order("created_at", { ascending: false }).order("id");
+  if (params.transactionId) { if (!uuidSchema.safeParse(params.transactionId).success) notFound(); request = request.eq("id", params.transactionId); }
   if (params.type && params.type !== "all") request = request.eq("transaction_type", params.type);
   if (params.locationId) {
     const locationId = uuidSchema.safeParse(params.locationId);
@@ -141,12 +142,19 @@ export async function getInventoryTransactions(params: { type?: InventoryTransac
     projectIds.length ? supabase.from("projects").select("id,code,name").in("id", projectIds) : Promise.resolve({ data: [] }),
   ]);
   if (materialsResult.error || unitsResult.error) throw new Error("Unable to resolve inventory transaction details.");
+  const ids = (data ?? []).map((item) => item.id);
+  const corrections = ids.length ? await readByIds(ids, (batch, from, to) => supabase.from("inventory_transactions").select("reversal_of,remarks").in("reversal_of", batch).order("id").range(from, to), "inventory reversals") : [];
+  const links = ids.length ? await readByIds((data ?? []).flatMap((item) => item.transfer_item_id ? [item.transfer_item_id] : []), (batch, from, to) => supabase.from("material_request_dispatches").select("transfer_item_id").in("transfer_item_id", batch).order("transfer_item_id").range(from, to), "request dispatches") : [];
+  const transferItems = await readByIds((data ?? []).flatMap((item) => item.transfer_item_id ? [item.transfer_item_id] : []), (batch, from, to) => supabase.from("inventory_transfer_items").select("id,received_quantity,variance_quantity").in("id", batch).order("id").range(from, to), "transfer correction status");
+  const itemStatus = new Map(transferItems.map((item) => [item.id, item]));
+  const reversed = new Map(corrections.map((r) => [r.reversal_of, r.remarks]));
+  const requestItems = new Set(links.map((r) => r.transfer_item_id));
   const materialMap = new Map((materialsResult.data ?? []).map((item) => [item.id, item]));
   const locationMap = new Map(locations.map((item) => [item.id, item]));
   const unitMap = new Map((unitsResult.data ?? []).map((item) => [item.id, item.symbol]));
   const actorMap = new Map((actorsResult.data ?? []).map((item) => [item.id, item.full_name]));
   const projectMap = new Map((projectsResult.data ?? []).map((item) => [item.id, item]));
-  return { transactions: (data ?? []).map((item) => ({ ...item, material: materialMap.get(item.material_id), source: item.source_location_id ? locationMap.get(item.source_location_id) : undefined, destination: item.destination_location_id ? locationMap.get(item.destination_location_id) : undefined, unitSymbol: unitMap.get(item.unit_of_measure_id) ?? "", responsibleName: actorMap.get(item.responsible_user_id) ?? "Unavailable user", project: item.project_id ? projectMap.get(item.project_id) : undefined })), locations, count: count ?? 0, page, pageCount: Math.max(1, Math.ceil((count ?? 0) / pageSize)) };
+  return { transactions: (data ?? []).map((item) => ({ ...item, correctionReason: reversed.get(item.id), canReverse: item.cost_total !== null && !reversed.has(item.id) && (item.transaction_type === "STOCK_IN" || item.transaction_type === "STOCK_OUT" || item.transaction_type === "MATERIAL_CONSUMPTION" || item.transfer_phase === "receipt" || (item.transfer_phase === "dispatch" && !requestItems.has(item.transfer_item_id ?? "") && itemStatus.get(item.transfer_item_id ?? "")?.received_quantity === 0 && itemStatus.get(item.transfer_item_id ?? "")?.variance_quantity === 0)), material: materialMap.get(item.material_id), source: item.source_location_id ? locationMap.get(item.source_location_id) : undefined, destination: item.destination_location_id ? locationMap.get(item.destination_location_id) : undefined, unitSymbol: unitMap.get(item.unit_of_measure_id) ?? "", responsibleName: actorMap.get(item.responsible_user_id) ?? "Unavailable user", project: item.project_id ? projectMap.get(item.project_id) : undefined })), locations, count: count ?? 0, page, pageCount: Math.max(1, Math.ceil((count ?? 0) / pageSize)) };
 }
 
 export async function getInventoryTransfers(page = 1) {

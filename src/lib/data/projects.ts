@@ -23,7 +23,7 @@ export async function getProjects(params: ProjectListParams = {}) {
   else if (params.sort === "client") query = query.order("client_name", { ascending });
   else if (params.sort === "status") query = query.order("status", { ascending });
   else query = query.order("created_at", { ascending });
-  const { data, count, error } = await query.range(from, from + PAGE_SIZE - 1);
+  const { data, count, error } = await query.order("id").range(from, from + PAGE_SIZE - 1);
   if (error) throw new Error(`Unable to load projects: ${error.message}`);
   const projects = data ?? [];
   const ids = projects.map((project) => project.id);

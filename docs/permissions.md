@@ -1,98 +1,26 @@
-# Permission matrix
+# Five-role permissions
 
-| Role | Project scope | Project mutation | Warehouse scope | Warehouse mutation |
-|---|---|---|---|---|
-| Super Admin / Owner / Admin | All | Create, edit, archive, assignments, sites | All | Create, edit, activate/deactivate, staff assignment |
-| Project Manager / Engineer / Foreman / Worker | Explicit active project assignments | Read only | None unless separately assigned | Read only when assigned |
-| Warehouse Staff | Explicit project assignments only | Read only | Explicit active warehouse assignments | Read only |
-| Accounting | Explicit project assignments only | Read only | None unless separately assigned | Read only when assigned |
+Current roles are `admin`, `engineer`, `foreman`, `warehouse_staff` and `finance`. Permissions require an active, onboarded account. Historical role names are not current application roles.
 
-The responsive web interface hides unauthorized mutations for usability. Supabase grants and RLS policies remain authoritative. Mutation server actions also verify the administrator role before submitting changes.
-
-Inactive profiles fail role and assignment checks. Ending an assignment preserves history and removes future scoped access. Project records are archived, never hard-deleted through the application API.
-
-## Material request submission (unapplied connected rule)
-
-| Actor | Submit request | Review/approve |
-|---|---|---|
-| Assigned Project Manager / Engineer / Foreman | Yes, for an active assigned project and site | Assigned Project Manager may approve |
-| Super Admin / Owner / Admin | No; requests originate with site staff | May review and approve |
-| Warehouse Staff / Accounting / Worker | No | No |
-
-The connected server action and an unapplied insert trigger both enforce the submitter rule; the demo transaction enforces the same role boundary. Verify direct RPC denial in isolated staging before enabling live requests.
-
-## Phase 4A asset registry
-
-| Role | Asset registry scope | Registry mutation |
-|---|---|---|
-| Super Admin / Owner / Admin | All equipment, vehicles, classifications, and locations | Create, edit, relocate, status update, archive |
-| Project Manager / Engineer / Foreman | Assets currently at explicitly assigned project sites | None |
-| Warehouse Staff | Assets currently at explicitly assigned warehouses | None |
-| Accounting | All asset registry records for reporting | None |
-| Worker without an assignment | None | None |
-
-Direct client writes to asset identities, subtype details, and history are revoked. Protected database commands and server actions re-check the administrator role. Assignment, transfer, usage, maintenance, and costing permissions remain deferred to Phase 4B/4C.
-
-## Phase 5A workforce registry
-
-| Role | Employee identity | Private contact | Project workforce | Labor rates | Mutation |
+| Workflow | Admin | Engineer | Foreman | Warehouse Staff | Finance |
 |---|---|---|---|---|---|
-| Super Admin / Owner / Admin | All | All | All current/history | All | Categories, employees, archive, assign/end/transfer, add/close rate |
-| Accounting | All | All | All current/history | All | None |
-| Project Manager / Engineer / Foreman | Employees with workforce history on an accessible project | None | Accessible projects only | None | None |
-| Linked Worker | Own employee identity | Own | Own assignment rows | Own | None |
-| Warehouse-only / unrelated Worker | None | None | None | None | None |
+| Projects/sites | All; manage | Assigned projects/sites | Assigned projects/sites | Approved-request context from assigned warehouses | Financial project views |
+| Project documents | Upload, rename, delete, read | Read assigned-project documents, including direct site assignments | Same assigned-project read | None | None |
+| Material requests | Review/cancel as authorized | Request; independently review assigned sites | Request; cancel own undispatched requests | Dispatch approved requests from assigned warehouses | No decisions or dispatch |
+| Delivery acceptance | Inspect/receive | Inspect/receive at assigned sites | Inspect/receive at assigned sites | Receive issued PO deliveries and returns at assigned warehouses | No receiving |
+| Site consumption | Post and correct | Post at assigned sites | Post at assigned sites | No site consumption | Financial reporting |
+| Consumption/receipt corrections | Reasoned, audited reversal; replacement through normal workflow | None | None | None | Financial history |
+| Material planning/progress | Save; progress against approved reports | Save plans and approved-report progress at sites with review authority | Read assigned-site plans/progress | None | Financial summaries |
+| Attendance | Post/correct/read costs | Assigned-site operational view without wages | Record assigned-site attendance without wages | No global attendance | Read attendance/costs; no posting/correction |
+| Invoices/collections | Issue, collect, void/correct as authorized | None | None | None | Issue/collect within financial limits |
+| Accounts, procurement, wages/rates | Manage through protected commands | No management authority | No management authority | Quantity-only PO receipt at issued price | Financial read and billing authority |
 
-A workforce assignment does not grant authenticated project access. If an employee also needs application access, an administrator must separately create the appropriate Phase 2 project assignment. Direct client writes to workforce tables and history are revoked; protected database commands remain authoritative.
+`private.project_site_role` matches the project/site pair and either a direct site assignment or an active project assignment with the same current account role. Admin can access historical inactive sites; posting commands validate operational statuses separately. Warehouse access requires an active Warehouse Staff role and warehouse assignment, or Admin.
 
-## Phase 6A supplier management
+Web reviews, mobile capabilities and SQL review commands use the same site helper. Request receipt authorization runs before retries and checks the receiving site. Authenticated clients cannot execute the legacy receipt command; inspection is the supported request receipt entry point. Vehicle choices and manifests respect asset scope.
 
-| Role | Supplier registry | Catalog and price history | Mutation |
-|---|---|---|---|
-| Super Admin / Owner / Admin | All active and archived records | All materials, versions, comparisons, and events | Categories, suppliers, catalog entries, price add/close, archive |
-| Accounting | All records | All materials, versions, comparisons, and events | None |
-| Project Manager / Engineer / Foreman / Warehouse Staff / Worker | None | None | None |
+Corrections append `inventory_corrections` and a linked reversal. Original quantities, costs, inspections, actors and timestamps remain intact. Used or reserved receipt stock must be restored first. Receipt reversal reopens PO/transfer quantities without changing approval/dispatch history. Request-bound dispatch reversal remains unsupported because reservation restoration is a separate workflow; the UI does not offer it.
 
-Authenticated clients receive read-only table grants filtered by RLS. All mutations use validated security-definer database commands and repeat the manager-role authorization check in the server action. Phase 6A does not introduce an unapproved procurement role or purchase-order authority.
+Global Attendance navigation is Admin/Finance only. Site attendance remains accessible through assigned projects. Finance's project attendance page omits Admin posting/correction controls.
 
-## Phase 7A daily reports
-
-| Role | Report visibility | Create and submit | Edit draft |
-|---|---|---|---|
-| Super Admin / Owner / Admin | All projects | Any active project and site | Own drafts only |
-| Project Manager / Engineer / Foreman | Projects with an active matching assignment | Assigned active projects and sites | Own drafts only |
-| Accounting / Warehouse Staff / Worker | None | None | None |
-
-Submitted reports and their snapshots are read-only. Later review and correction permissions require the approved Phase 7D workflow. The database command and project-scoped RLS enforce these boundaries independently of navigation.
-
-## Phase 9A QR identification
-
-| Role | QR registry and label management | Active-code resolution |
-|---|---|---|
-| Super Admin / Owner / Admin | List, generate, print/download, replace, deactivate, view history | All linked records |
-| Other active users | No registry or label-management access | Material catalog records; assets only at accessible locations; warehouses and sites only within authorized assignments |
-
-Resolution returns identifying metadata only. It does not grant stock, equipment, or project mutation rights. Inactive or replaced identifiers do not resolve. Browser camera scanning and inventory/asset transaction integration are not part of Phase 9A.
-
-## Project planning, progress and physical counts (unapplied)
-
-| Actor | Material plan | Dated progress | Physical count |
-|---|---|---|---|
-| Owner/Admin | Read and save across projects | Record against an approved daily report | Count any valued location; approve or reject shortages |
-| Assigned Project Manager | Read and save assigned projects | Record against an approved report for the assigned project | Count assigned project sites; cannot approve |
-| Assigned Engineer/Foreman | Read assigned project plan/progress | Read only | Count assigned project sites; cannot approve |
-| Assigned Warehouse Staff | No project planning access | No project progress access | Count assigned warehouse stock; cannot approve |
-| Accounting | Profitability RPC and export | No direct progress mutation | No count mutation |
-
-The SQL commands re-check assignment, status, verified valuation and count snapshots. A stock-count shortage reduces only unreserved on-hand through a valued ledger movement; approved site losses appear separately in management profitability. These policies still require real-role staging verification before use.
-
-## Phase 10A notifications
-
-| Actor | Notification access | Mutation |
-|---|---|---|
-| Active recipient | Own currently accessible project/warehouse notifications only | Mark own visible messages read, including mark-all |
-| Recipient without current project/warehouse access | No longer sees related messages | Cannot mark hidden messages read |
-| Admin/Owner/Super Admin | Own messages, including unrestricted project/warehouse scope | Same read actions; no browser-side notification creation |
-| Database event processor | Outbox and recipient resolution across roles and active assignments | Creates recipient messages from trusted committed event records; retries and records failures |
-
-Financial, labor, and attendance categories are additionally restricted to Admin/Owner/Super Admin/Accounting pending the approved module-specific rules. Authenticated users have no direct insert/update/delete grants on notification and outbox tables. Realtime uses recipient-filtered subscriptions and the table's RLS; it is not the source of truth.
+Database role boundaries are tested with real concurrent PostgreSQL sessions. Supabase HTTP/Auth/Storage, Realtime delivery and signed-in web/device acceptance remain release gates. See [verification notes](erp-workflow-implementation-2026-10-03.md).

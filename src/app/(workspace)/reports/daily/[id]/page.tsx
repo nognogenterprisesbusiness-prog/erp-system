@@ -39,19 +39,10 @@ export default async function DailyReportDetailPage({ params, searchParams }: { 
   const canEdit = report.status === "draft" && user.userId === report.prepared_by;
   const choices = canEdit ? await getDailyReportChoices() : null;
   const canCorrect = report.status === "requires_revision" && user.userId === report.prepared_by;
-  let canReview = report.status === "submitted" && user.userId !== report.prepared_by && user.canManage;
-  if (!canReview && report.status === "submitted" && user.userId !== report.prepared_by && user.roles.includes("engineer")) {
-    const supabase = await createClient();
-    const { data: assignments, error } = await supabase.from("project_assignments").select("id")
-      .eq("project_id", report.project_id).eq("user_id", user.userId)
-      .eq("assignment_role", "engineer").eq("status", "active").limit(1);
-    if (error) throw new Error("Unable to verify report review access.");
-    canReview = Boolean(assignments?.length);
-  }
-  const canRecordProgress = report.status === "approved" && !progress && (user.canManage ||
-    (user.roles.includes("engineer") && Boolean((await (await createClient()).from("project_assignments").select("id")
-      .eq("project_id", report.project_id).eq("user_id", user.userId).eq("assignment_role", "engineer")
-      .eq("status", "active").limit(1)).data?.length)));
+  const { data: capabilities, error: accessError } = await (await createClient()).rpc("get_project_site_capabilities", { p_project_id: report.project_id, p_site_id: report.project_site_id });
+  if (accessError) throw new Error("Unable to verify site capabilities.");
+  const canReview = report.status === "submitted" && user.userId !== report.prepared_by && Boolean(capabilities?.[0]?.can_review);
+  const canRecordProgress = report.status === "approved" && !progress && Boolean(capabilities?.[0]?.can_review);
   return <>
     <PageHeader eyebrow={report.report_number} title="Daily construction report" description={`${project.code} · ${project.name} · ${site.name}`}
       action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${report.project_id}/reports`}>Project reports</Link></Button>{canEdit && choices && <RecordCreateDialog key={report.updated_at} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen={filters.edit === "1"} closeHref={`/reports/daily/${id}`}><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}{canCorrect && <DailyReportCorrection reportId={id} />}</div>} />
