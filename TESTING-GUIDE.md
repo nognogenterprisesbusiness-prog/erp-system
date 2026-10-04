@@ -39,6 +39,8 @@ Admin invites everyone from **Users**. Engineers and Foremen only see projects t
 | View and download project documents | ✅ | — | ✅ | ✅ | — |
 | Add suppliers, issue purchase orders | ✅ | — | — | — | — |
 | View purchase orders, suppliers and prices | ✅ | ✅ | — | — | — |
+| Record supplier payments (cash or check) | ✅ | ✅ | — | — | — |
+| Void a supplier payment | ✅ | — | — | — | — |
 | Receive deliveries for a purchase order Admin issued | ✅ | — | — | — | ✅ |
 | Add stock without a purchase order | ✅ | — | — | — | — |
 | Request materials (in-stock only) | — | — | ✅ | ✅ | — |
@@ -154,8 +156,9 @@ sequenceDiagram
 | # | Account | What to do | What to check |
 |---|---|---|---|
 | 1 | Admin | Invite Engineer, Foreman, Warehouse Staff and Finance. Create a warehouse and assign Warehouse Staff to it. | Each person gets an email and can set a password. |
-| 2 | Admin | Add a material (e.g. cement, bags), a supplier with a price, one equipment item and one vehicle. | They appear in Inventory and Suppliers. |
-| 3 | Admin | Issue a purchase order for cement to the warehouse. | The order shows as issued. |
+| 2 | Admin | Add materials (e.g. Rebars and Cemento, pcs), one equipment item and one vehicle. Add a supplier with only its name, address and contact number (e.g. VIC Hardware). | They appear in Inventory and Suppliers. The supplier gets a code automatically. |
+| 3 | Admin | In **Suppliers & purchases**, add a purchase: VIC Hardware, deliver to the warehouse, Rebars 1,000 × ₱100 and Cemento 2,500 × ₱250. | Each line shows its total and the order total is ₱725,000. The supplier page now shows those prices as the latest. |
+| 3a | Finance | Open the purchase and **Record payment**: Check, Metrobank, check no. 123456, ₱725,000, dated Dec 15, 2026. | The purchase shows Fully paid; the check shows Postdated. The supplier's **Supplier history** lists the check. Finance cannot void it; Admin can. |
 | 4 | Warehouse Staff | Open **Receive deliveries**, receive the purchase order with a delivery receipt number. | Stock appears in Inventory. No price is shown to Warehouse Staff. |
 | 5 | Admin | Create a project with a site. On the **Documents** page, upload a file for that project with a name you type. In the project's **Labour → Manage workers**, assign the Engineer and Foreman and two employees with labor rates. | The project's Documents tab lists the file with View and Download only. The Labour tab shows the labour distribution and worker list. |
 | 6 | Foreman (phone) | Request 50 bags of cement. Try to find an item that is not in stock and report it as missing. | Only in-stock items can be requested. Admin sees the missing-item report. |
@@ -166,6 +169,6 @@ sequenceDiagram
 | 11 | Admin or Finance | Open the project's **Finance** tab. | Only the 20 bags used are charged, plus labor and equipment. |
 | 12 | Finance | Issue an invoice and record a partial payment. | Finance cannot void it; Admin can. |
 | 13 | Admin | Receive 10 bags at ₱100, then 10 bags at ₱200. Release and use 10 at the site. | The use costs ₱2,000 (the newer batch). The material page shows the ₱100 batch as used next. |
-| 14 | Admin | Change the supplier price. | Yesterday's project cost does not change. Audit logs show every step. |
+| 14 | Admin | Add a new purchase from the same supplier with a different price (e.g. Cemento at ₱260). | The new price becomes the supplier's latest; yesterday's project cost does not change. Audit logs show every step. |
 
 Also try each account on a project or warehouse it is **not** assigned to: it should not appear.

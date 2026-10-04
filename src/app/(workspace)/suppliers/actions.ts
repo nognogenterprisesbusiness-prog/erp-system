@@ -40,11 +40,16 @@ function revalidateSuppliers(supplierId?: string) {
 
 export async function saveSupplierAction(_: SupplierActionState, form: FormData): Promise<SupplierActionState> {
   try { await requireManager(); } catch { return failure("You do not have permission to manage suppliers."); }
+  // City is optional; when chosen it must come from the location list.
   const municipalityCode = value(form, "municipalityCode");
-  if (!/^\d{10}$/.test(municipalityCode)) return failure("Choose a city or municipality from the list.", { municipalityCode: ["Choose a city or municipality from the list."] });
   const supabase = await createClient();
-  const { data: municipality, error: locationError } = await supabase.from("geo_municipalities").select("display_name,province_name").eq("code", municipalityCode).eq("selectable", true).single();
-  if (locationError || !municipality) return failure("Choose a valid city or municipality.", { municipalityCode: ["Choose a city or municipality from the list."] });
+  let municipality: { display_name: string; province_name: string } | null = null;
+  if (municipalityCode) {
+    if (!/^\d{10}$/.test(municipalityCode)) return failure("Choose a city or municipality from the list.", { municipalityCode: ["Choose a city or municipality from the list."] });
+    const { data, error: locationError } = await supabase.from("geo_municipalities").select("display_name,province_name").eq("code", municipalityCode).eq("selectable", true).single();
+    if (locationError || !data) return failure("Choose a valid city or municipality.", { municipalityCode: ["Choose a city or municipality from the list."] });
+    municipality = data;
+  }
   const parsed = supplierInputSchema.safeParse({
     id: value(form, "id") || undefined,
     code: value(form, "code").toUpperCase(),
@@ -55,8 +60,8 @@ export async function saveSupplierAction(_: SupplierActionState, form: FormData)
     contactNumber: value(form, "contactNumber"),
     emailAddress: value(form, "emailAddress"),
     businessAddress: value(form, "businessAddress"),
-    city: municipality.display_name,
-    province: municipality.province_name,
+    city: municipality?.display_name ?? "",
+    province: municipality?.province_name ?? "",
     taxIdentificationNumber: value(form, "taxIdentificationNumber"),
     paymentTerms: value(form, "paymentTerms"),
     status: value(form, "status"),
@@ -69,7 +74,7 @@ export async function saveSupplierAction(_: SupplierActionState, form: FormData)
   const input = parsed.data;
   const { data, error } = await supabase.rpc("save_supplier", {
     p_id: input.id ?? null, p_code: input.code, p_supplier_name: input.supplierName, p_business_name: input.businessName,
-    p_category_id: input.categoryId, p_contact_person: input.contactPerson, p_contact_number: input.contactNumber,
+    p_category_id: input.categoryId || null, p_contact_person: input.contactPerson, p_contact_number: input.contactNumber,
     p_email_address: input.emailAddress, p_business_address: input.businessAddress, p_city: input.city, p_province: input.province,
     p_tax_identification_number: input.taxIdentificationNumber, p_payment_terms: input.paymentTerms, p_status: input.status, p_remarks: input.remarks || "",
   });

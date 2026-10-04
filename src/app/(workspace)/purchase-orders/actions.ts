@@ -1,9 +1,9 @@
 "use server";
 
-import { cancelPurchaseOrderSchema, issuePurchaseOrderSchema, receivePurchaseOrderLineSchema } from "@nognog/domain";
+import { cancelPurchaseOrderSchema, issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, uuidSchema, voidSupplierPaymentSchema } from "@nognog/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireManager, requireUser } from "@/lib/auth";
+import { requireFinanceViewer, requireManager, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export type PurchaseActionState = { message: string; fieldErrors?: Record<string, string[]> };
@@ -12,8 +12,8 @@ const fail = (message: string, fieldErrors?: Record<string, string[]>): Purchase
 
 function purchaseError(error: { code?: string; message: string }) {
   if (error.code === "42501") return "Only an administrator can perform this purchase action.";
-  if (error.message.includes("No active PHP price")) return "A selected supplier material has no valid PHP price for the order date.";
-  if (error.message.includes("below the supplier minimum")) return "A line is below the supplier minimum order quantity.";
+  if (error.message.includes("unit price")) return "Enter a price greater than zero for every item.";
+  if (error.message.includes("each material once")) return "Choose each item once.";
   if (error.message.includes("opening value") || error.message.includes("valuation")) return "Verify the warehouse opening quantity and value before receiving this material.";
   if (error.message.includes("exceeds ordered quantity")) return "The receipt exceeds the unreceived order quantity or predates the order.";
   if (error.message.includes("difference from the PO")) return "Enter a reason for the difference from the PO price.";
@@ -37,7 +37,7 @@ export async function issuePurchaseOrderAction(_: PurchaseActionState, form: For
   const { data, error } = await supabase.rpc("issue_purchase_order", {
     p_idempotency_key: input.idempotencyKey, p_supplier_id: input.supplierId,
     p_warehouse_id: input.warehouseId, p_ordered_on: input.orderedOn,
-    p_expected_on: input.expectedOn, p_purpose: input.purpose, p_lines: input.lines,
+    p_expected_on: input.expectedOn || null, p_purpose: input.purpose || null, p_lines: input.lines,
   });
   if (error) return fail(purchaseError(error));
   revalidatePath("/purchase-orders");
@@ -104,4 +104,53 @@ export async function cancelPurchaseOrderAction(_: PurchaseActionState, form: Fo
   revalidatePath("/purchase-orders");
   revalidatePath(`/purchase-orders/${parsed.data.orderId}`);
   redirect(`/purchase-orders/${parsed.data.orderId}?posted=cancelled`);
+}
+
+function paymentError(error: { code?: string; message: string }) {
+  if (error.code === "42501") return "You do not have permission to change supplier payments.";
+  if (error.message.includes("exceeds the purchase order balance")) return "The amount is more than the unpaid balance of this purchase.";
+  if (error.message.includes("bank and check number")) return "Enter the bank and check number for a check payment.";
+  if (error.message.includes("cancelled purchase order")) return "A cancelled purchase cannot be paid.";
+  if (error.message.includes("already void")) return "This payment is already void.";
+  return "The payment could not be saved. Please try again.";
+}
+
+function revalidatePayments(orderId: string) {
+  revalidatePath("/purchase-orders");
+  revalidatePath(`/purchase-orders/${orderId}`);
+  revalidatePath("/suppliers", "layout");
+}
+
+// Admin and Finance record how a purchase was paid: cash or check.
+export async function recordSupplierPaymentAction(_: PurchaseActionState, form: FormData): Promise<PurchaseActionState> {
+  try { await requireFinanceViewer(); } catch { return fail("Only Admin or Finance can record supplier payments."); }
+  const parsed = recordSupplierPaymentSchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), orderId: value(form, "orderId"), method: value(form, "method"),
+    bankName: value(form, "bankName"), checkNumber: value(form, "checkNumber"), amount: value(form, "amount"),
+    paymentDate: value(form, "paymentDate"), remarks: value(form, "remarks"),
+  });
+  if (!parsed.success) return fail("Review the payment details.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("record_supplier_payment", {
+    p_idempotency_key: input.idempotencyKey, p_order_id: input.orderId, p_method: input.method,
+    p_bank_name: input.method === "check" ? input.bankName : null, p_check_number: input.method === "check" ? input.checkNumber : null,
+    p_amount: input.amount, p_payment_date: input.paymentDate, p_remarks: input.remarks || null,
+  });
+  if (error) return fail(paymentError(error));
+  revalidatePayments(input.orderId);
+  redirect(`/purchase-orders/${input.orderId}?posted=payment`);
+}
+
+export async function voidSupplierPaymentAction(_: PurchaseActionState, form: FormData): Promise<PurchaseActionState> {
+  try { await requireManager(); } catch { return fail("Only an administrator can void a supplier payment."); }
+  const parsed = voidSupplierPaymentSchema.safeParse({ paymentId: value(form, "paymentId"), reason: value(form, "reason") });
+  if (!parsed.success) return fail("Enter a reason of at least three characters.", parsed.error.flatten().fieldErrors);
+  const orderId = value(form, "orderId");
+  if (!uuidSchema.safeParse(orderId).success) return fail("The purchase order could not be found. Refresh and try again.");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("void_supplier_payment", { p_payment_id: parsed.data.paymentId, p_reason: parsed.data.reason });
+  if (error) return fail(paymentError(error));
+  revalidatePayments(orderId);
+  redirect(`/purchase-orders/${orderId}?posted=payment-void`);
 }

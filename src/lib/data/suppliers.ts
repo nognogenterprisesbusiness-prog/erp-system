@@ -56,7 +56,7 @@ export async function getSuppliers(params: { query?: string; categoryId?: string
   const { data: suppliers, count, error } = await request.order("supplier_name").range(from, from + PAGE_SIZE - 1);
   if (error) throw new Error("Unable to load suppliers.");
   const ids = (suppliers ?? []).map((supplier) => supplier.id);
-  const categoryIds = [...new Set((suppliers ?? []).map((supplier) => supplier.category_id))];
+  const categoryIds = [...new Set((suppliers ?? []).flatMap((supplier) => supplier.category_id ? [supplier.category_id] : []))];
   const [{ data: categories, error: categoryError }, catalog] = await Promise.all([
     categoryIds.length ? supabase.from("supplier_categories").select("id,name").in("id", categoryIds) : Promise.resolve({ data: [], error: null }),
     readByIds(ids, (batch, from, to) => supabase.from("supplier_materials").select("id,supplier_id").in("supplier_id", batch).is("archived_at", null).order("id").range(from, to), "supplier catalog counts"),
@@ -66,7 +66,7 @@ export async function getSuppliers(params: { query?: string; categoryId?: string
   const counts = new Map<string, number>();
   for (const item of catalog) counts.set(item.supplier_id, (counts.get(item.supplier_id) ?? 0) + 1);
   return {
-    suppliers: (suppliers ?? []).map((supplier): SupplierListView => ({ ...supplier, categoryName: categoryMap.get(supplier.category_id) ?? "Unavailable category", catalogCount: counts.get(supplier.id) ?? 0 })),
+    suppliers: (suppliers ?? []).map((supplier): SupplierListView => ({ ...supplier, categoryName: supplier.category_id ? categoryMap.get(supplier.category_id) ?? "" : "", catalogCount: counts.get(supplier.id) ?? 0 })),
     count: count ?? 0,
     page,
     pageCount: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)),
@@ -80,7 +80,7 @@ export async function getSupplier(id: string, pages = { events: 1, purchases: 1,
   if (error) throw new Error(`Unable to load supplier: ${error.message}`, { cause: error });
   if (!supplier) notFound();
   const [categoryResult, catalogResult, eventResult, purchaseResult, references] = await Promise.all([
-    supabase.from("supplier_categories").select("*").eq("id", supplier.category_id).single(),
+    supplier.category_id ? supabase.from("supplier_categories").select("*").eq("id", supplier.category_id).single() : Promise.resolve({ data: null, error: null }),
     readAllPages((from, to) => supabase.from("supplier_materials").select("*").eq("supplier_id", id).order("updated_at", { ascending: false }).order("id").range(from, to), "supplier catalog"),
     supabase.from("supplier_events").select("*", { count: "exact" }).eq("supplier_id", id).order("occurred_at", { ascending: false }).order("id").range((pages.events - 1) * 20, pages.events * 20 - 1),
     supabase.from("purchase_orders").select("id,po_number,warehouse_name,ordered_on,expected_on,status", { count: "exact" }).eq("supplier_id", id).order("ordered_on", { ascending: false }).order("id").range((pages.purchases - 1) * 20, pages.purchases * 20 - 1),

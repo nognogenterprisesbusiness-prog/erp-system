@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { PlusSignIcon, Remove01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { cancelPurchaseOrderAction, issuePurchaseOrderAction, receivePurchaseOrderLineAction, receiveWarehouseDeliveryAction, type PurchaseActionState } from "@/app/(workspace)/purchase-orders/actions";
+import { cancelPurchaseOrderAction, issuePurchaseOrderAction, receivePurchaseOrderLineAction, receiveWarehouseDeliveryAction, recordSupplierPaymentAction, voidSupplierPaymentAction, type PurchaseActionState } from "@/app/(workspace)/purchase-orders/actions";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -12,44 +12,60 @@ import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import type { getPurchaseOrderChoices } from "@/lib/data/purchase-orders";
 
 type Choices = Awaited<ReturnType<typeof getPurchaseOrderChoices>>;
-type Line = { key: number; supplierMaterialId: string; quantity: string };
+type Line = { key: number; materialId: string; quantity: string; unitPrice: string };
 const initialState: PurchaseActionState = { message: "" };
+const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+const lineTotal = (line: Line) => {
+  const value = Number(line.quantity) * Number(line.unitPrice);
+  return Number.isFinite(value) ? Math.round(value * 100) / 100 : 0;
+};
 
+// Purchase like the client's sheet: supplier, warehouse, date, then item,
+// quantity and price per line. The price starts at the supplier's latest price.
 export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initialMaterialId, initialWarehouseId, initialQuantity }: { choices: Choices; idempotencyKey: string; today: string; initialMaterialId?: string; initialWarehouseId?: string; initialQuantity?: string }) {
   const [state, action, pending] = useActionState(issuePurchaseOrderAction, initialState);
-  const initialCatalogItem = choices.catalog.find((item) => item.materialId === initialMaterialId);
-  const [supplierId, setSupplierId] = useState(initialCatalogItem?.supplierId ?? choices.suppliers[0]?.id ?? "");
+  const [supplierId, setSupplierId] = useState(choices.suppliers[0]?.id ?? "");
   const [warehouseId, setWarehouseId] = useState(initialWarehouseId ?? choices.warehouses[0]?.id ?? "");
-  const [lines, setLines] = useState<Line[]>([{ key: 0, supplierMaterialId: initialCatalogItem?.id ?? "", quantity: initialQuantity ?? "" }]);
+  const latestPrice = (supplier: string, materialId: string) => {
+    const price = choices.latestPrices[`${supplier}:${materialId}`];
+    return price === undefined ? "" : price.toFixed(2);
+  };
+  const [lines, setLines] = useState<Line[]>([{ key: 0, materialId: initialMaterialId ?? "", quantity: initialQuantity ?? "", unitPrice: initialMaterialId ? latestPrice(supplierId, initialMaterialId) : "" }]);
   const [nextKey, setNextKey] = useState(1);
-  const [orderedOn, setOrderedOn] = useState(today);
-  const money = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
-  const priceFor = (id: string) => choices.prices.find((price) => price.supplier_material_id === id && price.effective_start_date <= orderedOn && (!price.effective_end_date || price.effective_end_date >= orderedOn));
-  const catalog = choices.catalog.filter((item) => item.supplierId === supplierId);
+  const materialById = new Map(choices.materials.map((material) => [material.id, material]));
+  const total = lines.reduce((sum, line) => sum + lineTotal(line), 0);
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   const updateLine = (key: number, patch: Partial<Line>) => setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
+  const changeSupplier = (next: string) => {
+    setSupplierId(next);
+    // Refill prices the user has not typed over with the new supplier's latest price.
+    setLines((current) => current.map((line) => line.materialId && line.unitPrice === latestPrice(supplierId, line.materialId) ? { ...line, unitPrice: latestPrice(next, line.materialId) } : line));
+  };
   return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
     <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
     <input type="hidden" name="supplierId" value={supplierId} /><input type="hidden" name="warehouseId" value={warehouseId} />
-    <input type="hidden" name="lines" value={JSON.stringify(lines.map(({ supplierMaterialId, quantity }) => ({ supplierMaterialId, quantity })))} />
-    <div className="grid gap-5 md:grid-cols-2">
-      <FormField label="Supplier" htmlFor="poSupplier" error={error("supplierId")}><SelectPicker className="h-11" label="Supplier" value={supplierId} onValueChange={(next) => { setSupplierId(next); setLines([{ key: 0, supplierMaterialId: "", quantity: "" }]); }} options={choices.suppliers.map((item) => ({ value: item.id, label: `${item.code} · ${item.supplier_name}` }))} /></FormField>
-      <FormField label="Receiving warehouse" htmlFor="poWarehouse" error={error("warehouseId")}><SelectPicker className="h-11" label="Receiving warehouse" value={warehouseId} onValueChange={setWarehouseId} options={choices.warehouses.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} /></FormField>
-      <FormField label="Purchase date" htmlFor="orderedOn" error={error("orderedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="orderedOn" name="orderedOn" label="Purchase date" value={orderedOn} onValueChange={setOrderedOn} allowClear={false} required /></FormField>
-      <FormField label="Expected delivery" htmlFor="expectedOn" error={error("expectedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="expectedOn" name="expectedOn" label="Expected delivery" defaultValue={today} allowClear={false} required /></FormField>
-      <FormField label="Purpose" htmlFor="purpose" error={error("purpose")} className="md:col-span-2"><textarea id="purpose" name="purpose" rows={2} maxLength={500} className={`${fieldControlClass} h-auto py-3`} placeholder="Replenish warehouse material stock" required /></FormField>
+    <input type="hidden" name="lines" value={JSON.stringify(lines.map(({ materialId, quantity, unitPrice }) => ({ materialId, quantity, unitPrice })))} />
+    <div className="grid gap-5 md:grid-cols-3">
+      <FormField label="Supplier" htmlFor="poSupplier" error={error("supplierId")}><SelectPicker className="h-11" label="Supplier" value={supplierId} onValueChange={changeSupplier} options={choices.suppliers.map((item) => ({ value: item.id, label: item.supplier_name }))} /></FormField>
+      <FormField label="Deliver to warehouse" htmlFor="poWarehouse" error={error("warehouseId")}><SelectPicker className="h-11" label="Deliver to warehouse" value={warehouseId} onValueChange={setWarehouseId} options={choices.warehouses.map((item) => ({ value: item.id, label: item.name }))} /></FormField>
+      <FormField label="Purchase date" htmlFor="orderedOn" error={error("orderedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="orderedOn" name="orderedOn" label="Purchase date" defaultValue={today} allowClear={false} required /></FormField>
     </div>
-    <div className="mt-7 flex items-center justify-between gap-3"><div><h2 className="text-base font-semibold text-slate-900">Materials & prices</h2><p className="mt-1 text-xs text-slate-500">The order uses each supplier&apos;s saved price. Record the actual cost when the delivery arrives.</p></div><Button type="button" variant="outline" size="sm" disabled={lines.length >= 20 || pending} onClick={() => { setLines((current) => [...current, { key: nextKey, supplierMaterialId: "", quantity: "" }]); setNextKey((value) => value + 1); }}><HugeiconsIcon icon={PlusSignIcon} size={16} /> Add material</Button></div>
-    <div className="mt-4 grid gap-3">{lines.map((line, index) => <div key={line.key} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[minmax(0,1fr)_100px_120px_auto] sm:items-end">
-      <FormField label={`Material ${index + 1}`} htmlFor={`po-material-${line.key}`}><SelectPicker className="h-11" label={`Material ${index + 1}`} value={line.supplierMaterialId} onValueChange={(supplierMaterialId) => updateLine(line.key, { supplierMaterialId })} options={catalog.map((item) => ({ value: item.id, label: `${item.code} · ${item.name} (min ${item.minimumQuantity})`, disabled: lines.some((other) => other.key !== line.key && other.supplierMaterialId === item.id) }))} placeholder="Select supplier SKU" /></FormField>
-      <FormField label="Quantity" htmlFor={`po-quantity-${line.key}`}><input id={`po-quantity-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(line.key, { quantity: event.target.value })} placeholder="0.0000" required /></FormField>
-      <div><p className="mb-2 text-sm font-medium text-slate-700">Unit price</p><p className="flex h-11 items-center text-sm tabular-nums">{priceFor(line.supplierMaterialId) ? money.format(Number(priceFor(line.supplierMaterialId)?.unit_price)) : "Not available"}</p></div>
-      <Button type="button" variant="ghost" size="icon" aria-label={`Remove material ${index + 1}`} disabled={lines.length === 1 || pending} onClick={() => setLines((current) => current.filter((item) => item.key !== line.key))}><HugeiconsIcon icon={Remove01Icon} size={17} /></Button>
+    <div className="mt-7 flex items-center justify-between gap-3"><h2 className="text-base font-semibold text-slate-900">Items</h2><Button type="button" variant="outline" size="sm" disabled={lines.length >= 50 || pending} onClick={() => { setLines((current) => [...current, { key: nextKey, materialId: "", quantity: "", unitPrice: "" }]); setNextKey((value) => value + 1); }}><HugeiconsIcon icon={PlusSignIcon} size={16} /> Add item</Button></div>
+    <div className="mt-3 grid gap-3">{lines.map((line, index) => <div key={line.key} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[minmax(0,1fr)_120px_130px_130px_auto] sm:items-end">
+      <FormField label={`Item ${index + 1}`} htmlFor={`po-material-${line.key}`}><SelectPicker className="h-11" label={`Item ${index + 1}`} value={line.materialId} onValueChange={(materialId) => updateLine(line.key, { materialId, unitPrice: line.unitPrice || latestPrice(supplierId, materialId) })} options={choices.materials.map((item) => ({ value: item.id, label: `${item.name} (${item.unitSymbol})`, disabled: lines.some((other) => other.key !== line.key && other.materialId === item.id) }))} placeholder="Select item" /></FormField>
+      <FormField label={`Quantity${line.materialId ? ` (${materialById.get(line.materialId)?.unitSymbol ?? ""})` : ""}`} htmlFor={`po-quantity-${line.key}`}><input id={`po-quantity-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(line.key, { quantity: event.target.value })} placeholder="0" required /></FormField>
+      <FormField label="Price (PHP)" htmlFor={`po-price-${line.key}`}><input id={`po-price-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.unitPrice} onChange={(event) => updateLine(line.key, { unitPrice: event.target.value })} placeholder="0.00" required /></FormField>
+      <div><p className="mb-2 text-sm font-medium text-slate-700">Total</p><p className="flex h-11 items-center text-sm font-semibold tabular-nums">{peso.format(lineTotal(line))}</p></div>
+      <Button type="button" variant="ghost" size="icon" aria-label={`Remove item ${index + 1}`} disabled={lines.length === 1 || pending} onClick={() => setLines((current) => current.filter((item) => item.key !== line.key))}><HugeiconsIcon icon={Remove01Icon} size={17} /></Button>
     </div>)}</div>
+    <div className="mt-3 flex justify-end text-sm"><span className="text-slate-500">Total</span><span className="ml-4 font-semibold tabular-nums text-slate-900">{peso.format(total)}</span></div>
+    <details className="mt-4 rounded-lg border border-slate-200 p-3"><summary className="cursor-pointer text-sm font-medium text-slate-700">Expected delivery and notes (optional)</summary><div className="mt-3 grid gap-4 md:grid-cols-2">
+      <FormField label="Expected delivery" htmlFor="expectedOn" error={error("expectedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="expectedOn" name="expectedOn" label="Expected delivery" /></FormField>
+      <FormField label="Notes" htmlFor="purpose" error={error("purpose")}><input id="purpose" name="purpose" maxLength={500} className={fieldControlClass} /></FormField>
+    </div></details>
     {error("lines") && <p role="alert" className="mt-2 text-xs text-red-700">{error("lines")}</p>}
     {state.message && <p role="alert" className="mt-5 text-sm text-red-700">{state.message}</p>}
-    {!catalog.length && supplierId && <p role="status" className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Add an available supplier material and active PHP price before issuing this order.</p>}
-    <RecordFormControls busy={pending} disabled={!supplierId || !warehouseId || !catalog.length || lines.some((line) => !line.supplierMaterialId || !line.quantity)} label="Save purchase" />
+    <RecordFormControls busy={pending} disabled={!supplierId || !warehouseId || lines.some((line) => !line.materialId || !line.quantity || !line.unitPrice)} label="Save purchase" />
   </form>;
 }
 
@@ -87,4 +103,35 @@ export function ReceiveWarehouseDeliveryForm({ orderId, lineId, remaining, unitS
 export function CancelPurchaseOrderForm({ orderId }: { orderId: string }) {
   const [state, action, pending] = useActionState(cancelPurchaseOrderAction, initialState);
   return <form action={action} className="space-y-3"><input type="hidden" name="orderId" value={orderId} /><FormField label="Cancellation reason" htmlFor="cancelPoReason" error={state.fieldErrors?.reason?.[0]}><input id="cancelPoReason" name="reason" className={fieldControlClass} minLength={3} maxLength={500} required /></FormField>{state.message && <p role="alert" className="text-xs text-red-700">{state.message}</p>}<Button type="submit" variant="outline" size="sm" disabled={pending}>{pending ? "Cancelling…" : "Cancel order"}</Button></form>;
+}
+
+// How a purchase was paid, as in the client's sheet: cash, or a check (often
+// postdated) with bank, check number, amount and date.
+export function RecordSupplierPaymentForm({ orderId, balance, idempotencyKey, today }: { orderId: string; balance: number; idempotencyKey: string; today: string }) {
+  const [state, action, pending] = useActionState(recordSupplierPaymentAction, initialState);
+  const [method, setMethod] = useState<"cash" | "check">("check");
+  const error = (field: string) => state.fieldErrors?.[field]?.[0];
+  return <form action={action} className="grid gap-4 sm:grid-cols-2">
+    <input type="hidden" name="orderId" value={orderId} /><input type="hidden" name="idempotencyKey" value={idempotencyKey} /><input type="hidden" name="method" value={method} />
+    <FormField label="Term" htmlFor="paymentMethod" className="sm:col-span-2"><SelectPicker id="paymentMethod" label="Term" value={method} onValueChange={(next) => setMethod(next as "cash" | "check")} options={[{ value: "check", label: "Check (postdated or dated)" }, { value: "cash", label: "Cash" }]} /></FormField>
+    {method === "check" && <>
+      <FormField label="Bank" htmlFor="bankName" error={error("bankName")}><input id="bankName" name="bankName" className={fieldControlClass} maxLength={80} placeholder="e.g. Metrobank" required /></FormField>
+      <FormField label="Check no." htmlFor="checkNumber" error={error("checkNumber")}><input id="checkNumber" name="checkNumber" className={fieldControlClass} maxLength={40} placeholder="e.g. 123456" required /></FormField>
+    </>}
+    <FormField label="Amount (PHP)" htmlFor="paymentAmount" error={error("amount")} hint={`Unpaid balance ${peso.format(balance)}`}><input id="paymentAmount" name="amount" inputMode="decimal" className={fieldControlClass} defaultValue={balance > 0 ? balance.toFixed(2) : ""} required /></FormField>
+    <FormField label={method === "check" ? "Check date" : "Payment date"} htmlFor="paymentDate" error={error("paymentDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="paymentDate" name="paymentDate" label={method === "check" ? "Check date" : "Payment date"} defaultValue={today} allowClear={false} required /></FormField>
+    <FormField label="Note (optional)" htmlFor="paymentRemarks" className="sm:col-span-2" error={error("remarks")}><input id="paymentRemarks" name="remarks" className={fieldControlClass} maxLength={500} /></FormField>
+    {state.message && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{state.message}</p>}
+    <div className="sm:col-span-2"><RecordFormControls busy={pending} disabled={balance <= 0} label="Save payment" /></div>
+  </form>;
+}
+
+export function VoidSupplierPaymentForm({ orderId, paymentId }: { orderId: string; paymentId: string }) {
+  const [state, action, pending] = useActionState(voidSupplierPaymentAction, initialState);
+  return <form action={action} className="grid gap-3">
+    <input type="hidden" name="orderId" value={orderId} /><input type="hidden" name="paymentId" value={paymentId} />
+    <FormField label="Reason" htmlFor={`void-reason-${paymentId}`} error={state.fieldErrors?.reason?.[0]}><input id={`void-reason-${paymentId}`} name="reason" className={fieldControlClass} maxLength={500} placeholder="e.g. Wrong amount entered" required /></FormField>
+    {state.message && <p role="alert" className="text-sm text-red-700">{state.message}</p>}
+    <RecordFormControls busy={pending} label="Void payment" />
+  </form>;
 }

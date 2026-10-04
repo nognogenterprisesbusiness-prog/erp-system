@@ -19,6 +19,14 @@ import { randomUUID } from "node:crypto";
 import { uuidSchema } from "@nognog/domain";
 import { todayInManila } from "@/lib/date";
 
+const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+
+function PaymentStatus({ total, paid }: { total: number; paid: number }) {
+  if (paid <= 0) return <span className="rounded-full bg-amber-50 px-2.5 py-1 font-semibold text-amber-800">Unpaid</span>;
+  if (paid < total) return <span className="rounded-full bg-sky-50 px-2.5 py-1 font-semibold text-sky-800">Partly paid · {peso.format(total - paid)} left</span>;
+  return <span className="rounded-full bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700">Paid</span>;
+}
+
 export default async function PurchaseOrdersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireProcurementViewer();
   const params = await searchParams;
@@ -42,7 +50,7 @@ async function PurchaseOrderResults({ resultPromise, pageHref }: { resultPromise
   const result = await resultPromise;
   return <>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No purchase orders found" description="Issue an order or change the search." /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} order{result.count === 1 ? "" : "s"}</span>}>
-      <table className="w-full min-w-[710px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Code</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Warehouse</th><th className="px-4 py-3">Ordered / expected</th><th className="px-5 py-3">Status</th></tr></thead><tbody className="divide-y divide-slate-100">{result.rows.map((order) => <tr key={order.id} className="hover:bg-slate-50/70"><td className="px-5 py-4 font-semibold"><Link href={`/purchase-orders/${order.id}`} className="text-slate-900 hover:text-cyan-700">{order.po_number}</Link></td><td className="px-4 py-4 text-slate-800">{order.supplier_name}</td><td className="px-4 py-4 text-slate-600">{order.warehouse_code} · {order.warehouse_name}</td><td className="px-4 py-4 text-slate-600">{order.ordered_on}<br /><span className="text-xs text-slate-500">Expected {order.expected_on}</span></td><td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${order.status === "received" ? "bg-emerald-50 text-emerald-700" : order.status === "cancelled" ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-800"}`}>{order.status.replaceAll("_", " ")}</span></td></tr>)}</tbody></table>
+      <table className="w-full min-w-[820px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Code</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Warehouse</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Total</th><th className="px-4 py-3">Payment</th><th className="px-5 py-3">Delivery</th></tr></thead><tbody className="divide-y divide-slate-100">{result.rows.map((order) => <tr key={order.id} className="hover:bg-slate-50/70"><td className="px-5 py-4 font-semibold"><Link href={`/purchase-orders/${order.id}`} className="text-slate-900 hover:text-cyan-700">{order.po_number}</Link></td><td className="px-4 py-4 text-slate-800">{order.supplier_name}</td><td className="px-4 py-4 text-slate-600">{order.warehouse_name}</td><td className="px-4 py-4 tabular-nums text-slate-600">{order.ordered_on}</td><td className="px-4 py-4 text-right font-medium tabular-nums">{order.payment ? peso.format(Number(order.payment.order_total)) : "—"}</td><td className="px-4 py-4 text-xs">{order.payment ? <PaymentStatus total={Number(order.payment.order_total)} paid={Number(order.payment.paid)} /> : "—"}</td><td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${order.status === "received" ? "bg-emerald-50 text-emerald-700" : order.status === "cancelled" ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-800"}`}>{order.status.replaceAll("_", " ")}</span></td></tr>)}</tbody></table>
     </DataTableShell>
     {result.pageCount > 1 && <nav aria-label="Purchase order pages" className="mt-4 flex items-center justify-end gap-2">{result.page > 1 ? <Button variant="outline" size="sm" asChild><Link href={pageHref(result.page - 1)}>Previous</Link></Button> : <Button variant="outline" size="sm" disabled>Previous</Button>}<span className="px-2 text-xs text-slate-500">Page {result.page} of {result.pageCount}</span>{result.page < result.pageCount ? <Button variant="outline" size="sm" asChild><Link href={pageHref(result.page + 1)}>Next</Link></Button> : <Button variant="outline" size="sm" disabled>Next</Button>}</nav>}
   </>;

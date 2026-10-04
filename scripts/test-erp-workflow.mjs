@@ -170,11 +170,38 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     values('${catalog}','${supplier}','${material}','TEST-CEMENT','${unit}',1,'${users.admin}','${users.admin}');
     insert into public.supplier_prices(supplier_material_id,unit_price,effective_start_date,recorded_by)
     values('${catalog}',250,current_date,'${users.admin}'); commit;`);
-  const issue = (key) => `select public.issue_purchase_order('${key}','${supplier}','${warehouse}',current_date,current_date+7,'Test purchase','[{"supplierMaterialId":"${catalog}","quantity":"100"}]')`;
+  const issue = (key) => `select public.issue_purchase_order('${key}','${supplier}','${warehouse}',current_date,current_date+7,'Test purchase','[{"materialId":"${material}","quantity":"100","unitPrice":"250"}]')`;
   const po = result(await as("admin", issue(randomUUID())));
   const poLine = await value(`select id from public.purchase_order_lines where purchase_order_id='${po}'`);
   const purchaseReceive = (key, quantity) => `select public.receive_purchase_order_line('${key}','${poLine}',${quantity},null,'TEST-DR',current_date,null)`;
   let purchaseTx;
+  await check("simple purchasing: three-field supplier, typed prices become the latest supplier price, history stays immutable", async () => {
+    assert.equal(await value(`select supplier_price_id is not null from public.purchase_order_lines where id='${poLine}'`), "t");
+    const vic = result(await as("admin", "select public.save_supplier(null,'','VIC Hardware',null,null,null,'09171234567',null,'Borbon, Cebu',null,null,null,null,'active',null)"));
+    assert.match(await value(`select code from public.suppliers where id='${vic}'`), /^SUP-\d{4}$/);
+    await assert.rejects(as("finance", "select public.save_supplier(null,'','Other',null,null,null,'09171234567',null,'Cebu',null,null,null,null,'active',null)"), /not authorized/);
+    await assert.rejects(as("admin", "select public.save_supplier(null,'','No Address',null,null,null,'09171234567',null,'',null,null,null,null,'active',null)"), /invalid supplier/);
+    const order = (date, price, lines = `[{"materialId":"${material}","quantity":"1000","unitPrice":"${price}"}]`) =>
+      `select public.issue_purchase_order('${randomUUID()}','${vic}','${warehouse}',${date},null,null,'${lines}')`;
+    const first = result(await as("admin", order("current_date - 10", 100)));
+    const prices = () => value(`select string_agg(unit_price::text || '@' || effective_start_date::text || '-' || coalesce(effective_end_date::text, 'open'), ',' order by effective_start_date)
+      from public.supplier_prices p join public.supplier_materials m on m.id = p.supplier_material_id where m.supplier_id = '${vic}'`);
+    assert.equal(await prices(), `100.00@${await value("select (current_date - 10)::text")}-open`);
+    await as("admin", order("current_date", 120));
+    assert.equal(await prices(), `100.00@${await value("select (current_date - 10)::text")}-${await value("select (current_date - 1)::text")},120.00@${await value("select current_date::text")}-open`);
+    const history = await prices();
+    const backdated = result(await as("admin", order("current_date - 5", 110)));
+    const sameDay = result(await as("admin", order("current_date", 130)));
+    assert.equal(await prices(), history);
+    assert.equal(await value(`select unit_price::text || ':' || (supplier_price_id is null)::text from public.purchase_order_lines where purchase_order_id='${backdated}'`), "110.00:true");
+    assert.equal(await value(`select unit_price::text || ':' || (supplier_price_id is null)::text from public.purchase_order_lines where purchase_order_id='${sameDay}'`), "130.00:true");
+    assert.equal(await value(`select count(*) from public.supplier_materials where supplier_id='${vic}'`), "1");
+    assert.equal(await value(`select (expected_on is null and purpose is null)::text from public.purchase_orders where id='${first}'`), "true");
+    assert.equal(Number(scalar(await as("finance", `select order_total from public.get_purchase_order_payment_summaries(array['${first}']::uuid[])`))), 100000);
+    await assert.rejects(as("admin", order("current_date", 100, `[{"materialId":"${material}","quantity":"1","unitPrice":"100"},{"materialId":"${material}","quantity":"2","unitPrice":"100"}]`)), /each material once/);
+    await assert.rejects(as("admin", order("current_date", 0)), /unit price/);
+    await assert.rejects(as("foreman", order("current_date", 100)), /administrator/);
+  });
   await check("warehouse PO receipt retries post one cost snapshot and partial delivery", async () => {
     const key = randomUUID(); const posted = await Promise.all([as("warehouse_staff", purchaseReceive(key, 40)), as("warehouse_staff", purchaseReceive(key, 40))]);
     assert.equal(result(posted[0]), result(posted[1]));
@@ -233,7 +260,7 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
   await check("searchable billing projects and expected deliveries remain accessible beyond 500 records", async () => {
     await as("admin", `insert into public.projects(code,name,client_name,address,city_province,start_date,target_completion_date,contract_amount,initial_budget,status,created_by,updated_by)
       select 'PAGED-'||lpad(n::text,4,'0'),'Paged project '||n,'Test Client','Test address','Cebu',current_date,current_date+30,1000,900,'active','${users.admin}','${users.admin}' from generate_series(1,505) n;
-      select public.issue_purchase_order(gen_random_uuid(),'${supplier}','${warehouse}',current_date,current_date+7,'Paged delivery test','[{"supplierMaterialId":"${catalog}","quantity":"100"}]') from generate_series(1,505)`);
+      select public.issue_purchase_order(gen_random_uuid(),'${supplier}','${warehouse}',current_date,current_date+7,'Paged delivery test','[{"materialId":"${material}","quantity":"100","unitPrice":"250"}]') from generate_series(1,505)`);
     const projects = await json("finance", "select json_agg(row_to_json(p)) from public.get_billable_projects('',500,20) p");
     assert(projects.length > 0); assert(projects[0].total_count > 500);
     const searched = await json("finance", "select json_agg(row_to_json(p)) from public.get_billable_projects('PAGED-0505',0,20) p");
@@ -269,6 +296,27 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
       update public.profiles set is_active=false where id='${users.warehouse_staff}'`);
     await assert.rejects(as("warehouse_staff", purchaseReceive(randomUUID(), 1)), /assigned/);
     await sql(`update public.profiles set is_active=true where id='${users.warehouse_staff}'`);
+  });
+  await check("supplier payments: postdated check and cash up to the PO balance, retries post once, only Admin voids", async () => {
+    const total = Number(await value(`select sum(round(ordered_quantity * unit_price, 2)) from public.purchase_order_lines where purchase_order_id='${po}'`));
+    const pay = (key, method, amount, bank = "null", check = "null", date = "current_date") => `select public.record_supplier_payment('${key}','${po}','${method}',${bank},${check},${amount},${date},null)`;
+    const checkKey = randomUUID(); const first = total - 5000;
+    const posted = await Promise.all([as("finance", pay(checkKey, "check", first, "'Metrobank'", "'123456'", "current_date + 30")), as("finance", pay(checkKey, "check", first, "'Metrobank'", "'123456'", "current_date + 30"))]);
+    assert.equal(result(posted[0]), result(posted[1]));
+    assert.equal(await value(`select count(*) from public.supplier_payments where purchase_order_id='${po}'`), "1");
+    await assert.rejects(as("finance", pay(checkKey, "check", first - 1, "'Metrobank'", "'123456'")), /idempotency/i);
+    await assert.rejects(as("finance", pay(randomUUID(), "check", 100)), /bank and check number/);
+    await assert.rejects(as("finance", pay(randomUUID(), "cash", 5000.01)), /exceeds the purchase order balance/);
+    for (const role of ["warehouse_staff", "engineer", "foreman"]) await assert.rejects(as(role, pay(randomUUID(), "cash", 1)), /Admin or Finance/);
+    const cash = result(await as("admin", pay(randomUUID(), "cash", 5000)));
+    assert.equal(Number(scalar(await as("finance", `select balance from public.get_purchase_order_payment_summaries(array['${po}']::uuid[])`))), 0);
+    await assert.rejects(as("finance", `select public.void_supplier_payment('${cash}','Wrong amount')`), /administrator/);
+    await as("admin", `select public.void_supplier_payment('${cash}','Wrong amount')`);
+    await as("admin", `select public.void_supplier_payment('${cash}','Wrong amount')`);
+    assert.equal(Number(scalar(await as("finance", `select balance from public.get_purchase_order_payment_summaries(array['${po}']::uuid[])`))), 5000);
+    assert.equal(scalar(await as("finance", `select count(*) from public.supplier_payments where supplier_id=(select supplier_id from public.purchase_orders where id='${po}')`)), "2");
+    assert.equal(scalar(await as("warehouse_staff", "select count(*) from public.supplier_payments")), "0");
+    await assert.rejects(as("finance", "update public.supplier_payments set amount = 1"), /permission denied/);
   });
   await check("Finance reads purchasing, stock value and movement costs without write access; other roles stay cost-blind", async () => {
     const count = async (role, query) => Number(scalar(await as(role, `select count(*) from (${query}) visible`)));
