@@ -343,6 +343,16 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     await assert.rejects(as("finance", "update public.inventory_valuations set total_value = total_value + 1"), /permission denied/);
     await assert.rejects(as("finance", `select public.post_stock_out('${randomUUID()}','${material}','${source}',1,'${unit}','FIN-OUT',current_date,null,'Finance attempt')`), /authorized|administrator|permission/i);
   });
+  await check("site staff: Admin assigns Engineer and Foreman, wrong roles are refused, site staff cannot reassign", async () => {
+    const staff = () => value(`select coalesce(engineer_id::text,'-') || '/' || coalesce(foreman_id::text,'-') from public.project_sites where id='${sibling}'`);
+    await as("admin", `update public.project_sites set engineer_id='${users.engineer}', foreman_id='${users.foreman}', updated_by='${users.admin}' where id='${sibling}'`);
+    assert.equal(await staff(), `${users.engineer}/${users.foreman}`);
+    await assert.rejects(as("admin", `update public.project_sites set foreman_id='${users.engineer}', updated_by='${users.admin}' where id='${sibling}'`), /foreman|role/i);
+    await as("foreman", `update public.project_sites set foreman_id=null, updated_by='${users.foreman}' where id='${sibling}'`);
+    assert.equal(await staff(), `${users.engineer}/${users.foreman}`);
+    await as("admin", `update public.project_sites set engineer_id=null, foreman_id=null, updated_by='${users.admin}' where id='${sibling}'`);
+    assert.equal(await staff(), "-/-");
+  });
   await check("all balances, valuations and batches reconcile after corrections", async () => {
     assert.equal(await value("select count(*) from public.inventory_balances where available_quantity<0 or quantity_on_hand<0"), "0");
     assert.equal(await value(`select count(*) from public.inventory_balances b join public.inventory_valuations v using(material_id,inventory_location_id)

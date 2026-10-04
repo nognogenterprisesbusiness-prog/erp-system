@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { projectAssignmentInputSchema, projectInputSchema, projectSiteInputSchema, projectUpdateSchema } from "@nognog/domain";
+import { projectAssignmentInputSchema, projectInputSchema, projectSiteInputSchema, projectUpdateSchema, uuidSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireManager } from "@/lib/auth";
 import { prepareRecordPhoto, saveRecordPhoto } from "@/lib/media/record-photo";
@@ -85,12 +85,40 @@ export async function endProjectAssignmentAction(form: FormData) {
   revalidatePath(`/projects/${projectId}`); revalidatePath(`/projects/${projectId}/workforce`);
 }
 
+// A site only needs its Engineer and Foreman; it takes the project's name and
+// address. Additional sites are numbered: "Compostela Gym 2", "Compostela Gym 3".
 export async function createProjectSiteAction(form: FormData) {
   const actor = await requireManager();
-  const parsed = projectSiteInputSchema.safeParse({ projectId: value(form, "projectId"), name: value(form, "name"), address: value(form, "address"), description: value(form, "description"), engineerId: value(form, "engineerId"), foremanId: value(form, "foremanId"), status: value(form, "status") });
-  if (!parsed.success) throw new Error("Review the site details and try again.");
+  const projectId = value(form, "projectId");
+  if (!uuidSchema.safeParse(projectId).success) throw new Error("Review the site details and try again.");
   const supabase = await createClient();
+  const [{ data: project }, { data: existing }] = await Promise.all([
+    supabase.from("projects").select("name,address").eq("id", projectId).maybeSingle(),
+    supabase.from("project_sites").select("name").eq("project_id", projectId),
+  ]);
+  if (!project) throw new Error("The project could not be found.");
+  const taken = new Set((existing ?? []).map((site) => site.name.trim().toLowerCase()));
+  let name = project.name.trim();
+  for (let number = 2; taken.has(name.toLowerCase()); number++) name = `${project.name.trim().slice(0, 150)} ${number}`;
+  const parsed = projectSiteInputSchema.safeParse({ projectId, name, address: project.address, description: "", engineerId: value(form, "engineerId"), foremanId: value(form, "foremanId"), status: "active" });
+  if (!parsed.success) throw new Error("Review the site details and try again.");
   const { error } = await supabase.from("project_sites").insert({ project_id: parsed.data.projectId, name: parsed.data.name, address: parsed.data.address, description: parsed.data.description || null, engineer_id: parsed.data.engineerId || null, foreman_id: parsed.data.foremanId || null, status: parsed.data.status, created_by: actor.userId, updated_by: actor.userId });
   if (error) throw new Error(`Unable to create site: ${error.message}`);
   revalidatePath(`/projects/${parsed.data.projectId}`); revalidatePath(`/projects/${parsed.data.projectId}/workforce`);
+}
+
+// Change who runs a site. The database checks that each person has the
+// matching Engineer or Foreman role.
+export async function updateProjectSiteStaffAction(form: FormData) {
+  const actor = await requireManager();
+  const siteId = value(form, "siteId");
+  const projectId = value(form, "projectId");
+  const engineerId = value(form, "engineerId");
+  const foremanId = value(form, "foremanId");
+  if (![siteId, projectId].every((id) => uuidSchema.safeParse(id).success)
+    || ![engineerId, foremanId].every((id) => id === "" || uuidSchema.safeParse(id).success)) throw new Error("Review the site staff and try again.");
+  const supabase = await createClient();
+  const { error } = await supabase.from("project_sites").update({ engineer_id: engineerId || null, foreman_id: foremanId || null, updated_by: actor.userId }).eq("id", siteId).eq("project_id", projectId);
+  if (error) throw new Error(`Unable to update site staff: ${error.message}`);
+  revalidatePath(`/projects/${projectId}`); revalidatePath(`/projects/${projectId}/workforce`);
 }
