@@ -14,6 +14,7 @@ Current roles are `admin`, `engineer`, `foreman`, `warehouse_staff` and `finance
 | Attendance | Post/correct/read costs | Assigned-site operational view without wages | Record assigned-site attendance without wages | No global attendance | Read attendance/costs; no posting/correction |
 | Invoices/collections | Issue, collect, void/correct as authorized | None | None | None | Issue/collect within financial limits |
 | Accounts, procurement, wages/rates | Manage through protected commands | No management authority | No management authority | Quantity-only PO receipt at issued price | Financial read and billing authority |
+| Purchasing and inventory read | All | Assigned sites' stock; no prices or costs | Assigned sites' stock; no prices or costs | Assigned warehouses' stock; no prices or costs | Read-only: purchase orders, receipts, suppliers, prices, stock and value at every location, movement and per-material project costs |
 
 `private.project_site_role` matches the project/site pair and either a direct site assignment or an active project assignment with the same current account role. Admin can access historical inactive sites; posting commands validate operational statuses separately. Warehouse access requires an active Warehouse Staff role and warehouse assignment, or Admin.
 

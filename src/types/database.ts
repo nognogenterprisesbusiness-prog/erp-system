@@ -327,6 +327,7 @@ export type Database = {
       get_project_material_plan: { Args: { p_project_id: string }; Returns: ProjectMaterialPlanView[] };
       get_project_material_estimate: { Args: { p_project_id: string }; Returns: ProjectMaterialEstimateView[] };
       get_material_cost_batches: { Args: { p_material_id: string }; Returns: MaterialCostBatchRow[] };
+      get_inventory_transaction_costs: { Args: { p_transaction_ids: string[] }; Returns: { transaction_id: string; cost_total: number | null; cost_unit: number | null }[] };
       get_asset_photo_paths: { Args: { p_asset_ids: string[] }; Returns: { asset_id: string; photo_path: string }[] };
       save_project_material_plan_line: { Args: { p_project_id: string; p_site_id: string; p_warehouse_id: string; p_material_id: string; p_quantity: number | string; p_required_on: string; p_note: string }; Returns: string };
       record_project_progress: { Args: { p_report_id: string; p_percent: number | string; p_summary: string }; Returns: string };

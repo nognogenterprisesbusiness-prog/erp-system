@@ -270,6 +270,31 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     await assert.rejects(as("warehouse_staff", purchaseReceive(randomUUID(), 1)), /assigned/);
     await sql(`update public.profiles set is_active=true where id='${users.warehouse_staff}'`);
   });
+  await check("Finance reads purchasing, stock value and movement costs without write access; other roles stay cost-blind", async () => {
+    const count = async (role, query) => Number(scalar(await as(role, `select count(*) from (${query}) visible`)));
+    for (const query of [`select 1 from public.purchase_orders where id='${po}'`, `select 1 from public.purchase_order_lines where id='${poLine}'`,
+      `select 1 from public.purchase_order_receipts where purchase_order_line_id='${poLine}'`, "select 1 from public.suppliers", "select 1 from public.supplier_prices",
+      "select 1 from public.warehouses", "select 1 from public.inventory_locations", "select 1 from public.inventory_balances",
+      "select 1 from public.inventory_valuations where total_value is not null", "select 1 from public.inventory_transactions"]) {
+      assert.ok(await count("finance", query) > 0, `Finance should read: ${query}`);
+    }
+    await as("finance", `select * from public.get_project_material_cost('${project}')`);
+    assert.equal(scalar(await as("finance", `select cost_total from public.get_inventory_transaction_costs(array['${purchaseTx}']::uuid[])`)), "10000.00");
+    assert.equal(scalar(await as("admin", `select cost_total from public.get_inventory_transaction_costs(array['${purchaseTx}']::uuid[])`)), "10000.00");
+    await assert.rejects(as("finance", "select cost_total from public.inventory_transactions limit 1"), /permission denied/);
+    for (const role of ["engineer", "foreman", "warehouse_staff"]) {
+      await assert.rejects(as(role, `select * from public.get_inventory_transaction_costs(array['${purchaseTx}']::uuid[])`), /not authorized/);
+      assert.equal(await count(role, "select 1 from public.supplier_prices"), 0);
+      assert.equal(await count(role, "select 1 from public.inventory_valuations"), 0);
+    }
+    assert.equal(await count("warehouse_staff", "select 1 from public.purchase_orders"), 0);
+    await assert.rejects(as("finance", issue(randomUUID())), /administrator|authorized|permission/i);
+    await assert.rejects(as("finance", purchaseReceive(randomUUID(), 1)), /assigned|administrator/i);
+    await assert.rejects(as("finance", `update public.purchase_orders set purpose='Changed by Finance' where id='${po}'`), /permission denied/);
+    await assert.rejects(as("finance", "update public.supplier_prices set unit_price = unit_price + 1"), /permission denied/);
+    await assert.rejects(as("finance", "update public.inventory_valuations set total_value = total_value + 1"), /permission denied/);
+    await assert.rejects(as("finance", `select public.post_stock_out('${randomUUID()}','${material}','${source}',1,'${unit}','FIN-OUT',current_date,null,'Finance attempt')`), /authorized|administrator|permission/i);
+  });
   await check("all balances, valuations and batches reconcile after corrections", async () => {
     assert.equal(await value("select count(*) from public.inventory_balances where available_quantity<0 or quantity_on_hand<0"), "0");
     assert.equal(await value(`select count(*) from public.inventory_balances b join public.inventory_valuations v using(material_id,inventory_location_id)

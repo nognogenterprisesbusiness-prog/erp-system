@@ -38,6 +38,7 @@ Admin invites everyone from **Users**. Engineers and Foremen only see projects t
 | Upload, rename and delete project documents | ✅ | — | — | — | — |
 | View and download project documents | ✅ | — | ✅ | ✅ | — |
 | Add suppliers, issue purchase orders | ✅ | — | — | — | — |
+| View purchase orders, suppliers and prices | ✅ | ✅ | — | — | — |
 | Receive deliveries for a purchase order Admin issued | ✅ | — | — | — | ✅ |
 | Add stock without a purchase order | ✅ | — | — | — | — |
 | Request materials (in-stock only) | — | — | ✅ | ✅ | — |
@@ -51,6 +52,7 @@ Admin invites everyone from **Users**. Engineers and Foremen only see projects t
 | Review daily report | ✅ | — | ✅ | — | — |
 | See project costs, profit and loss | ✅ | ✅ | — | — | — |
 | See material price batches | ✅ | ✅ | — | — | — |
+| See stock value and movement costs | ✅ | ✅ | — | — | — |
 | Issue invoices, record payments | ✅ | ✅ | — | — | — |
 | Void invoices, reverse payments | ✅ | — | — | — | — |
 | Audit logs | ✅ | — | — | — | — |
@@ -68,8 +70,8 @@ Web · all projects and warehouses
 ### 💼 Finance — financing department
 Web · all projects, read-mostly
 
-- **Can:** see dashboard totals and costs for every project (materials, labor, equipment, other expenses, budget); see labor rates and attendance cost; see material price batches; view equipment photos; issue client invoices; record client payments; export profit and loss.
-- **Cannot:** change budgets or rates; void invoices or reverse payments; buy materials or manage suppliers; move stock; manage users.
+- **Can:** see dashboard totals and costs for every project (materials, labor, equipment, other expenses, budget), including cost per material; view purchase orders, suppliers and price history; see stock at every location with its value, cost per stock movement and material price batches; export inventory with values; see labor rates and attendance cost; view equipment photos; issue client invoices; record client payments; export profit and loss.
+- **Cannot:** create or change purchase orders, suppliers or prices; receive deliveries or move stock; change budgets or rates; void invoices or reverse payments; manage users.
 
 ### 🧑‍💼 Engineer — site engineer
 Web and mobile · assigned projects only

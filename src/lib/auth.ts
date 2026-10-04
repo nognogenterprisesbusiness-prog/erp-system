@@ -21,7 +21,8 @@ export const requireUser = cache(async function requireUser(): Promise<UserConte
   if (!profile.is_active || roles.length === 0) redirect("/?error=account");
   const canManage = roles.includes("admin");
   const canViewFinance = canManage || roles.includes("finance");
-  return { userId, profile, roles, canManage, canOperateInventory: canManage || roles.includes("warehouse_staff"), canViewLaborRates: canViewFinance, canViewProcurement: canManage, canViewDailyReports: canManage || roles.some((role) => role === "engineer" || role === "foreman") };
+  // Finance reads purchasing; every purchasing change stays Admin-only.
+  return { userId, profile, roles, canManage, canOperateInventory: canManage || roles.includes("warehouse_staff"), canViewLaborRates: canViewFinance, canViewProcurement: canViewFinance, canViewDailyReports: canManage || roles.some((role) => role === "engineer" || role === "foreman") };
 });
 
 export async function requireManager() {
