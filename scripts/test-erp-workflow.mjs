@@ -417,6 +417,19 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     assert.equal(scalar(await as("finance", `select supplier_name from public.get_inventory_transaction_costs(array['${purchaseTx}']::uuid[])`)), "Test Hardware");
     await assert.rejects(as("engineer", `select * from public.get_material_cost_batches('${material}')`), /not authorized/);
   });
+  await check("purchasing by supplier: one list of purchase-order and site-purchase items with delivery and payment stages", async () => {
+    const stage = async (search, where) => scalar(await as("finance", `select coalesce(max(delivery_stage || '/' || payment_stage), 'none') from public.get_purchase_lines('${search}', 0, 100) where ${where}`));
+    const poNumber = await value(`select po_number from public.purchase_orders where id='${po}'`);
+    assert.equal(await stage(poNumber, `purchase_id='${po}'`), "partly_received/partly_paid");
+    assert.equal(await stage("ace hardware", "source='site_purchase' and payment_stage='paid'"), "received/paid");
+    assert.equal(await stage("ace hardware", "source='site_purchase' and delivery_stage='rejected'"), "rejected/none");
+    assert.equal(scalar(await as("admin", "select count(*) from public.get_purchase_lines('ace hardware', 0, 100)")) !== "0", true);
+    const lines = Number(scalar(await as("finance", "select count(*) from public.get_purchase_lines('', 0, 100) where delivery_stage not in ('cancelled','rejected')")));
+    const summary = scalar(await as("finance", "select item_count || '|' || received_count from public.get_purchase_summary()")).split("|").map(Number);
+    assert.ok(summary[0] >= Math.min(lines, 100) && summary[1] >= 1);
+    await assert.rejects(as("finance", "select * from public.get_purchase_lines('', 0, 500)"), /invalid page/);
+    for (const role of ["engineer", "foreman", "warehouse_staff"]) await assert.rejects(as(role, "select * from public.get_purchase_summary()"), /not authorized/);
+  });
   await check("all balances, valuations and batches reconcile after corrections", async () => {
     assert.equal(await value("select count(*) from public.inventory_balances where available_quantity<0 or quantity_on_hand<0"), "0");
     assert.equal(await value(`select count(*) from public.inventory_balances b join public.inventory_valuations v using(material_id,inventory_location_id)

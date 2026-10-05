@@ -7,21 +7,23 @@ import { readAllPages, readByIds } from "@/lib/data/read-all-pages";
 
 const PAGE_SIZE = 20;
 
-export async function getPurchaseOrders({ page = 1, query = "" }: { page?: number; query?: string } = {}) {
+// Every purchased item (purchase orders and site purchases), newest first.
+export async function getPurchaseLines({ page = 1, query = "" }: { page?: number; query?: string } = {}) {
   const supabase = await createClient();
   const currentPage = Math.max(1, Math.min(10000, Number.isSafeInteger(page) ? page : 1));
-  const from = (currentPage - 1) * PAGE_SIZE;
-  let request = supabase.from("purchase_orders").select("id,po_number,supplier_name,warehouse_code,warehouse_name,ordered_on,expected_on,status,created_at", { count: "exact" });
-  const search = safeSearchTerm(query);
-  if (search) request = request.or(`po_number.ilike.%${search}%,supplier_name.ilike.%${search}%,warehouse_name.ilike.%${search}%`);
-  const { data, count, error } = await request.order("created_at", { ascending: false }).order("id").range(from, from + PAGE_SIZE - 1);
-  if (error) throw new Error("Unable to load purchase orders.");
+  const { data, error } = await supabase.rpc("get_purchase_lines", { p_search: safeSearchTerm(query), p_offset: (currentPage - 1) * PAGE_SIZE, p_limit: PAGE_SIZE });
+  if (error) throw new Error("Unable to load purchases.", { cause: error });
   const rows = data ?? [];
-  const summaries = rows.length ? await supabase.rpc("get_purchase_order_payment_summaries", { p_order_ids: rows.map((row) => row.id) }) : null;
-  // PGRST202: payments not deployed yet; the list still loads without them.
-  if (summaries?.error && summaries.error.code !== "PGRST202") throw new Error("Unable to load purchase order payments.", { cause: summaries.error });
-  const payment = new Map((summaries?.data ?? []).map((row) => [row.order_id, row]));
-  return { rows: rows.map((row) => ({ ...row, payment: payment.get(row.id) ?? null })), count: count ?? 0, page: currentPage, pageCount: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)) };
+  const count = Number(rows[0]?.total_count ?? 0);
+  return { rows, count, page: currentPage, pageCount: Math.max(1, Math.ceil(count / PAGE_SIZE)) };
+}
+
+export async function getPurchaseSummary() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_purchase_summary");
+  if (error) throw new Error("Unable to load purchase totals.", { cause: error });
+  const row = data?.[0];
+  return { items: Number(row?.item_count ?? 0), totalValue: Number(row?.total_value ?? 0), suppliers: Number(row?.supplier_count ?? 0), received: Number(row?.received_count ?? 0), unpaid: Number(row?.unpaid_value ?? 0) };
 }
 
 export async function getPurchaseOrder(id: string) {
