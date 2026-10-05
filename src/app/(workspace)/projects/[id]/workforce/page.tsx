@@ -17,8 +17,8 @@ export default async function ProjectWorkforcePage({ params }: { params: Promise
   try { await requireManager(); } catch { notFound(); }
   const [data, workforce] = await Promise.all([getProject(id), getProjectWorkforce(id, true)]);
   return <>
-    <PageHeader eyebrow={data.project.code} title="Manage workers" description={`Assign workers and site personnel for ${data.project.name}.`} action={<Button variant="outline" asChild><Link href={`/projects/${id}?tab=labour`}>Back to labour</Link></Button>} />
+    <PageHeader eyebrow={data.project.code} title="Manage workers" description={`Assign workers for ${data.project.name}. Engineers and Foremen are set on each site.`} action={<Button variant="outline" asChild><Link href={`/projects/${id}?tab=labour`}>Back to labour</Link></Button>} />
     <ProjectWorkforceSection projectId={id} projectName={data.project.name} workforce={workforce} canManage canViewRates />
-    <ProjectPersonnelSection data={data} canManage />
+    <ProjectPersonnelSection data={data} />
   </>;
 }

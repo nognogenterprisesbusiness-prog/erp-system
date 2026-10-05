@@ -87,6 +87,31 @@ export async function readMobileResource(
   const offset = (q.page - 1) * size;
   const search = safeSearchTerm(q.search);
   switch (resource) {
+    case "site-purchases": {
+      const r = await c.from("site_purchases")
+        .select("id,purchase_number,supplier_name,receipt_number,receipt_date,status,paid_with,rejection_reason,reimbursed_on", { count: "exact" })
+        .eq("project_id", required(q.projectId)).eq("project_site_id", required(q.siteId))
+        .order("created_at", { ascending: false }).order("id").range(offset, offset + size - 1);
+      if (r.error) databaseError(r.error);
+      const rows = r.data ?? [];
+      const lines = await readByIds(rows.map((x) => x.id), (ids, from, to) => c.from("site_purchase_lines").select("id,site_purchase_id,quantity,unit_price").in("site_purchase_id", ids).order("id").range(from, to), "site purchase lines");
+      const totals = new Map<string, number>();
+      for (const line of lines) totals.set(line.site_purchase_id, (totals.get(line.site_purchase_id) ?? 0) + Math.round(Number(line.quantity) * Number(line.unit_price) * 100) / 100);
+      return page(rows.map((x) => ({ ...x, total: totals.get(x.id) ?? 0 })), r.count, q);
+    }
+    case "purchase-choices": {
+      const [stores, materials, units] = await Promise.all([
+        c.rpc("get_site_purchase_suppliers"),
+        readAllPages((from, to) => c.from("materials").select("id,name,base_unit_id").eq("material_kind", "consumable").eq("is_active", true).is("archived_at", null).order("name").order("id").range(from, to), "purchase materials"),
+        readAllPages((from, to) => c.from("units_of_measure").select("id,symbol").order("id").range(from, to), "purchase units"),
+      ]);
+      if (stores.error) databaseError(stores.error);
+      const symbols = new Map(units.map((unit) => [unit.id, unit.symbol]));
+      return {
+        stores: (stores.data ?? []).map((store) => ({ id: store.id, name: store.supplier_name })),
+        materials: materials.map((material) => ({ id: material.id, name: material.name, unit: symbols.get(material.base_unit_id) ?? "" })),
+      };
+    }
     case "session": {
       const r = await c.rpc("get_unread_notification_count");
       if (r.error) databaseError(r.error);

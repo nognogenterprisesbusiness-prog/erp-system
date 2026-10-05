@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { projectAssignmentInputSchema, projectInputSchema, projectSiteInputSchema, projectUpdateSchema, uuidSchema } from "@nognog/domain";
+import { projectInputSchema, projectSiteInputSchema, projectUpdateSchema, uuidSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireManager } from "@/lib/auth";
 import { prepareRecordPhoto, saveRecordPhoto } from "@/lib/media/record-photo";
@@ -62,27 +62,6 @@ export async function archiveProjectAction(form: FormData) {
   if (error) throw new Error(`Unable to archive project: ${error.message}`);
   revalidatePath("/dashboard"); revalidatePath("/projects");
   redirect("/projects");
-}
-
-export async function assignProjectMemberAction(form: FormData) {
-  const actor = await requireManager();
-  const parsed = projectAssignmentInputSchema.safeParse({ projectId: value(form, "projectId"), userId: value(form, "userId"), role: value(form, "role"), assignedOn: value(form, "assignedOn") });
-  if (!parsed.success) throw new Error("Invalid personnel assignment.");
-  const supabase = await createClient();
-  const { data: matchingRole, error: roleError } = await supabase.from("user_roles").select("user_id").eq("user_id", parsed.data.userId).eq("role", parsed.data.role).maybeSingle();
-  if (roleError || !matchingRole) throw new Error("The selected account does not have this project role.");
-  const { error } = await supabase.from("project_assignments").insert({ project_id: parsed.data.projectId, user_id: parsed.data.userId, assignment_role: parsed.data.role, assigned_on: parsed.data.assignedOn, assigned_by: actor.userId });
-  if (error) throw new Error(error.code === "23505" ? "This person already has that active role." : `Unable to assign personnel: ${error.message}`);
-  revalidatePath(`/projects/${parsed.data.projectId}`); revalidatePath(`/projects/${parsed.data.projectId}/workforce`);
-}
-
-export async function endProjectAssignmentAction(form: FormData) {
-  const actor = await requireManager();
-  const id = value(form, "assignmentId"); const projectId = value(form, "projectId");
-  const supabase = await createClient();
-  const { error } = await supabase.from("project_assignments").update({ status: "inactive", ended_at: new Date().toISOString(), ended_by: actor.userId }).eq("id", id);
-  if (error) throw new Error(`Unable to end assignment: ${error.message}`);
-  revalidatePath(`/projects/${projectId}`); revalidatePath(`/projects/${projectId}/workforce`);
 }
 
 // A site only needs its Engineer and Foreman; it takes the project's name and

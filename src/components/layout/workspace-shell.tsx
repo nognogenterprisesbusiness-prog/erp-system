@@ -1,6 +1,6 @@
 "use client";
 
-import { AssignmentsIcon, Audit01Icon, Building03Icon, DashboardSquare01Icon, File02Icon, FilePenLineIcon, Logout01Icon, Package01Icon, PackageReceiveIcon, QrCodeIcon, SearchDollarIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Audit01Icon, Building03Icon, DashboardSquare01Icon, File02Icon, FilePenLineIcon, Logout01Icon, Invoice01Icon, Package01Icon, PackageReceiveIcon, QrCodeIcon, SearchDollarIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { logoutAction } from "@/app/auth/actions";
@@ -27,6 +27,7 @@ const navItems = [
   { href: "/suppliers", label: "Suppliers & purchases", icon: Store02Icon, procurement: true, group: "Purchasing & finance" },
   { href: "/suppliers/prices", label: "Compare prices", icon: SearchDollarIcon, procurement: true, nested: true, group: "Purchasing & finance" },
   { href: "/suppliers/categories", label: "Categories", icon: Tag01Icon, manager: true, nested: true, group: "Purchasing & finance" },
+  { href: "/site-purchases", label: "Site purchases", icon: Invoice01Icon, sitePurchases: true, group: "Purchasing & finance" },
   { href: "/billing", label: "Billing & payments", icon: File02Icon, finance: true, group: "Purchasing & finance" },
   { href: "/employees", label: "Employees", icon: UserGroupIcon, group: "People & administration" },
   { href: "/attendance", label: "Attendance", icon: AssignmentsIcon, finance: true, nested: true, group: "People & administration" },
@@ -35,9 +36,9 @@ const navItems = [
   { href: "/audit-logs", label: "Audit logs", icon: Audit01Icon, manager: true, group: "People & administration" },
 ] as const;
 
-export function WorkspaceShell({ children, userId, name, avatar, roleLabel, canViewProcurement, canViewFinance, canViewDailyReports, canViewRequests, canDispatchRequests, canManage }: { children: React.ReactNode; userId: string; name: string; avatar?: string; roleLabel: string; canViewProcurement: boolean; canViewFinance: boolean; canViewDailyReports: boolean; canViewRequests: boolean; canDispatchRequests: boolean; canManage: boolean }) {
+export function WorkspaceShell({ children, userId, name, avatar, roleLabel, canViewProcurement, canViewFinance, canViewDailyReports, canViewRequests, canDispatchRequests, canManage, canSubmitSitePurchases }: { children: React.ReactNode; userId: string; name: string; avatar?: string; roleLabel: string; canViewProcurement: boolean; canViewFinance: boolean; canViewDailyReports: boolean; canViewRequests: boolean; canDispatchRequests: boolean; canManage: boolean; canSubmitSitePurchases: boolean }) {
   const pathname = usePathname();
-  const items = navItems.filter((item) => (!("procurement" in item) || canViewProcurement) && (!("finance" in item) || canViewFinance) && (!("reports" in item) || canViewDailyReports) && (!("requests" in item) || canViewRequests || canDispatchRequests) && (!("receiving" in item) || canDispatchRequests) && (!("manager" in item) || canManage)).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item);
+  const items = navItems.filter((item) => (!("procurement" in item) || canViewProcurement) && (!("finance" in item) || canViewFinance) && (!("reports" in item) || canViewDailyReports) && (!("requests" in item) || canViewRequests || canDispatchRequests) && (!("receiving" in item) || (canDispatchRequests && !canManage)) && (!("sitePurchases" in item) || canViewFinance || canSubmitSitePurchases) && (!("manager" in item) || canManage)).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item);
   const activeHref = pathname.startsWith("/materials") || pathname.startsWith("/equipment") || pathname.startsWith("/vehicles") ? "/inventory" : pathname.startsWith("/purchase-orders/receive") ? "/purchase-orders/receive" : pathname.startsWith("/purchase-orders") ? "/suppliers" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
   return <><Suspense fallback={null}><LiveRouteRefresh userId={userId} /></Suspense><AppShell name={name} avatar={avatar} roleLabel={roleLabel} items={items} activeHref={activeHref} footerItems={[{ href: "/profile", label: "My profile", icon: UserCircleIcon }, { href: "/notifications", label: "Notifications", icon: Notification01Icon }, { href: "/help", label: "Help centre", icon: HelpCircleIcon }]} homeHref="/dashboard" headerSearch={<HeaderSearch />} headerActions={<>
     <NotificationBell userId={userId} />

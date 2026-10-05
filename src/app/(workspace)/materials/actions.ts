@@ -39,7 +39,7 @@ export async function saveMaterialAction(_: MaterialActionState, form: FormData)
   catch (cause) { return failure(cause instanceof Error ? cause.message : "The material photo could not be processed."); }
   const input = parsed.data; const supabase = await createClient();
   const { data, error } = await supabase.rpc("save_material", { p_id: input.id ?? null, p_code: input.code, p_name: input.name, p_description: input.description || "", p_category_id: input.categoryId, p_base_unit_id: input.baseUnitId, p_material_kind: input.materialKind, p_minimum_stock_level: input.minimumStockLevel, p_is_active: input.isActive === "true" });
-  if (error) return failure(error.code === "23505" ? "That material code is already in use." : "The material could not be saved.");
+  if (error) return failure(error.code === "23505" ? (error.message.includes("materials_name_unit_unique") ? "A material with this name and unit already exists." : "That material code is already in use.") : "The material could not be saved.");
   if (photo) {
     try { await saveRecordPhoto("materials", data, photo); }
     catch (cause) { return failure(cause instanceof Error ? cause.message : "The material was saved, but its photo could not be attached. Open the material again to retry."); }

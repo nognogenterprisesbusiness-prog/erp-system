@@ -30,7 +30,7 @@ export async function saveWarehouseAction(_: WarehouseActionState, form: FormDat
       "Receive or cancel open warehouse purchase orders before marking it inactive",
     ];
     const retirementError = retirementErrors.find((message) => result.error.message.includes(message));
-    return { ok: false, message: retirementError ?? (result.error.code === "23505" ? "That warehouse code is already in use." : `Unable to save warehouse: ${result.error.message}`) };
+    return { ok: false, message: retirementError ?? (result.error.code === "23505" ? (result.error.message.includes("warehouses_name_unique") ? "A warehouse with this name already exists." : "That warehouse code is already in use.") : `Unable to save warehouse: ${result.error.message}`) };
   }
   if (photo) {
     try { await saveRecordPhoto("warehouses", result.data.id, photo); }

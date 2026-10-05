@@ -10,6 +10,7 @@ import { siteConsumptionInputSchema } from "./inventory";
 import { assetKinds, equipmentRequestInputSchema } from "./assets";
 import { equipmentUsageSchema } from "./project-costs";
 import { materialSourcingSchema } from "./material-sourcing";
+import { submitSitePurchaseSchema } from "./procurement";
 import {
   dailyReportInputSchema,
   dailyReportReviewSchema,
@@ -149,6 +150,26 @@ export const mobileResponseSchemas = {
       }),
     ),
     events: page(event),
+  }),
+  // Hardware store purchases for the selected site, newest first.
+  "site-purchases": page(
+    z.object({
+      id: uuidSchema,
+      purchase_number: z.string(),
+      supplier_name: z.string(),
+      receipt_number: z.string(),
+      receipt_date: z.string(),
+      status: z.enum(["submitted", "approved", "rejected"]),
+      paid_with: z.enum(["company_cash", "own_money"]),
+      total: number,
+      rejection_reason: text,
+      reimbursed_on: text,
+    }),
+  ),
+  // Stores and inventory materials an Engineer can choose when buying.
+  "purchase-choices": z.object({
+    stores: z.array(z.object({ id: uuidSchema, name: z.string() })),
+    materials: z.array(z.object({ id: uuidSchema, name: z.string(), unit: z.string() })),
   }),
   materials: page(
     z.object({
@@ -360,6 +381,7 @@ export const mobileCommandSchema = z.discriminatedUnion("action", [
       detach: z.boolean().default(false),
     }),
   ),
+  command("submit-site-purchase", submitSitePurchaseSchema),
   command("read-notification", z.object({ id: uuidSchema, read: z.boolean() })),
   command("read-all-notifications", z.object({ read: z.boolean() })),
 ]);

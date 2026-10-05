@@ -353,6 +353,70 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     await as("admin", `update public.project_sites set engineer_id=null, foreman_id=null, updated_by='${users.admin}' where id='${sibling}'`);
     assert.equal(await staff(), "-/-");
   });
+  await check("no duplicate names: suppliers, materials of the same unit and warehouses are refused ignoring case and spaces", async () => {
+    await as("admin", "select public.save_supplier(null,'','City Hardware',null,null,null,'09171234567',null,'Cebu City',null,null,null,null,'active',null)");
+    await assert.rejects(as("admin", "select public.save_supplier(null,'','  city   HARDWARE ',null,null,null,'09171234567',null,'Cebu City',null,null,null,null,'active',null)"), /suppliers_name_unique/);
+    const materialName = await value(`select name from public.materials where id='${material}'`);
+    await assert.rejects(sql(`insert into public.materials(code,name,category_id,base_unit_id,created_by,updated_by)
+      select 'DUP-CHECK', upper(name), category_id, base_unit_id, created_by, updated_by from public.materials where id='${material}'`), /materials_name_unit_unique/);
+    const warehouseName = await value(`select name from public.warehouses where id='${warehouse}'`);
+    await assert.rejects(sql(`insert into public.warehouses(code,name,address,created_by,updated_by)
+      select 'WH-DUP', lower(name), address, created_by, updated_by from public.warehouses where id='${warehouse}'`), /warehouses_name_unique/);
+    assert.ok(materialName && warehouseName);
+  });
+  await check("site purchase: Engineer buys at a hardware store with a receipt photo; Admin or Finance approves; stock lands at the site once", async () => {
+    const photo = async (role, key) => as(role, `insert into storage.objects(bucket_id,name) values('erp-site-purchase-receipts','${users[role]}/${key}/receipt.webp')`);
+    const submit = (key, supplier, receipt, paid = "own_money", newName = "Ace Hardware", qty = 10, price = 260) =>
+      `select public.submit_site_purchase('${key}','${project}','${site}',${supplier},${supplier === "null" ? `'${newName}','Mandaue City','09170001111'` : "null,null,null"},'${receipt}',current_date,'${paid}',null,'[{"materialId":"${material}","quantity":"${qty}","unitPrice":"${price}"}]')`;
+    const onHand = async () => Number(await value(`select quantity_on_hand from public.inventory_balances where material_id='${material}' and inventory_location_id='${location}'`));
+    const before = await onHand();
+
+    const key = randomUUID(); await photo("engineer", key);
+    const purchase = result(await as("engineer", submit(key, "null", "OR-1001")));
+    assert.equal(result(await as("engineer", submit(key, "null", "OR-1001"))), purchase, "retry returns the same purchase");
+    const ace = await value(`select supplier_id from public.site_purchases where id='${purchase}'`);
+    assert.equal(await value("select count(*) from public.suppliers where lower(supplier_name)='ace hardware'"), "1");
+
+    const noPhoto = randomUUID();
+    await assert.rejects(as("engineer", submit(noPhoto, `'${ace}'`, "OR-1002")), /receipt photo is required/);
+    const dup = randomUUID(); await photo("engineer", dup);
+    await assert.rejects(as("engineer", submit(dup, `'${ace}'`, "or-1001")), /site_purchases_receipt_unique/);
+    const sameName = randomUUID(); await photo("engineer", sameName);
+    const second = result(await as("engineer", submit(sameName, "null", "OR-1003", "company_cash", "  ACE hardware ", 5, 270)));
+    assert.equal(await value(`select supplier_id from public.site_purchases where id='${second}'`), ace, "typing the same store reuses it");
+    await assert.rejects(as("foreman", submit(randomUUID(), `'${ace}'`, "OR-1004")), /Only an Engineer/);
+    await assert.rejects(as("warehouse_staff", submit(randomUUID(), `'${ace}'`, "OR-1005")), /Only an Engineer/);
+    await assert.rejects(as("engineer", `select public.submit_site_purchase('${randomUUID()}','${project}','${sibling}','${ace}',null,null,null,'OR-1006',current_date,'company_cash',null,'[{"materialId":"${material}","quantity":"1","unitPrice":"1"}]')`), /Not the Engineer/);
+
+    assert.equal(await onHand(), before, "no stock before approval");
+    await assert.rejects(as("engineer", `select public.approve_site_purchase('${purchase}')`), /Admin or Finance/);
+    await Promise.all([as("finance", `select public.approve_site_purchase('${purchase}')`), as("finance", `select public.approve_site_purchase('${purchase}')`)]);
+    assert.equal(await onHand(), before + 10, "approved once, posted once");
+    assert.equal(await value(`select cost_total from public.inventory_transactions t join public.site_purchase_lines l on l.inventory_transaction_id = t.id where l.site_purchase_id='${purchase}'`), "2600.00");
+    assert.equal(await value(`select count(*) from public.inventory_cost_layers where inventory_location_id='${location}' and material_id='${material}' and unit_cost=260 and remaining_quantity>0`), "1");
+    assert.equal(await value(`select p.unit_price from public.supplier_prices p join public.supplier_materials m on m.id=p.supplier_material_id where m.supplier_id='${ace}' and p.effective_end_date is null`), "260.00");
+    await assert.rejects(as("admin", `select public.reject_site_purchase('${purchase}','Too late')`), /cannot be rejected/);
+
+    await as("admin", `select public.reject_site_purchase('${second}','Wrong project')`);
+    assert.equal(await onHand(), before + 10, "a rejected purchase adds no stock");
+    await assert.rejects(as("finance", `select public.mark_site_purchase_reimbursed('${second}',current_date,'PCV-1')`), /own money/);
+    await assert.rejects(as("engineer", `select public.mark_site_purchase_reimbursed('${purchase}',current_date,'PCV-1')`), /Admin or Finance/);
+    await as("finance", `select public.mark_site_purchase_reimbursed('${purchase}',current_date,'PCV-0001')`);
+    assert.equal(await value(`select reimbursement_reference from public.site_purchases where id='${purchase}'`), "PCV-0001");
+
+    assert.equal(scalar(await as("engineer", "select count(*) from public.site_purchases")), "2");
+    assert.equal(scalar(await as("warehouse_staff", "select count(*) from public.site_purchases")), "0");
+    assert.equal(scalar(await as("engineer", "select count(*) from public.get_site_purchase_suppliers()")) !== "0", true);
+    await assert.rejects(as("foreman", "select * from public.get_site_purchase_suppliers()"), /not authorized/);
+  });
+  await check("price batches and stock-in movements show the store they came from", async () => {
+    const siteBatchStore = scalar(await as("finance", `select supplier_name from public.get_material_cost_batches('${material}') where location_id='${location}' and unit_cost=260 limit 1`));
+    assert.equal(siteBatchStore, "Ace Hardware");
+    const tx = await value(`select l.inventory_transaction_id from public.site_purchase_lines l join public.site_purchases p on p.id=l.site_purchase_id where p.status='approved' limit 1`);
+    assert.equal(scalar(await as("admin", `select supplier_name from public.get_inventory_transaction_costs(array['${tx}']::uuid[])`)), "Ace Hardware");
+    assert.equal(scalar(await as("finance", `select supplier_name from public.get_inventory_transaction_costs(array['${purchaseTx}']::uuid[])`)), "Test Hardware");
+    await assert.rejects(as("engineer", `select * from public.get_material_cost_batches('${material}')`), /not authorized/);
+  });
   await check("all balances, valuations and batches reconcile after corrections", async () => {
     assert.equal(await value("select count(*) from public.inventory_balances where available_quantity<0 or quantity_on_hand<0"), "0");
     assert.equal(await value(`select count(*) from public.inventory_balances b join public.inventory_valuations v using(material_id,inventory_location_id)

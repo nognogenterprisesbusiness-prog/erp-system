@@ -3,11 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
-  closeSupplierPriceInputSchema,
   supplierCategoryInputSchema,
   supplierInputSchema,
-  supplierMaterialInputSchema,
-  supplierPriceInputSchema,
   uuidSchema,
 } from "@nognog/domain";
 import { requireManager } from "@/lib/auth";
@@ -23,7 +20,8 @@ const failure = (message: string, fieldErrors?: Record<string, string[]>): Suppl
 
 function friendlySupplierError(error: { code?: string; message: string }) {
   if (error.code === "42501") return "You do not have permission to manage supplier records.";
-  if (error.code === "23505") return "That supplier code, tax number, category, or catalog relationship is already in use.";
+  if (error.code === "23505" && error.message.includes("suppliers_name_unique")) return "A supplier with this name already exists. Open the existing supplier instead.";
+  if (error.code === "23505") return "That supplier code, tax number or category is already in use.";
   if (error.code === "23P01" || error.message.includes("overlap")) return "This price overlaps an existing price period for the supplier material.";
   if (error.message.includes("category")) return "The selected supplier category is unavailable.";
   if (error.message.includes("base unit") || error.message.includes("unit")) return "Supplier catalog entries must use the material base unit until conversions are approved.";
@@ -124,57 +122,3 @@ export async function archiveSupplierCategoryAction(_: SupplierActionState, form
   return { ok: true, message: "Supplier category archived." };
 }
 
-export async function saveSupplierMaterialAction(_: SupplierActionState, form: FormData): Promise<SupplierActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to manage supplier catalogs."); }
-  const parsed = supplierMaterialInputSchema.safeParse({
-    id: value(form, "id") || undefined, supplierId: value(form, "supplierId"), materialId: value(form, "materialId"), unitId: value(form, "unitId"),
-    supplierMaterialCode: value(form, "supplierMaterialCode").toUpperCase(), minimumOrderQuantity: value(form, "minimumOrderQuantity"),
-    leadTimeDays: value(form, "leadTimeDays"), availabilityStatus: value(form, "availabilityStatus"),
-  });
-  if (!parsed.success) return failure("Review the supplier material details.", parsed.error.flatten().fieldErrors);
-  const input = parsed.data;
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("save_supplier_material", {
-    p_id: input.id ?? null, p_supplier_id: input.supplierId, p_material_id: input.materialId,
-    p_supplier_material_code: input.supplierMaterialCode, p_unit_id: input.unitId,
-    p_minimum_order_quantity: input.minimumOrderQuantity, p_lead_time_days: input.leadTimeDays === "" ? null : input.leadTimeDays,
-    p_availability_status: input.availabilityStatus,
-  });
-  if (error) return failure(friendlySupplierError(error));
-  revalidateSuppliers(input.supplierId);
-  return { ok: true, message: input.id ? "Catalog entry updated." : "Material added to supplier catalog.", data: { id: data } };
-}
-
-export async function archiveSupplierMaterialAction(_: SupplierActionState, form: FormData): Promise<SupplierActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to archive supplier catalog entries."); }
-  const id = uuidSchema.safeParse(value(form, "id"));
-  if (!id.success) return failure("Invalid supplier catalog entry.");
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("archive_supplier_material", { p_id: id.data });
-  if (error) return failure(friendlySupplierError(error));
-  revalidateSuppliers(value(form, "supplierId") || undefined);
-  return { ok: true, message: "Catalog entry archived." };
-}
-
-export async function addSupplierPriceAction(_: SupplierActionState, form: FormData): Promise<SupplierActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to manage supplier prices."); }
-  const parsed = supplierPriceInputSchema.safeParse({ supplierMaterialId: value(form, "supplierMaterialId"), unitPrice: value(form, "unitPrice"), effectiveStartDate: value(form, "effectiveStartDate"), effectiveEndDate: value(form, "effectiveEndDate"), currency: value(form, "currency").toUpperCase() });
-  if (!parsed.success) return failure("Review the supplier price details.", parsed.error.flatten().fieldErrors);
-  const input = parsed.data;
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("post_supplier_price", { p_supplier_material_id: input.supplierMaterialId, p_unit_price: input.unitPrice, p_effective_start_date: input.effectiveStartDate, p_effective_end_date: input.effectiveEndDate || null, p_currency: input.currency });
-  if (error) return failure(friendlySupplierError(error));
-  revalidateSuppliers(value(form, "supplierId") || undefined);
-  return { ok: true, message: "Supplier price version added.", data: { id: data } };
-}
-
-export async function closeSupplierPriceAction(_: SupplierActionState, form: FormData): Promise<SupplierActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to close supplier prices."); }
-  const parsed = closeSupplierPriceInputSchema.safeParse({ priceId: value(form, "priceId"), effectiveEndDate: value(form, "effectiveEndDate") });
-  if (!parsed.success) return failure("Enter a valid price end date.", parsed.error.flatten().fieldErrors);
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("close_supplier_price", { p_price_id: parsed.data.priceId, p_effective_end_date: parsed.data.effectiveEndDate });
-  if (error) return failure(friendlySupplierError(error));
-  revalidateSuppliers(value(form, "supplierId") || undefined);
-  return { ok: true, message: "Supplier price closed." };
-}

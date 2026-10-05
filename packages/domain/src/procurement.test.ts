@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema } from "./procurement";
+import { issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, submitSitePurchaseSchema } from "./procurement";
 
 const id = "01234567-89ab-4cde-8123-456789abcdef";
 const other = "11234567-89ab-4cde-8123-456789abcdef";
@@ -27,4 +27,13 @@ test("receipt requires actual goods cost, quantity and delivery reference", () =
   assert.equal(receivePurchaseOrderLineSchema.safeParse(value).success, true);
   assert.equal(receivePurchaseOrderLineSchema.safeParse({ ...value, goodsTotalCost: "0" }).success, false);
   assert.equal(receivePurchaseOrderLineSchema.safeParse({ ...value, deliveryReference: "" }).success, false);
+});
+
+test("site purchase: existing store, or a new store with name, address and contact number", () => {
+  const value = { idempotencyKey: id, projectId: id, siteId: other, supplierId: id, newSupplierName: "", newSupplierAddress: "", newSupplierContact: "", receiptNumber: "OR-1001", receiptDate: "2026-10-05", paidWith: "own_money", notes: "", lines: [{ materialId: id, quantity: "10", unitPrice: "260" }] };
+  assert.equal(submitSitePurchaseSchema.safeParse(value).success, true);
+  assert.equal(submitSitePurchaseSchema.safeParse({ ...value, supplierId: "" }).success, false);
+  assert.equal(submitSitePurchaseSchema.safeParse({ ...value, supplierId: "", newSupplierName: "Ace Hardware", newSupplierAddress: "Mandaue City", newSupplierContact: "09170001111" }).success, true);
+  assert.equal(submitSitePurchaseSchema.safeParse({ ...value, receiptNumber: "" }).success, false);
+  assert.equal(submitSitePurchaseSchema.safeParse({ ...value, lines: [value.lines[0], value.lines[0]] }).success, false);
 });

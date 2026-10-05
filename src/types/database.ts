@@ -101,6 +101,10 @@ export type SupplierMaterialRow = { id: string; supplier_id: string; material_id
 export type SupplierPriceRow = { id: string; supplier_material_id: string; unit_price: number; effective_start_date: string; effective_end_date: string | null; currency: string; recorded_by: string; created_at: string; updated_at: string };
 export type SupplierEventRow = { id: string; supplier_id: string; event_type: SupplierEventType; summary: string; details: Json; actor_id: string; occurred_at: string };
 export type ClientInvoiceRow = { id: string; invoice_number: string; project_id: string; project_code: string; project_name: string; client_name: string; description: string; issued_on: string; due_on: string; amount: number; status: "issued" | "void"; issued_by: string; voided_by: string | null; voided_at: string | null; void_reason: string | null; idempotency_key: string; command_payload: Json; created_at: string };
+export type SitePurchaseStatus = "submitted" | "approved" | "rejected";
+export type SitePurchasePaidWith = "company_cash" | "own_money";
+export type SitePurchaseRow = { id: string; purchase_number: string; project_id: string; project_site_id: string; supplier_id: string; supplier_name: string; receipt_number: string; receipt_date: string; receipt_photo_path: string; paid_with: SitePurchasePaidWith; notes: string | null; status: SitePurchaseStatus; submitted_by: string; decided_by: string | null; decided_at: string | null; rejection_reason: string | null; reimbursed_on: string | null; reimbursed_by: string | null; reimbursement_reference: string | null; idempotency_key: string; command_payload: Json; created_at: string; updated_at: string };
+export type SitePurchaseLineRow = { id: string; site_purchase_id: string; material_id: string; material_code: string; material_name: string; unit_of_measure_id: string; unit_symbol: string; quantity: number; unit_price: number; inventory_transaction_id: string | null; created_at: string };
 export type SupplierPaymentMethod = "cash" | "check";
 export type SupplierPaymentRow = { id: string; purchase_order_id: string; supplier_id: string; method: SupplierPaymentMethod; bank_name: string | null; check_number: string | null; amount: number; payment_date: string; remarks: string | null; recorded_by: string; idempotency_key: string; command_payload: Json; created_at: string };
 export type SupplierPaymentVoidRow = { id: string; payment_id: string; reason: string; voided_by: string; created_at: string };
@@ -125,7 +129,7 @@ export type ProjectMaterialPlanRow = { id: string; project_id: string; project_s
 export type ProjectMaterialPlanView = { id: string; project_site_id: string; site_name: string; warehouse_id: string; warehouse_name: string; material_id: string; material_code: string; material_name: string; unit_symbol: string; planned_quantity: number; required_on: string; note: string; consumed_quantity: number; site_on_hand: number; warehouse_available: number; outstanding_request_quantity: number; quantity_to_request: number; procurement_shortage: number };
 export type ProjectMaterialEstimateView = { plan_line_id: string; unit_cost: number | null; price_source: "supplier" | "stock" | null; estimated_cost: number | null };
 export type WarehouseReceivableLine = { line_id: string; order_id: string; po_number: string; supplier_name: string; warehouse_id: string; warehouse_name: string; ordered_on: string; expected_on: string | null; material_code: string; material_name: string; unit_symbol: string; ordered_quantity: number; received_quantity: number; remaining_quantity: number; total_count: number };
-export type MaterialCostBatchRow = { location_id: string; location_name: string; location_type: "warehouse" | "project_site"; batch_number: number; batch_date: string; unit_cost: number; remaining_quantity: number; remaining_value: number; use_order: number };
+export type MaterialCostBatchRow = { location_id: string; location_name: string; location_type: "warehouse" | "project_site"; batch_number: number; batch_date: string; unit_cost: number; remaining_quantity: number; remaining_value: number; use_order: number; supplier_name: string | null };
 export type ProjectProgressRow = { id: string; project_id: string; project_site_id: string; daily_report_id: string; progress_date: string; completion_percent: number; summary: string; recorded_by: string; recorded_at: string };
 export type InventoryStockCountRow = { id: string; idempotency_key: string; material_id: string; inventory_location_id: string; expected_quantity: number; expected_reserved: number; expected_value: number; counted_quantity: number; reason_type: "physical_count" | "damaged" | "missing"; reason: string; status: "pending" | "approved" | "rejected"; counted_by: string; counted_at: string; decided_by: string | null; decided_at: string | null; decision_note: string | null; transaction_id: string | null };
 export type LegacyTransitValueRow = { id: string; transfer_item_id: string; verified_dispatched_total_cost: number; verified_received_total_cost: number; supporting_reference: string; reason: string; verified_by: string; verified_at: string; idempotency_key: string; command_payload: Json };
@@ -198,6 +202,8 @@ export type Database = {
       client_invoices: Table<ClientInvoiceRow, never>;
       client_payments: Table<ClientPaymentRow, never>;
       supplier_payments: Table<SupplierPaymentRow, never>;
+      site_purchases: Table<SitePurchaseRow, never>;
+      site_purchase_lines: Table<SitePurchaseLineRow, never>;
       supplier_payment_voids: Table<SupplierPaymentVoidRow, never>;
       client_payment_reversals: Table<ClientPaymentReversalRow, never>;
       purchase_orders: Table<PurchaseOrderRow, never>;
@@ -332,10 +338,15 @@ export type Database = {
       get_project_material_plan: { Args: { p_project_id: string }; Returns: ProjectMaterialPlanView[] };
       get_project_material_estimate: { Args: { p_project_id: string }; Returns: ProjectMaterialEstimateView[] };
       get_material_cost_batches: { Args: { p_material_id: string }; Returns: MaterialCostBatchRow[] };
+      get_site_purchase_suppliers: { Args: Record<string, never>; Returns: { id: string; supplier_name: string }[] };
+      submit_site_purchase: { Args: { p_idempotency_key: string; p_project_id: string; p_site_id: string; p_supplier_id: string | null; p_new_supplier_name: string | null; p_new_supplier_address: string | null; p_new_supplier_contact: string | null; p_receipt_number: string; p_receipt_date: string; p_paid_with: SitePurchasePaidWith; p_notes: string | null; p_lines: Json }; Returns: string };
+      approve_site_purchase: { Args: { p_purchase_id: string }; Returns: string };
+      reject_site_purchase: { Args: { p_purchase_id: string; p_reason: string }; Returns: string };
+      mark_site_purchase_reimbursed: { Args: { p_purchase_id: string; p_reimbursed_on: string; p_reference: string }; Returns: string };
       record_supplier_payment: { Args: { p_idempotency_key: string; p_order_id: string; p_method: SupplierPaymentMethod; p_bank_name: string | null; p_check_number: string | null; p_amount: number | string; p_payment_date: string; p_remarks?: string | null }; Returns: string };
       void_supplier_payment: { Args: { p_payment_id: string; p_reason: string }; Returns: string };
       get_purchase_order_payment_summaries: { Args: { p_order_ids: string[] }; Returns: { order_id: string; order_total: number; paid: number; balance: number }[] };
-      get_inventory_transaction_costs: { Args: { p_transaction_ids: string[] }; Returns: { transaction_id: string; cost_total: number | null; cost_unit: number | null }[] };
+      get_inventory_transaction_costs: { Args: { p_transaction_ids: string[] }; Returns: { transaction_id: string; cost_total: number | null; cost_unit: number | null; supplier_name: string | null }[] };
       get_asset_photo_paths: { Args: { p_asset_ids: string[] }; Returns: { asset_id: string; photo_path: string }[] };
       save_project_material_plan_line: { Args: { p_project_id: string; p_site_id: string; p_warehouse_id: string; p_material_id: string; p_quantity: number | string; p_required_on: string; p_note: string }; Returns: string };
       record_project_progress: { Args: { p_report_id: string; p_percent: number | string; p_summary: string }; Returns: string };

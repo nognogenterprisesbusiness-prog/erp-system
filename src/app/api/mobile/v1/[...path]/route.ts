@@ -19,6 +19,7 @@ import { authorizeMobileCommand } from "@/lib/mobile/authorization";
 import { readRecordPhoto } from "@/lib/media/read-record-photo";
 import { prepareRecordPhoto, saveRecordPhoto } from "@/lib/media/record-photo";
 import { storeEquipmentEvidence } from "@/lib/media/equipment-evidence";
+import { storeSitePurchaseReceipt } from "@/lib/media/site-purchase-receipt";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
@@ -31,6 +32,39 @@ export async function GET(request: Request, context: Context) {
   try {
     const { path } = await context.params;
     const { client, user } = await mobileContext(request, false);
+    if (path.length === 2 && path[0] === "site-purchases" && path[1] === "receipt") {
+      if (!request.headers.get("content-type")?.startsWith("multipart/form-data"))
+        throw new MobileError(415, "Send the purchase with a receipt photo.");
+      const bytes = await boundedBody(request, 3_200_000);
+      const form = await new Request(request.url, {
+        method: "POST",
+        headers: { "Content-Type": request.headers.get("content-type") ?? "" },
+        body: new Uint8Array(bytes).buffer,
+      }).formData();
+      let input: unknown;
+      try {
+        input = JSON.parse(String(form.get("command") ?? ""));
+      } catch {
+        throw new MobileError(400, "The purchase is invalid.");
+      }
+      const command = mobileCommandSchema.safeParse(input);
+      if (!command.success || command.data.action !== "submit-site-purchase")
+        throw new MobileError(422, "Review the store, receipt and items.");
+      await authorizeMobileCommand(client, command.data);
+      let receipt: Buffer | undefined;
+      try {
+        receipt = await prepareRecordPhoto(form.get("receipt"));
+      } catch {
+        throw new MobileError(422, "Choose a receipt photo under 3 MB.");
+      }
+      if (!receipt) throw new MobileError(422, "Add a photo of the receipt.");
+      try {
+        await storeSitePurchaseReceipt(client, user.id, command.data.input.idempotencyKey, receipt);
+      } catch {
+        throw new MobileError(503, "The receipt photo could not be uploaded. Retry this purchase.");
+      }
+      return success(await executeSiteCommand(client, command.data));
+    }
     if (path.length === 2 && path[0] === "profile" && path[1] === "photo") {
       if (!user.avatar_path) throw new MobileError(404, "Profile photo not found.");
       const photo = await client.storage.from("erp-profile-photos").download(user.avatar_path);

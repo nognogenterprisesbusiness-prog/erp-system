@@ -7,21 +7,28 @@ This guide shows what each account can do and walks through one complete project
 
 ---
 
-## How the work flows between accounts
+## Three ways material moves
+
+| # | When | Steps | Who |
+|---|---|---|---|
+| **1. Buy for the warehouse** | Bulk order from a supplier | Purchase → receive at warehouse → pay | Admin buys, Warehouse Staff receive, Finance or Admin pays |
+| **2. Take from the warehouse** | The site needs stock the warehouse has | Request → approve → release (truck, driver) → receive at site | Foreman or Engineer requests, Engineer approves, Warehouse Staff release, site receives |
+| **3. Buy at the hardware store** | The Engineer buys directly for the site | Record the purchase with the receipt photo → Admin or Finance approves → stock is added at the site | Engineer, then Admin or Finance |
+
+All three end the same way: the Foreman or Engineer **records what was used at the site**, and that is when the project is charged.
 
 ```mermaid
 flowchart LR
-    A["👤 Admin<br/>buys materials<br/>(purchase order)"] --> W1["📦 Warehouse Staff<br/>receives delivery<br/>into warehouse"]
-    W1 --> F1["👷 Foreman<br/>requests materials<br/>for the site"]
-    F1 --> E["🧑‍💼 Engineer<br/>approves request"]
-    E --> W2["📦 Warehouse Staff<br/>releases with vehicle<br/>and driver"]
-    W2 --> F2["👷 Foreman<br/>receives at site,<br/>records use"]
-    F2 --> R["📝 Daily report<br/>Foreman submits,<br/>Engineer reviews"]
-    F2 --> C["💰 Project cost<br/>charged automatically"]
-    C --> FI["💼 Finance<br/>invoices client,<br/>records payment"]
+    A["👤 Admin<br/>purchase order"] --> W["📦 Warehouse<br/>receives"]
+    W --> R["Request → approve<br/>→ release"]
+    R --> S["🏗️ Site stock"]
+    H["🧑‍💼 Engineer<br/>buys at hardware,<br/>receipt photo"] --> AP["💼 Admin or Finance<br/>approves"]
+    AP --> S
+    S --> U["👷 Record use"]
+    U --> C["💰 Project cost"]
 ```
 
-A request only lists materials that are in stock at the chosen warehouse. If something is missing, the Foreman or Engineer reports it to Admin, who buys it.
+A request only lists materials that are in stock. If an item is not in inventory at all, the Foreman or Engineer reports it to Admin, who adds it.
 
 ---
 
@@ -41,6 +48,8 @@ Admin invites everyone from **Users**. Engineers and Foremen only see projects t
 | View purchase orders, suppliers and prices | ✅ | ✅ | — | — | — |
 | Record supplier payments (cash or check) | ✅ | ✅ | — | — | — |
 | Void a supplier payment | ✅ | — | — | — | — |
+| Buy at a hardware store for the site (with receipt photo) | ✅ | — | ✅ | — | — |
+| Approve or reject a site purchase; mark it reimbursed | ✅ | ✅ | — | — | — |
 | Receive deliveries for a purchase order Admin issued | ✅ | — | — | — | ✅ |
 | Add stock without a purchase order | ✅ | — | — | — | — |
 | Request materials (in-stock only) | — | — | ✅ | ✅ | — |
@@ -63,7 +72,7 @@ Admin invites everyone from **Users**. Engineers and Foremen only see projects t
 Web · all projects and warehouses
 
 - **People:** invite Engineer, Foreman, Warehouse Staff and Finance accounts; deactivate accounts; add employees and labor rates; assign staff to projects and warehouses.
-- **Projects:** create, edit and archive projects and sites; upload, rename and delete documents on the **Documents** page (each project's Documents tab is view and download only); assign workers and site staff from the project's **Labour → Manage workers**; adjust budget; post other expenses; set equipment rates; reverse wrong entries with a reason.
+- **Projects:** create, edit and archive projects and sites; upload, rename and delete documents on the **Documents** page (each project's Documents tab is view and download only); set each site's Engineer and Foreman on the project's **Sites** tab; add workers in **Labour → Manage workers**; adjust budget; post other expenses; set equipment rates; reverse wrong entries with a reason.
 - **Inventory and purchasing:** add warehouses, materials, equipment and vehicles; add suppliers and prices; issue purchase orders; receive deliveries, including at a changed price with a reason; print QR labels.
 - **Approvals:** approve or reject any material request; resolve missing-material reports; approve, hand over and take back equipment; approve stock-count shortages.
 - **Money:** invoices and payments; void invoices and reverse payments (Admin only); profit and loss; PDF and Excel export.
@@ -72,14 +81,14 @@ Web · all projects and warehouses
 ### 💼 Finance — financing department
 Web · all projects, read-mostly
 
-- **Can:** see dashboard totals and costs for every project (materials, labor, equipment, other expenses, budget), including cost per material; view purchase orders, suppliers and price history; see stock at every location with its value, cost per stock movement and material price batches; export inventory with values; see labor rates and attendance cost; view equipment photos; issue client invoices; record client payments; export profit and loss.
+- **Can:** see dashboard totals and costs for every project (materials, labor, equipment, other expenses, budget), including cost per material; view purchase orders, suppliers and price history; see stock at every location with its value, cost per stock movement and material price batches; export inventory with values; see labor rates and attendance cost; approve or reject site purchases and mark them reimbursed; view equipment photos; issue client invoices; record client payments; export profit and loss.
 - **Cannot:** create or change purchase orders, suppliers or prices; receive deliveries or move stock; change budgets or rates; void invoices or reverse payments; manage users.
 
 ### 🧑‍💼 Engineer — site engineer
 Web and mobile · assigned projects only
 
-- **Can:** approve, partly approve or reject the Foreman's material requests; request in-stock materials; report a missing material; receive deliveries at site with a quality note; record materials used; review daily reports (approve or return); record project progress; request equipment; count site stock; download project documents; scan QR codes.
-- **Cannot:** approve their own request; request items not in inventory; see wages or rates; see other projects.
+- **Can:** approve, partly approve or reject the Foreman's material requests; request in-stock materials; report a missing material; receive deliveries at site with a quality note; record materials used; review daily reports (approve or return); record project progress; **record purchases made at a hardware store** with the receipt photo (web or phone); request equipment; count site stock; download project documents; scan QR codes.
+- **Cannot:** approve their own request or site purchase; request items not in inventory; see wages or rates; see other projects.
 
 ### 👷 Foreman — on site daily
 Mobile (main) and web · assigned projects only
@@ -165,6 +174,8 @@ sequenceDiagram
 | 7 | Engineer (phone) | Approve 40 of the 50 bags. | The Foreman cannot approve. |
 | 8 | Warehouse Staff | Release the 40 bags with vehicle, driver and delivery reference. | The request shows as released. |
 | 9 | Foreman (phone) | Receive 40 bags with a quality note. Record 20 bags used. Record attendance and equipment hours with two photos. | Site stock shows 20 left. |
+| 9a | Engineer (phone or web) | Open **Buy at hardware store / Site purchases**. Choose the site, pick **+ New store** and enter Ace Hardware with its address and contact number, receipt no. OR-1001, Cemento 10 bag × ₱260, paid with **Own money**, and take a photo of the receipt. Submit. | The purchase shows Waiting approval. Submitting the same receipt again is refused. |
+| 9b | Finance | Open **Site purchases**, open the purchase, check the receipt photo, **Approve**. Then **Mark reimbursed** with reference PCV-0001. | Site stock goes up by 10 bags. The material page's **Price batches** shows the ₱260 batch from Ace Hardware at the site. |
 | 10 | Foreman, then Engineer | Foreman creates and submits today's daily report. Engineer approves or returns it. | The report shows the day's material use, workers and equipment. |
 | 11 | Admin or Finance | Open the project's **Finance** tab. | Only the 20 bags used are charged, plus labor and equipment. |
 | 12 | Finance | Issue an invoice and record a partial payment. | Finance cannot void it; Admin can. |

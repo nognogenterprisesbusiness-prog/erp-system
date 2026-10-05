@@ -44,4 +44,27 @@ export const recordSupplierPaymentSchema = z.object({
 
 export const voidSupplierPaymentSchema = z.object({ paymentId: uuidSchema, reason: z.string().trim().min(3).max(500) });
 
+// Site purchase: the Engineer buys at a hardware store and records the receipt.
+// Pick an existing store, or enter a new store's name, address and contact number.
+export const sitePurchasePaidWith = ["company_cash", "own_money"] as const;
+export const submitSitePurchaseSchema = z.object({
+  idempotencyKey: uuidSchema,
+  projectId: uuidSchema,
+  siteId: uuidSchema,
+  supplierId: z.union([z.literal(""), uuidSchema]),
+  newSupplierName: z.string().trim().max(160),
+  newSupplierAddress: z.string().trim().max(300),
+  newSupplierContact: z.string().trim().max(40),
+  receiptNumber: z.string().trim().min(1, "Enter the receipt number").max(80),
+  receiptDate: z.iso.date(),
+  paidWith: z.enum(sitePurchasePaidWith),
+  notes: z.string().trim().max(500).optional().or(z.literal("")),
+  lines: z.array(purchaseOrderLineSchema).min(1).max(30),
+}).refine((value) => Boolean(value.supplierId) || (value.newSupplierName.length >= 2 && value.newSupplierAddress.length >= 3 && /^[0-9+() .-]{7,40}$/.test(value.newSupplierContact)),
+  { path: ["supplierId"], message: "Choose a store, or enter the new store's name, address and contact number" })
+  .refine((value) => new Set(value.lines.map((line) => line.materialId)).size === value.lines.length,
+    { path: ["lines"], message: "Choose each material once" });
+export const rejectSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reason: z.string().trim().min(3, "Enter a reason").max(500) });
+export const reimburseSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reimbursedOn: z.iso.date(), reference: z.string().trim().min(2, "Enter the reference").max(120) });
+
 export const cancelPurchaseOrderSchema = z.object({ orderId: uuidSchema, reason: z.string().trim().min(3).max(500) });

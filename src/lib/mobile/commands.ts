@@ -119,6 +119,20 @@ export async function executeSiteCommand(
       );
       return { id, message: "Equipment request submitted." };
     }
+    case "submit-site-purchase": {
+      const i = command.input;
+      const newStore = !i.supplierId;
+      const r = await client.rpc("submit_site_purchase", {
+        p_idempotency_key: i.idempotencyKey, p_project_id: i.projectId, p_site_id: i.siteId,
+        p_supplier_id: i.supplierId || null,
+        p_new_supplier_name: newStore ? i.newSupplierName : null, p_new_supplier_address: newStore ? i.newSupplierAddress : null,
+        p_new_supplier_contact: newStore ? i.newSupplierContact : null,
+        p_receipt_number: i.receiptNumber, p_receipt_date: i.receiptDate, p_paid_with: i.paidWith,
+        p_notes: i.notes || null, p_lines: i.lines,
+      });
+      if (r.error) databaseError(r.error);
+      return { id: r.data!, message: "Purchase submitted for approval." };
+    }
     case "record-equipment": {
       const i = command.input;
       const r = await client.rpc("post_project_equipment_usage_with_photos", {
