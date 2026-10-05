@@ -17,11 +17,12 @@ const postedMessages: Record<string, string> = {
 const statusStyle = { submitted: "bg-amber-50 text-amber-800", approved: "bg-emerald-50 text-emerald-700", rejected: "bg-slate-100 text-slate-600" } as const;
 const statusLabel = { submitted: "Waiting approval", approved: "Approved", rejected: "Rejected" } as const;
 
-export default async function SitePurchasePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ posted?: string }> }) {
+export default async function SitePurchasePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ posted?: string; action?: string }> }) {
   const user = await requireUser();
   if (!user.canManage && !user.canViewLaborRates && !user.roles.some((role) => role === "engineer" || role === "foreman")) notFound();
   const { id } = await params;
-  const posted = (await searchParams).posted;
+  const query = await searchParams;
+  const posted = query.posted;
   const data = await getSitePurchase(id);
   const { purchase } = data;
   const canDecide = user.canViewLaborRates;
@@ -42,9 +43,9 @@ export default async function SitePurchasePage({ params, searchParams }: { param
         </dl>
         {canDecide && purchase.status === "submitted" && <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
           <RecordCreateDialog title="Reject purchase" triggerLabel="Reject" triggerVariant="outline"><RejectSitePurchaseForm purchaseId={purchase.id} /></RecordCreateDialog>
-          <RecordCreateDialog title="Approve purchase" triggerLabel="Approve"><ApproveSitePurchaseForm purchaseId={purchase.id} total={data.total} /></RecordCreateDialog>
+          <RecordCreateDialog title="Approve purchase" triggerLabel="Approve" initialOpen={query.action === "approve"} closeHref={`/site-purchases/${id}`}><ApproveSitePurchaseForm purchaseId={purchase.id} total={data.total} /></RecordCreateDialog>
         </div>}
-        {canDecide && purchase.status === "approved" && purchase.paid_with === "own_money" && !purchase.reimbursed_on && <div className="mt-5 flex justify-end border-t border-slate-100 pt-4"><RecordCreateDialog title="Mark reimbursed" triggerLabel="Mark reimbursed" triggerVariant="outline"><ReimburseSitePurchaseForm purchaseId={purchase.id} today={today} /></RecordCreateDialog></div>}
+        {canDecide && purchase.status === "approved" && purchase.paid_with === "own_money" && !purchase.reimbursed_on && <div className="mt-5 flex justify-end border-t border-slate-100 pt-4"><RecordCreateDialog title="Mark reimbursed" triggerLabel="Mark reimbursed" triggerVariant="outline" initialOpen={query.action === "reimburse"} closeHref={`/site-purchases/${id}`}><ReimburseSitePurchaseForm purchaseId={purchase.id} today={today} /></RecordCreateDialog></div>}
       </div>
       <a href={`/site-purchases/${purchase.id}/receipt`} target="_blank" rel="noopener" className="block overflow-hidden rounded-xl border border-slate-200 bg-slate-50" title="Open receipt photo">
         {/* eslint-disable-next-line @next/next/no-img-element -- private, authenticated photo route */}
