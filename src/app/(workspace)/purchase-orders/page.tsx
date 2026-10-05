@@ -18,25 +18,10 @@ import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { randomUUID } from "node:crypto";
 import { uuidSchema } from "@nognog/domain";
 import { todayInManila } from "@/lib/date";
-import type { PurchaseLineRow } from "@/types/database";
+import { PurchaseWorkflowCell } from "@/components/purchase-orders/purchase-workflow-cell";
 
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 
-const deliveryBadge: Record<PurchaseLineRow["delivery_stage"], { label: string; className: string }> = {
-  waiting_approval: { label: "Waiting approval", className: "bg-amber-50 text-amber-800" },
-  ordered: { label: "Ordered", className: "bg-slate-100 text-slate-700" },
-  partly_received: { label: "Partly received", className: "bg-sky-50 text-sky-800" },
-  received: { label: "Received", className: "bg-emerald-50 text-emerald-700" },
-  rejected: { label: "Rejected", className: "bg-slate-100 text-slate-500" },
-  cancelled: { label: "Cancelled", className: "bg-slate-100 text-slate-500" },
-};
-const paymentBadge: Record<PurchaseLineRow["payment_stage"], { label: string; className: string } | null> = {
-  unpaid: { label: "Unpaid", className: "bg-amber-50 text-amber-800" },
-  partly_paid: { label: "Partly paid", className: "bg-sky-50 text-sky-800" },
-  paid: { label: "Paid", className: "bg-emerald-50 text-emerald-700" },
-  to_reimburse: { label: "To reimburse", className: "bg-amber-50 text-amber-800" },
-  none: null,
-};
 const quantity = (value: number) => Number(value).toLocaleString("en-PH", { maximumFractionDigits: 4 });
 
 export default async function PurchaseOrdersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -52,11 +37,11 @@ export default async function PurchaseOrdersPage({ searchParams }: { searchParam
   const quantity = typeof params.quantity === "string" && /^\d+(\.\d{1,4})?$/.test(params.quantity) && Number(params.quantity) > 0 ? params.quantity : undefined;
   const pageHref = (target: number) => `/purchase-orders?${new URLSearchParams({ ...(query ? { q: query } : {}), page: String(target) })}`;
   return <>
-    <PageHeader eyebrow="Purchasing" title="Purchases" description="Every item bought, by supplier: purchase orders and site purchases, with delivery and payment." action={user.canManage && <Button asChild><Link href="/purchase-orders?create=1"><HugeiconsIcon icon={PlusSignIcon} size={17} />Add purchase</Link></Button>} />
+    <PageHeader eyebrow="Purchasing & suppliers" title="Purchasing by Supplier" description="Every purchased item, with its supplier, delivery and payment history." action={user.canManage && <Button asChild><Link href="/purchase-orders?create=1"><HugeiconsIcon icon={PlusSignIcon} size={17} />Add supplier items</Link></Button>} />
     {choices && <RecordCreateDialog title="Add purchase" initialOpen hideTrigger closeHref={pageHref(page)}>{choices.suppliers.length && choices.warehouses.length ? <IssuePurchaseOrderForm choices={choices} idempotencyKey={randomUUID()} today={todayInManila()} initialMaterialId={material.success ? material.data : undefined} initialWarehouseId={warehouse.success && choices.warehouses.some((item) => item.id === warehouse.data) ? warehouse.data : undefined} initialQuantity={quantity} /> : <EmptyState title="Supplier or warehouse missing" description="Add an active supplier and warehouse first." />}</RecordCreateDialog>}
     <Suspense fallback={<div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map((n) => <div key={n} className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white" />)}</div>}><PurchaseSummary summaryPromise={summaryPromise} /></Suspense>
     <ListFilterBar><SearchField key={query} name="q" label="Search purchases" defaultValue={query} placeholder="Search item, supplier, purchase no. or location" /></ListFilterBar>
-    <Suspense key={`${query}:${page}`} fallback={<TableSkeleton columns={8} filters={0} />}><PurchaseLineResults resultPromise={resultPromise} pageHref={pageHref} canManage={user.canManage} canViewFinance={user.canViewLaborRates} /></Suspense>
+    <Suspense key={`${query}:${page}`} fallback={<TableSkeleton columns={7} filters={0} />}><PurchaseLineResults resultPromise={resultPromise} pageHref={pageHref} canManage={user.canManage} canViewFinance={user.canViewLaborRates} /></Suspense>
   </>;
 }
 
@@ -72,23 +57,12 @@ async function PurchaseSummary({ summaryPromise }: { summaryPromise: ReturnType<
 
 async function PurchaseLineResults({ resultPromise, pageHref, canManage, canViewFinance }: { resultPromise: ReturnType<typeof getPurchaseLines>; pageHref: (page: number) => string; canManage: boolean; canViewFinance: boolean }) {
   const result = await resultPromise;
+  const today = todayInManila();
   return <>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No purchases found" description="Add a purchase, or change the search." /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} item{result.count === 1 ? "" : "s"}</span>}>
       <table className="w-full min-w-[1160px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Item · purchase</th><th className="px-4 py-3">Quantity</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Unit price</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Location</th><th className="px-5 py-3">Workflow stage / action</th></tr></thead>
         <tbody className="divide-y divide-slate-100">{result.rows.map((row) => {
-          const delivery = deliveryBadge[row.delivery_stage];
-          const payment = paymentBadge[row.payment_stage];
           const href = row.source === "purchase_order" ? `/purchase-orders/${row.purchase_id}` : `/site-purchases/${row.purchase_id}`;
-          const actions = row.source === "purchase_order"
-            ? [
-                ...(canManage && ["ordered", "partly_received"].includes(row.delivery_stage) ? [{ label: "Receive", href: `${href}?action=receive&line=${row.line_id}` }] : []),
-                ...(canViewFinance && ["unpaid", "partly_paid"].includes(row.payment_stage) ? [{ label: "Record payment", href: `${href}?action=payment` }] : []),
-              ]
-            : row.delivery_stage === "waiting_approval" && canViewFinance
-              ? [{ label: "Review", href: `${href}?action=approve` }]
-              : row.payment_stage === "to_reimburse" && canViewFinance
-                ? [{ label: "Reimburse", href: `${href}?action=reimburse` }]
-                : [];
           return <tr key={`${row.source}:${row.line_id}`} className="hover:bg-slate-50/70">
             <td className="px-5 py-4"><p className="font-semibold text-slate-900">{row.material_name}</p><Link href={href} className="text-xs text-cyan-700 hover:underline">{row.purchase_number}</Link><span className="text-xs text-slate-500"> · {row.purchase_date}</span></td>
             <td className="px-4 py-4 tabular-nums">{quantity(row.quantity)} {row.unit_symbol}{row.delivery_stage === "partly_received" && <p className="text-xs text-slate-500">{quantity(row.received_quantity)} received</p>}</td>
@@ -96,7 +70,7 @@ async function PurchaseLineResults({ resultPromise, pageHref, canManage, canView
             <td className="px-4 py-4 tabular-nums">{peso.format(Number(row.unit_price))}</td>
             <td className="px-4 py-4 font-semibold tabular-nums">{peso.format(Number(row.line_total))}</td>
             <td className="px-4 py-4 text-slate-600">{row.location_name ?? "—"}</td>
-            <td className="px-5 py-4"><div className="flex flex-wrap gap-1.5 text-xs"><span className={`rounded-full px-2.5 py-1 font-semibold ${delivery.className}`}>{delivery.label}</span>{payment && <span className={`rounded-full px-2.5 py-1 font-semibold ${payment.className}`}>{payment.label}</span>}</div>{actions.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{actions.map((action) => <Button key={action.label} size="sm" variant={action.label === "Receive" || action.label === "Record payment" ? "outline" : "ghost"} asChild><Link href={action.href} aria-label={`${action.label} for ${row.purchase_number} · ${row.material_name}`}>{action.label}</Link></Button>)}</div>}</td>
+            <td className="px-5 py-4"><PurchaseWorkflowCell row={row} canManage={canManage} canViewFinance={canViewFinance} paymentBalance={row.paymentBalance} today={today} /></td>
           </tr>;
         })}</tbody></table>
     </DataTableShell>

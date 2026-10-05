@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import { PlusSignIcon, Remove01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cancelPurchaseOrderAction, issuePurchaseOrderAction, receivePurchaseOrderLineAction, receiveWarehouseDeliveryAction, recordSupplierPaymentAction, voidSupplierPaymentAction, type PurchaseActionState } from "@/app/(workspace)/purchase-orders/actions";
@@ -109,18 +109,20 @@ export function CancelPurchaseOrderForm({ orderId }: { orderId: string }) {
 // postdated) with bank, check number, amount and date.
 export function RecordSupplierPaymentForm({ orderId, balance, idempotencyKey, today }: { orderId: string; balance: number; idempotencyKey: string; today: string }) {
   const [state, action, pending] = useActionState(recordSupplierPaymentAction, initialState);
+  const formId = useId();
+  const fieldId = (field: string) => `${formId}-${field}`;
   const [method, setMethod] = useState<"cash" | "check">("check");
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="orderId" value={orderId} /><input type="hidden" name="idempotencyKey" value={idempotencyKey} /><input type="hidden" name="method" value={method} />
-    <FormField label="Term" htmlFor="paymentMethod" className="sm:col-span-2"><SelectPicker id="paymentMethod" label="Term" value={method} onValueChange={(next) => setMethod(next as "cash" | "check")} options={[{ value: "check", label: "Check (postdated or dated)" }, { value: "cash", label: "Cash" }]} /></FormField>
+    <FormField label="Term" htmlFor={fieldId("paymentMethod")} className="sm:col-span-2"><SelectPicker id={fieldId("paymentMethod")} label="Term" value={method} onValueChange={(next) => setMethod(next as "cash" | "check")} options={[{ value: "check", label: "Check (postdated or dated)" }, { value: "cash", label: "Cash" }]} /></FormField>
     {method === "check" && <>
-      <FormField label="Bank" htmlFor="bankName" error={error("bankName")}><input id="bankName" name="bankName" className={fieldControlClass} maxLength={80} placeholder="e.g. Metrobank" required /></FormField>
-      <FormField label="Check no." htmlFor="checkNumber" error={error("checkNumber")}><input id="checkNumber" name="checkNumber" className={fieldControlClass} maxLength={40} placeholder="e.g. 123456" required /></FormField>
+      <FormField label="Bank" htmlFor={fieldId("bankName")} error={error("bankName")}><input id={fieldId("bankName")} name="bankName" className={fieldControlClass} maxLength={80} placeholder="e.g. Metrobank" required /></FormField>
+      <FormField label="Check no." htmlFor={fieldId("checkNumber")} error={error("checkNumber")}><input id={fieldId("checkNumber")} name="checkNumber" className={fieldControlClass} maxLength={40} placeholder="e.g. 123456" required /></FormField>
     </>}
-    <FormField label="Amount (PHP)" htmlFor="paymentAmount" error={error("amount")} hint={`Unpaid balance ${peso.format(balance)}`}><input id="paymentAmount" name="amount" inputMode="decimal" className={fieldControlClass} defaultValue={balance > 0 ? balance.toFixed(2) : ""} required /></FormField>
-    <FormField label={method === "check" ? "Check date" : "Payment date"} htmlFor="paymentDate" error={error("paymentDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="paymentDate" name="paymentDate" label={method === "check" ? "Check date" : "Payment date"} defaultValue={today} allowClear={false} required /></FormField>
-    <FormField label="Note (optional)" htmlFor="paymentRemarks" className="sm:col-span-2" error={error("remarks")}><input id="paymentRemarks" name="remarks" className={fieldControlClass} maxLength={500} /></FormField>
+    <FormField label="Amount (PHP)" htmlFor={fieldId("paymentAmount")} error={error("amount")} hint={`Unpaid balance ${peso.format(balance)}`}><input id={fieldId("paymentAmount")} name="amount" inputMode="decimal" className={fieldControlClass} defaultValue={balance > 0 ? balance.toFixed(2) : ""} required /></FormField>
+    <FormField label={method === "check" ? "Check date" : "Payment date"} htmlFor={fieldId("paymentDate")} error={error("paymentDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id={fieldId("paymentDate")} name="paymentDate" label={method === "check" ? "Check date" : "Payment date"} defaultValue={today} allowClear={false} required /></FormField>
+    <FormField label="Note (optional)" htmlFor={fieldId("paymentRemarks")} className="sm:col-span-2" error={error("remarks")}><input id={fieldId("paymentRemarks")} name="remarks" className={fieldControlClass} maxLength={500} /></FormField>
     {state.message && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{state.message}</p>}
     <div className="sm:col-span-2"><RecordFormControls busy={pending} disabled={balance <= 0} label="Save payment" /></div>
   </form>;

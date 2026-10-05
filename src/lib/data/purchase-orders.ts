@@ -14,8 +14,13 @@ export async function getPurchaseLines({ page = 1, query = "" }: { page?: number
   const { data, error } = await supabase.rpc("get_purchase_lines", { p_search: safeSearchTerm(query), p_offset: (currentPage - 1) * PAGE_SIZE, p_limit: PAGE_SIZE });
   if (error) throw new Error("Unable to load purchases.", { cause: error });
   const rows = data ?? [];
+  const orderIds = [...new Set(rows.filter((row) => row.source === "purchase_order").map((row) => row.purchase_id))];
+  const summaries = orderIds.length ? await supabase.rpc("get_purchase_order_payment_summaries", { p_order_ids: orderIds }) : null;
+  if (summaries?.error) throw new Error("Unable to load purchase payment balances.", { cause: summaries.error });
+  const balances = new Map((summaries?.data ?? []).map((order) => [order.order_id, Number(order.balance)]));
+  if (orderIds.some((id) => !balances.has(id))) throw new Error("A purchase payment balance is unavailable. Refresh purchases.");
   const count = Number(rows[0]?.total_count ?? 0);
-  return { rows, count, page: currentPage, pageCount: Math.max(1, Math.ceil(count / PAGE_SIZE)) };
+  return { rows: rows.map((row) => ({ ...row, paymentBalance: row.source === "purchase_order" ? balances.get(row.purchase_id)! : null })), count, page: currentPage, pageCount: Math.max(1, Math.ceil(count / PAGE_SIZE)) };
 }
 
 export async function getPurchaseSummary() {

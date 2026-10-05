@@ -12,8 +12,8 @@
 html { scroll-behavior: smooth; scrollbar-gutter: stable; }
 body { margin: 0; font-family: var(--font-sans); }
 button, a, input, summary { -webkit-tap-highlight-color: transparent; }
-table thead th { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: none; }
-table tbody > tr > td { font-size: 0.875rem; }
+table thead th { font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
+table tbody > tr > td { font-size: 0.875rem; line-height: 1.25rem; }
 table :is(th, td) { text-align: left; }
 
 html[data-theme="dark"] {
