@@ -13,9 +13,9 @@ Simplify entry points instead of deleting stock, costing, history or payment fea
 | Purchasing | Warehouse POs, supplier payments, Engineer site purchases and receipt approval |
 | Suppliers | Store details, purchase history and Compare prices |
 
-Move Categories, Asset classifications, Users and Audit logs into their respective setup screens or an Administration/Settings area. Put QR scanning in Inventory and Requests as a contextual action. Put Documents under a project, with the existing global document management screen available from Projects. Staff/attendance navigation belongs under project Labour or a People workspace when relevant. Billing remains in Finance; it is a quoted feature and should not be deleted merely because the current discussion focuses on materials. These are recommendations, not applied navigation removals.
+Implemented on 7 October: the role-filtered sidebar keeps the six day-to-day workspaces together, while project, inventory, purchasing, people and administration tools start in collapsed groups. Common Engineer site purchases and Warehouse receiving stay in the main work group; Finance keeps Billing & payments there. Low-frequency categories and audit/user tools are separated, and category labels now identify their subject. No underlying page or business capability was removed.
 
-Role menus should follow real work:
+Role menus now follow the primary tasks while retaining secondary links:
 
 - Warehouse Staff: Inventory, Requests, Receive deliveries and Warehouses. Receiving is daily work and should remain prominent for this role.
 - Engineer: My projects/sites, Requests, Site purchases and Daily reports; site stock/use are contextual project actions.

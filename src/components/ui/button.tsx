@@ -14,10 +14,10 @@ const buttonVariants = cva(
         ghost: "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 px-3 text-xs",
+        default: "h-11 px-4 py-2 sm:h-10",
+        sm: "h-11 px-3 text-sm sm:h-9 sm:text-xs",
         lg: "h-12 px-5",
-        icon: "size-10",
+        icon: "size-11 sm:size-10",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

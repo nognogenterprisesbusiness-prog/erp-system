@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import { IntentLink as Link } from "./intent-link";
 import { usePathname } from "next/navigation";
 import { ArrowDown01Icon, Cancel01Icon, Menu01Icon, PanelLeftCloseIcon, PanelLeftOpenIcon, Settings01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
-import { Button } from "@/components/ui/button";
 import { AccountAvatar } from "@/components/ui/account-avatar";
 import { HistoryLink } from "@/components/layout/history-link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -18,7 +17,7 @@ type FooterAction = { label: string; icon: IconSvgElement; onClick: () => void }
 type NavigationMode = "client" | "document" | "history";
 
 function SidebarLink({ item, active, compact, navigationMode, onNavigate }: { item: ShellNavItem; active: boolean; compact: boolean; navigationMode: NavigationMode; onNavigate?: () => void }) {
-  const className = cn("flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400", item.nested && !compact && "pl-10 text-[13px]", compact && "justify-center px-0", active ? "bg-cyan-400/12 font-medium text-cyan-200" : "hover:bg-white/6 hover:text-white");
+  const className = cn("flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:min-h-10", item.nested && !compact && "pl-10", compact && "justify-center px-0", active ? "bg-cyan-400/12 font-medium text-cyan-200" : "hover:bg-white/6 hover:text-white");
   const content = <><HugeiconsIcon icon={item.icon} size={item.nested ? 16 : 19} strokeWidth={1.7} className="shrink-0" /><span className={compact ? "sr-only" : "truncate"}>{item.label}</span></>;
   return navigationMode === "document"
     ? <a href={item.href} onClick={onNavigate} aria-current={active ? "page" : undefined} aria-label={compact ? item.label : undefined} title={compact ? item.label : undefined} className={className}>{content}</a>
@@ -45,7 +44,7 @@ function Sidebar({ items, footerItems = [], footerAction, homeHref, pathname, na
         const expanded = compact || !collapsedGroups.includes(group);
         const panelId = `${navigationId}-group-${index}`;
         return <section key={group} aria-label={group}>
-          {compact ? <p className="sr-only">{group}</p> : <button type="button" aria-expanded={expanded} aria-controls={panelId} onClick={() => onToggleGroup(group)} className="mb-2 flex min-h-9 w-full items-center justify-between gap-2 rounded-lg px-3 text-left text-xs font-medium text-slate-400 hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400">
+          {compact ? <p className="sr-only">{group}</p> : <button type="button" aria-expanded={expanded} aria-controls={panelId} onClick={() => onToggleGroup(group)} className="mb-2 flex min-h-11 w-full items-center justify-between gap-2 rounded-lg px-3 text-left text-sm font-medium text-slate-300 hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:min-h-9">
             <span>{group}</span><HugeiconsIcon icon={ArrowDown01Icon} size={15} strokeWidth={1.7} className={cn("shrink-0 transition-transform motion-reduce:transition-none", !expanded && "-rotate-90")} />
           </button>}
           <div id={panelId} hidden={!expanded} className="space-y-1">{items.filter((item) => (item.group ?? "Workspace") === group).map((item) => <SidebarLink key={item.href} item={item} active={(pathname === item.href || (item.href !== homeHref && pathname.startsWith(`${item.href}/`))) && !items.some((other) => other.href !== item.href && other.href.length > item.href.length && (pathname === other.href || pathname.startsWith(`${other.href}/`)))} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}</div>
@@ -53,7 +52,7 @@ function Sidebar({ items, footerItems = [], footerAction, homeHref, pathname, na
       })}</div>
     </nav>
     {(footerItems.length > 0 || footerAction) && <nav className="mt-5 border-t border-white/10 pt-5" aria-label="Support and account">
-      {footerItems.length > 0 && !compact && <button type="button" aria-expanded={!collapsedGroups.includes("Settings")} aria-controls={`${navigationId}-settings`} onClick={() => onToggleGroup("Settings")} className="flex h-10 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-sm font-normal hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"><span className="flex items-center gap-3"><HugeiconsIcon icon={Settings01Icon} size={19} strokeWidth={1.7} />Settings</span><HugeiconsIcon icon={ArrowDown01Icon} size={15} strokeWidth={1.7} className={cn("transition-transform motion-reduce:transition-none", collapsedGroups.includes("Settings") && "-rotate-90")} /></button>}
+      {footerItems.length > 0 && !compact && <button type="button" aria-expanded={!collapsedGroups.includes("Settings")} aria-controls={`${navigationId}-settings`} onClick={() => onToggleGroup("Settings")} className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-3 text-left text-sm font-normal hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:min-h-10"><span className="flex items-center gap-3"><HugeiconsIcon icon={Settings01Icon} size={19} strokeWidth={1.7} />Account & help</span><HugeiconsIcon icon={ArrowDown01Icon} size={15} strokeWidth={1.7} className={cn("transition-transform motion-reduce:transition-none", collapsedGroups.includes("Settings") && "-rotate-90")} /></button>}
       <div id={`${navigationId}-settings`} hidden={!compact && collapsedGroups.includes("Settings")} className={cn("space-y-1", !compact && "pl-3")}>
         {footerItems.map((item) => <SidebarLink key={item.href} item={item} active={pathname === item.href} compact={compact} navigationMode={navigationMode} onNavigate={onNavigate} />)}
       </div>
@@ -88,7 +87,14 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<string[]>(() => ["/profile", "/notifications", "/help"].includes(pathname) ? [] : ["Settings"]);
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>(() => {
+    const activeItem = items.filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)).sort((left, right) => right.href.length - left.href.length)[0];
+    const activeGroup = activeItem?.group ?? (["/profile", "/notifications", "/help"].includes(pathname) ? "Settings" : undefined);
+    return ["Project tools", "Inventory tools", "Purchasing tools", "People", "Administration", "Settings"].filter((group) => group !== activeGroup);
+  });
+  const mobileNavigation = useRef<HTMLDivElement>(null);
+  const mobileNavigationTrigger = useRef<HTMLButtonElement>(null);
+  const mobileNavigationClose = useRef<HTMLButtonElement>(null);
   function toggleGroup(group: string) {
     setCollapsedGroups((current) => current.includes(group) ? current.filter((item) => item !== group) : [...current, group]);
   }
@@ -100,11 +106,27 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
   }, []);
   useEffect(() => {
     if (!sidebarOpen) return;
+    const trigger = mobileNavigationTrigger.current;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setSidebarOpen(false); };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener("keydown", closeOnEscape); };
+    const firstLink = mobileNavigation.current?.querySelector<HTMLElement>('nav[aria-label="Main navigation"] a[href]');
+    (firstLink ?? mobileNavigationClose.current)?.focus();
+    const closeOnKeyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setSidebarOpen(false); return; }
+      if (event.key !== "Tab" || !mobileNavigation.current) return;
+      const focusable = Array.from(mobileNavigation.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')).filter((element) => element.getClientRects().length > 0);
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && (document.activeElement === first || !mobileNavigation.current.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !mobileNavigation.current.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", closeOnKeyboard);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnKeyboard);
+      if (trigger?.isConnected) trigger.focus();
+    };
   }, [sidebarOpen]);
   useEffect(() => {
     const closeOtherHeaderMenus = (event: Event) => {
@@ -128,13 +150,13 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
   return <div className="min-h-svh bg-[#f5f6f8] text-[#07152d]">
     {banner ? <div className="sticky top-0 z-50">{banner}</div> : null}
     <div className={cn("fixed bottom-0 left-0 z-40 hidden transition-[width] duration-200 lg:block", banner ? "top-11" : "top-0", sidebarCollapsed ? "w-[76px]" : "w-[264px]")}><Sidebar collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} items={items} footerItems={footerItems} footerAction={footerAction} homeHref={homeHref} pathname={activeHref ?? pathname} navigationMode={navigationMode} compact={sidebarCollapsed} onToggle={toggleSidebar} /></div>
-    {sidebarOpen && <div role="dialog" aria-modal="true" aria-label="Navigation" className="fixed inset-0 z-50 lg:hidden">
-      <button className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />
-      <div className="relative h-full w-[min(88vw,280px)] shadow-2xl"><Sidebar collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} items={items} footerItems={footerItems} footerAction={footerAction} homeHref={homeHref} pathname={activeHref ?? pathname} navigationMode={navigationMode} onNavigate={() => setSidebarOpen(false)} /><button onClick={() => setSidebarOpen(false)} aria-label="Close navigation" className="absolute right-3 top-4 grid size-9 place-items-center rounded-lg text-slate-300 hover:bg-white/10"><HugeiconsIcon icon={Cancel01Icon} size={20} /></button></div>
+    {sidebarOpen && <div ref={mobileNavigation} role="dialog" aria-modal="true" aria-label="Navigation" className="fixed inset-0 z-50 lg:hidden">
+      <button type="button" tabIndex={-1} className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" aria-label="Close navigation" onClick={() => setSidebarOpen(false)} />
+      <div className="relative h-full w-[min(88vw,320px)] shadow-2xl"><Sidebar collapsedGroups={collapsedGroups} onToggleGroup={toggleGroup} items={items} footerItems={footerItems} footerAction={footerAction} homeHref={homeHref} pathname={activeHref ?? pathname} navigationMode={navigationMode} onNavigate={() => setSidebarOpen(false)} /><button ref={mobileNavigationClose} type="button" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" className="absolute right-3 top-4 grid size-11 place-items-center rounded-lg text-slate-300 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"><HugeiconsIcon icon={Cancel01Icon} size={20} /></button></div>
     </div>}
     <div className={cn("transition-[padding] duration-200", sidebarCollapsed ? "lg:pl-[76px]" : "lg:pl-[264px]")}>
       <header className={cn("sticky z-30 flex h-16 items-center border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-xl sm:px-6 xl:px-8", banner ? "top-11" : "top-0")}>
-        <Button variant="ghost" size="icon" className="mr-2 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><HugeiconsIcon icon={Menu01Icon} size={21} /></Button>
+        <button ref={mobileNavigationTrigger} type="button" className="mr-2 grid size-11 shrink-0 place-items-center rounded-full text-slate-600 hover:bg-slate-100 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 lg:hidden" onClick={() => setSidebarOpen(true)} aria-label="Open navigation"><HugeiconsIcon icon={Menu01Icon} size={21} /></button>
         {headerSearch ? <div className="min-w-0 max-w-[320px] flex-1">{headerSearch}</div> : null}
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <ThemeToggle />

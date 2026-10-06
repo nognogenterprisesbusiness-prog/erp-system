@@ -14,32 +14,38 @@ import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { href: "/dashboard", label: "Overview", icon: DashboardSquare01Icon, group: "Projects & operations" },
-  { href: "/projects", label: "Projects", icon: Building03Icon, group: "Projects & operations" },
-  { href: "/documents", label: "Documents", icon: File02Icon, reports: true, group: "Projects & operations" },
-  { href: "/reports/daily", label: "Daily reports", icon: FilePenLineIcon, reports: true, group: "Projects & operations" },
-  { href: "/inventory", label: "Inventory", icon: Package01Icon, group: "Materials & assets" },
-  { href: "/warehouses", label: "Warehouses", icon: WarehouseIcon, group: "Materials & assets" },
-  { href: "/requests", label: "Requests", icon: AssignmentsIcon, requests: true, group: "Materials & assets" },
-  { href: "/purchase-orders/receive", label: "Receive deliveries", icon: PackageReceiveIcon, receiving: true, group: "Materials & assets" },
-  { href: "/equipment/categories", label: "Asset classifications", icon: Tag01Icon, manager: true, nested: true, group: "Materials & assets" },
-  { href: "/qr-codes", label: "QR tools", icon: QrCodeIcon, group: "Materials & assets" },
-  { href: "/purchase-orders", label: "Purchases", icon: ShoppingCart01Icon, procurement: true, group: "Purchasing & finance" },
-  { href: "/suppliers", label: "Suppliers", icon: Store02Icon, procurement: true, group: "Purchasing & finance" },
-  { href: "/suppliers/prices", label: "Compare prices", icon: SearchDollarIcon, procurement: true, nested: true, group: "Purchasing & finance" },
-  { href: "/suppliers/categories", label: "Categories", icon: Tag01Icon, manager: true, nested: true, group: "Purchasing & finance" },
-  { href: "/site-purchases", label: "Site purchases", icon: Invoice01Icon, sitePurchases: true, group: "Purchasing & finance" },
-  { href: "/billing", label: "Billing & payments", icon: File02Icon, finance: true, group: "Purchasing & finance" },
-  { href: "/employees", label: "Employees", icon: UserGroupIcon, group: "People & administration" },
-  { href: "/attendance", label: "Attendance", icon: AssignmentsIcon, finance: true, nested: true, group: "People & administration" },
-  { href: "/employees/categories", label: "Categories", icon: Tag01Icon, manager: true, nested: true, group: "People & administration" },
-  { href: "/users", label: "Users", icon: UserGroupIcon, manager: true, group: "People & administration" },
-  { href: "/audit-logs", label: "Audit logs", icon: Audit01Icon, manager: true, group: "People & administration" },
+  { href: "/dashboard", label: "Overview", icon: DashboardSquare01Icon, group: "Main work" },
+  { href: "/projects", label: "Projects", icon: Building03Icon, group: "Main work" },
+  { href: "/inventory", label: "Inventory", icon: Package01Icon, group: "Main work" },
+  { href: "/requests", label: "Requests", icon: AssignmentsIcon, requests: true, group: "Main work" },
+  { href: "/purchase-orders", label: "Purchasing", icon: ShoppingCart01Icon, procurement: true, group: "Main work" },
+  { href: "/suppliers", label: "Suppliers", icon: Store02Icon, procurement: true, group: "Main work" },
+  { href: "/site-purchases", label: "Site purchases", icon: Invoice01Icon, sitePurchases: true, quickSitePurchase: true, group: "Main work" },
+  { href: "/purchase-orders/receive", label: "Receive deliveries", icon: PackageReceiveIcon, receiving: true, quickReceiving: true, group: "Main work" },
+  { href: "/billing", label: "Billing & payments", icon: File02Icon, finance: true, group: "Main work" },
+  { href: "/documents", label: "Project documents", icon: File02Icon, reports: true, group: "Project tools" },
+  { href: "/reports/daily", label: "Daily reports", icon: FilePenLineIcon, reports: true, group: "Project tools" },
+  { href: "/warehouses", label: "Warehouses", icon: WarehouseIcon, group: "Inventory tools" },
+  { href: "/qr-codes", label: "QR tools", icon: QrCodeIcon, group: "Inventory tools" },
+  { href: "/equipment/categories", label: "Asset classifications", icon: Tag01Icon, manager: true, group: "Inventory tools" },
+  { href: "/suppliers/prices", label: "Compare supplier prices", icon: SearchDollarIcon, procurement: true, group: "Purchasing tools" },
+  { href: "/suppliers/categories", label: "Supplier categories", icon: Tag01Icon, manager: true, group: "Purchasing tools" },
+  { href: "/site-purchases", label: "Site purchases", icon: Invoice01Icon, financeSitePurchase: true, group: "Purchasing tools" },
+  { href: "/employees", label: "Employees", icon: UserGroupIcon, group: "People" },
+  { href: "/attendance", label: "Attendance", icon: AssignmentsIcon, finance: true, group: "People" },
+  { href: "/employees/categories", label: "Employee categories", icon: Tag01Icon, manager: true, group: "People" },
+  { href: "/users", label: "User access", icon: UserGroupIcon, manager: true, group: "Administration" },
+  { href: "/audit-logs", label: "Audit history", icon: Audit01Icon, manager: true, group: "Administration" },
 ] as const;
 
 export function WorkspaceShell({ children, userId, name, avatar, roleLabel, canViewProcurement, canViewFinance, canViewDailyReports, canViewRequests, canDispatchRequests, canManage, canSubmitSitePurchases }: { children: React.ReactNode; userId: string; name: string; avatar?: string; roleLabel: string; canViewProcurement: boolean; canViewFinance: boolean; canViewDailyReports: boolean; canViewRequests: boolean; canDispatchRequests: boolean; canManage: boolean; canSubmitSitePurchases: boolean }) {
   const pathname = usePathname();
-  const items = navItems.filter((item) => (!("procurement" in item) || canViewProcurement) && (!("finance" in item) || canViewFinance) && (!("reports" in item) || canViewDailyReports) && (!("requests" in item) || canViewRequests || canDispatchRequests) && (!("receiving" in item) || (canDispatchRequests && !canManage)) && (!("sitePurchases" in item) || canViewFinance || canSubmitSitePurchases) && (!("manager" in item) || canManage)).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item);
+  const items = navItems.filter((item) => {
+    if ("quickReceiving" in item) return canDispatchRequests && !canManage;
+    if ("quickSitePurchase" in item) return canSubmitSitePurchases && !canManage;
+    if ("financeSitePurchase" in item) return canViewFinance;
+    return (!("procurement" in item) || canViewProcurement) && (!("finance" in item) || canViewFinance) && (!("reports" in item) || canViewDailyReports) && (!("requests" in item) || canViewRequests || canDispatchRequests) && (!("receiving" in item) || (canDispatchRequests && !canManage)) && (!("sitePurchases" in item) || canViewFinance || canSubmitSitePurchases) && (!("manager" in item) || canManage);
+  }).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item);
   const activeHref = pathname.startsWith("/materials") || pathname.startsWith("/equipment") || pathname.startsWith("/vehicles") ? "/inventory" : pathname.startsWith("/purchase-orders/receive") ? "/purchase-orders/receive" : pathname.startsWith("/purchase-orders") ? "/purchase-orders" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
   return <><Suspense fallback={null}><LiveRouteRefresh userId={userId} /></Suspense><AppShell name={name} avatar={avatar} roleLabel={roleLabel} items={items} activeHref={activeHref} footerItems={[{ href: "/profile", label: "My profile", icon: UserCircleIcon }, { href: "/notifications", label: "Notifications", icon: Notification01Icon }, { href: "/help", label: "Help centre", icon: HelpCircleIcon }]} homeHref="/dashboard" headerSearch={<HeaderSearch />} headerActions={<>
     <NotificationBell userId={userId} />
