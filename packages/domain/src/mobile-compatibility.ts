@@ -5,8 +5,10 @@ export const mobileProtocolVersion = 1;
 export const legacyMobileProtocolVersion = 1;
 const protocol = z.number().int().min(1).max(9999);
 export const mobileUpdateUrlSchema = z.string().max(2048).url().refine((value) => {
-  const url = new URL(value);
-  return url.protocol === "https:" && !url.username && !url.password;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch { return false; }
 }, "Use a public HTTPS download or store URL");
 export const mobileCompatibilitySchema = z.object({
   minimumProtocol: protocol,

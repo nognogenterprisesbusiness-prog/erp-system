@@ -42,6 +42,7 @@ for (const [protocol, expected] of [['invalid', 400], ['9999', 503]]) {
 }
 const receipt = await fetch(new URL('/api/mobile/v1/site-purchases/receipt', base), { method: 'POST', body: new FormData() });
 assert.equal(receipt.status, 401, 'receipt uploads remain bearer-authenticated');
+console.log('PASS mobile HTTP: uncached compatibility metadata, malformed/newer protocols and receipt upload authentication.');
 console.log(
   "PASS mobile HTTP: missing/malformed bearer tokens and cookie-only authentication are rejected; unauthenticated commands return no data.",
 );

@@ -34,7 +34,19 @@ test("public metadata is uncached, validated and contains no account data or cre
   const body = await response.json();
   assert.deepEqual(mobileCompatibilitySchema.parse(body.data), mobileCompatibility());
   assert.equal(mobileCompatibilitySchema.safeParse({ ...future, minimumProtocol: 4 }).success, false);
-  for (const url of ["javascript:alert(1)", "http://example.test/app", "https://user:password@example.test/app"]) {
+  for (const url of ["", "not a URL", "javascript:alert(1)", "http://example.test/app", "https://user:password@example.test/app"]) {
     assert.equal(mobileCompatibilitySchema.safeParse({ ...future, updateUrls: { android: url, ios: null } }).success, false);
+  }
+});
+test("a malformed optional download setting does not take the mobile API offline", () => {
+  const original = process.env.MOBILE_ANDROID_UPDATE_URL;
+  try {
+    for (const value of ["", "not a URL", "http://example.test/app"]) {
+      process.env.MOBILE_ANDROID_UPDATE_URL = value;
+      assert.equal(mobileCompatibility().updateUrls.android, null);
+    }
+  } finally {
+    if (original === undefined) delete process.env.MOBILE_ANDROID_UPDATE_URL;
+    else process.env.MOBILE_ANDROID_UPDATE_URL = original;
   }
 });
