@@ -2,12 +2,15 @@ import { createClient } from "@supabase/supabase-js";
 import { mobileAccess, mobileRoles } from "@nognog/domain";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
+import type { MobileCompatibility } from "@nognog/domain";
+import { inspectMobileProtocol, mobileCompatibility } from "./compatibility";
 
 export class MobileError extends Error {
   constructor(
     public status: number,
     message: string,
     public fieldErrors?: Record<string, string[]>,
+    public compatibility?: MobileCompatibility,
   ) {
     super(message);
   }
@@ -34,8 +37,15 @@ function tokenSubject(token: string) {
   } catch {}
   throw new MobileError(401, "Please sign in again.");
 }
+export function assertMobileCompatibility(request: Request, compatibility = mobileCompatibility()) {
+  const protocol = inspectMobileProtocol(request.headers.get("x-nognog-mobile-protocol"), compatibility);
+  if (protocol === "invalid") throw new MobileError(400, "The mobile compatibility header is invalid.");
+  if (protocol === "update_required") throw new MobileError(426, "Please update Nognog to continue safely with this ERP.", undefined, compatibility);
+  if (protocol === "server_outdated") throw new MobileError(503, "The ERP needs an update to support this app. Contact your administrator.");
+}
 export async function mobileContext(request: Request, write: boolean) {
   const token = bearerToken(request.headers.get("authorization"));
+  assertMobileCompatibility(request);
   const env = getSupabaseEnv();
   const client = createClient<Database>(env.url, env.publishableKey, {
     global: { headers: { Authorization: `Bearer ${token}` } },
@@ -187,6 +197,7 @@ export function mobileFailure(error: unknown) {
         ? error.message
         : "The operation could not be completed. Please retry.",
       ...(known && error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+      ...(known && error.status === 426 && error.compatibility ? { code: "APP_UPDATE_REQUIRED", compatibility: error.compatibility } : {}),
     },
     {
       status: known ? error.status : 500,

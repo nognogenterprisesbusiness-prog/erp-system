@@ -28,6 +28,20 @@ for (const options of [
   assert.equal(body.ok, false);
   assert.equal("data" in body, false);
 }
+const compatibility = await fetch(new URL('/api/mobile/v1/compatibility', base));
+assert.equal(compatibility.status, 200);
+assert.match(compatibility.headers.get('cache-control') ?? '', /no-store/);
+const metadata = await compatibility.json();
+assert.equal(metadata.ok, true);
+assert.equal(metadata.data.minimumProtocol, 1);
+assert.equal(metadata.data.currentProtocol, 1);
+for (const [protocol, expected] of [['invalid', 400], ['9999', 503]]) {
+  const response = await fetch(new URL('/api/mobile/v1/commands', base), { method: 'POST', headers: { Authorization: 'Bearer test', 'X-Nognog-Mobile-Protocol': protocol, 'Content-Type': 'application/json' }, body: '{}' });
+  assert.equal(response.status, expected);
+  assert.equal((await response.json()).code, undefined, 'an invalid header or older server is not an app-update requirement');
+}
+const receipt = await fetch(new URL('/api/mobile/v1/site-purchases/receipt', base), { method: 'POST', body: new FormData() });
+assert.equal(receipt.status, 401, 'receipt uploads remain bearer-authenticated');
 console.log(
   "PASS mobile HTTP: missing/malformed bearer tokens and cookie-only authentication are rejected; unauthenticated commands return no data.",
 );
