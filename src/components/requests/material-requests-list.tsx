@@ -10,23 +10,25 @@ import { SelectPicker } from "@/components/ui/select-picker";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { getMaterialRequests } from "@/lib/data/material-requests";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
+import { RequestTypeFilter } from "@/components/requests/request-type-filter";
 
 const statuses = ["submitted", "approved", "partially_approved", "rejected", "cancelled"] as const;
 const statusLabels = { submitted: "For approval", approved: "Approved", partially_approved: "Partially approved", rejected: "Rejected", cancelled: "Cancelled" };
 
 /** Material request list with its filters; the requests page renders the header and type tabs. */
-export async function MaterialRequestsList({ params, canRequest }: { params: Record<string, string | string[] | undefined>; canRequest: boolean }) {
+export async function MaterialRequestsList({ params, canRequest, showFilters = true, showAssets = true }: { params: Record<string, string | string[] | undefined>; canRequest: boolean; showFilters?: boolean; showAssets?: boolean }) {
   const search = typeof params.q === "string" ? params.q.slice(0, 80) : "";
   const status = z.enum([...statuses, "all"]).safeParse(params.status);
   const page = typeof params.page === "string" ? Number(params.page) : 1;
   const filters = { search, status: status.success ? status.data : "all" as const, page };
   const result = await getMaterialRequests(filters);
-  const pageHref = (target: number) => { const next = new URLSearchParams(); if (search) next.set("q", search); if (filters.status !== "all") next.set("status", filters.status); next.set("page", String(target)); return `/requests?${next}`; };
+  const pageHref = (target: number) => { const next = new URLSearchParams(); if (params.type === "all") next.set("type", "all"); if (search) next.set("q", search); if (filters.status !== "all") next.set("status", filters.status); next.set("page", String(target)); return `/requests?${next}`; };
   return <>
-    <ListFilterBar>
+    {showFilters && <ListFilterBar>
+      <RequestTypeFilter showAssets={showAssets} defaultValue={params.type === "all" ? "all" : "material"} />
       <SearchField name="q" label="Search request number" defaultValue={search} placeholder="Search request number" />
       <div className="min-w-[180px]"><SelectPicker name="status" label="Status" defaultValue={filters.status} options={[{ value: "all", label: "All statuses" }, ...statuses.map((value) => ({ value, label: statusLabels[value] }))]} /></div>
-    </ListFilterBar>
+    </ListFilterBar>}
     <DataTableShell empty={result.requests.length === 0 ? <EmptyState title="No material requests found" description={canRequest ? "Create a request or change the filters." : "No requests are available to your account."} /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} request{result.count === 1 ? "" : "s"}</span>}>
       <table className="w-full min-w-[980px] text-left text-sm"><thead className={tableHeadClass}><tr>
         <th className="px-5 py-3">Code</th><th className="px-4 py-3">Material</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Source warehouse</th><th className="px-4 py-3">Needed by</th><th className="px-4 py-3">Status</th><th className="px-5 py-3 text-right">Requested</th>

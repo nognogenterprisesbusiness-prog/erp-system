@@ -16,6 +16,7 @@ import { safeSearchTerm } from "@/lib/data/search";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
 import { createClient } from "@/lib/supabase/server";
 import type { EquipmentRequestRow } from "@/types/database";
+import { RequestTypeFilter } from "@/components/requests/request-type-filter";
 
 const pageSize = 20;
 const statuses = ["all", "submitted", "approved", "checked_out", "overdue", "returned", "rejected"] as const;
@@ -52,7 +53,7 @@ function HandoverRow({ item, isVehicle, photoPath, projectName, siteName, canMan
 }
 
 /** Equipment or vehicle request list; the requests page authorizes access and renders the header. */
-export async function EquipmentRequestsView({ params, kind, canManage, canRequest }: { params: Record<string, string | string[] | undefined>; kind: "equipment" | "vehicle"; canManage: boolean; canRequest: boolean }) {
+export async function EquipmentRequestsView({ params, kind, canManage, canRequest, showFilters = true, listingType = kind }: { params: Record<string, string | string[] | undefined>; kind: "equipment" | "vehicle"; canManage: boolean; canRequest: boolean; showFilters?: boolean; listingType?: "all" | "equipment" | "vehicle" }) {
   const requestedProject = uuidSchema.safeParse(params.project);
   const requestedSite = uuidSchema.safeParse(params.site);
   const requestedAsset = uuidSchema.safeParse(params.asset);
@@ -94,17 +95,17 @@ export async function EquipmentRequestsView({ params, kind, canManage, canReques
   const siteNames = new Map(sites.map((item) => [item.id, item.name]));
   const total = count ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const pageHref = (target: number) => { const next = new URLSearchParams(); next.set("type", kind); if (projectId) next.set("project", projectId); if (siteId) next.set("site", siteId); if (requestedAsset.success) next.set("asset", requestedAsset.data); if (currentStatus !== "all") next.set("status", currentStatus); if (search) next.set("q", search); next.set("page", String(target)); return `/requests?${next}`; };
+  const pageHref = (target: number) => { const next = new URLSearchParams(); next.set("type", listingType); if (projectId) next.set("project", projectId); if (siteId) next.set("site", siteId); if (requestedAsset.success) next.set("asset", requestedAsset.data); if (currentStatus !== "all") next.set("status", currentStatus); if (search) next.set("q", search); next.set("page", String(target)); return `/requests?${next}`; };
   return <>
     {requestedAsset.success && <p className="mt-3 text-sm text-slate-600">Showing requests for the scanned asset. <Link href={`/requests?type=${kind}`} className="font-semibold text-cyan-700 hover:underline">Clear asset filter</Link></p>}
-    <ListFilterBar>
-      <input type="hidden" name="type" value={kind} />
+    {showFilters && <ListFilterBar>
       {requestedAsset.success && <input type="hidden" name="asset" value={requestedAsset.data} />}
+      <RequestTypeFilter defaultValue={kind} />
       <SearchField name="q" label={`Search ${kind}`} defaultValue={search} placeholder={`Search ${kind}`} />
       <div className="min-w-[220px]"><SelectPicker name="project" label="Project" defaultValue={projectId || "all"} options={[{ value: "all", label: "All projects" }, ...activeProjects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))]} /></div>
       {canRequest && projectId && <div className="min-w-[180px]"><SelectPicker name="site" label="Site" defaultValue={siteId || "all"} options={[{ value: "all", label: "Select site" }, ...activeSites.map((item) => ({ value: item.id, label: item.name }))]} /></div>}
       <div className="min-w-[180px]"><SelectPicker name="status" label="Status" defaultValue={currentStatus} options={statuses.map((value) => ({ value, label: statusLabels[value] }))} /></div>
-    </ListFilterBar>
+    </ListFilterBar>}
     {canRequest && projectId && siteId && <EquipmentRequestForm key={`${projectId}:${siteId}:${kind}`} projectId={projectId} siteId={siteId} equipment={(equipment ?? []).filter((item) => item.asset_kind === kind)} kind={kind} initialAssetId={requestedAsset.success ? requestedAsset.data : ""} />}
     <div className="mt-5"><DataTableShell empty={(requests ?? []).length === 0 ? <EmptyState kind="items" title={`No ${kind} requests`} /> : undefined}>
       <table className="w-full min-w-[960px] text-left text-sm">
