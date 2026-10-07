@@ -75,4 +75,11 @@ test("database/internal failures never disclose SQL or credentials", async () =>
       error.status === 422 &&
       error.message.includes("could not read one of the item lines"),
   );
+  assert.throws(
+    () => databaseError({ code: "22023", message: "The receipt date cannot be in the future" }),
+    (error) =>
+      error instanceof MobileError &&
+      error.status === 422 &&
+      error.message === "The receipt date is later than today's ERP date. Check the date and try again.",
+  );
 });

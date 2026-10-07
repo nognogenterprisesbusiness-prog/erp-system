@@ -187,6 +187,7 @@ export function databaseError(error: {
     ],
     ["required", "Review the required fields before submitting."],
     ["receipt photo", "Add or retake the receipt photo before submitting."],
+    ["receipt date cannot be in the future", "The receipt date is later than today's ERP date. Check the date and try again."],
     ["invalid site purchase line", "The ERP could not read one of the item lines. Re-select the item and enter its quantity and price, then retry."],
     ["invalid site purchase", "Review the receipt details, payment method, and at least one valid item."],
     ["store name, address and contact", "Enter the new store's name, address, and valid contact number."],
