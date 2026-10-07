@@ -1,25 +1,19 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { PlusSignIcon, Remove01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { approveSitePurchaseAction, reimburseSitePurchaseAction, rejectSitePurchaseAction, submitSitePurchaseAction, type SitePurchaseActionState } from "@/app/(workspace)/site-purchases/actions";
-import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { isValidPurchaseQuantity, isValidPurchaseUnitPrice, PurchaseLineItems, type PurchaseLineInput } from "@/components/purchasing/purchase-line-items";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
 import { SelectPicker } from "@/components/ui/select-picker";
 import type { getSitePurchaseChoices } from "@/lib/data/site-purchases";
 
 type Choices = Awaited<ReturnType<typeof getSitePurchaseChoices>>;
-type Line = { key: number; materialId: string; quantity: string; unitPrice: string };
+type Line = PurchaseLineInput;
 const initialState: SitePurchaseActionState = { message: "" };
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
-const lineTotal = (line: Line) => {
-  const value = Number(line.quantity) * Number(line.unitPrice);
-  return Number.isFinite(value) ? Math.round(value * 100) / 100 : 0;
-};
 const NEW_STORE = "__new__";
 
 // The Engineer records what was bought at the hardware store, like the receipt.
@@ -32,8 +26,6 @@ export function SitePurchaseForm({ choices, idempotencyKey, today }: { choices: 
   const [nextKey, setNextKey] = useState(1);
   const [processingPhoto, setProcessingPhoto] = useState(false);
   const site = choices.sites.find((item) => item.id === siteId);
-  const units = new Map(choices.materials.map((material) => [material.id, material.unitSymbol]));
-  const total = lines.reduce((sum, line) => sum + lineTotal(line), 0);
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   const updateLine = (key: number, patch: Partial<Line>) => setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
   return <form action={action} className="space-y-6">
@@ -53,15 +45,7 @@ export function SitePurchaseForm({ choices, idempotencyKey, today }: { choices: 
       <FormField label="Receipt date" htmlFor="receiptDate" error={error("receiptDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="receiptDate" name="receiptDate" label="Receipt date" defaultValue={today} allowClear={false} required /></FormField>
     </div>
     <div>
-      <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-semibold text-slate-900">Items bought</h3><Button type="button" variant="outline" size="sm" disabled={lines.length >= 30 || pending} onClick={() => { setLines((current) => [...current, { key: nextKey, materialId: "", quantity: "", unitPrice: "" }]); setNextKey((key) => key + 1); }}><HugeiconsIcon icon={PlusSignIcon} size={16} /> Add item</Button></div>
-      <div className="mt-3 grid gap-3">{lines.map((line, index) => <div key={line.key} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[minmax(0,1fr)_110px_120px_120px_auto] sm:items-end">
-        <FormField label={`Item ${index + 1}`} htmlFor={`sp-material-${line.key}`}><SelectPicker label={`Item ${index + 1}`} value={line.materialId} onValueChange={(materialId) => updateLine(line.key, { materialId })} placeholder="Select item" options={choices.materials.map((item) => ({ value: item.id, label: `${item.name} (${item.unitSymbol})`, disabled: lines.some((other) => other.key !== line.key && other.materialId === item.id) }))} /></FormField>
-        <FormField label={`Quantity${line.materialId ? ` (${units.get(line.materialId) ?? ""})` : ""}`} htmlFor={`sp-quantity-${line.key}`}><input id={`sp-quantity-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.quantity} onChange={(event) => updateLine(line.key, { quantity: event.target.value })} placeholder="0" required /></FormField>
-        <FormField label="Price (PHP)" htmlFor={`sp-price-${line.key}`}><input id={`sp-price-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.unitPrice} onChange={(event) => updateLine(line.key, { unitPrice: event.target.value })} placeholder="0.00" required /></FormField>
-        <div><p className="mb-2 text-sm font-medium text-slate-700">Total</p><p className="flex h-11 items-center text-sm font-semibold tabular-nums">{peso.format(lineTotal(line))}</p></div>
-        <Button type="button" variant="ghost" size="icon" aria-label={`Remove item ${index + 1}`} disabled={lines.length === 1 || pending} onClick={() => setLines((current) => current.filter((item) => item.key !== line.key))}><HugeiconsIcon icon={Remove01Icon} size={17} /></Button>
-      </div>)}</div>
-      <div className="mt-3 flex justify-end text-sm"><span className="text-slate-500">Receipt total</span><span className="ml-4 font-semibold tabular-nums text-slate-900">{peso.format(total)}</span></div>
+      <PurchaseLineItems title="Items bought" totalLabel="Receipt total" lines={lines} materials={choices.materials} maxLines={30} pending={pending || processingPhoto} idPrefix="site-purchase" onAdd={() => { setLines((current) => [...current, { key: nextKey, materialId: "", quantity: "", unitPrice: "" }]); setNextKey((key) => key + 1); }} onRemove={(key) => setLines((current) => current.filter((line) => line.key !== key))} onUpdate={(key, patch) => updateLine(key, patch)} />
       {error("lines") && <p role="alert" className="mt-2 text-xs text-red-700">{error("lines")}</p>}
     </div>
     <div className="grid gap-4 md:grid-cols-2">
@@ -70,7 +54,7 @@ export function SitePurchaseForm({ choices, idempotencyKey, today }: { choices: 
       <div className="md:col-span-2"><RecordPhotoInput label="Receipt photo" required convertBeforeSubmit onProcessingChange={setProcessingPhoto} />{error("photo") && <p className="mt-1 text-xs text-red-600">{error("photo")}</p>}</div>
     </div>
     {state.message && <p role="alert" className="text-sm text-red-700">{state.message}</p>}
-    <RecordFormControls busy={pending || processingPhoto} disabled={!siteId || !store || lines.some((line) => !line.materialId || !line.quantity || !line.unitPrice)} label="Submit for approval" />
+    <RecordFormControls busy={pending || processingPhoto} disabled={!siteId || !store || lines.some((line) => !line.materialId || !isValidPurchaseQuantity(line.quantity) || !isValidPurchaseUnitPrice(line.unitPrice))} label="Submit for approval" />
   </form>;
 }
 
