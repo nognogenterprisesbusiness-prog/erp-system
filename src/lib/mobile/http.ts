@@ -144,6 +144,11 @@ export function databaseError(error: {
   code?: string;
   message: string;
 }): never {
+  if (error.code === "PGRST202")
+    throw new MobileError(
+      503,
+      "This operation is not enabled in the ERP database yet. Contact your administrator to apply the required database update.",
+    );
   if (error.code === "42501")
     throw new MobileError(
       403,
@@ -173,6 +178,15 @@ export function databaseError(error: {
       "This action requires an approved record. Refresh its status.",
     ],
     ["required", "Review the required fields before submitting."],
+    ["receipt photo", "Add or retake the receipt photo before submitting."],
+    ["store name, address and contact", "Enter the new store's name, address, and valid contact number."],
+    ["unit price", "Enter a price greater than zero with up to two decimal places for every item."],
+    ["materials that are already in inventory", "One selected material is no longer active or its unit is unavailable. Refresh the purchase choices and try again."],
+    ["quantity exceeds the unit precision", "Enter a quantity using only the decimal places allowed for that material's unit."],
+    ["unit not found or inactive", "This material's unit is inactive. Refresh the purchase choices and ask Admin to check the material setup."],
+    ["quantity must be positive", "Enter a quantity greater than zero for every item."],
+    ["each material once", "Choose each material only once in the purchase."],
+    ["not active", "The project site or store is no longer active. Refresh the purchase choices and try again."],
     [
       "inactive",
       "The project, site, employee or equipment is no longer active.",

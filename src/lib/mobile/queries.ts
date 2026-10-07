@@ -103,13 +103,14 @@ export async function readMobileResource(
       const [stores, materials, units] = await Promise.all([
         c.rpc("get_site_purchase_suppliers"),
         readAllPages((from, to) => c.from("materials").select("id,name,base_unit_id").eq("material_kind", "consumable").eq("is_active", true).is("archived_at", null).order("name").order("id").range(from, to), "purchase materials"),
-        readAllPages((from, to) => c.from("units_of_measure").select("id,symbol").order("id").range(from, to), "purchase units"),
+        readAllPages((from, to) => c.from("units_of_measure").select("id,symbol").eq("is_active", true).order("id").range(from, to), "purchase units"),
       ]);
       if (stores.error) databaseError(stores.error);
       const symbols = new Map(units.map((unit) => [unit.id, unit.symbol]));
       return {
         stores: (stores.data ?? []).map((store) => ({ id: store.id, name: store.supplier_name })),
-        materials: materials.map((material) => ({ id: material.id, name: material.name, unit: symbols.get(material.base_unit_id) ?? "" })),
+        materials: materials.filter((material) => symbols.has(material.base_unit_id))
+          .map((material) => ({ id: material.id, name: material.name, unit: symbols.get(material.base_unit_id)! })),
       };
     }
     case "session": {
