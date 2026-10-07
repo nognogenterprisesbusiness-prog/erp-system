@@ -11,7 +11,7 @@ import { InventoryBalanceCard } from "@/components/inventory/inventory-balance-c
 import { MaterialForm } from "@/components/materials/material-form";
 import { InventoryMovementForm } from "@/components/inventory/inventory-movement-form";
 import { SiteConsumptionForm } from "@/components/inventory/site-consumption-form";
-import { assetStatuses, uuidSchema } from "@nognog/domain";
+import { uuidSchema } from "@nognog/domain";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { Button } from "@/components/ui/button";
 import { SearchField } from "@/components/ui/search-field";
@@ -21,24 +21,20 @@ import { RecordActionMenu } from "@/components/ui/record-action-menu";
 import { requireUser } from "@/lib/auth";
 import { getInventoryBalances, getMaterialReferences, getInventoryOptions, getSiteConsumptionOptions } from "@/lib/data/inventory";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
+import { InventoryTypeTabs } from "@/components/inventory/inventory-type-tabs";
 import { AssetRegistryPage } from "@/components/assets/asset-registry-page";
-import { SelectPicker } from "@/components/ui/select-picker";
-import { getAssets, getAssetReferences } from "@/lib/data/assets";
-import { AssetCards } from "@/components/assets/asset-cards";
-import { IntentLink } from "@/components/layout/intent-link";
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
   if (params.type === "equipment" || params.type === "vehicle") {
     return <AssetRegistryPage kind={params.type} searchParams={Promise.resolve(params)} inventoryMode />;
   }
-  const type = params.type === "materials" ? "materials" : "all";
   const query = typeof params.q === "string" ? params.q : "";
   const locationId = typeof params.location === "string" ? params.location : "";
   const lowStock = params.low === "true";
   const page = pageNumber(params.page);
   const user = await requireUser();
-  const data = await getInventoryBalances({ query, locationId, lowStock, defaultToFirstLocation: type !== "all", page, includeValues: user.canViewLaborRates });
+  const data = await getInventoryBalances({ query, locationId, lowStock, defaultToFirstLocation: true, page, includeValues: user.canViewLaborRates });
   const references = user.canManage ? await getMaterialReferences() : null;
   const movement = user.canManage && (params.action === "stock-in" || params.action === "stock-out") ? params.action : undefined;
   const movementOptions = movement ? await getInventoryOptions() : null;
@@ -52,35 +48,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   if (lowStock) exportParams.set("low", "true");
   const selectedLocationName = data.locations.find((item) => item.id === data.selectedLocationId)?.name;
 
-  if (type === "all") {
-    const assetStatus = typeof params.status === "string" && assetStatuses.includes(params.status as (typeof assetStatuses)[number]) ? params.status as (typeof assetStatuses)[number] : "all";
-    const [equipment, vehicles, equipmentReferences, vehicleReferences] = await Promise.all([
-      getAssets({ kind: "equipment", query, status: assetStatus, page: 1, pageSize: 12 }),
-      getAssets({ kind: "vehicle", query, status: assetStatus, page: 1, pageSize: 12 }),
-      getAssetReferences("equipment"),
-      getAssetReferences("vehicle"),
-    ]);
-    return <>
-      <PageHeader eyebrow="Stock and assets" title="Inventory" description="Materials, equipment, and vehicles across your inventory." action={<div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" asChild><a href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export materials</a></Button>
-        {user.canManage && references && <RecordCreateDialog title="Add material"><MaterialForm {...references} /></RecordCreateDialog>}
-      </div>} />
-      <ListFilterBar viewKey="inventory-all" viewTitle="Inventory">
-        <SelectPicker name="type" label="Inventory type" defaultValue="all" options={[{ value: "all", label: "All types" }, { value: "materials", label: "Materials" }, { value: "equipment", label: "Equipment" }, { value: "vehicle", label: "Vehicles" }]} />
-        <input type="hidden" name="location" value={data.selectedLocationId} />
-        <SearchField name="q" defaultValue={query} label="Search inventory" placeholder="Search materials, equipment, or vehicles" />
-        <SelectPicker name="status" label="Asset status" defaultValue={assetStatus} options={[{ value: "all", label: "All asset statuses" }, ...assetStatuses.map((status) => ({ value: status, label: status.replaceAll("_", " ") }))]} />
-      </ListFilterBar>
-      <section className="mt-6" aria-labelledby="inventory-materials-heading"><div className="mb-3 flex items-center justify-between"><h2 id="inventory-materials-heading" className="text-base font-semibold text-slate-900">Materials <span className="ml-1 text-sm font-normal text-slate-500">({data.count.toLocaleString()})</span></h2><IntentLink href="/inventory?type=materials" className="text-sm font-medium text-cyan-700 hover:underline">View materials</IntentLink></div>
-        {data.balances.length === 0 ? <div className="rounded-xl border border-slate-200 bg-white"><EmptyState compact title="No material balances found" /></div> : <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">{data.balances.map((item) => <InventoryBalanceCard key={item.id} name={item.material?.name ?? "Unavailable material"} sku={item.material?.code ?? "—"} photo={item.material?.photo_path ? recordPhotoUrl("materials", item.material_id) : undefined} unit={item.material?.unitSymbol ?? ""} location={item.location?.name ?? "Unavailable location"} locationDetail={item.location?.detail} onHand={item.quantity_on_hand} reserved={item.reserved_quantity} available={item.available_quantity} minimum={item.material?.minimum_stock_level} href={`/materials/${item.material_id}`} />)}</div>}
-      </section>
-      <section className="mt-7" aria-labelledby="inventory-equipment-heading"><div className="mb-3 flex items-center justify-between"><h2 id="inventory-equipment-heading" className="text-base font-semibold text-slate-900">Equipment</h2><IntentLink href="/inventory?type=equipment" className="text-sm font-medium text-cyan-700 hover:underline">View all equipment</IntentLink></div><AssetCards assets={equipment.slice(0, 12)} kind="equipment" canManage={user.canManage} {...equipmentReferences} /></section>
-      <section className="mt-7" aria-labelledby="inventory-vehicles-heading"><div className="mb-3 flex items-center justify-between"><h2 id="inventory-vehicles-heading" className="text-base font-semibold text-slate-900">Vehicles</h2><IntentLink href="/inventory?type=vehicle" className="text-sm font-medium text-cyan-700 hover:underline">View all vehicles</IntentLink></div><AssetCards assets={vehicles.slice(0, 12)} kind="vehicle" canManage={user.canManage} {...vehicleReferences} /></section>
-      <HistoryPagination path="/inventory" page={page} count={data.count} pageSize={24} filters={{ q: query, location: data.selectedLocationId, type: "all" }} />
-    </>;
-  }
-
   return <>
+    <InventoryTypeTabs active="materials" />
     <PageHeader eyebrow="Materials control" title="Inventory" description={selectedLocationName ? `${selectedLocationName} stock balances` : "Stock balances"} action={<div className="flex flex-wrap items-center gap-2">
       <InventoryLocationPicker locations={data.locations} value={data.selectedLocationId} />
       <Button variant="outline" asChild><a href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export CSV</a></Button>
@@ -94,7 +63,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     {movement && movementOptions && <RecordCreateDialog title={movement === "stock-in" ? "Stock in" : "Stock out"} initialOpen hideTrigger closeHref={`/inventory?${exportParams}`}><p className="mb-4 text-sm text-slate-500">{movement === "stock-in" ? "Supplier deliveries should be received through Purchases. This records other receipts with a verified cost." : "Project deliveries use approved requests. This records admin-authorized non-project stock removal."}</p><InventoryMovementForm mode={movement} {...movementOptions} initialMaterialId={material.success ? material.data : ""} />{movement === "stock-in" && <details className="mt-4 text-sm text-slate-500"><summary className="cursor-pointer">Existing stock setup</summary><Link href="/inventory/opening-values" className="mt-2 block font-medium text-cyan-700">Verify starting values without receiving stock again</Link></details>}</RecordCreateDialog>}
     {usageOptions && <RecordCreateDialog title="Record material use" initialOpen hideTrigger closeHref={projectId ? `/projects/${projectId}?tab=materials` : `/inventory?${exportParams}`}>{usageOptions.sites.length ? <SiteConsumptionForm {...usageOptions} initialMaterialId={material.success ? material.data : ""} initialProjectId={projectId} /> : <EmptyState title="No assigned sites available" description="Choose an active assigned project with an inventory site." />}</RecordCreateDialog>}
     <ListFilterBar viewKey="inventory" viewTitle="Inventory">
-      <SelectPicker name="type" label="Inventory type" defaultValue="materials" options={[{ value: "all", label: "All types" }, { value: "materials", label: "Materials" }, { value: "equipment", label: "Equipment" }, { value: "vehicle", label: "Vehicles" }]} />
       <input type="hidden" name="location" value={data.selectedLocationId} />
       <SearchField name="q" defaultValue={query} label="Search materials" placeholder="Search materials" />
       <label className="group relative inline-flex h-9 cursor-pointer items-center">
