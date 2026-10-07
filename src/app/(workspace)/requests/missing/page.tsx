@@ -21,7 +21,7 @@ export default async function MissingMaterialsPage({ searchParams }: { searchPar
   if (result.error) throw new Error("Unable to load missing material reports.");
   const reports = result.data ?? [];
   return <>
-    <PageHeader title="Missing materials" description="Report a needed item or stock shortage for Admin review." action={<Button variant="outline" asChild><Link href="/requests">All requests</Link></Button>} />
+    <PageHeader title="Missing materials" description="Tell Admin what material is unavailable at a project site so it can be reviewed and sourced." action={<Button variant="outline" asChild><Link href="/requests">All requests</Link></Button>} />
     {canSubmit && <section className="mt-6"><h2 className="mb-3 text-base font-semibold">Report a missing material</h2><MissingMaterialForm choices={choices} /></section>}
     <section className="mt-8"><h2 className="text-base font-semibold">Reports</h2>
       {reports.length === 0 ? <p className="mt-4 rounded-xl border border-slate-200 bg-white p-6 text-sm text-slate-500">No missing materials reported.</p> : <div className="mt-4 grid gap-3">{reports.map((item) => <article key={item.id} className="rounded-xl border border-slate-200 bg-white p-5">
