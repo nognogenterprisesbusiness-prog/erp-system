@@ -159,6 +159,14 @@ export function databaseError(error: {
       409,
       "This record changed or was already posted. Refresh before retrying.",
     );
+  if (
+    error.code === "23502" &&
+    /column \"(business_name|category_id|contact_person|email_address|city|province|payment_terms)\".*suppliers/i.test(error.message)
+  )
+    throw new MobileError(
+      503,
+      "The supplier database needs the latest purchasing update. Ask your administrator to apply the pending ERP database migration, then retry.",
+    );
   const messages: [string, string][] = [
     [
       "insufficient",
@@ -179,6 +187,7 @@ export function databaseError(error: {
     ],
     ["required", "Review the required fields before submitting."],
     ["receipt photo", "Add or retake the receipt photo before submitting."],
+    ["invalid site purchase", "Review the receipt details, payment method, and at least one valid item."],
     ["store name, address and contact", "Enter the new store's name, address, and valid contact number."],
     ["unit price", "Enter a price greater than zero with up to two decimal places for every item."],
     ["materials that are already in inventory", "One selected material is no longer active or its unit is unavailable. Refresh the purchase choices and try again."],

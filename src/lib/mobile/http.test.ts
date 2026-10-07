@@ -50,4 +50,14 @@ test("database/internal failures never disclose SQL or credentials", async () =>
       error.status === 403 &&
       !error.message.includes("secret"),
   );
+  assert.throws(
+    () => databaseError({
+      code: "23502",
+      message: 'null value in column "category_id" of relation "suppliers" violates not-null constraint',
+    }),
+    (error) =>
+      error instanceof MobileError &&
+      error.status === 503 &&
+      error.message.includes("latest purchasing update"),
+  );
 });
