@@ -49,7 +49,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const selectedLocationName = data.locations.find((item) => item.id === data.selectedLocationId)?.name;
 
   return <>
-    <InventoryTypeTabs active="materials" />
     <PageHeader eyebrow="Materials control" title="Inventory" description={selectedLocationName ? `${selectedLocationName} stock balances` : "Stock balances"} action={<div className="flex flex-wrap items-center gap-2">
       <InventoryLocationPicker locations={data.locations} value={data.selectedLocationId} />
       <Button variant="outline" asChild><a href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export CSV</a></Button>
@@ -60,6 +59,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         { label: "Transaction history", href: "/inventory/transactions" },
       ]} />
     </div>} />
+    <InventoryTypeTabs active="materials" />
     {movement && movementOptions && <RecordCreateDialog title={movement === "stock-in" ? "Stock in" : "Stock out"} initialOpen hideTrigger closeHref={`/inventory?${exportParams}`}><p className="mb-4 text-sm text-slate-500">{movement === "stock-in" ? "Supplier deliveries should be received through Purchases. This records other receipts with a verified cost." : "Project deliveries use approved requests. This records admin-authorized non-project stock removal."}</p><InventoryMovementForm mode={movement} {...movementOptions} initialMaterialId={material.success ? material.data : ""} />{movement === "stock-in" && <details className="mt-4 text-sm text-slate-500"><summary className="cursor-pointer">Existing stock setup</summary><Link href="/inventory/opening-values" className="mt-2 block font-medium text-cyan-700">Verify starting values without receiving stock again</Link></details>}</RecordCreateDialog>}
     {usageOptions && <RecordCreateDialog title="Record material use" initialOpen hideTrigger closeHref={projectId ? `/projects/${projectId}?tab=materials` : `/inventory?${exportParams}`}>{usageOptions.sites.length ? <SiteConsumptionForm {...usageOptions} initialMaterialId={material.success ? material.data : ""} initialProjectId={projectId} /> : <EmptyState title="No assigned sites available" description="Choose an active assigned project with an inventory site." />}</RecordCreateDialog>}
     <ListFilterBar viewKey="inventory" viewTitle="Inventory">
