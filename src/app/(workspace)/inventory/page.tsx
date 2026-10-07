@@ -71,7 +71,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       </label>
       <Button size="sm" variant="outline" asChild><Link href="/materials">All materials</Link></Button>
     </ListFilterBar>
-    <HistoryPagination path="/inventory" page={page} count={data.count} pageSize={24} filters={{ q: query, location: data.selectedLocationId, low: String(lowStock) }} />
     <RecordListView storageKey="inventory" title="Inventory" columns={["Material", "Stock location", "On hand", "Reserved", "Available", "Minimum", ...(user.canViewLaborRates ? ["Stock value"] : [])]} rows={data.balances.map((item) => ({ id: item.id, cells: [
       <div key="record" className="flex min-w-56 items-center gap-3"><RecordThumbnail icon={PackageIcon} name={item.material?.name ?? "Material"} photo={item.material?.photo_path ? recordPhotoUrl("materials", item.material_id) : null} /><Link key="material" href={`/materials/${item.material_id}`} className="font-semibold hover:text-cyan-700">{item.material?.code} · {item.material?.name ?? "Unavailable material"}</Link></div>,
       item.location?.name ?? "Unavailable location",
@@ -80,5 +79,6 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     ] }))}>
     {data.balances.length === 0 ? <section className="mt-5 rounded-xl border border-slate-200 bg-white"><EmptyState title="No inventory records found" description="Post stock in or change the current filters." /></section> : <section className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3" aria-label="Material stock balances">{data.balances.map((item) => <InventoryBalanceCard key={item.id} name={item.material?.name ?? "Unavailable material"} sku={item.material?.code ?? "—"} photo={item.material?.photo_path ? recordPhotoUrl("materials", item.material_id) : undefined} unit={item.material?.unitSymbol ?? ""} location={item.location?.name ?? "Unavailable location"} locationDetail={item.location?.detail} onHand={item.quantity_on_hand} reserved={item.reserved_quantity} available={item.available_quantity} minimum={item.material?.minimum_stock_level} href={`/materials/${item.material_id}`} />)}</section>}
     </RecordListView>
+    <HistoryPagination path="/inventory" page={page} count={data.count} pageSize={24} filters={{ q: query, location: data.selectedLocationId, low: String(lowStock) }} />
   </>;
 }
