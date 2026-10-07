@@ -57,8 +57,8 @@ export function LiveRouteRefresh({ userId }: { userId: string }) {
     const onOnline = () => scheduleRefresh();
     const onDialogClose = () => { if (pendingDeferred) scheduleRefresh(); };
     const onRecordsSaved = () => {
-      // The saving dialog refreshes this page. Other cached destinations need
-      // fresh data when revisited, without discarding their reusable screen.
+      // The Server Action revalidates the active page. Mark other cached
+      // destinations stale so they refresh when visited again.
       const now = Date.now();
       markOtherRoutesStale(visits.current, routeKey, now);
       lastRefresh = now;

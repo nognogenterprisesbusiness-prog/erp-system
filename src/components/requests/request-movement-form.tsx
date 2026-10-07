@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { dispatchRequestLineAction, receiveRequestTransferAction, type RequestActionState } from "@/app/(workspace)/requests/actions";
-import { useRouter } from "next/navigation";
 import { useRecordDialog, RecordFormControls } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { todayInManila } from "@/lib/date";
@@ -17,10 +16,9 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
 }) {
   const [state, action, pending] = useActionState(mode === "dispatch" ? dispatchRequestLineAction : receiveRequestTransferAction, initialState);
   const dialog = useRecordDialog();
-  const router = useRouter();
   const complete = dialog?.complete;
   const completed = useRef(false);
-  useEffect(() => { if (pending) { completed.current = false; return; } if (state.ok && !completed.current) { completed.current = true; if (complete) complete(); else router.refresh(); } }, [state, pending, complete, router]);
+  useEffect(() => { if (pending) { completed.current = false; return; } if (state.ok && !completed.current) { completed.current = true; complete?.(); } }, [state, pending, complete]);
   const [key] = useState(() => crypto.randomUUID());
   const [vehicleId, setVehicleId] = useState("");
   const [companyTransport, setCompanyTransport] = useState(false);

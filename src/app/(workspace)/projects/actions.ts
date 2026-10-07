@@ -47,10 +47,15 @@ export async function saveProjectAction(previous: ProjectActionState, form: Form
     catch (error) {
       const reason = error instanceof Error ? error.message : "Photo storage failed.";
       const message = `The project was saved, but its photo was not. ${reason} Retry Save to upload the same photo.`;
+      revalidatePath("/dashboard");
+      revalidatePath("/projects");
+      revalidatePath(`/projects/${result.data.id}`);
       return { ok: false, savedId: result.data.id, message, fieldErrors: { photo: [message] } };
     }
   }
-  // These authenticated routes are dynamic; the client refreshes only its current page.
+  revalidatePath("/dashboard");
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${result.data.id}`);
   return { ok: true, data: { id: result.data.id } };
 }
 

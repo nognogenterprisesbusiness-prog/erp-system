@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, startTransition, useContext, useEffect, useId, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PencilEdit02Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -37,7 +37,6 @@ export function RecordCreateDialog({ title, children, initialOpen = false, close
     dialog.current?.close();
     window.dispatchEvent(new Event("erp:records-saved"));
     if (initialOpen && closeHref) window.history.replaceState(null, "", closeHref);
-    startTransition(() => router.refresh());
   };
   return <>
     {!hideTrigger && <Button type="button" variant={triggerVariant} size={triggerSize} aria-label={triggerAriaLabel} title={triggerAriaLabel} onClick={() => { completed.current = false; setFormKey((key) => key + 1); dialog.current?.showModal(); }}>{triggerIcon === undefined ? <HugeiconsIcon icon={title.startsWith("Edit") ? PencilEdit02Icon : PlusSignIcon} size={17} strokeWidth={1.5} /> : triggerIcon}{triggerLabel ?? title}</Button>}

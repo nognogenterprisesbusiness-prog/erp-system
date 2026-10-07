@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useState } from "react";
 
 import { updateMyProfileAction } from "@/app/(workspace)/profile/actions";
 import { Button } from "@/components/ui/button";
@@ -11,8 +10,6 @@ import { RecordPhotoInput } from "@/components/ui/record-photo-input";
 export function MyProfileForm({ fullName, phone, email, avatarUrl }: { fullName: string; phone: string | null; email: string; avatarUrl?: string }) {
   const [state, action, pending] = useActionState(updateMyProfileAction, { ok: false, message: "" });
   const [processingPhoto, setProcessingPhoto] = useState(false);
-  const router = useRouter();
-  useEffect(() => { if (state.ok) router.refresh(); }, [state.ok, state.message, router]);
   return <form action={action} className="mt-5"><div className="grid gap-5 sm:grid-cols-2">
     <div className="sm:col-span-2"><RecordPhotoInput label="Profile picture" currentPhoto={avatarUrl} convertBeforeSubmit onProcessingChange={setProcessingPhoto} /></div>
     <label className="grid gap-1.5 text-sm font-medium text-slate-600">Full name<input name="fullName" className={fieldControlClass} defaultValue={fullName} minLength={2} maxLength={160} required autoComplete="name" /></label>

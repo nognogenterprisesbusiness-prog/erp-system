@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SelectPicker } from "@/components/ui/select-picker";
@@ -31,7 +30,6 @@ function contentTypeFor(file: File): ProjectDocumentContentType | null {
 }
 
 export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { projects: readonly DocumentProject[]; initialProjectId?: string }) {
-  const router = useRouter();
   const dialog = useRecordDialog();
   const input = useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = useState(projects.some((project) => project.id === initialProjectId) ? initialProjectId : "");
@@ -140,7 +138,6 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
     setNames([]);
     setUploading(false);
     setMessage(result.message);
-    router.refresh();
   }
 
   return <form onSubmit={submit} className="space-y-5">

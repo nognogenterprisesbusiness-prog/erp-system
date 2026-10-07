@@ -42,9 +42,14 @@ export async function saveMaterialAction(_: MaterialActionState, form: FormData)
   if (error) return failure(error.code === "23505" ? (error.message.includes("materials_name_unit_unique") ? "A material with this name and unit already exists." : "That material code is already in use.") : "The material could not be saved.");
   if (photo) {
     try { await saveRecordPhoto("materials", data, photo); }
-    catch (cause) { return failure(cause instanceof Error ? cause.message : "The material was saved, but its photo could not be attached. Open the material again to retry."); }
+    catch (cause) {
+      revalidatePath("/materials"); revalidatePath("/inventory");
+      if (input.id) revalidatePath(`/materials/${input.id}`);
+      return failure(cause instanceof Error ? cause.message : "The material was saved, but its photo could not be attached. Open the material again to retry.");
+    }
   }
   revalidatePath("/materials"); revalidatePath("/inventory");
+  if (input.id) revalidatePath(`/materials/${input.id}`);
   return { ok: true, data: { id: data } };
 }
 

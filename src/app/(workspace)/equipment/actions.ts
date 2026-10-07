@@ -77,8 +77,14 @@ export async function saveAssetAction(_: AssetActionState, form: FormData): Prom
   } else return failure("Unsupported asset type.");
   if (photo) {
     try { await saveRecordPhoto("assets", savedId, photo); }
-    catch (cause) { return { ok: false, savedId, message: `The asset was saved, but its photo was not. ${cause instanceof Error ? cause.message : "Retry the photo upload."}` }; }
+    catch (cause) {
+      revalidatePath(kind === "equipment" ? "/equipment" : "/vehicles");
+      revalidatePath(`/${kind === "equipment" ? "equipment" : "vehicles"}/${savedId}`);
+      return { ok: false, savedId, message: `The asset was saved, but its photo was not. ${cause instanceof Error ? cause.message : "Retry the photo upload."}` };
+    }
   }
+  revalidatePath(kind === "equipment" ? "/equipment" : "/vehicles");
+  revalidatePath(`/${kind === "equipment" ? "equipment" : "vehicles"}/${savedId}`);
   return { ok: true, data: { id: savedId } };
 }
 
@@ -89,6 +95,8 @@ export async function archiveAssetAction(_: AssetActionState, form: FormData): P
   const supabase = await createClient();
   const { error } = await supabase.rpc("archive_asset", { p_id: id, p_reason: reason });
   if (error) return failure(friendlyAssetError(error));
+  revalidatePath(kind === "equipment" ? "/equipment" : "/vehicles");
+  revalidatePath(`/${kind === "equipment" ? "equipment" : "vehicles"}/${id}`);
   return { ok: true, data: { id } };
 }
 

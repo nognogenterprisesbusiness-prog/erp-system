@@ -38,9 +38,15 @@ export async function saveDailyReportAction(_: DailyReportActionState, form: For
     catch (cause) { return { ok: false, message: cause instanceof Error ? cause.message : "The report was saved, but its photo could not be attached." }; }
     if (input.intent === "submit") {
       try { await executeSiteCommand(supabase, { action: "save-report", input }); }
-      catch { return { ok: false, message: "The photo was saved. Refresh the report status before retrying submission." }; }
+      catch {
+        revalidatePath("/reports/daily");
+        revalidatePath(`/reports/daily/${data}`);
+        return { ok: false, message: "The photo was saved. The report remains a draft; review its status before submitting again." };
+      }
     }
   }
+  revalidatePath("/reports/daily");
+  revalidatePath(`/reports/daily/${data}`);
   return { ok: true, message: input.intent === "submit" ? "Report submitted." : "Draft saved.", id: data };
 }
 

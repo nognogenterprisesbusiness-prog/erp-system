@@ -34,9 +34,10 @@ export async function saveWarehouseAction(_: WarehouseActionState, form: FormDat
   }
   if (photo) {
     try { await saveRecordPhoto("warehouses", result.data.id, photo); }
-    catch (error) { revalidatePath("/warehouses"); return { ok: true, data: { id: result.data.id }, message: error instanceof Error ? error.message : "The record was saved, but its photo could not be uploaded." }; }
+    catch (error) { revalidatePath("/warehouses"); revalidatePath(`/warehouses/${result.data.id}`); return { ok: true, data: { id: result.data.id }, message: error instanceof Error ? error.message : "The record was saved, but its photo could not be uploaded." }; }
   }
   revalidatePath("/dashboard"); revalidatePath("/warehouses");
+  if (result.data.id) revalidatePath(`/warehouses/${result.data.id}`);
   return { ok: true, data: { id: result.data.id } };
 }
 

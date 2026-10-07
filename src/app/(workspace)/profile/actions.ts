@@ -20,6 +20,8 @@ export async function updateMyProfileAction(_: ProfileActionState, form: FormDat
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ full_name: parsed.data.fullName, phone: parsed.data.phone || null }).eq("id", actor.userId);
   if (error) return { ok: false, message: "Profile details could not be updated." };
+  revalidatePath("/profile");
+  revalidatePath("/dashboard");
   if (photo) {
     const path = `profiles/${actor.userId}/avatar.webp`;
     const { error: uploadError } = await supabase.storage.from("erp-profile-photos").upload(path, photo, { contentType: "image/webp", upsert: true, cacheControl: "0" });
@@ -30,10 +32,7 @@ export async function updateMyProfileAction(_: ProfileActionState, form: FormDat
   if (parsed.data.email.toLowerCase() !== actor.profile.email.toLowerCase()) {
     const { error: emailError } = await supabase.auth.updateUser({ email: parsed.data.email });
     if (emailError) return { ok: false, message: "Profile saved, but the email-change request could not be sent." };
-    revalidatePath("/profile");
     return { ok: true, message: "Profile saved. Confirm the email change using the link sent by your authentication provider." };
   }
-  revalidatePath("/profile");
-  revalidatePath("/dashboard");
   return { ok: true, message: "Profile updated." };
 }
