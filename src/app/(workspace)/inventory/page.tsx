@@ -49,7 +49,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const selectedLocationName = data.locations.find((item) => item.id === data.selectedLocationId)?.name;
 
   return <>
-    <PageHeader eyebrow="Materials control" title="Inventory" description={selectedLocationName ? `${selectedLocationName} stock balances` : "Stock balances"} action={<div className="flex flex-wrap items-center gap-2">
+    <PageHeader title="Inventory" description={selectedLocationName ? `${selectedLocationName} stock balances` : "Stock balances"} action={<div className="flex flex-wrap items-center gap-2">
       <InventoryLocationPicker locations={data.locations} value={data.selectedLocationId} />
       <Button variant="outline" asChild><a href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export CSV</a></Button>
       {user.canManage && references && <RecordCreateDialog title="Add material"><MaterialForm {...references} /></RecordCreateDialog>}

@@ -7,9 +7,9 @@ const types = [
 ] as const;
 
 export function InventoryTypeTabs({ active }: { active: (typeof types)[number]["key"] }) {
-  return <nav aria-label="Inventory type" className="mb-5 flex flex-wrap gap-2">
+  return <nav aria-label="Inventory type" className="mt-6 inline-flex max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
     {types.map((item) => <Link key={item.key} href={item.href} aria-current={active === item.key ? "page" : undefined}
-      className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${active === item.key ? "border-[#07152d] bg-[#07152d] text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>
+      className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-600 ${active === item.key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}>
       {item.label}
     </Link>)}
   </nav>;
