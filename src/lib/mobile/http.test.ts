@@ -68,4 +68,11 @@ test("database/internal failures never disclose SQL or credentials", async () =>
       error.status === 503 &&
       error.message.includes("latest purchasing update"),
   );
+  assert.throws(
+    () => databaseError({ code: "22023", message: "Invalid site purchase line" }),
+    (error) =>
+      error instanceof MobileError &&
+      error.status === 422 &&
+      error.message.includes("could not read one of the item lines"),
+  );
 });
