@@ -27,10 +27,10 @@ export default async function SitePurchasePage({ params, searchParams }: { param
   const { purchase } = data;
   const canDecide = user.canViewLaborRates;
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-  return <>
+  return <div className="max-w-5xl">
     <PageHeader eyebrow="Site purchase" title={purchase.purchase_number} description={`${data.project?.name ?? ""} · ${data.siteName}`} action={<Button variant="outline" asChild><Link href={`/site-purchases?status=${purchase.status}`}>Back to site purchases</Link></Button>} />
     {posted && postedMessages[posted] && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{postedMessages[posted]}</p>}
-    <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle[purchase.status]}`}>{statusLabel[purchase.status]}</span><span className="text-lg font-semibold tabular-nums">{peso.format(data.total)}</span></div>
         <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
@@ -47,9 +47,9 @@ export default async function SitePurchasePage({ params, searchParams }: { param
         </div>}
         {canDecide && purchase.status === "approved" && purchase.paid_with === "own_money" && !purchase.reimbursed_on && <div className="mt-5 flex justify-end border-t border-slate-100 pt-4"><RecordCreateDialog title="Mark reimbursed" triggerLabel="Mark reimbursed" triggerVariant="outline" initialOpen={query.action === "reimburse"} closeHref={`/site-purchases/${id}`}><ReimburseSitePurchaseForm purchaseId={purchase.id} today={today} /></RecordCreateDialog></div>}
       </div>
-      <a href={`/site-purchases/${purchase.id}/receipt`} target="_blank" rel="noopener" className="block overflow-hidden rounded-xl border border-slate-200 bg-slate-50" title="Open receipt photo">
+      <a href={`/site-purchases/${purchase.id}/receipt`} target="_blank" rel="noopener" className="block aspect-[3/4] w-full max-w-[280px] overflow-hidden self-start rounded-xl border border-slate-200 bg-slate-50" title="Open receipt photo">
         {/* eslint-disable-next-line @next/next/no-img-element -- private, authenticated photo route */}
-        <img src={`/site-purchases/${purchase.id}/receipt`} alt={`Receipt ${purchase.receipt_number}`} className="h-full max-h-[420px] w-full object-contain" />
+        <img src={`/site-purchases/${purchase.id}/receipt`} alt={`Receipt ${purchase.receipt_number}`} className="h-full w-full object-contain" />
       </a>
     </section>
     <h2 className="mt-8 text-lg font-semibold text-slate-900">Items bought</h2>
@@ -57,5 +57,5 @@ export default async function SitePurchasePage({ params, searchParams }: { param
       <table className="w-full min-w-[620px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Item</th><th className="px-4 py-3 text-right">Quantity</th><th className="px-4 py-3 text-right">Price</th><th className="px-5 py-3 text-right">Total</th></tr></thead>
         <tbody className="divide-y divide-slate-100">{data.lines.map((line) => <tr key={line.id}><td className="px-5 py-4"><p className="font-medium">{line.material_name}</p><p className="text-xs text-slate-500">{line.material_code}</p></td><td className="px-4 py-4 text-right tabular-nums">{line.quantity} {line.unit_symbol}</td><td className="px-4 py-4 text-right tabular-nums">{peso.format(Number(line.unit_price))}/{line.unit_symbol}</td><td className="px-5 py-4 text-right font-medium tabular-nums">{peso.format(line.total)}</td></tr>)}</tbody></table>
     </DataTableShell>
-  </>;
+  </div>;
 }
