@@ -51,6 +51,14 @@ test("database/internal failures never disclose SQL or credentials", async () =>
       !error.message.includes("secret"),
   );
   assert.throws(
+    () => databaseError({ code: "23514", message: "private constraint detail" }),
+    (error) =>
+      error instanceof MobileError &&
+      error.status === 503 &&
+      error.message.includes("DB-23514") &&
+      !error.message.includes("private constraint detail"),
+  );
+  assert.throws(
     () => databaseError({
       code: "23502",
       message: 'null value in column "category_id" of relation "suppliers" violates not-null constraint',

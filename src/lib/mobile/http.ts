@@ -206,9 +206,11 @@ export function databaseError(error: {
   for (const [match, message] of messages)
     if (error.message.toLowerCase().includes(match))
       throw new MobileError(422, message);
+  const errorReference = `DB-${error.code ?? "UNKNOWN"}`;
+  console.error("Mobile database operation failed", { errorReference });
   throw new MobileError(
     error.code === "22023" ? 422 : 503,
-    "The operation could not be completed. Review the details and retry.",
+    `The operation could not be completed. Review the details and retry. Error reference: ${errorReference}.`,
   );
 }
 export function mobileFailure(error: unknown) {
