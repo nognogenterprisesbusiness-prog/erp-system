@@ -122,6 +122,42 @@ export async function getInventoryBalances(params: { query?: string; locationId?
   return { balances, materials: balances.map((b) => b.material), locations, selectedLocationId, count: data?.[0]?.total_count ?? 0 };
 }
 
+// The Inventory page lists the material catalog with the balance at one
+// authorized location. A material without posted stock remains visible as zero.
+export async function getInventoryMaterials(params: { query?: string; locationId?: string; categoryId?: string; status?: "active" | "inactive" | "all"; lowStock?: boolean; page?: number; pageSize?: number; includeValues?: boolean } = {}) {
+  const supabase = await createClient();
+  const locations = await getLocationViews();
+  const selectedLocationId = params.locationId || locations[0]?.id || "";
+  if (selectedLocationId && !locations.some((item) => item.id === selectedLocationId)) notFound();
+  const pageSize = Math.min(500, Math.max(1, params.pageSize ?? 24));
+  let page = Number.isSafeInteger(params.page) && params.page! > 0 ? Math.min(params.page!, 10000) : 1;
+  const args = { p_query: safeSearchTerm(params.query), p_location_id: selectedLocationId || null,
+    p_category_id: params.categoryId || null, p_status: params.status ?? "active",
+    p_low: params.lowStock ?? false, p_limit: pageSize };
+  const readPage = async (target: number) => {
+    const { data, error } = await supabase.rpc("list_inventory_materials", { ...args, p_offset: (target - 1) * pageSize });
+    if (error) throw new Error("Unable to load inventory materials.", { cause: error });
+    return data ?? [];
+  };
+  let rows = await readPage(page);
+  let count = Number(rows[0]?.total_count ?? 0);
+  if (page > 1 && !rows.length) {
+    const first = await readPage(1);
+    count = Number(first[0]?.total_count ?? 0);
+    page = Math.max(1, Math.ceil(count / pageSize));
+    rows = page === 1 ? first : await readPage(page);
+  }
+  const values = new Map<string, number | null>();
+  if (params.includeValues && selectedLocationId && rows.length) {
+    const valueRows = await readByIds(rows.map((item) => item.material_id), (ids, from, to) => supabase.from("inventory_valuations")
+      .select("material_id,total_value").eq("inventory_location_id", selectedLocationId)
+      .in("material_id", ids).order("material_id").range(from, to), "inventory material values");
+    for (const item of valueRows) values.set(item.material_id, item.total_value);
+  }
+  return { rows: rows.map((item) => ({ ...item, stockValue: Number(item.quantity_on_hand) === 0 ? 0 : values.get(item.material_id) ?? null })),
+    locations, selectedLocationId, count, page };
+}
+
 // includeCosts (Admin/Finance) adds each movement's cost through a guarded RPC;
 // the cost columns are not readable from the table itself.
 export async function getInventoryTransactions(params: { type?: InventoryTransactionType | "all"; locationId?: string; transactionId?: string; page?: number; includeCosts?: boolean } = {}) {

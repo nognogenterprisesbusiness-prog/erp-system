@@ -37,6 +37,21 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
       assert(!mobile.some((p) => JSON.stringify(p).includes(sibling)));
     }
   });
+  await check("inventory lists zero-stock catalog materials and enforces location and status filters", async () => {
+    const category = await value(`select category_id from public.materials where id='${material}'`);
+    const empty = result(await as("admin", `select public.save_material(null,'MAT-UNSTOCKED','Unstocked Test Material',null,'${category}','${unit}','consumable',5,true)`));
+    const inactive = result(await as("admin", `select public.save_material(null,'MAT-INACTIVE','Inactive Test Material',null,'${category}','${unit}','consumable',0,false)`));
+    const row = await json("admin", `select row_to_json(m) from public.list_inventory_materials('Unstocked Test Material','${source}','${category}','active',false,0,24) m`);
+    assert.equal(row.material_id, empty);
+    assert.equal(Number(row.quantity_on_hand), 0);
+    assert.equal(Number(row.available_quantity), 0);
+    assert.equal(row.balance_id, null);
+    assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('Unstocked Test Material','${source}',null,'active',true,0,24)`)), "1");
+    assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('Inactive Test Material','${source}',null,'active',false,0,24)`)), "0");
+    assert.equal(scalar(await as("admin", `select material_id from public.list_inventory_materials('Inactive Test Material','${source}',null,'all',false,0,24)`)), inactive);
+    assert.equal(scalar(await as("warehouse_staff", `select material_id from public.list_inventory_materials('Unstocked Test Material','${source}',null,'active',false,0,24)`)), empty);
+    await assert.rejects(as("foreman", `select * from public.list_inventory_materials('','${source}',null,'active',false,0,24)`), /Inventory location is not available/);
+  });
   await check("assigned-site documents and storage metadata are readable without projectwide assignment", async () => {
     const doc = randomUUID();
     await as("admin", `insert into public.project_documents(id,project_id,category,file_name,content_type,file_size,storage_path,uploaded_by)
@@ -534,6 +549,16 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     assert.ok(summary[0] >= Math.min(lines, 100) && summary[1] >= 1);
     await assert.rejects(as("finance", "select * from public.get_purchase_lines('', 0, 500)"), /invalid page/);
     for (const role of ["engineer", "foreman", "warehouse_staff"]) await assert.rejects(as(role, "select * from public.get_purchase_summary()"), /not authorized/);
+  });
+  await check("inventory catalog pagination keeps materials beyond 500 reachable", async () => {
+    const category = await value(`select category_id from public.materials where id='${material}'`);
+    await sql(`insert into public.materials(code,name,category_id,base_unit_id,material_kind,minimum_stock_level,is_active,created_by,updated_by)
+      select 'MAT-PAGE-' || lpad(g::text,4,'0'), 'Paged material ' || lpad(g::text,4,'0'),
+        '${category}','${unit}','consumable',0,true,'${users.admin}','${users.admin}'
+      from generate_series(1,505) g`);
+    const count = Number(scalar(await as("admin", `select max(total_count) from public.list_inventory_materials('Paged material','${source}',null,'active',false,500,24)`)));
+    assert.equal(count, 505);
+    assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('Paged material','${source}',null,'active',false,500,24)`)), "5");
   });
   await check("all balances, valuations and batches reconcile after corrections", async () => {
     assert.equal(await value("select count(*) from public.inventory_balances where available_quantity<0 or quantity_on_hand<0"), "0");

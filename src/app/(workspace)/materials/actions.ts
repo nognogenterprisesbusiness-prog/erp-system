@@ -18,7 +18,7 @@ export async function saveCategoryAction(_: MaterialActionState, form: FormData)
   const supabase = await createClient();
   const { error } = await supabase.rpc("save_material_category", { p_id: parsed.data.id ?? null, p_name: parsed.data.name, p_description: parsed.data.description || "" });
   if (error) return failure(error.code === "23505" ? "A category with this name already exists." : "The category could not be saved.");
-  revalidatePath("/materials/categories"); revalidatePath("/materials");
+  revalidatePath("/materials/categories"); revalidatePath("/inventory");
   redirect("/materials/categories");
 }
 
@@ -26,7 +26,7 @@ export async function archiveCategoryAction(form: FormData) {
   await requireManager(); const id = value(form, "id");
   const supabase = await createClient(); const { error } = await supabase.rpc("archive_material_category", { p_id: id });
   if (error) throw new Error("The category could not be archived.");
-  revalidatePath("/materials/categories"); revalidatePath("/materials");
+  revalidatePath("/materials/categories"); revalidatePath("/inventory");
 }
 
 export async function saveMaterialAction(_: MaterialActionState, form: FormData): Promise<MaterialActionState> {
@@ -43,12 +43,12 @@ export async function saveMaterialAction(_: MaterialActionState, form: FormData)
   if (photo) {
     try { await saveRecordPhoto("materials", data, photo); }
     catch (cause) {
-      revalidatePath("/materials"); revalidatePath("/inventory");
+      revalidatePath("/inventory");
       if (input.id) revalidatePath(`/materials/${input.id}`);
       return failure(cause instanceof Error ? cause.message : "The material was saved, but its photo could not be attached. Open the material again to retry.");
     }
   }
-  revalidatePath("/materials"); revalidatePath("/inventory");
+  revalidatePath("/inventory");
   if (input.id) revalidatePath(`/materials/${input.id}`);
   return { ok: true, data: { id: data } };
 }
@@ -57,5 +57,5 @@ export async function archiveMaterialAction(form: FormData) {
   await requireManager(); const id = value(form, "id");
   const supabase = await createClient(); const { error } = await supabase.rpc("archive_material", { p_id: id });
   if (error) throw new Error("The material could not be archived.");
-  revalidatePath("/materials"); revalidatePath("/inventory"); redirect("/materials");
+  revalidatePath("/inventory"); redirect("/inventory");
 }
