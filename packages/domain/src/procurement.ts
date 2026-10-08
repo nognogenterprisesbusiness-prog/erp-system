@@ -23,6 +23,29 @@ export const decidePurchaseOwnerApprovalSchema = z.object({
 }).refine((value) => value.decision === "approve" || value.reason.length >= 3,
   { path: ["reason"], message: "Enter a reason for rejection" });
 
+export const recordSupplierQuotationSchema = z.object({
+  idempotencyKey: uuidSchema,
+  supplierId: uuidSchema,
+  reference: z.string().trim().min(2).max(120),
+  quotedOn: z.iso.date(),
+  validUntil: z.union([z.literal(""), z.iso.date()]),
+  notes: z.string().trim().max(500),
+  lines: z.array(purchaseOrderLineSchema).min(1).max(50),
+}).refine((value) => !value.validUntil || value.validUntil >= value.quotedOn,
+  { path: ["validUntil"], message: "Valid until must not precede the quote date" })
+  .refine((value) => new Set(value.lines.map((line) => line.materialId)).size === value.lines.length,
+    { path: ["lines"], message: "Choose each material once" });
+
+export const inspectPurchaseDeliverySchema = z.object({
+  idempotencyKey: uuidSchema, orderId: uuidSchema, lineId: uuidSchema,
+  deliveredQuantity: quantitySchema, acceptedQuantity: z.string().regex(/^\d+(?:\.\d{1,4})?$/),
+  deliveryReference: z.string().trim().min(2).max(120),
+  inspectedOn: z.iso.date(), qualityNote: z.string().trim().max(500),
+}).refine((value) => Number(value.acceptedQuantity) <= Number(value.deliveredQuantity),
+  { path: ["acceptedQuantity"], message: "Accepted quantity cannot exceed delivered quantity" })
+  .refine((value) => Number(value.acceptedQuantity) === Number(value.deliveredQuantity) || value.qualityNote.length >= 3,
+    { path: ["qualityNote"], message: "Explain rejected or damaged quantity" });
+
 export const receivePurchaseOrderLineSchema = z.object({
   idempotencyKey: uuidSchema,
   orderId: uuidSchema,

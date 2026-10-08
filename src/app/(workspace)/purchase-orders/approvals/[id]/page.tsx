@@ -15,7 +15,7 @@ export default async function PurchaseApprovalPage({ params, searchParams }: {
   searchParams: Promise<{ posted?: string }>;
 }) {
   const user = await requireProcurementViewer();
-  const { request, input, supplierName, warehouseName, requestedByName, decidedByName, lines } =
+  const { request, input, context, supplierName, warehouseName, requestedByName, decidedByName, lines } =
     await getPurchaseApprovalRequest((await params).id);
   const query = await searchParams;
   return <>
@@ -32,6 +32,8 @@ export default async function PurchaseApprovalPage({ params, searchParams }: {
         <strong className="text-lg tabular-nums text-slate-900">{peso(Number(request.order_total))}</strong>
       </div>
       <p className="mt-4 text-sm text-slate-600">Purchases above ₱50,000 need this approval before a purchase order is issued. Submission alone does not update supplier prices or inventory.</p>
+      {context?.material_request_id && <p className="mt-2">Related <Link href={`/requests/${context.material_request_id}`} className="text-cyan-700 hover:underline">material request</Link>.</p>}
+      {context?.supplier_quotation_id && <p className="mt-2">Based on a <Link href={`/purchase-orders/quotations/${context.supplier_quotation_id}`} className="text-cyan-700 hover:underline">saved supplier quotation</Link>.</p>}
       {request.purchase_order_id && <Button variant="outline" asChild className="mt-4"><Link href={`/purchase-orders/${request.purchase_order_id}`}>View issued purchase order</Link></Button>}
       {request.status === "pending" && user.canManage && <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-200 pt-5">
         <RecordCreateDialog title="Approve purchase" triggerLabel="Approve"><p className="mb-4 text-sm text-slate-600">Review the supplier, warehouse, every item and the {peso(Number(request.order_total))} total before issuing the order.</p><PurchaseApprovalForm requestId={request.id} decision="approve" /></RecordCreateDialog>

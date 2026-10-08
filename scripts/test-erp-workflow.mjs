@@ -171,9 +171,43 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     insert into public.supplier_prices(supplier_material_id,unit_price,effective_start_date,recorded_by)
     values('${catalog}',250,current_date,'${users.admin}'); commit;`);
   const issue = (key) => `select public.issue_purchase_order('${key}','${supplier}','${warehouse}',current_date,current_date+7,'Test purchase','[{"materialId":"${material}","quantity":"100","unitPrice":"250"}]')`;
-  const po = result(await as("admin", issue(randomUUID())));
+  const quoteLines = `[{"materialId":"${material}","quantity":"100","unitPrice":"250"}]`;
+  const quoteKey = randomUUID();
+  const quoteCommand = (key, price = 250) => `select public.record_supplier_quotation('${key}','${supplier}','TEST-Q-1',current_date,current_date+7,'Initial written offer','[{"materialId":"${material}","quantity":"100","unitPrice":"${price}"}]')`;
+  let quote;
+  await check("supplier quotation is immutable, comparable and restricted to Admin write access", async () => {
+    await assert.rejects(as("finance", quoteCommand(randomUUID())), /Only Admin/);
+    const results = await Promise.all([as("admin", quoteCommand(quoteKey)), as("admin", quoteCommand(quoteKey))]);
+    quote = result(results[0]); assert.equal(result(results[1]), quote);
+    await assert.rejects(as("admin", quoteCommand(quoteKey, 260)), /Idempotency key/);
+    assert.equal(await value(`select total::text from public.supplier_quotations where id='${quote}'`), "25000.00");
+    assert.equal(scalar(await as("finance", `select count(*) from public.supplier_quotations where id='${quote}'`)), "1");
+    assert.equal(scalar(await as("foreman", `select count(*) from public.supplier_quotations where id='${quote}'`)), "0");
+    assert.equal(scalar(await as("finance", `select count(*) from public.list_supplier_quotation_lines('TEST-Q-1','${material}',0,20)`)), "1");
+    const otherSupplier = result(await as("admin", "select public.save_supplier(null,'','Comparison Hardware',null,null,null,'09171234568',null,'Danao, Cebu',null,null,null,null,'active',null)"));
+    const cheaperQuote = result(await as("admin", `select public.record_supplier_quotation('${randomUUID()}','${otherSupplier}','TEST-Q-2',current_date,current_date+7,null,'[{"materialId":"${material}","quantity":"100","unitPrice":"240"}]')`));
+    assert.equal(scalar(await as("finance", `select quotation_id from public.list_supplier_quotation_lines('TEST-Q-','${material}',0,20) limit 1`)), cheaperQuote);
+    assert.equal(scalar(await as("finance", `select count(*) from public.list_supplier_quotation_lines('TEST-Q-','${material}',1,1)`)), "1");
+  });
+  const poKey = randomUUID();
+  const procure = (key, requestId = request, quoteId = quote, lines = quoteLines, targetWarehouse = warehouse) =>
+    `select public.submit_procurement_purchase('${key}','${supplier}','${targetWarehouse}',current_date,current_date+7,'Test purchase','${lines}','${requestId}','${quoteId}')`;
+  const po = (await json("admin", procure(poKey))).id;
   const poLine = await value(`select id from public.purchase_order_lines where purchase_order_id='${po}'`);
   const purchaseReceive = (key, quantity) => `select public.receive_purchase_order_line('${key}','${poLine}',${quantity},null,'TEST-DR',current_date,null)`;
+  const inspect = (key, delivered, accepted, ref = "TEST-DR", note = "null") =>
+    `select public.inspect_purchase_delivery('${key}','${poLine}',${delivered},${accepted},'${ref}',current_date,${note})`;
+  await check("linked request and quotation match supplier, warehouse, material and exact offered price", async () => {
+    assert.equal(await value(`select material_request_id::text || ':' || supplier_quotation_id::text from public.purchase_procurement_context where idempotency_key='${poKey}'`), `${request}:${quote}`);
+    assert.equal((await json("admin", procure(poKey))).id, po);
+    await assert.rejects(as("admin", procure(poKey, randomUUID())), /different sourcing/);
+    await assert.rejects(as("admin", procure(randomUUID(), request, quote, `[{"materialId":"${material}","quantity":"100","unitPrice":"251"}]`)), /match the selected quotation/);
+    await assert.rejects(as("admin", procure(randomUUID(), request, quote, quoteLines, randomUUID())), /warehouse/);
+    const pendingRequest = result(await as("foreman", `select public.submit_material_request('${randomUUID()}','${project}','${site}','${warehouse}',current_date+7,'Pending procurement test','[{"materialId":"${material}","quantity":"1"}]')`));
+    await assert.rejects(as("admin", procure(randomUUID(), pendingRequest, quote)), /requires Engineer approval/);
+    await assert.rejects(as("finance", procure(randomUUID())), /Only Admin/);
+    assert.equal(scalar(await as("foreman", `select count(*) from public.purchase_procurement_context where idempotency_key='${poKey}'`)), "0");
+  });
   let purchaseTx;
   await check("simple purchasing: three-field supplier, typed prices become the latest supplier price, history stays immutable", async () => {
     assert.equal(await value(`select supplier_price_id is not null from public.purchase_order_lines where id='${poLine}'`), "t");
@@ -214,7 +248,7 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
   await check("PHP 50,000 issues automatically; higher purchases wait for audited Admin approval", async () => {
     const exactKey = randomUUID();
     const exactLines = `[{"materialId":"${material}","quantity":"200","unitPrice":"250"}]`;
-    const submit = (key, lines) => `select public.submit_purchase_order('${key}','${supplier}','${warehouse}',current_date,null,null,'${lines}')`;
+    const submit = (key, lines) => `select public.submit_procurement_purchase('${key}','${supplier}','${warehouse}',current_date,null,null,'${lines}',null,null)`;
     const exact = JSON.parse(scalar(await as("admin", submit(exactKey, exactLines))));
     assert.equal(exact.kind, "issued");
     assert.equal(await value(`select status from public.purchase_orders where id='${exact.id}'`), "issued");
@@ -228,7 +262,7 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     assert.equal(await value(`select count(*) from public.purchase_orders where idempotency_key='${highKey}'`), "0");
     assert.equal(await currentPrice(), priceBefore);
     await assert.rejects(as("admin", `select public.issue_purchase_order('${highKey}','${supplier}','${warehouse}',current_date,null,null,'${highLines}')`), /Owner approval is required/);
-    await assert.rejects(as("finance", submit(randomUUID(), highLines)), /administrator/);
+    await assert.rejects(as("finance", submit(randomUUID(), highLines)), /Only Admin/);
     await assert.rejects(as("finance", `select public.decide_purchase_owner_approval('${pending.id}',true,null)`), /administrator/);
     assert.deepEqual(JSON.parse(scalar(await as("admin", submit(highKey, highLines)))), pending);
     await assert.rejects(as("admin", submit(highKey, exactLines)), /Idempotency key/);
@@ -247,6 +281,28 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     await as("admin", `select public.decide_purchase_owner_approval('${rejected.id}',false,'Price exceeds plan')`);
     assert.equal(await value(`select count(*) from public.purchase_orders where idempotency_key='${rejectedKey}'`), "0");
     await assert.rejects(as("admin", `select public.decide_purchase_owner_approval('${rejected.id}',true,null)`), /already decided/);
+    const linkedQuote = result(await as("admin", `select public.record_supplier_quotation('${randomUUID()}','${supplier}','TEST-Q-HIGH',current_date,current_date+7,null,'${highLines}')`));
+    const linkedKey = randomUUID();
+    const linked = JSON.parse(scalar(await as("admin", `select public.submit_procurement_purchase('${linkedKey}','${supplier}','${warehouse}',current_date,null,null,'${highLines}','${request}','${linkedQuote}')`)));
+    assert.equal(linked.kind, "pending");
+    assert.equal(await value(`select material_request_id::text || ':' || supplier_quotation_id::text from public.purchase_procurement_context where idempotency_key='${linkedKey}'`), `${request}:${linkedQuote}`);
+    const linkedOrder = result(await as("admin", `select public.decide_purchase_owner_approval('${linked.id}',true,'Verified request and quotation')`));
+    assert.equal(await value(`select idempotency_key::text from public.purchase_orders where id='${linkedOrder}'`), linkedKey);
+  });
+  await check("supplier inspection records partial acceptance; uninspected receipt is denied", async () => {
+    await assert.rejects(as("warehouse_staff", purchaseReceive(randomUUID(), 40)), /Accepted delivery inspection/);
+    await assert.rejects(as("finance", inspect(randomUUID(), 45, 40, "TEST-DR", "'Five bags damaged'")), /Only Admin or assigned/);
+    const key = randomUUID();
+    const attempts = await Promise.all([as("warehouse_staff", inspect(key, 45, 40, "TEST-DR", "'Five bags damaged'")), as("warehouse_staff", inspect(key, 45, 40, "TEST-DR", "'Five bags damaged'"))]);
+    assert.equal(result(attempts[0]), result(attempts[1]));
+    await assert.rejects(as("warehouse_staff", inspect(key, 45, 41, "TEST-DR", "'Four bags damaged'")), /Idempotency key/);
+    assert.equal(await value(`select accepted_quantity::text || ':' || quality_note from public.purchase_delivery_inspections where id='${result(attempts[0])}'`), "40.0000:Five bags damaged");
+    assert.equal(await value(`select received_quantity from public.purchase_order_lines where id='${poLine}'`), "0.0000");
+    assert.equal(scalar(await as("warehouse_staff", `select count(*) from public.get_open_purchase_inspections(array['${poLine}']::uuid[])`)), "1");
+    assert.equal(scalar(await as("finance", `select count(*) from public.get_open_purchase_inspections(array['${poLine}']::uuid[])`)), "0");
+    await assert.rejects(as("warehouse_staff", inspect(randomUUID(), 101, 101, "TOO-MUCH")), /remaining purchase order quantity/);
+    await as("warehouse_staff", inspect(randomUUID(), 5, 0, "REJECTED-DR", "'All damaged'"));
+    await assert.rejects(as("warehouse_staff", `select public.receive_purchase_order_line('${randomUUID()}','${poLine}',5,null,'REJECTED-DR',current_date,null)`), /Accepted delivery inspection/);
   });
   await check("warehouse PO receipt retries post one cost snapshot and partial delivery", async () => {
     const key = randomUUID(); const posted = await Promise.all([as("warehouse_staff", purchaseReceive(key, 40)), as("warehouse_staff", purchaseReceive(key, 40))]);
@@ -254,6 +310,8 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     purchaseTx = await value(`select inventory_transaction_id from public.purchase_order_receipts where idempotency_key='${key}'`);
     assert.equal(await value(`select cost_total from public.inventory_transactions where id='${purchaseTx}'`), "10000.00");
     assert.equal(await value(`select received_quantity from public.purchase_order_lines where id='${poLine}'`), "40.0000");
+    assert.equal(await value(`select inspection_id is not null from public.purchase_order_receipts where idempotency_key='${key}'`), "t");
+    assert.equal(scalar(await as("warehouse_staff", `select count(*) from public.get_open_purchase_inspections(array['${poLine}']::uuid[])`)), "0");
     await assert.rejects(as("finance", purchaseReceive(randomUUID(), 1)), /assigned|administrator/i);
     await assert.rejects(as("warehouse_staff", `select public.receive_purchase_order_line('${randomUUID()}','${poLine}',1,200,'BAD-PRICE',current_date,'Discount')`), /administrator/);
   });
@@ -262,10 +320,11 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     assert.equal(attempts.filter((r) => r.status === "fulfilled").length, 1);
     assert.equal(await value(`select status from public.purchase_orders where id='${po}'`), "issued");
     assert.equal(await value(`select received_quantity from public.purchase_order_lines where id='${poLine}'`), "0.0000");
+    await as("warehouse_staff", inspect(randomUUID(), 35, 35));
     await as("warehouse_staff", purchaseReceive(randomUUID(), 35));
     assert.equal(await value(`select received_quantity from public.purchase_order_lines where id='${poLine}'`), "35.0000");
     assert.equal(await value(`select count(*) from public.purchase_order_receipts where purchase_order_line_id='${poLine}'`), "2");
-    await assert.rejects(as("warehouse_staff", purchaseReceive(randomUUID(), 5)), /delivery reference/);
+    await assert.rejects(as("warehouse_staff", purchaseReceive(randomUUID(), 5)), /delivery reference|Accepted delivery inspection/);
     assert.equal(await value(`select cost_total from public.inventory_transactions where id='${purchaseTx}'`), "10000.00");
   });
   await check("used receipt batch cannot be replaced by unrelated stock with enough overall quantity", async () => {

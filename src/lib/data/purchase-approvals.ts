@@ -56,17 +56,19 @@ export async function getPurchaseApprovalRequest(id: string) {
   if (!parsed.success) throw new Error("The saved purchase details are invalid. Contact an administrator.");
   const input = parsed.data;
   const materialIds = input.lines.map((line) => line.materialId);
-  const [supplier, warehouse, materials, people] = await Promise.all([
+  const [supplier, warehouse, materials, people, context] = await Promise.all([
     supabase.from("suppliers").select("id,supplier_name").eq("id", input.supplierId).single(),
     supabase.from("warehouses").select("id,name").eq("id", input.warehouseId).single(),
     supabase.from("materials").select("id,code,name").in("id", materialIds),
     supabase.from("profiles").select("id,full_name").in("id", [request.requested_by, ...(request.decided_by ? [request.decided_by] : [])]),
+    supabase.from("purchase_procurement_context").select("material_request_id,supplier_quotation_id")
+      .eq("idempotency_key", request.idempotency_key).maybeSingle(),
   ]);
-  if (supplier.error || warehouse.error || materials.error || people.error) throw new Error("Unable to load purchase approval details.");
+  if (supplier.error || warehouse.error || materials.error || people.error || context.error) throw new Error("Unable to load purchase approval details.");
   const names = new Map((materials.data ?? []).map((material) => [material.id, material]));
   const peopleNames = new Map((people.data ?? []).map((person) => [person.id, person.full_name]));
   return {
-    request, input,
+    request, input, context: context.data,
     supplierName: supplier.data.supplier_name,
     warehouseName: warehouse.data.name,
     requestedByName: peopleNames.get(request.requested_by) ?? "Unknown",

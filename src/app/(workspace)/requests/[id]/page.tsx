@@ -39,7 +39,7 @@ export default async function MaterialRequestDetailPage({ params }: { params: Pr
     ...varianceEvents.map((event) => ({ id: event.id, event: "Variance approved", material: event.materialName, quantity: String(event.quantity), actor: event.actorName, detail: event.reason, occurredAt: event.approved_at })),
   ].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   return <>
-    <PageHeader title={request.request_number} description={`${project.code} · ${project.name} · ${site.name}`} action={<Button asChild variant="outline"><Link href="/requests">All requests</Link></Button>} />
+    <PageHeader title={request.request_number} description={`${project.code} · ${project.name} · ${site.name}`} action={<div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link href="/requests">All requests</Link></Button>{user.canManage && (request.status === "approved" || request.status === "partially_approved") && <Button asChild variant="outline"><Link href={`/purchase-orders?create=1&request=${request.id}`}>Purchase for request</Link></Button>}</div>} />
     <div className="mt-7 grid gap-4 rounded-xl border border-slate-200 bg-white p-5 text-sm sm:grid-cols-2 lg:grid-cols-4">
       <div><p className="text-xs font-medium text-slate-500">Status</p><p className="mt-1 font-semibold text-slate-900">{labels[request.status]}</p></div>
       <div><p className="text-xs font-medium text-slate-500">Warehouse</p><p className="mt-1 font-semibold text-slate-900">{warehouse.name}</p></div>

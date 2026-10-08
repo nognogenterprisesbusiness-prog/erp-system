@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Button } from "@/components/ui/button";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
-import { ReceivePurchaseLineForm, RecordSupplierPaymentForm } from "./purchase-order-forms";
+import { RecordSupplierPaymentForm } from "./purchase-order-forms";
 import { getPurchaseWorkflow } from "@/lib/purchasing/workflow";
 import type { PurchaseLineRow } from "@/types/database";
 
@@ -25,10 +25,7 @@ export function PurchaseWorkflowCell({ row, canManage, canViewFinance, paymentBa
       <RecordSupplierPaymentForm orderId={row.purchase_id} balance={paymentBalance} idempotencyKey={randomUUID()} today={today} />
     </RecordCreateDialog>;
   } else if (workflow.action === "receive") {
-    control = <RecordCreateDialog key={`${row.line_id}:${row.received_quantity}`} title="Inventory Receipt" triggerLabel="" triggerVariant="outline" triggerSize="icon" triggerIcon={pencil} triggerAriaLabel={`Receive ${row.material_name} for ${context}`}>
-      <p className="mb-4 text-sm text-slate-600">{context} · {row.material_name} → {row.location_name}</p>
-      <ReceivePurchaseLineForm orderId={row.purchase_id} lineId={row.line_id} remaining={Number(row.quantity) - Number(row.received_quantity)} unitPrice={Number(row.unit_price)} unitSymbol={row.unit_symbol} idempotencyKey={randomUUID()} today={today} />
-    </RecordCreateDialog>;
+    control = <Button size="icon" variant="outline" asChild><Link href={`${href}#delivery-inspection`} aria-label={`Inspect delivery for ${context}`} title={`Inspect delivery for ${context}`}>{pencil}</Link></Button>;
   } else {
     const target = workflow.action === "reimburse" ? `${href}?action=reimburse` : workflow.action === "history" && row.source === "purchase_order" ? `${href}#supplier-payments` : href;
     const label = workflow.action === "review" ? "Review purchase and receipt" : workflow.action === "reimburse" ? "Manage reimbursement" : workflow.action === "history" ? "Manage Supplier Payment history" : "View purchase";

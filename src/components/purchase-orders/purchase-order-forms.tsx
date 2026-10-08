@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useId, useState } from "react";
-import { cancelPurchaseOrderAction, decidePurchaseOwnerApprovalAction, issuePurchaseOrderAction, receivePurchaseOrderLineAction, receiveWarehouseDeliveryAction, recordSupplierPaymentAction, voidSupplierPaymentAction, type PurchaseActionState } from "@/app/(workspace)/purchase-orders/actions";
+import { cancelPurchaseOrderAction, decidePurchaseOwnerApprovalAction, inspectPurchaseDeliveryAction, issuePurchaseOrderAction, receivePurchaseOrderLineAction, receiveWarehouseDeliveryAction, recordSupplierPaymentAction, recordSupplierQuotationAction, voidSupplierPaymentAction, type PurchaseActionState } from "@/app/(workspace)/purchase-orders/actions";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -12,21 +12,25 @@ import { isValidPurchaseQuantity, isValidPurchaseUnitPrice, PurchaseLineItems, t
 
 type Choices = Awaited<ReturnType<typeof getPurchaseOrderChoices>>;
 type Line = PurchaseLineInput & { priceEdited?: boolean };
+export type LinkedQuotation = { id: string; reference: string; supplierId: string; lines: { materialId: string; quantity: string; unitPrice: string }[] };
+export type LinkedRequest = { id: string; number: string; warehouseId: string; lines: { materialId: string; quantity: string }[] };
+export type AcceptedInspection = { id: string; delivery_reference: string; inspected_on: string; accepted_quantity: number; delivered_quantity: number; quality_note: string | null };
 const initialState: PurchaseActionState = { message: "" };
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 
 // Purchase like the client's sheet: supplier, warehouse, date, then item,
 // quantity and price per line. The price starts at the supplier's latest price.
-export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initialMaterialId, initialWarehouseId, initialQuantity }: { choices: Choices; idempotencyKey: string; today: string; initialMaterialId?: string; initialWarehouseId?: string; initialQuantity?: string }) {
+export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initialMaterialId, initialWarehouseId, initialQuantity, quotation, sourceRequest }: { choices: Choices; idempotencyKey: string; today: string; initialMaterialId?: string; initialWarehouseId?: string; initialQuantity?: string; quotation?: LinkedQuotation; sourceRequest?: LinkedRequest }) {
   const [state, action, pending] = useActionState(issuePurchaseOrderAction, initialState);
-  const [supplierId, setSupplierId] = useState(choices.suppliers[0]?.id ?? "");
-  const [warehouseId, setWarehouseId] = useState(initialWarehouseId ?? choices.warehouses[0]?.id ?? "");
+  const [supplierId, setSupplierId] = useState(quotation?.supplierId ?? choices.suppliers[0]?.id ?? "");
+  const [warehouseId, setWarehouseId] = useState(sourceRequest?.warehouseId ?? initialWarehouseId ?? choices.warehouses[0]?.id ?? "");
   const latestPrice = (supplier: string, materialId: string) => {
     const price = choices.latestPrices[`${supplier}:${materialId}`];
     return price === undefined ? "" : price.toFixed(2);
   };
-  const [lines, setLines] = useState<Line[]>([{ key: 0, materialId: initialMaterialId ?? "", quantity: initialQuantity ?? "", unitPrice: initialMaterialId ? latestPrice(supplierId, initialMaterialId) : "" }]);
-  const [nextKey, setNextKey] = useState(1);
+  const initialLines = quotation?.lines ?? sourceRequest?.lines.map((line) => ({ ...line, unitPrice: latestPrice(supplierId, line.materialId) })) ?? [{ materialId: initialMaterialId ?? "", quantity: initialQuantity ?? "", unitPrice: initialMaterialId ? latestPrice(supplierId, initialMaterialId) : "" }];
+  const [lines, setLines] = useState<Line[]>(initialLines.map((line, key) => ({ ...line, key })));
+  const [nextKey, setNextKey] = useState(initialLines.length);
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   const updateLine = (key: number, patch: Partial<Line>) => setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
   const changeSupplier = (next: string) => {
@@ -36,14 +40,16 @@ export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initial
   };
   return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
     <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+    <input type="hidden" name="materialRequestId" value={sourceRequest?.id ?? ""} /><input type="hidden" name="supplierQuotationId" value={quotation?.id ?? ""} />
     <input type="hidden" name="supplierId" value={supplierId} /><input type="hidden" name="warehouseId" value={warehouseId} />
     <input type="hidden" name="lines" value={JSON.stringify(lines.map(({ materialId, quantity, unitPrice }) => ({ materialId, quantity, unitPrice })))} />
     <div className="grid gap-5 md:grid-cols-3">
-      <FormField label="Supplier" htmlFor="poSupplier" error={error("supplierId")}><SelectPicker id="poSupplier" className="h-11" label="Supplier" value={supplierId} onValueChange={changeSupplier} options={choices.suppliers.map((item) => ({ value: item.id, label: item.supplier_name }))} /></FormField>
-      <FormField label="Deliver to warehouse" htmlFor="poWarehouse" error={error("warehouseId")}><SelectPicker id="poWarehouse" className="h-11" label="Deliver to warehouse" value={warehouseId} onValueChange={setWarehouseId} options={choices.warehouses.map((item) => ({ value: item.id, label: item.name }))} /></FormField>
+      <FormField label="Supplier" htmlFor="poSupplier" error={error("supplierId")}><SelectPicker id="poSupplier" className="h-11" label="Supplier" value={supplierId} disabled={Boolean(quotation)} onValueChange={changeSupplier} options={choices.suppliers.map((item) => ({ value: item.id, label: item.supplier_name }))} /></FormField>
+      <FormField label="Deliver to warehouse" htmlFor="poWarehouse" error={error("warehouseId")}><SelectPicker id="poWarehouse" className="h-11" label="Deliver to warehouse" value={warehouseId} disabled={Boolean(sourceRequest)} onValueChange={setWarehouseId} options={choices.warehouses.map((item) => ({ value: item.id, label: item.name }))} /></FormField>
       <FormField label="Purchase date" htmlFor="orderedOn" error={error("orderedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="orderedOn" name="orderedOn" label="Purchase date" defaultValue={today} allowClear={false} required /></FormField>
     </div>
-    <div className="mt-7"><PurchaseLineItems lines={lines} materials={choices.materials} maxLines={50} pending={pending} idPrefix="po" onAdd={() => { setLines((current) => [...current, { key: nextKey, materialId: "", quantity: "", unitPrice: "" }]); setNextKey((value) => value + 1); }} onRemove={(key) => setLines((current) => current.filter((line) => line.key !== key))} onUpdate={(key, patch) => {
+    {(quotation || sourceRequest) && <p className="mt-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-900">{sourceRequest ? `Linked to material request ${sourceRequest.number}. ` : ""}{quotation ? `Using supplier quotation ${quotation.reference}; its items, quantities and prices are fixed.` : ""}</p>}
+    <div className="mt-7"><PurchaseLineItems lines={lines} materials={sourceRequest ? choices.materials.filter((item) => sourceRequest.lines.some((line) => line.materialId === item.id)) : choices.materials} maxLines={50} pending={pending} locked={Boolean(quotation)} idPrefix="po" onAdd={() => { setLines((current) => [...current, { key: nextKey, materialId: "", quantity: "", unitPrice: "" }]); setNextKey((value) => value + 1); }} onRemove={(key) => setLines((current) => current.filter((line) => line.key !== key))} onUpdate={(key, patch) => {
       if (patch.materialId !== undefined) updateLine(key, { ...patch, unitPrice: latestPrice(supplierId, patch.materialId), priceEdited: false });
       else updateLine(key, { ...patch, ...(patch.unitPrice !== undefined ? { priceEdited: true } : {}) });
     }} /></div>
@@ -72,17 +78,61 @@ export function PurchaseApprovalForm({ requestId, decision }: { requestId: strin
   </form>;
 }
 
-export function ReceivePurchaseLineForm({ orderId, lineId, remaining, unitPrice, unitSymbol, idempotencyKey, today }: { orderId: string; lineId: string; remaining: number; unitPrice: number; unitSymbol: string; idempotencyKey: string; today: string }) {
+export function SupplierQuotationForm({ choices, idempotencyKey, today }: { choices: Choices; idempotencyKey: string; today: string }) {
+  const [state, action, pending] = useActionState(recordSupplierQuotationAction, initialState);
+  const [supplierId, setSupplierId] = useState(choices.suppliers[0]?.id ?? "");
+  const [lines, setLines] = useState<Line[]>([{ key: 0, materialId: "", quantity: "", unitPrice: "" }]);
+  const [nextKey, setNextKey] = useState(1);
+  const error = (field: string) => state.fieldErrors?.[field]?.[0];
+  return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+    <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+    <input type="hidden" name="supplierId" value={supplierId} />
+    <input type="hidden" name="lines" value={JSON.stringify(lines.map(({ materialId, quantity, unitPrice }) => ({ materialId, quantity, unitPrice })))} />
+    <div className="grid gap-4 sm:grid-cols-2">
+      <FormField label="Supplier" htmlFor="quoteSupplier" error={error("supplierId")}><SelectPicker id="quoteSupplier" label="Supplier" value={supplierId} onValueChange={setSupplierId} options={choices.suppliers.map((item) => ({ value: item.id, label: item.supplier_name }))} /></FormField>
+      <FormField label="Supplier quotation reference" htmlFor="quoteReference" error={error("reference")}><input id="quoteReference" name="reference" className={fieldControlClass} maxLength={120} required /></FormField>
+      <FormField label="Quote date" htmlFor="quotedOn" error={error("quotedOn")}><DatePicker id="quotedOn" name="quotedOn" label="Quote date" defaultValue={today} allowClear={false} required /></FormField>
+      <FormField label="Valid until (optional)" htmlFor="validUntil" error={error("validUntil")}><DatePicker id="validUntil" name="validUntil" label="Valid until" /></FormField>
+    </div>
+    <div className="mt-6"><PurchaseLineItems title="Quoted materials" lines={lines} materials={choices.materials} maxLines={50} pending={pending} idPrefix="quote" onAdd={() => { setLines((current) => [...current, { key: nextKey, materialId: "", quantity: "", unitPrice: "" }]); setNextKey((value) => value + 1); }} onRemove={(key) => setLines((current) => current.filter((line) => line.key !== key))} onUpdate={(key, patch) => setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line))} /></div>
+    <FormField label="Quote note (optional)" htmlFor="quoteNotes" className="mt-4" error={error("notes")}><input id="quoteNotes" name="notes" className={fieldControlClass} maxLength={500} /></FormField>
+    {state.message && <p role="alert" className="mt-4 text-sm text-red-700">{state.message}</p>}
+    <p className="mt-4 text-sm text-slate-600">Saving a quote records an offered price. It does not update supplier price history, issue an order or change stock.</p>
+    <RecordFormControls busy={pending} disabled={!supplierId || lines.some((line) => !line.materialId || !isValidPurchaseQuantity(line.quantity) || !isValidPurchaseUnitPrice(line.unitPrice))} label="Save quotation" />
+  </form>;
+}
+
+export function PurchaseDeliveryInspectionForm({ orderId, lineId, remaining, unitSymbol, idempotencyKey, today, source = "order" }: {
+  orderId: string; lineId: string; remaining: number; unitSymbol: string; idempotencyKey: string; today: string; source?: "order" | "warehouse";
+}) {
+  const [state, action, pending] = useActionState(inspectPurchaseDeliveryAction, initialState);
+  const [delivered, setDelivered] = useState(String(remaining));
+  const [accepted, setAccepted] = useState(String(remaining));
+  const error = (field: string) => state.fieldErrors?.[field]?.[0];
+  return <form action={action} className="grid gap-4 sm:grid-cols-2">
+    <input type="hidden" name="idempotencyKey" value={idempotencyKey} /><input type="hidden" name="orderId" value={orderId} />
+    <input type="hidden" name="lineId" value={lineId} /><input type="hidden" name="source" value={source} />
+    <FormField label={`Delivered quantity (${unitSymbol})`} htmlFor={`inspect-delivered-${lineId}`} error={error("deliveredQuantity")}><input id={`inspect-delivered-${lineId}`} name="deliveredQuantity" className={fieldControlClass} inputMode="decimal" value={delivered} onChange={(event) => { setDelivered(event.target.value); setAccepted(event.target.value); }} required /></FormField>
+    <FormField label={`Accepted quantity (${unitSymbol})`} htmlFor={`inspect-accepted-${lineId}`} error={error("acceptedQuantity")} hint="Enter zero if the entire delivery is rejected."><input id={`inspect-accepted-${lineId}`} name="acceptedQuantity" className={fieldControlClass} inputMode="decimal" value={accepted} onChange={(event) => setAccepted(event.target.value)} required /></FormField>
+    <FormField label="Delivery receipt number" htmlFor={`inspect-ref-${lineId}`} error={error("deliveryReference")}><input id={`inspect-ref-${lineId}`} name="deliveryReference" className={fieldControlClass} maxLength={120} required /></FormField>
+    <FormField label="Inspection date" htmlFor={`inspect-date-${lineId}`} error={error("inspectedOn")}><DatePicker id={`inspect-date-${lineId}`} name="inspectedOn" label="Inspection date" defaultValue={today} allowClear={false} required /></FormField>
+    <FormField label="Quality or rejection note" htmlFor={`inspect-note-${lineId}`} className="sm:col-span-2" error={error("qualityNote")} hint="Required if any delivered quantity is not accepted."><input id={`inspect-note-${lineId}`} name="qualityNote" className={fieldControlClass} maxLength={500} required={Number(accepted) < Number(delivered)} /></FormField>
+    {state.message && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{state.message}</p>}
+    <div className="sm:col-span-2"><RecordFormControls busy={pending} disabled={!isValidPurchaseQuantity(delivered) || !/^\d+(?:\.\d{1,4})?$/.test(accepted) || Number(accepted) > Number(delivered)} label="Save inspection" /></div>
+  </form>;
+}
+
+export function ReceivePurchaseLineForm({ orderId, lineId, remaining, unitPrice, unitSymbol, idempotencyKey, today, inspection }: { orderId: string; lineId: string; remaining: number; unitPrice: number; unitSymbol: string; idempotencyKey: string; today: string; inspection?: AcceptedInspection }) {
   const [state, action, pending] = useActionState(receivePurchaseOrderLineAction, initialState);
-  const [quantity, setQuantity] = useState(String(remaining));
-  const [cost, setCost] = useState((Math.round(remaining * unitPrice * 100) / 100).toFixed(2));
+  const [quantity, setQuantity] = useState(String(inspection?.accepted_quantity ?? remaining));
+  const [cost, setCost] = useState((Math.round((inspection?.accepted_quantity ?? remaining) * unitPrice * 100) / 100).toFixed(2));
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   return <form action={action} className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
     <input type="hidden" name="orderId" value={orderId} /><input type="hidden" name="lineId" value={lineId} /><input type="hidden" name="idempotencyKey" value={idempotencyKey} />
-    <FormField label={`Received quantity (${unitSymbol})`} htmlFor={`po-receive-quantity-${lineId}`} error={error("quantity")}><input id={`po-receive-quantity-${lineId}`} name="quantity" inputMode="decimal" className={fieldControlClass} value={quantity} onChange={(event) => { setQuantity(event.target.value); const next = Number(event.target.value); if (Number.isFinite(next)) setCost((Math.round(next * unitPrice * 100) / 100).toFixed(2)); }} required /></FormField>
+    <FormField label={`Accepted quantity (${unitSymbol})`} htmlFor={`po-receive-quantity-${inspection?.id ?? lineId}`} error={error("quantity")}><input id={`po-receive-quantity-${inspection?.id ?? lineId}`} name="quantity" inputMode="decimal" className={fieldControlClass} value={quantity} readOnly={Boolean(inspection)} onChange={(event) => { setQuantity(event.target.value); const next = Number(event.target.value); if (Number.isFinite(next)) setCost((Math.round(next * unitPrice * 100) / 100).toFixed(2)); }} required /></FormField>
     <FormField label="Actual goods cost (PHP)" htmlFor={`po-cost-${lineId}`} error={error("goodsTotalCost")} hint="Material cost on the delivery receipt, without freight or VAT."><input id={`po-cost-${lineId}`} name="goodsTotalCost" inputMode="decimal" className={fieldControlClass} value={cost} onChange={(event) => setCost(event.target.value)} required /></FormField>
-    <FormField label="Delivery reference" htmlFor={`po-delivery-${lineId}`} error={error("deliveryReference")}><input id={`po-delivery-${lineId}`} name="deliveryReference" className={fieldControlClass} maxLength={120} placeholder="DR-12345" required /></FormField>
-    <FormField label="Receipt date" htmlFor={`po-date-${lineId}`} error={error("receivedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id={`po-date-${lineId}`} name="receivedOn" label="Receipt date" defaultValue={today} allowClear={false} required /></FormField>
+    <FormField label="Delivery reference" htmlFor={`po-delivery-${inspection?.id ?? lineId}`} error={error("deliveryReference")}><input id={`po-delivery-${inspection?.id ?? lineId}`} name="deliveryReference" className={fieldControlClass} maxLength={120} value={inspection?.delivery_reference} readOnly={Boolean(inspection)} placeholder="DR-12345" required /></FormField>
+    {inspection ? <><input type="hidden" name="receivedOn" value={inspection.inspected_on} /><p className="self-center text-sm text-slate-600">Inspected {inspection.inspected_on}{inspection.quality_note ? ` · ${inspection.quality_note}` : ""}</p></> : <FormField label="Receipt date" htmlFor={`po-date-${lineId}`} error={error("receivedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id={`po-date-${lineId}`} name="receivedOn" label="Receipt date" defaultValue={today} allowClear={false} required /></FormField>}
     <FormField label="Price variance reason" htmlFor={`po-reason-${lineId}`} error={error("costVarianceReason")} className="sm:col-span-2" hint="Only needed if the cost differs from the purchase order."><input id={`po-reason-${lineId}`} name="costVarianceReason" className={fieldControlClass} maxLength={500} /></FormField>
     {state.message && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{state.message}</p>}
     <div className="sm:col-span-2"><RecordFormControls busy={pending} label="Record delivery" /></div>
@@ -90,14 +140,14 @@ export function ReceivePurchaseLineForm({ orderId, lineId, remaining, unitPrice,
 }
 
 // Quantity-only receipt: the stock cost comes from the PO price, which is not shown.
-export function ReceiveWarehouseDeliveryForm({ orderId, lineId, remaining, unitSymbol, idempotencyKey, today }: { orderId: string; lineId: string; remaining: number; unitSymbol: string; idempotencyKey: string; today: string }) {
+export function ReceiveWarehouseDeliveryForm({ orderId, lineId, remaining, unitSymbol, idempotencyKey, today, inspection }: { orderId: string; lineId: string; remaining: number; unitSymbol: string; idempotencyKey: string; today: string; inspection?: AcceptedInspection }) {
   const [state, action, pending] = useActionState(receiveWarehouseDeliveryAction, initialState);
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="orderId" value={orderId} /><input type="hidden" name="lineId" value={lineId} /><input type="hidden" name="idempotencyKey" value={idempotencyKey} />
-    <FormField label={`Quantity received (${unitSymbol})`} htmlFor={`delivery-quantity-${lineId}`} error={error("quantity")} hint={`Up to ${remaining} ${unitSymbol} still expected`}><input id={`delivery-quantity-${lineId}`} name="quantity" inputMode="decimal" className={fieldControlClass} defaultValue={String(remaining)} required /></FormField>
-    <FormField label="Delivery receipt number" htmlFor={`delivery-reference-${lineId}`} error={error("deliveryReference")}><input id={`delivery-reference-${lineId}`} name="deliveryReference" className={fieldControlClass} maxLength={120} placeholder="DR-12345" required /></FormField>
-    <FormField label="Date received" htmlFor={`delivery-date-${lineId}`} error={error("receivedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id={`delivery-date-${lineId}`} name="receivedOn" label="Date received" defaultValue={today} allowClear={false} required /></FormField>
+    <FormField label={`Quantity received (${unitSymbol})`} htmlFor={`delivery-quantity-${inspection?.id ?? lineId}`} error={error("quantity")} hint={`Up to ${remaining} ${unitSymbol} still expected`}><input id={`delivery-quantity-${inspection?.id ?? lineId}`} name="quantity" inputMode="decimal" className={fieldControlClass} defaultValue={String(inspection?.accepted_quantity ?? remaining)} readOnly={Boolean(inspection)} required /></FormField>
+    <FormField label="Delivery receipt number" htmlFor={`delivery-reference-${inspection?.id ?? lineId}`} error={error("deliveryReference")}><input id={`delivery-reference-${inspection?.id ?? lineId}`} name="deliveryReference" className={fieldControlClass} maxLength={120} defaultValue={inspection?.delivery_reference} readOnly={Boolean(inspection)} placeholder="DR-12345" required /></FormField>
+    {inspection ? <><input type="hidden" name="receivedOn" value={inspection.inspected_on} /><p className="self-center text-sm text-slate-600">Inspected {inspection.inspected_on}{inspection.quality_note ? ` · ${inspection.quality_note}` : ""}</p></> : <FormField label="Date received" htmlFor={`delivery-date-${lineId}`} error={error("receivedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id={`delivery-date-${lineId}`} name="receivedOn" label="Date received" defaultValue={today} allowClear={false} required /></FormField>}
     {state.message && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{state.message}</p>}
     <div className="sm:col-span-2"><RecordFormControls busy={pending} label="Add to inventory" /></div>
   </form>;

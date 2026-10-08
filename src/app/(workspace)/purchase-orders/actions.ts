@@ -1,6 +1,6 @@
 "use server";
 
-import { cancelPurchaseOrderSchema, decidePurchaseOwnerApprovalSchema, issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, uuidSchema, voidSupplierPaymentSchema } from "@nognog/domain";
+import { cancelPurchaseOrderSchema, decidePurchaseOwnerApprovalSchema, inspectPurchaseDeliverySchema, issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, recordSupplierQuotationSchema, uuidSchema, voidSupplierPaymentSchema } from "@nognog/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireFinanceViewer, requireManager, requireUser } from "@/lib/auth";
@@ -11,8 +11,16 @@ const value = (form: FormData, key: string) => String(form.get(key) ?? "");
 const fail = (message: string, fieldErrors?: Record<string, string[]>): PurchaseActionState => ({ message, fieldErrors });
 
 function purchaseError(error: { code?: string; message: string }) {
+  if (error.message.includes("warehouse is not available to inspect")) return "You are not assigned to this purchase order's warehouse.";
+  if (error.message.includes("quotation is not valid")) return "The selected quotation is expired, from another supplier, or dated after this purchase.";
+  if (error.message.includes("Accepted quantity exceeds")) return "The accepted quantity is more than the amount still expected on the purchase order.";
+  if (error.message.includes("open inspection")) return "This delivery reference already has an inspection waiting for receipt.";
   if (error.code === "42501") return "Only an administrator can perform this purchase action.";
   if (error.message.includes("Owner approval is required")) return "Purchases above ₱50,000 must be approved by Admin before an order is issued.";
+  if (error.message.includes("Accepted delivery inspection")) return "Inspect and accept the delivered quantity before adding it to inventory.";
+  if (error.message.includes("selected quotation")) return "The purchase items must match the selected supplier quotation.";
+  if (error.message.includes("requires Engineer approval")) return "The linked material request must be approved by its Engineer before purchasing.";
+  if (error.message.includes("linked request")) return "Choose only materials from the linked project request.";
   if (error.message.includes("unit price")) return "Enter a price greater than zero for every item.";
   if (error.message.includes("each material once")) return "Choose each item once.";
   if (error.message.includes("opening value") || error.message.includes("valuation")) return "Verify the warehouse opening quantity and value before receiving this material.";
@@ -35,15 +43,68 @@ export async function issuePurchaseOrderAction(_: PurchaseActionState, form: For
   if (!parsed.success) return fail("Review the purchase order details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("submit_purchase_order", {
+  const materialRequestId = value(form, "materialRequestId");
+  const supplierQuotationId = value(form, "supplierQuotationId");
+  if ((materialRequestId && !uuidSchema.safeParse(materialRequestId).success) ||
+    (supplierQuotationId && !uuidSchema.safeParse(supplierQuotationId).success)) return fail("The linked request or quotation is invalid.");
+  const { data, error } = await supabase.rpc("submit_procurement_purchase", {
     p_idempotency_key: input.idempotencyKey, p_supplier_id: input.supplierId,
     p_warehouse_id: input.warehouseId, p_ordered_on: input.orderedOn,
     p_expected_on: input.expectedOn || null, p_purpose: input.purpose || null, p_lines: input.lines,
+    p_material_request_id: materialRequestId || null, p_supplier_quotation_id: supplierQuotationId || null,
   });
   if (error) return fail(purchaseError(error));
   if (!data || !uuidSchema.safeParse(data.id).success) return fail("The purchase result could not be verified. Refresh purchases before retrying.");
   revalidatePath("/purchase-orders");
   redirect(data.kind === "issued" ? `/purchase-orders/${data.id}` : `/purchase-orders/approvals/${data.id}`);
+}
+
+export async function recordSupplierQuotationAction(_: PurchaseActionState, form: FormData): Promise<PurchaseActionState> {
+  try { await requireManager(); } catch { return fail("Only Admin can record supplier quotations."); }
+  let lines: unknown;
+  try { lines = JSON.parse(value(form, "lines")); } catch { return fail("Add at least one valid quotation item."); }
+  const parsed = recordSupplierQuotationSchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), supplierId: value(form, "supplierId"),
+    reference: value(form, "reference"), quotedOn: value(form, "quotedOn"),
+    validUntil: value(form, "validUntil"), notes: value(form, "notes"), lines,
+  });
+  if (!parsed.success) return fail("Review the quotation details.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const { data, error } = await (await createClient()).rpc("record_supplier_quotation", {
+    p_idempotency_key: input.idempotencyKey, p_supplier_id: input.supplierId,
+    p_reference: input.reference, p_quoted_on: input.quotedOn,
+    p_valid_until: input.validUntil || null, p_notes: input.notes || null, p_lines: input.lines,
+  });
+  if (error) return fail(error.code === "23505" ? "This supplier quotation reference already exists." : purchaseError(error));
+  if (!data) return fail("The quotation could not be verified. Refresh before retrying.");
+  revalidatePath("/purchase-orders/quotations");
+  redirect(`/purchase-orders/quotations?posted=1`);
+}
+
+export async function inspectPurchaseDeliveryAction(_: PurchaseActionState, form: FormData): Promise<PurchaseActionState> {
+  const user = await requireUser();
+  if (!user.canOperateInventory) return fail("Only Admin or assigned warehouse staff can inspect deliveries.");
+  const parsed = inspectPurchaseDeliverySchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), orderId: value(form, "orderId"),
+    lineId: value(form, "lineId"), deliveredQuantity: value(form, "deliveredQuantity"),
+    acceptedQuantity: value(form, "acceptedQuantity"), deliveryReference: value(form, "deliveryReference"),
+    inspectedOn: value(form, "inspectedOn"), qualityNote: value(form, "qualityNote"),
+  });
+  if (!parsed.success) return fail("Review the inspection details.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("inspect_purchase_delivery", {
+    p_idempotency_key: input.idempotencyKey, p_line_id: input.lineId,
+    p_delivered_quantity: input.deliveredQuantity, p_accepted_quantity: input.acceptedQuantity,
+    p_delivery_reference: input.deliveryReference, p_inspected_on: input.inspectedOn,
+    p_quality_note: input.qualityNote || null,
+  });
+  if (error) return fail(purchaseError(error));
+  revalidatePath("/purchase-orders/receive");
+  revalidatePath(`/purchase-orders/${input.orderId}`);
+  const outcome = Number(input.acceptedQuantity) > 0 ? "inspected" : "inspection-rejected";
+  if (value(form, "source") === "warehouse") redirect(`/purchase-orders/receive?posted=${outcome}`);
+  redirect(`/purchase-orders/${input.orderId}?posted=${outcome}`);
 }
 
 export async function decidePurchaseOwnerApprovalAction(_: PurchaseActionState, form: FormData): Promise<PurchaseActionState> {
