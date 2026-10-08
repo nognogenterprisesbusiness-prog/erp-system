@@ -4,7 +4,7 @@ import { PlusSignIcon, Remove01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { moneyInputSchema, quantitySchema } from "@nognog/domain";
 import { Button } from "@/components/ui/button";
-import { FormField, fieldControlClass } from "@/components/ui/form-field";
+import { fieldControlClass } from "@/components/ui/form-field";
 import { SelectPicker } from "@/components/ui/select-picker";
 
 export type PurchaseLineInput = { key: number; materialId: string; quantity: string; unitPrice: string };
@@ -37,16 +37,13 @@ export function PurchaseLineItems({ title = "Items", totalLabel = "Total", lines
   return <section aria-label={title}>
     <div className="flex items-center justify-between gap-3"><h2 className="text-base font-semibold text-slate-900">{title}</h2><Button type="button" variant="outline" size="sm" className="h-11 rounded-lg px-3 text-sm" disabled={lines.length >= maxLines || pending} onClick={onAdd}><HugeiconsIcon icon={PlusSignIcon} size={16} />Add item</Button></div>
     <div className="mt-3 space-y-3">
-      <div aria-hidden="true" className={`${lineGridClass} hidden px-3 text-xs font-medium text-slate-600 sm:grid`}>
-        <span>Material</span><span>Quantity</span><span>Unit price (PHP)</span><span>Line total</span><span />
-      </div>
       {lines.map((line, index) => <fieldset key={line.key} className="min-w-0 rounded-lg border border-slate-200 p-3">
       <legend className="px-1 text-xs font-semibold text-slate-600">Item {index + 1}</legend>
       <div className={lineGridClass}>
-        <FormField label={`Material for item ${index + 1}`} htmlFor={`${idPrefix}-material-${line.key}`} className="col-span-2 min-w-0 sm:col-span-1 sm:[&>span]:sr-only"><SelectPicker id={`${idPrefix}-material-${line.key}`} className="h-11" label={`Material for item ${index + 1}`} value={line.materialId} onValueChange={(materialId) => onUpdate(line.key, { materialId })} options={materials.map((item) => ({ value: item.id, label: `${item.name} (${item.unitSymbol})`, disabled: lines.some((other) => other.key !== line.key && other.materialId === item.id) }))} placeholder="Select material" /></FormField>
-        <FormField label={`Quantity${line.materialId ? ` (${materialById.get(line.materialId)?.unitSymbol ?? ""})` : ""}`} htmlFor={`${idPrefix}-quantity-${line.key}`} className="min-w-0 sm:[&>span]:sr-only"><input id={`${idPrefix}-quantity-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.quantity} onChange={(event) => onUpdate(line.key, { quantity: event.target.value })} placeholder="0" required /></FormField>
-        <FormField label="Unit price (PHP)" htmlFor={`${idPrefix}-price-${line.key}`} className="min-w-0 sm:[&>span]:sr-only"><input id={`${idPrefix}-price-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.unitPrice} onChange={(event) => onUpdate(line.key, { unitPrice: event.target.value })} placeholder="0.00" required /></FormField>
-        <div className="col-span-2 min-w-0 sm:col-span-1"><p className="mb-2 text-sm font-medium text-slate-700 sm:sr-only">Line total</p><output aria-label={`Item ${index + 1} total`} className="flex h-11 min-w-0 items-center truncate text-sm font-semibold tabular-nums text-slate-900">{peso.format(lineTotal(line))}</output></div>
+        <div className="col-span-2 min-w-0 sm:col-span-1"><label htmlFor={`${idPrefix}-material-${line.key}`} className="mb-2 block text-sm font-medium text-slate-700">Material</label><SelectPicker id={`${idPrefix}-material-${line.key}`} className="h-11" label={`Material for item ${index + 1}`} value={line.materialId} onValueChange={(materialId) => onUpdate(line.key, { materialId })} options={materials.map((item) => ({ value: item.id, label: `${item.name} (${item.unitSymbol})`, disabled: lines.some((other) => other.key !== line.key && other.materialId === item.id) }))} placeholder="Select material" /></div>
+        <div className="min-w-0"><label htmlFor={`${idPrefix}-quantity-${line.key}`} className="mb-2 block text-sm font-medium text-slate-700">Quantity{line.materialId ? ` (${materialById.get(line.materialId)?.unitSymbol ?? ""})` : ""}</label><input id={`${idPrefix}-quantity-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.quantity} onChange={(event) => onUpdate(line.key, { quantity: event.target.value })} placeholder="0" required /></div>
+        <div className="min-w-0"><label htmlFor={`${idPrefix}-price-${line.key}`} className="mb-2 block text-sm font-medium text-slate-700">Unit price (PHP)</label><input id={`${idPrefix}-price-${line.key}`} className={fieldControlClass} inputMode="decimal" value={line.unitPrice} onChange={(event) => onUpdate(line.key, { unitPrice: event.target.value })} placeholder="0.00" required /></div>
+        <div className="col-span-2 min-w-0 sm:col-span-1"><p className="mb-2 text-sm font-medium text-slate-700">Line total</p><output aria-label={`Item ${index + 1} total`} className="flex h-11 min-w-0 items-center truncate text-sm font-semibold tabular-nums text-slate-900">{peso.format(lineTotal(line))}</output></div>
         <Button type="button" variant="outline" size="sm" className="col-span-2 h-11 w-full rounded-lg px-3 text-xs sm:col-span-1 sm:w-11 sm:px-0" aria-label={`Remove item ${index + 1}`} title={`Remove item ${index + 1}`} disabled={lines.length === 1 || pending} onClick={() => onRemove(line.key)}><HugeiconsIcon icon={Remove01Icon} size={16} /><span className="sm:sr-only">Remove</span></Button>
       </div>
     </fieldset>)}
