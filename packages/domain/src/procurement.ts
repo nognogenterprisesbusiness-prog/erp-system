@@ -16,6 +16,13 @@ export const issuePurchaseOrderSchema = z.object({
   .refine((value) => new Set(value.lines.map((line) => line.materialId)).size === value.lines.length,
     { path: ["lines"], message: "Choose each material once" });
 
+export const decidePurchaseOwnerApprovalSchema = z.object({
+  requestId: uuidSchema,
+  decision: z.enum(["approve", "reject"]),
+  reason: z.string().trim().max(500),
+}).refine((value) => value.decision === "approve" || value.reason.length >= 3,
+  { path: ["reason"], message: "Enter a reason for rejection" });
+
 export const receivePurchaseOrderLineSchema = z.object({
   idempotencyKey: uuidSchema,
   orderId: uuidSchema,

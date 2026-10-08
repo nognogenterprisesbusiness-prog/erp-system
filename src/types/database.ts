@@ -112,6 +112,7 @@ export type ClientPaymentRow = { id: string; invoice_id: string; amount: number;
 export type ClientPaymentReversalRow = { id: string; payment_id: string; reason: string; reversed_by: string; reversed_at: string; idempotency_key: string; command_payload: Json };
 export type ClientInvoiceBalanceRow = { invoice_id: string; paid_amount: number; outstanding_amount: number };
 export type PurchaseOrderRow = { id: string; po_number: string; supplier_id: string; supplier_name: string; warehouse_id: string; warehouse_code: string; warehouse_name: string; ordered_on: string; expected_on: string | null; purpose: string | null; status: "issued" | "partially_received" | "received" | "cancelled"; issued_by: string; cancelled_by: string | null; cancelled_at: string | null; cancellation_reason: string | null; idempotency_key: string; command_payload: Json; created_at: string; updated_at: string };
+export type PurchaseApprovalRequestRow = { id: string; idempotency_key: string; request_payload: Json; order_total: number; status: "pending" | "approved" | "rejected"; requested_by: string; decided_by: string | null; decided_at: string | null; decision_reason: string | null; purchase_order_id: string | null; created_at: string };
 export type PurchaseOrderLineRow = { id: string; purchase_order_id: string; supplier_material_id: string; material_id: string; material_code: string; material_name: string; unit_of_measure_id: string; unit_symbol: string; ordered_quantity: number; received_quantity: number; unit_price: number; supplier_price_id: string | null; created_at: string };
 export type PurchaseOrderReceiptRow = { id: string; purchase_order_id: string; purchase_order_line_id: string; inventory_transaction_id: string; quantity: number; goods_total_cost: number; expected_total_cost: number; cost_variance_reason: string | null; delivery_reference: string; received_on: string; received_by: string; idempotency_key: string; command_payload: Json; created_at: string };
 export type ProjectAttendanceRow = { id: string; employee_id: string; assignment_id: string; project_id: string; project_site_id: string; work_date: string; attendance_status: "present" | "absent"; hours_worked: number; billable_units: number; rate_id: string | null; rate_type: LaborRateType | null; rate_snapshot: number | null; cost_total: number; note: string; recorded_by: string; idempotency_key: string; command_payload: Json; created_at: string };
@@ -208,6 +209,7 @@ export type Database = {
       supplier_payment_voids: Table<SupplierPaymentVoidRow, never>;
       client_payment_reversals: Table<ClientPaymentReversalRow, never>;
       purchase_orders: Table<PurchaseOrderRow, never>;
+      purchase_approval_requests: Table<PurchaseApprovalRequestRow, never>;
       purchase_order_lines: Table<PurchaseOrderLineRow, never>;
       purchase_order_receipts: Table<PurchaseOrderReceiptRow, never>;
       project_attendance: Table<ProjectAttendanceRow, never>;
@@ -320,6 +322,8 @@ export type Database = {
       get_client_invoice_balances: { Args: { p_invoice_ids: string[] }; Returns: ClientInvoiceBalanceRow[] };
       get_billable_projects: { Args: { p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; code: string; name: string; client_name: string; contract_amount: number; status: ProjectStatus; total_count: number }[] };
       issue_purchase_order: { Args: { p_idempotency_key: string; p_supplier_id: string; p_warehouse_id: string; p_ordered_on: string; p_expected_on: string | null; p_purpose: string | null; p_lines: Json }; Returns: string };
+      submit_purchase_order: { Args: { p_idempotency_key: string; p_supplier_id: string; p_warehouse_id: string; p_ordered_on: string; p_expected_on: string | null; p_purpose: string | null; p_lines: Json }; Returns: { kind: "issued" | "pending" | "approved" | "rejected"; id: string } };
+      decide_purchase_owner_approval: { Args: { p_request_id: string; p_approve: boolean; p_reason?: string | null }; Returns: string | null };
       receive_purchase_order_line: { Args: { p_idempotency_key: string; p_line_id: string; p_quantity: number | string; p_goods_total_cost: number | string | null; p_delivery_reference: string; p_received_on: string; p_cost_variance_reason?: string | null }; Returns: string };
       get_warehouse_receivable_po_lines: { Args: { p_search?: string; p_offset?: number; p_limit?: number }; Returns: WarehouseReceivableLine[] };
       cancel_purchase_order: { Args: { p_order_id: string; p_reason: string }; Returns: undefined };

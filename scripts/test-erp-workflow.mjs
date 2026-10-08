@@ -183,15 +183,24 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     await assert.rejects(as("admin", "select public.save_supplier(null,'','No Address',null,null,null,'09171234567',null,'',null,null,null,null,'active',null)"), /invalid supplier/);
     const order = (date, price, lines = `[{"materialId":"${material}","quantity":"1000","unitPrice":"${price}"}]`) =>
       `select public.issue_purchase_order('${randomUUID()}','${vic}','${warehouse}',${date},null,null,'${lines}')`;
-    const first = result(await as("admin", order("current_date - 10", 100)));
+    const approvedOrder = async (date, price) => {
+      const key = randomUUID();
+      const payload = `[{"materialId":"${material}","quantity":"1000","unitPrice":"${price}"}]`;
+      const response = JSON.parse(scalar(await as("admin",
+        `select public.submit_purchase_order('${key}','${vic}','${warehouse}',${date},null,null,'${payload}')`)));
+      assert.equal(response.kind, "pending");
+      assert.equal(await value(`select count(*) from public.purchase_orders where idempotency_key='${key}'`), "0");
+      return result(await as("admin", `select public.decide_purchase_owner_approval('${response.id}',true,null)`));
+    };
+    const first = await approvedOrder("current_date - 10", 100);
     const prices = () => value(`select string_agg(unit_price::text || '@' || effective_start_date::text || '-' || coalesce(effective_end_date::text, 'open'), ',' order by effective_start_date)
       from public.supplier_prices p join public.supplier_materials m on m.id = p.supplier_material_id where m.supplier_id = '${vic}'`);
     assert.equal(await prices(), `100.00@${await value("select (current_date - 10)::text")}-open`);
-    await as("admin", order("current_date", 120));
+    await approvedOrder("current_date", 120);
     assert.equal(await prices(), `100.00@${await value("select (current_date - 10)::text")}-${await value("select (current_date - 1)::text")},120.00@${await value("select current_date::text")}-open`);
     const history = await prices();
-    const backdated = result(await as("admin", order("current_date - 5", 110)));
-    const sameDay = result(await as("admin", order("current_date", 130)));
+    const backdated = await approvedOrder("current_date - 5", 110);
+    const sameDay = await approvedOrder("current_date", 130);
     assert.equal(await prices(), history);
     assert.equal(await value(`select unit_price::text || ':' || (supplier_price_id is null)::text from public.purchase_order_lines where purchase_order_id='${backdated}'`), "110.00:true");
     assert.equal(await value(`select unit_price::text || ':' || (supplier_price_id is null)::text from public.purchase_order_lines where purchase_order_id='${sameDay}'`), "130.00:true");
@@ -201,6 +210,43 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     await assert.rejects(as("admin", order("current_date", 100, `[{"materialId":"${material}","quantity":"1","unitPrice":"100"},{"materialId":"${material}","quantity":"2","unitPrice":"100"}]`)), /each material once/);
     await assert.rejects(as("admin", order("current_date", 0)), /unit price/);
     await assert.rejects(as("foreman", order("current_date", 100)), /administrator/);
+  });
+  await check("PHP 50,000 issues automatically; higher purchases wait for audited Admin approval", async () => {
+    const exactKey = randomUUID();
+    const exactLines = `[{"materialId":"${material}","quantity":"200","unitPrice":"250"}]`;
+    const submit = (key, lines) => `select public.submit_purchase_order('${key}','${supplier}','${warehouse}',current_date,null,null,'${lines}')`;
+    const exact = JSON.parse(scalar(await as("admin", submit(exactKey, exactLines))));
+    assert.equal(exact.kind, "issued");
+    assert.equal(await value(`select status from public.purchase_orders where id='${exact.id}'`), "issued");
+    const highKey = randomUUID();
+    const highLines = `[{"materialId":"${material}","quantity":"201","unitPrice":"260"}]`;
+    const currentPrice = () => value(`select unit_price::text from public.supplier_prices where supplier_material_id='${catalog}' and effective_end_date is null order by id desc limit 1`);
+    const priceBefore = await currentPrice();
+    const pending = JSON.parse(scalar(await as("admin", submit(highKey, highLines))));
+    assert.equal(pending.kind, "pending");
+    assert.equal(await value(`select order_total::text from public.purchase_approval_requests where id='${pending.id}'`), "52260.00");
+    assert.equal(await value(`select count(*) from public.purchase_orders where idempotency_key='${highKey}'`), "0");
+    assert.equal(await currentPrice(), priceBefore);
+    await assert.rejects(as("admin", `select public.issue_purchase_order('${highKey}','${supplier}','${warehouse}',current_date,null,null,'${highLines}')`), /Owner approval is required/);
+    await assert.rejects(as("finance", submit(randomUUID(), highLines)), /administrator/);
+    await assert.rejects(as("finance", `select public.decide_purchase_owner_approval('${pending.id}',true,null)`), /administrator/);
+    assert.deepEqual(JSON.parse(scalar(await as("admin", submit(highKey, highLines)))), pending);
+    await assert.rejects(as("admin", submit(highKey, exactLines)), /Idempotency key/);
+    const decisions = await Promise.all([
+      as("admin", `select public.decide_purchase_owner_approval('${pending.id}',true,'Owner reviewed price')`),
+      as("admin", `select public.decide_purchase_owner_approval('${pending.id}',true,'Owner reviewed price')`),
+    ]);
+    const approved = result(decisions[0]);
+    assert.equal(result(decisions[1]), approved);
+    assert.equal(await value(`select purchase_order_id::text from public.purchase_approval_requests where id='${pending.id}'`), approved);
+    assert.equal(await currentPrice(), priceBefore);
+    assert.equal(await value(`select unit_price::text from public.purchase_order_lines where purchase_order_id='${approved}'`), "260.00");
+    assert.equal(result(await as("admin", `select public.decide_purchase_owner_approval('${pending.id}',true,'Owner reviewed price')`)), approved);
+    const rejectedKey = randomUUID();
+    const rejected = JSON.parse(scalar(await as("admin", submit(rejectedKey, highLines))));
+    await as("admin", `select public.decide_purchase_owner_approval('${rejected.id}',false,'Price exceeds plan')`);
+    assert.equal(await value(`select count(*) from public.purchase_orders where idempotency_key='${rejectedKey}'`), "0");
+    await assert.rejects(as("admin", `select public.decide_purchase_owner_approval('${rejected.id}',true,null)`), /already decided/);
   });
   await check("warehouse PO receipt retries post one cost snapshot and partial delivery", async () => {
     const key = randomUUID(); const posted = await Promise.all([as("warehouse_staff", purchaseReceive(key, 40)), as("warehouse_staff", purchaseReceive(key, 40))]);

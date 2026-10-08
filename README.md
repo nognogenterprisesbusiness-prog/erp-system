@@ -680,6 +680,8 @@ nognog-enterprises/
 
 ### Progress log
 
+2026-10-08 purchase owner-approval slice: a purchase order of ₱50,000 or less issues directly; a larger Admin submission waits in an audited queue for explicit Admin owner approval or reasoned rejection. The database guards the existing direct issue RPC, so UI bypasses cannot issue unapproved high-value orders. Pending requests do not create supplier prices, orders or stock. TypeScript, lint, production build, 78 unit tests and 29 isolated PostgreSQL workflow checks pass. The migration and signed-in Supabase/browser acceptance remain outstanding. Formal supplier quotation capture and a separate supplier-delivery inspection record from the seven-stage reference are still outside this slice; do not present those stages as completed.
+
 Latest local repairs: see [five-role implementation and verification](docs/erp-workflow-implementation-2026-10-03.md). These forward migrations have not been applied to hosting.
 
 Previous hosted repair (2026-09-27): the user applied [20260927160000_repair_request_receipt_access.sql](supabase/migrations/20260927160000_repair_request_receipt_access.sql) to staging. The authenticated four-role retest passed the Warehouse request scope, both receipt paths, Admin valuation reads, site consumption/cost, report linking without duplicate cost, and 9 role-denial/pagination checks. See [repair verification and hosted QA evidence](docs/erp-six-gap-verification-2026-09-27.md#repair-of-the-three-hosted-qa-blockers). The updated request-page loader still needs deployment and browser verification; broader Package 3 acceptance remains open.

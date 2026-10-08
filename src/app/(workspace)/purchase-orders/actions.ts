@@ -1,6 +1,6 @@
 "use server";
 
-import { cancelPurchaseOrderSchema, issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, uuidSchema, voidSupplierPaymentSchema } from "@nognog/domain";
+import { cancelPurchaseOrderSchema, decidePurchaseOwnerApprovalSchema, issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, uuidSchema, voidSupplierPaymentSchema } from "@nognog/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireFinanceViewer, requireManager, requireUser } from "@/lib/auth";
@@ -12,6 +12,7 @@ const fail = (message: string, fieldErrors?: Record<string, string[]>): Purchase
 
 function purchaseError(error: { code?: string; message: string }) {
   if (error.code === "42501") return "Only an administrator can perform this purchase action.";
+  if (error.message.includes("Owner approval is required")) return "Purchases above ₱50,000 must be approved by Admin before an order is issued.";
   if (error.message.includes("unit price")) return "Enter a price greater than zero for every item.";
   if (error.message.includes("each material once")) return "Choose each item once.";
   if (error.message.includes("opening value") || error.message.includes("valuation")) return "Verify the warehouse opening quantity and value before receiving this material.";
@@ -34,14 +35,33 @@ export async function issuePurchaseOrderAction(_: PurchaseActionState, form: For
   if (!parsed.success) return fail("Review the purchase order details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("issue_purchase_order", {
+  const { data, error } = await supabase.rpc("submit_purchase_order", {
     p_idempotency_key: input.idempotencyKey, p_supplier_id: input.supplierId,
     p_warehouse_id: input.warehouseId, p_ordered_on: input.orderedOn,
     p_expected_on: input.expectedOn || null, p_purpose: input.purpose || null, p_lines: input.lines,
   });
   if (error) return fail(purchaseError(error));
+  if (!data || !uuidSchema.safeParse(data.id).success) return fail("The purchase result could not be verified. Refresh purchases before retrying.");
   revalidatePath("/purchase-orders");
-  redirect(`/purchase-orders/${data}`);
+  redirect(data.kind === "issued" ? `/purchase-orders/${data.id}` : `/purchase-orders/approvals/${data.id}`);
+}
+
+export async function decidePurchaseOwnerApprovalAction(_: PurchaseActionState, form: FormData): Promise<PurchaseActionState> {
+  try { await requireManager(); } catch { return fail("Only Admin can approve a purchase above ₱50,000."); }
+  const parsed = decidePurchaseOwnerApprovalSchema.safeParse({
+    requestId: value(form, "requestId"), decision: value(form, "decision"), reason: value(form, "reason"),
+  });
+  if (!parsed.success) return fail("Review the decision details.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("decide_purchase_owner_approval", {
+    p_request_id: input.requestId, p_approve: input.decision === "approve", p_reason: input.reason || null,
+  });
+  if (error) return fail(purchaseError(error));
+  revalidatePath("/purchase-orders");
+  revalidatePath(`/purchase-orders/approvals/${input.requestId}`);
+  if (data) redirect(`/purchase-orders/${data}?posted=owner-approved`);
+  redirect(`/purchase-orders/approvals/${input.requestId}?posted=rejected`);
 }
 
 export async function receivePurchaseOrderLineAction(_: PurchaseActionState, form: FormData): Promise<PurchaseActionState> {

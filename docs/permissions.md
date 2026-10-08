@@ -13,7 +13,7 @@ Current roles are `admin`, `engineer`, `foreman`, `warehouse_staff` and `finance
 | Material planning/progress | Save; progress against approved reports | Save plans and approved-report progress at sites with review authority | Read assigned-site plans/progress | None | Financial summaries |
 | Attendance | Post/correct/read costs | Assigned-site operational view without wages | Record assigned-site attendance without wages | No global attendance | Read attendance/costs; no posting/correction |
 | Invoices/collections | Issue, collect, void/correct as authorized | None | None | None | Issue/collect within financial limits |
-| Accounts, procurement, wages/rates | Manage through protected commands | No management authority | No management authority | Quantity-only PO receipt at issued price | Financial read and billing authority |
+| Accounts, procurement, wages/rates | Manage through protected commands; explicitly approve purchases above ₱50,000 as owner | No management authority | No management authority | Quantity-only PO receipt at issued price | Financial read and billing authority; cannot approve owner-gated purchases |
 | Purchasing and inventory read | All | Assigned sites' stock; no prices or costs | Assigned sites' stock; no prices or costs | Assigned warehouses' stock; no prices or costs | Read-only: purchase orders, receipts, suppliers, prices, stock and value at every location, movement and per-material project costs |
 
 `private.project_site_role` matches the project/site pair and either a direct site assignment or an active project assignment with the same current account role. Admin can access historical inactive sites; posting commands validate operational statuses separately. Warehouse access requires an active Warehouse Staff role and warehouse assignment, or Admin.
@@ -25,3 +25,5 @@ Corrections append `inventory_corrections` and a linked reversal. Original quant
 Global Attendance navigation is Admin/Finance only. Site attendance remains accessible through assigned projects. Finance's project attendance page omits Admin posting/correction controls.
 
 Database role boundaries are tested with real concurrent PostgreSQL sessions. Supabase HTTP/Auth/Storage, Realtime delivery and signed-in web/device acceptance remain release gates. See [verification notes](erp-workflow-implementation-2026-10-03.md).
+
+For supplier orders, an Admin submission totaling at most ₱50,000 issues immediately. A larger submission creates an audited pending request; only an active Admin can approve or reject it. Direct calls to the legacy purchase-order command cannot issue a larger order without a matching approved request. Pending and rejected requests do not create supplier price history or stock. The current Admin owner approval permits the same Admin who submitted to decide; separate-person approval is not implied by this rule.

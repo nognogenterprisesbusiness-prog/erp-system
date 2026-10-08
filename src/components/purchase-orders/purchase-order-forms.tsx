@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useId, useState } from "react";
-import { cancelPurchaseOrderAction, issuePurchaseOrderAction, receivePurchaseOrderLineAction, receiveWarehouseDeliveryAction, recordSupplierPaymentAction, voidSupplierPaymentAction, type PurchaseActionState } from "@/app/(workspace)/purchase-orders/actions";
+import { cancelPurchaseOrderAction, decidePurchaseOwnerApprovalAction, issuePurchaseOrderAction, receivePurchaseOrderLineAction, receiveWarehouseDeliveryAction, recordSupplierPaymentAction, voidSupplierPaymentAction, type PurchaseActionState } from "@/app/(workspace)/purchase-orders/actions";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -53,7 +53,22 @@ export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initial
     </div></details>
     {error("lines") && <p role="alert" className="mt-2 text-xs text-red-700">{error("lines")}</p>}
     {state.message && <p role="alert" className="mt-5 text-sm text-red-700">{state.message}</p>}
-    <RecordFormControls busy={pending} disabled={!supplierId || !warehouseId || lines.some((line) => !line.materialId || !isValidPurchaseQuantity(line.quantity) || !isValidPurchaseUnitPrice(line.unitPrice))} label="Save purchase" />
+    <p className="mt-4 text-sm text-slate-600">Purchases up to ₱50,000 issue immediately. A larger purchase waits for Admin owner approval before the order and supplier price are posted.</p>
+    <RecordFormControls busy={pending} disabled={!supplierId || !warehouseId || lines.some((line) => !line.materialId || !isValidPurchaseQuantity(line.quantity) || !isValidPurchaseUnitPrice(line.unitPrice))} label="Submit purchase" />
+  </form>;
+}
+
+export function PurchaseApprovalForm({ requestId, decision }: { requestId: string; decision: "approve" | "reject" }) {
+  const [state, action, pending] = useActionState(decidePurchaseOwnerApprovalAction, initialState);
+  const id = useId();
+  return <form action={action} className="space-y-4">
+    <input type="hidden" name="requestId" value={requestId} />
+    <input type="hidden" name="decision" value={decision} />
+    <FormField label={decision === "approve" ? "Approval note (optional)" : "Reason for rejection"} htmlFor={id} error={state.fieldErrors?.reason?.[0]}>
+      <input id={id} name="reason" className={fieldControlClass} maxLength={500} minLength={decision === "reject" ? 3 : undefined} required={decision === "reject"} />
+    </FormField>
+    {state.message && <p role="alert" className="text-sm text-red-700">{state.message}</p>}
+    <RecordFormControls busy={pending} label={decision === "approve" ? "Approve and issue purchase order" : "Reject purchase"} />
   </form>;
 }
 
