@@ -2,7 +2,7 @@
 -- at the selected location. Stock remains scoped by the existing location rule.
 begin;
 
-create function public.list_inventory_materials(
+create or replace function public.list_inventory_materials(
   p_query text default '', p_location_id uuid default null, p_category_id uuid default null,
   p_status text default 'active', p_low boolean default false,
   p_offset integer default 0, p_limit integer default 24
