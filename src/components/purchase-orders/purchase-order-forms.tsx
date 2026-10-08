@@ -140,14 +140,14 @@ export function ReceivePurchaseLineForm({ orderId, lineId, remaining, unitPrice,
 }
 
 // Quantity-only receipt: the stock cost comes from the PO price, which is not shown.
-export function ReceiveWarehouseDeliveryForm({ orderId, lineId, remaining, unitSymbol, idempotencyKey, today, inspection }: { orderId: string; lineId: string; remaining: number; unitSymbol: string; idempotencyKey: string; today: string; inspection?: AcceptedInspection }) {
+export function ReceiveWarehouseDeliveryForm({ orderId, lineId, remaining, unitSymbol, idempotencyKey, inspection }: { orderId: string; lineId: string; remaining: number; unitSymbol: string; idempotencyKey: string; inspection: AcceptedInspection }) {
   const [state, action, pending] = useActionState(receiveWarehouseDeliveryAction, initialState);
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="orderId" value={orderId} /><input type="hidden" name="lineId" value={lineId} /><input type="hidden" name="idempotencyKey" value={idempotencyKey} />
-    <FormField label={`Quantity received (${unitSymbol})`} htmlFor={`delivery-quantity-${inspection?.id ?? lineId}`} error={error("quantity")} hint={`Up to ${remaining} ${unitSymbol} still expected`}><input id={`delivery-quantity-${inspection?.id ?? lineId}`} name="quantity" inputMode="decimal" className={fieldControlClass} defaultValue={String(inspection?.accepted_quantity ?? remaining)} readOnly={Boolean(inspection)} required /></FormField>
-    <FormField label="Delivery receipt number" htmlFor={`delivery-reference-${inspection?.id ?? lineId}`} error={error("deliveryReference")}><input id={`delivery-reference-${inspection?.id ?? lineId}`} name="deliveryReference" className={fieldControlClass} maxLength={120} defaultValue={inspection?.delivery_reference} readOnly={Boolean(inspection)} placeholder="DR-12345" required /></FormField>
-    {inspection ? <><input type="hidden" name="receivedOn" value={inspection.inspected_on} /><p className="self-center text-sm text-slate-600">Inspected {inspection.inspected_on}{inspection.quality_note ? ` · ${inspection.quality_note}` : ""}</p></> : <FormField label="Date received" htmlFor={`delivery-date-${lineId}`} error={error("receivedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id={`delivery-date-${lineId}`} name="receivedOn" label="Date received" defaultValue={today} allowClear={false} required /></FormField>}
+    <FormField label={`Quantity received (${unitSymbol})`} htmlFor={`delivery-quantity-${inspection.id}`} error={error("quantity")} hint={`Up to ${remaining} ${unitSymbol} still expected`}><input id={`delivery-quantity-${inspection.id}`} name="quantity" inputMode="decimal" className={fieldControlClass} defaultValue={String(inspection.accepted_quantity)} readOnly required /></FormField>
+    <FormField label="Delivery receipt number" htmlFor={`delivery-reference-${inspection.id}`} error={error("deliveryReference")}><input id={`delivery-reference-${inspection.id}`} name="deliveryReference" className={fieldControlClass} maxLength={120} defaultValue={inspection.delivery_reference} readOnly required /></FormField>
+    <input type="hidden" name="receivedOn" value={inspection.inspected_on} /><p className="self-center text-sm text-slate-600">Inspected {inspection.inspected_on}{inspection.quality_note ? ` · ${inspection.quality_note}` : ""}</p>
     {state.message && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{state.message}</p>}
     <div className="sm:col-span-2"><RecordFormControls busy={pending} label="Add to inventory" /></div>
   </form>;

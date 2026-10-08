@@ -92,15 +92,16 @@ export async function getPurchaseOrderPayments(orderId: string) {
     supabase.rpc("get_purchase_order_payment_summaries", { p_order_ids: [orderId] }),
     readAllPages((from, to) => supabase.from("supplier_payments").select("id,method,bank_name,check_number,amount,payment_date,remarks,recorded_by,created_at").eq("purchase_order_id", orderId).order("payment_date", { ascending: false }).order("id").range(from, to), "supplier payments"),
   ]);
-  if (summary.error?.code === "PGRST202") return null;
   if (summary.error) throw new Error("Unable to load supplier payments.", { cause: summary.error });
   const ids = payments.map((payment) => payment.id);
   const voids = await readByIds(ids, (batch, from, to) => supabase.from("supplier_payment_voids").select("id,payment_id,reason").in("payment_id", batch).order("id").range(from, to), "supplier payment voids");
   const recorders = [...new Set(payments.map((payment) => payment.recorded_by))];
-  const { data: people } = recorders.length ? await supabase.from("profiles").select("id,full_name").in("id", recorders) : { data: [] };
+  const peopleResult = recorders.length ? await supabase.from("profiles").select("id,full_name").in("id", recorders) : { data: [], error: null };
+  if (peopleResult.error) throw new Error("Unable to load supplier payment actors.", { cause: peopleResult.error });
   const voidReasons = new Map(voids.map((item) => [item.payment_id, item.reason]));
-  const names = new Map((people ?? []).map((person) => [person.id, person.full_name]));
+  const names = new Map((peopleResult.data ?? []).map((person) => [person.id, person.full_name]));
   const totals = summary.data?.[0];
+  if (!totals) throw new Error("The purchase payment balance is unavailable.");
   return {
     total: Number(totals?.order_total ?? 0), paid: Number(totals?.paid ?? 0), balance: Number(totals?.balance ?? 0),
     payments: payments.map((payment) => ({ ...payment, voidReason: voidReasons.get(payment.id) ?? null, recordedByName: names.get(payment.recorded_by) ?? null })),
@@ -114,7 +115,6 @@ export async function getSupplierPayments(supplierId: string, page = 1) {
   const from = (currentPage - 1) * PAGE_SIZE;
   const { data, count, error } = await supabase.from("supplier_payments").select("id,purchase_order_id,method,bank_name,check_number,amount,payment_date", { count: "exact" })
     .eq("supplier_id", supplierId).order("payment_date", { ascending: false }).order("id").range(from, from + PAGE_SIZE - 1);
-  if (error?.code === "42P01" || error?.code === "PGRST205") return null;
   if (error) throw new Error("Unable to load supplier payment history.", { cause: error });
   const rows = data ?? [];
   const orderIds = [...new Set(rows.map((row) => row.purchase_order_id))];
