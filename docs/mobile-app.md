@@ -1,6 +1,9 @@
 # Approved simple mobile client — 2026-09-28
 
-**Latest code verification — 2026-10-07:** repaired the Engineer receipt upload POST route and added [conditional compatibility checks](mobile-compatibility.md), keeping legacy protocol 1 supported. Web checks, 78 web unit tests and the local HTTP smoke suite pass; mobile checks, 17 tests and iOS/Android bundle exports pass. No new APK, store submission or OTA update has been released. Installing the checking feature, authenticated receipt upload and physical-device acceptance remain separate steps.
+**Current audit — 2026-10-10:** [System audit and remaining native release gates](package-3-turnover-audit-2026-10-10.md). SDK 57 compatible patches, 18 mobile tests, types/lint, Expo Doctor 21/21 and Android/iOS bundle exports pass. The current backend passes 42 isolated PostgreSQL workflow checks and 12 project-cost/capacity checks. Installed-device workflows, signed replacement builds, notification/email delivery and operational acceptance remain separate gates. Earlier dated verification notes below are historical.
+
+
+**Historical code verification — 2026-10-07:** repaired the Engineer receipt upload POST route and added [conditional compatibility checks](mobile-compatibility.md), keeping legacy protocol 1 supported. Web checks, 78 web unit tests and the local HTTP smoke suite pass; mobile checks, 17 tests and iOS/Android bundle exports pass. No new APK, store submission or OTA update has been released. Installing the checking feature, authenticated receipt upload and physical-device acceptance remain separate steps.
 
 The approved native client lives beside this repository in `../nognog-mobile`. It serves active, onboarded Foremen and Engineers. Admin and Admin-plus-Engineer accounts use the web ERP. This scope supersedes earlier web-only/future-mobile notes; it does not expand the mobile release into administration, finances, demo mode or offline writes.
 

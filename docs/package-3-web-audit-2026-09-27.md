@@ -1,5 +1,8 @@
 # Package 3 web ERP recheck — 2026-09-27
 
+> Historical checkpoint. For the current five-role system, database test evidence, dependency status and pending rollout, use the [10 October system audit](package-3-turnover-audit-2026-10-10.md). Statements below describe the original dated review.
+
+
 Later evidence: the [initial authorized hosted four-role QA](erp-six-gap-verification-2026-09-27.md#authorized-hosted-four-role-qa-later-on-2026-09-27) found three database blockers. The [repair retest](erp-six-gap-verification-2026-09-27.md#authorized-staging-retest-after-database-repair) then passed 5/5 stock/valuation/cost/report checks and 9/9 access/pagination denials after the migration was applied. These selected checks do not constitute whole-system acceptance; the updated request loader still needs deployment and browser verification.
 
 ## Decision and evidence standard

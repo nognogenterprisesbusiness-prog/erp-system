@@ -81,11 +81,11 @@ export async function EquipmentRequestsView({ params, kind, canManage, canReques
   if (term) query = query.or(`asset_name.ilike.%${term}%,asset_code.ilike.%${term}%`);
   if (currentStatus === "overdue") query = query.eq("status", "checked_out").lt("expected_return_on", today);
   else if (currentStatus !== "all") query = query.eq("status", currentStatus);
-  const [{ data: requests, count, error: requestError }, { data: equipment, error: equipmentError }] = await Promise.all([
+  const [{ data: requests, count, error: requestError }, equipment] = await Promise.all([
     query.range((page - 1) * pageSize, page * pageSize - 1),
-    canRequest && projectId && siteId ? supabase.rpc("get_requestable_equipment", { p_project_id: projectId, p_project_site_id: siteId }) : Promise.resolve({ data: [], error: null }),
+    canRequest && projectId && siteId ? readAllPages((from, to) => supabase.rpc("get_requestable_equipment", { p_project_id: projectId, p_project_site_id: siteId }).order("asset_code").order("asset_id").range(from, to), "requestable equipment") : Promise.resolve([]),
   ]);
-  if (requestError || equipmentError) throw new Error("Unable to load equipment requests.");
+  if (requestError) throw new Error("Unable to load equipment requests.");
   const assetIds = [...new Set((requests ?? []).map((item) => item.asset_id))];
   const { data: photos, error: photoError } = assetIds.length ? await supabase.rpc("get_asset_photo_paths", { p_asset_ids: assetIds }) : { data: [], error: null };
   if (photoError) throw new Error("Unable to load equipment requests.");

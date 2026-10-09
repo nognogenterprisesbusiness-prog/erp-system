@@ -281,7 +281,5 @@ export async function getProjectMaterialCost(projectId: string) {
   const parsed = uuidSchema.safeParse(projectId);
   if (!parsed.success) notFound();
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_project_material_cost", { p_project_id: parsed.data });
-  if (error) throw new Error(`Unable to load verified project material costs: ${error.message}`, { cause: error });
-  return data ?? [];
+  return readAllPages((from, to) => supabase.rpc("get_project_material_cost", { p_project_id: parsed.data }).order("material_code").order("material_id").range(from, to), "verified project material costs");
 }

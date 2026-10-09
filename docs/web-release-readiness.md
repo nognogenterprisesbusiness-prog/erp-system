@@ -1,5 +1,8 @@
 # Web release readiness — 2026-09-24
 
+> Historical checkpoint. For the current five-role system, database test evidence, dependency status and pending rollout, use the [10 October system audit](package-3-turnover-audit-2026-10-10.md). Statements below describe the original dated review.
+
+
 **Later source update:** See [web-first implementation status](./web-first-implementation-status-2026-09-24.md) for reservation, QR, low-stock notifications, audit inspection, daily-report review, project planning/progress, stock counts, profitability, exports and overdue-request visibility. These additions remain unapplied and do not change the NO-GO decision below.
 
 **Decision: NO-GO for a connected production ERP deployment.** The browser-only local demo was retired on 2026-09-26. The app now uses normal authentication and one standard Supabase configuration; there is no staging-only runtime requirement or account switcher. A passing Next.js build does not validate PostgreSQL commands, Supabase RLS, authenticated workflows or Package 3 completeness.

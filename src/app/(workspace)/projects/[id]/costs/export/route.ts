@@ -3,12 +3,12 @@ import writeXlsxFile from "write-excel-file/node";
 import { uuidSchema } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { projectSummaryDisclaimer, projectSummaryLines } from "@/lib/export/project-summary";
+import { fitPdfText } from "@/lib/export/pdf-text";
 import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 
 const money = (value: number) => new Intl.NumberFormat("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-const pdfText = (value: string) => value.replace(/[^\x20-\x7e]/g, "?");
 
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
   const user = await requireUser();
@@ -52,7 +52,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const regular = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
   page.drawText("PROJECT MANAGEMENT SUMMARY", { x: 48, y: 786, size: 16, font: bold, color: rgb(0.06, 0.17, 0.28) });
-  page.drawText(pdfText(`${summary.project_code} - ${summary.project_name}`).slice(0, 78), { x: 48, y: 758, size: 10, font: regular });
+  page.drawText(fitPdfText(`${summary.project_code} - ${summary.project_name}`, regular, 10, 499), { x: 48, y: 758, size: 10, font: regular });
   page.drawText(`Project ID: ${id}`, { x: 48, y: 740, size: 9, font: regular });
   page.drawText(`Generated: ${new Date().toISOString().slice(0, 16)} UTC`, { x: 48, y: 723, size: 9, font: regular });
   let y = 686;
