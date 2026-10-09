@@ -1,6 +1,7 @@
 export type LiveTable =
   | "material_requests"
   | "material_request_lines"
+  | "site_purchases"
   | "inventory_balances"
   | "inventory_transfers"
   | "inventory_transfer_items"
@@ -32,6 +33,7 @@ const projectTables = ["projects", "project_sites", "project_assignments", "proj
 export function liveTablesForPath(pathname: string, requestType?: string | null): readonly LiveTable[] {
   if (pathname === "/requests" && (requestType === "equipment" || requestType === "vehicle")) return ["equipment_requests", "assets"];
   if (pathname === "/requests" || pathname.startsWith("/requests/")) return requestTables;
+  if (pathname === "/site-purchases" || pathname.startsWith("/site-purchases/")) return ["site_purchases", "inventory_balances"];
   if (pathname === "/inventory/transactions") return ["inventory_transactions"];
   if (pathname === "/inventory/transfers") return ["inventory_transfers", "inventory_transfer_items"];
   if (pathname === "/inventory/counts") return ["inventory_stock_counts", "inventory_balances"];
