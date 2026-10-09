@@ -110,11 +110,9 @@ select public.save_equipment(
 );
 
 select public.save_vehicle(
-  null, 'VEH-DT-001', 'Dump Truck #001', 'Development-only vehicle registry fixture.',
-  '80000000-0000-0000-0000-000000000003', 'Isuzu', 'GIGA', '2024-08-10',
-  'company_owned', 'available',
+  null, 'VEH-DT-001', 'Dump Truck #001', 'Dump truck', 'ABC 1234',
   (select al.id from public.asset_locations al join public.inventory_locations il on il.id = al.inventory_location_id where il.warehouse_id = '30000000-0000-0000-0000-000000000001'),
-  'Roadworthy at registration.', 'ABC 1234', 2024::smallint, 18450.50
+  'company_owned', 'available', 'Roadworthy at registration.'
 );
 
 insert into public.employee_categories (id, name, description, created_by, updated_by) values

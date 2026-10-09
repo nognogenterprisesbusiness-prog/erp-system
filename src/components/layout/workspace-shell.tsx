@@ -27,12 +27,10 @@ const navItems = [
   { href: "/reports/daily", label: "Daily reports", icon: FilePenLineIcon, reports: true, group: "Project tools" },
   { href: "/warehouses", label: "Warehouses", icon: WarehouseIcon, group: "Inventory tools" },
   { href: "/qr-codes", label: "QR tools", icon: QrCodeIcon, group: "Inventory tools" },
-  { href: "/equipment/categories", label: "Asset classifications", icon: Tag01Icon, manager: true, group: "Inventory tools" },
-  { href: "/suppliers/categories", label: "Supplier categories", icon: Tag01Icon, manager: true, group: "Purchasing tools" },
+  { href: "/equipment/categories", label: "Equipment categories", icon: Tag01Icon, manager: true, group: "Inventory tools" },
   { href: "/site-purchases", label: "Site purchases", icon: Invoice01Icon, financeSitePurchase: true, group: "Purchasing tools" },
   { href: "/employees", label: "Employees", icon: UserGroupIcon, group: "People" },
   { href: "/attendance", label: "Attendance", icon: AssignmentsIcon, finance: true, group: "People" },
-  { href: "/employees/categories", label: "Employee categories", icon: Tag01Icon, manager: true, group: "People" },
   { href: "/users", label: "User access", icon: UserGroupIcon, manager: true, group: "Administration" },
   { href: "/audit-logs", label: "Audit history", icon: Audit01Icon, manager: true, group: "Administration" },
 ] as const;

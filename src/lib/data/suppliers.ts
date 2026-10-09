@@ -1,5 +1,4 @@
 import "server-only";
-import { cache } from "react";
 import { notFound } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
@@ -18,27 +17,17 @@ function resolvePrices(prices: SupplierPriceRow[], asOf = todayInManila()) {
   return { current, previous, history: ordered };
 }
 
-export const getSupplierCategories = cache(async function getSupplierCategories(includeArchived = false) {
-  const supabase = await createClient();
-  return readAllPages((from, to) => {
-    let query = supabase.from("supplier_categories").select("id,name,description,created_by,updated_by,archived_at,archived_by,created_at,updated_at").order("name").order("id");
-    if (!includeArchived) query = query.is("archived_at", null);
-    return query.range(from, to);
-  }, "supplier categories");
-});
-
 export async function getSupplierReferences() {
   const supabase = await createClient();
-  const [categories, materials, units] = await Promise.all([
-    getSupplierCategories(false),
+  const [materials, units] = await Promise.all([
     readAllPages((from, to) => supabase.from("materials").select("id,code,name,base_unit_id,material_kind,is_active,archived_at").eq("is_active", true).is("archived_at", null).order("name").order("id").range(from, to), "supplier material choices"),
     readAllPages((from, to) => supabase.from("units_of_measure").select("id,code,name,symbol,dimension,decimal_scale,is_active,created_at").eq("is_active", true).order("name").order("id").range(from, to), "supplier units"),
   ]);
-  return { categories, materials, units };
+  return { materials, units };
 }
 
-export type SupplierListView = SupplierRow & { categoryName: string; catalogCount: number };
-export async function getSuppliers(params: { query?: string; categoryId?: string; status?: SupplierStatus | "archived" | "all"; page?: number } = {}) {
+export type SupplierListView = SupplierRow & { catalogCount: number };
+export async function getSuppliers(params: { query?: string; status?: SupplierStatus | "archived" | "all"; page?: number } = {}) {
   const supabase = await createClient();
   const requestedPage = Number.isSafeInteger(params.page) ? params.page! : 1;
   const page = Math.min(10_000, Math.max(1, requestedPage));
@@ -46,8 +35,6 @@ export async function getSuppliers(params: { query?: string; categoryId?: string
   let request = supabase.from("suppliers").select("*", { count: "exact" });
   const search = safeSearchTerm(params.query);
   if (search) request = request.or(`code.ilike.%${search}%,supplier_name.ilike.%${search}%,business_name.ilike.%${search}%,contact_person.ilike.%${search}%`);
-  const categoryId = uuidSchema.safeParse(params.categoryId);
-  if (categoryId.success) request = request.eq("category_id", categoryId.data);
   if (params.status === "archived") request = request.not("archived_at", "is", null);
   else {
     request = request.is("archived_at", null);
@@ -56,17 +43,11 @@ export async function getSuppliers(params: { query?: string; categoryId?: string
   const { data: suppliers, count, error } = await request.order("supplier_name").range(from, from + PAGE_SIZE - 1);
   if (error) throw new Error("Unable to load suppliers.");
   const ids = (suppliers ?? []).map((supplier) => supplier.id);
-  const categoryIds = [...new Set((suppliers ?? []).flatMap((supplier) => supplier.category_id ? [supplier.category_id] : []))];
-  const [{ data: categories, error: categoryError }, catalog] = await Promise.all([
-    categoryIds.length ? supabase.from("supplier_categories").select("id,name").in("id", categoryIds) : Promise.resolve({ data: [], error: null }),
-    readByIds(ids, (batch, from, to) => supabase.from("supplier_materials").select("id,supplier_id").in("supplier_id", batch).is("archived_at", null).order("id").range(from, to), "supplier catalog counts"),
-  ]);
-  if (categoryError) throw new Error("Unable to resolve supplier reference data.");
-  const categoryMap = new Map((categories ?? []).map((category) => [category.id, category.name]));
+  const catalog = await readByIds(ids, (batch, from, to) => supabase.from("supplier_materials").select("id,supplier_id").in("supplier_id", batch).is("archived_at", null).order("id").range(from, to), "supplier catalog counts");
   const counts = new Map<string, number>();
   for (const item of catalog) counts.set(item.supplier_id, (counts.get(item.supplier_id) ?? 0) + 1);
   return {
-    suppliers: (suppliers ?? []).map((supplier): SupplierListView => ({ ...supplier, categoryName: supplier.category_id ? categoryMap.get(supplier.category_id) ?? "" : "", catalogCount: counts.get(supplier.id) ?? 0 })),
+    suppliers: (suppliers ?? []).map((supplier): SupplierListView => ({ ...supplier, catalogCount: counts.get(supplier.id) ?? 0 })),
     count: count ?? 0,
     page,
     pageCount: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)),
@@ -79,14 +60,13 @@ export async function getSupplier(id: string, pages = { events: 1, purchases: 1,
   const { data: supplier, error } = await supabase.from("suppliers").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(`Unable to load supplier: ${error.message}`, { cause: error });
   if (!supplier) notFound();
-  const [categoryResult, catalogResult, eventResult, purchaseResult, references] = await Promise.all([
-    supplier.category_id ? supabase.from("supplier_categories").select("*").eq("id", supplier.category_id).single() : Promise.resolve({ data: null, error: null }),
+  const [catalogResult, eventResult, purchaseResult, references] = await Promise.all([
     readAllPages((from, to) => supabase.from("supplier_materials").select("*").eq("supplier_id", id).order("updated_at", { ascending: false }).order("id").range(from, to), "supplier catalog"),
     supabase.from("supplier_events").select("*", { count: "exact" }).eq("supplier_id", id).order("occurred_at", { ascending: false }).order("id").range((pages.events - 1) * 20, pages.events * 20 - 1),
     supabase.from("purchase_orders").select("id,po_number,warehouse_name,ordered_on,expected_on,status", { count: "exact" }).eq("supplier_id", id).order("ordered_on", { ascending: false }).order("id").range((pages.purchases - 1) * 20, pages.purchases * 20 - 1),
     getSupplierReferences(),
   ]);
-  if (categoryResult.error || eventResult.error || purchaseResult.error) throw new Error("Unable to load the supplier record.");
+  if (eventResult.error || purchaseResult.error) throw new Error("Unable to load the supplier record.");
   const purchaseIds = (purchaseResult.data ?? []).map((order) => order.id);
   const receipts = await readByIds(purchaseIds, (batch, from, to) => supabase.from("purchase_order_receipts").select("id,purchase_order_id").in("purchase_order_id", batch).order("id").range(from, to), "supplier purchase receipts");
   const receiptCounts = new Map<string, number>();
@@ -109,7 +89,6 @@ export async function getSupplier(id: string, pages = { events: 1, purchases: 1,
   return {
     historyCounts: { events: eventResult.count ?? 0, prices: historyPrices.data?.[0]?.total_count ?? 0 },
     supplier,
-    category: categoryResult.data,
     catalog: catalog.map((item) => ({
       ...item,
       material: materialMap.get(item.material_id),

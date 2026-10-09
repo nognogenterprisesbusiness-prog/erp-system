@@ -9,10 +9,10 @@ import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { LocationPicker } from "@/components/ui/location-picker";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
-import type { SupplierCategoryRow, SupplierRow } from "@/types/database";
+import type { SupplierRow } from "@/types/database";
 
 const initialState: SupplierActionState = { ok: false, message: "" };
-export function SupplierForm({ supplier, categories }: { supplier?: SupplierRow; categories: SupplierCategoryRow[] }) {
+export function SupplierForm({ supplier }: { supplier?: SupplierRow }) {
   const [state, action, pending] = useActionState(saveSupplierAction, initialState);
   const dialog = useRecordDialog();
   const router = useRouter();
@@ -34,11 +34,10 @@ export function SupplierForm({ supplier, categories }: { supplier?: SupplierRow;
       <FormField label="Contact number" htmlFor="contactNumber" error={error("contactNumber")}><input className={fieldControlClass} id="contactNumber" name="contactNumber" defaultValue={supplier?.contact_number} inputMode="tel" autoComplete="tel" required /></FormField>
       <FormField label="Address" htmlFor="businessAddress" className="md:col-span-2" error={error("businessAddress")}><input className={fieldControlClass} id="businessAddress" name="businessAddress" defaultValue={supplier?.business_address} autoComplete="street-address" required /></FormField>
     </div>
-    <details className="mt-5 rounded-xl border border-slate-200 p-4" open={Boolean(supplier && (supplier.business_name || supplier.contact_person || supplier.email_address || supplier.category_id || supplier.payment_terms || supplier.tax_identification_number || supplier.remarks))}>
+    <details className="mt-5 rounded-xl border border-slate-200 p-4" open={Boolean(supplier && (supplier.business_name || supplier.contact_person || supplier.email_address || supplier.payment_terms || supplier.tax_identification_number || supplier.remarks))}>
       <summary className="cursor-pointer text-sm font-medium text-slate-700">More details (optional)</summary>
       <div className="mt-4 grid gap-5 md:grid-cols-2">
         <FormField label="Supplier code" htmlFor="code" hint="Leave blank to create one automatically" error={error("code")}><input className={fieldControlClass} id="code" name="code" defaultValue={supplier?.code} placeholder="SUP-0001" /></FormField>
-        <FormField label="Supplier category" htmlFor="categoryId" error={error("categoryId")}><SelectPicker id="categoryId" name="categoryId" label="Supplier category" defaultValue={supplier?.category_id ?? ""} placeholder="No category" options={[{ value: "", label: "No category" }, ...categories.map((category) => ({ value: category.id, label: category.name }))]} /></FormField>
         <FormField label="Registered business name" htmlFor="businessName" error={error("businessName")}><input className={fieldControlClass} id="businessName" name="businessName" defaultValue={supplier?.business_name ?? ""} /></FormField>
         <FormField label="Contact person" htmlFor="contactPerson" error={error("contactPerson")}><input className={fieldControlClass} id="contactPerson" name="contactPerson" defaultValue={supplier?.contact_person ?? ""} autoComplete="name" /></FormField>
         <FormField label="Email address" htmlFor="emailAddress" error={error("emailAddress")}><input className={fieldControlClass} id="emailAddress" name="emailAddress" type="email" defaultValue={supplier?.email_address ?? ""} autoComplete="email" /></FormField>

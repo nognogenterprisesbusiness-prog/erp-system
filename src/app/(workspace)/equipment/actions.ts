@@ -31,10 +31,10 @@ function assetPayload(form: FormData) {
 
 function friendlyAssetError(error: { code?: string; message: string }) {
   if (error.code === "42501") return "You do not have permission to manage the asset registry.";
-  if (error.code === "23505") return "The asset code, serial number, plate number, or classification is already in use.";
-  if (error.message.includes("mileage cannot decrease")) return "Current mileage cannot be lower than the recorded mileage.";
+  if (error.code === "23505") return "The asset code, serial number or plate number is already in use.";
   if (error.message.includes("category")) return "The selected classification is unavailable or does not match this asset type.";
   if (error.message.includes("location")) return "The selected location is unavailable.";
+  if (error.message.includes("return the vehicle")) return "Return the vehicle before changing its status or location.";
   if (error.message.includes("assigned or in-use")) return "Return the asset before archiving it.";
   return "The asset registry change could not be saved.";
 }
@@ -63,14 +63,13 @@ export async function saveAssetAction(_: AssetActionState, form: FormData): Prom
     if (result.error) return fail(friendlyAssetError(result.error));
     savedId = result.data;
   } else if (kind === "vehicle") {
-    const parsed = vehicleInputSchema.safeParse({ ...base, plateNumber: value(form, "plateNumber").toUpperCase(), manufactureYear: value(form, "manufactureYear"), currentMileage: value(form, "currentMileage") });
+    const parsed = vehicleInputSchema.safeParse({ ...base, vehicleType: value(form, "vehicleType"), plateNumber: value(form, "plateNumber").toUpperCase() });
     if (!parsed.success) return fail("Review the highlighted vehicle details.", parsed.error.flatten().fieldErrors);
     const input = parsed.data;
     const result = await supabase.rpc("save_vehicle", {
-      p_id: input.id ?? null, p_code: input.code, p_name: input.name, p_description: input.description || "", p_category_id: input.categoryId,
-      p_brand: input.brand, p_model: input.model, p_acquisition_date: input.acquisitionDate, p_ownership_type: input.ownershipType, p_status: input.status,
-      p_location_id: input.currentLocationId, p_condition_notes: input.conditionNotes || "", p_plate_number: input.plateNumber,
-      p_manufacture_year: input.manufactureYear, p_current_mileage: input.currentMileage,
+      p_id: input.id ?? null, p_code: input.code, p_name: input.name, p_vehicle_type: input.vehicleType,
+      p_plate_number: input.plateNumber, p_location_id: input.currentLocationId,
+      p_ownership_type: input.ownershipType, p_status: input.status, p_condition_notes: input.conditionNotes || "",
     });
     if (result.error) return fail(friendlyAssetError(result.error));
     savedId = result.data;
@@ -107,15 +106,16 @@ export async function saveAssetCategoryAction(_: AssetActionState, form: FormDat
   const supabase = await createClient();
   const { error } = await supabase.rpc("save_asset_category", { p_id: parsed.data.id ?? null, p_asset_kind: parsed.data.assetKind, p_name: parsed.data.name, p_description: parsed.data.description || "" });
   if (error) return failure(friendlyAssetError(error));
-  revalidatePath("/equipment/categories"); revalidatePath("/equipment"); revalidatePath("/vehicles");
-  redirect(`/equipment/categories?kind=${parsed.data.assetKind}`);
+  revalidatePath("/equipment/categories"); revalidatePath("/equipment");
+  redirect("/equipment/categories");
 }
 
 export async function archiveAssetCategoryAction(form: FormData) {
   await requireManager();
-  const id = value(form, "id"); const kind = value(form, "assetKind");
+  const id = value(form, "id");
+  if (!uuidSchema.safeParse(id).success) throw new Error("Invalid equipment category.");
   const supabase = await createClient(); const { error } = await supabase.rpc("archive_asset_category", { p_id: id });
   if (error) throw new Error(friendlyAssetError(error));
-  revalidatePath("/equipment/categories"); revalidatePath("/equipment"); revalidatePath("/vehicles");
-  redirect(`/equipment/categories?kind=${kind}`);
+  revalidatePath("/equipment/categories"); revalidatePath("/equipment");
+  redirect("/equipment/categories");
 }

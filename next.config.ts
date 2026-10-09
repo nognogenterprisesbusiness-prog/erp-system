@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   transpilePackages: ["@nognog/domain"],
   poweredByHeader: false,
+  async redirects() {
+    return [{ source: "/suppliers/categories", destination: "/suppliers", permanent: true }];
+  },
   async headers() {
     if (process.env.NODE_ENV !== "development") return [];
     return [

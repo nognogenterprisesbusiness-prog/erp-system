@@ -37,6 +37,40 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
       assert(!mobile.some((p) => JSON.stringify(p).includes(sibling)));
     }
   });
+  await check("simple vehicle entry generates codes, permits free-text types and preserves tracking safeguards", async () => {
+    const assetLocation = await value(`select id from public.asset_locations where inventory_location_id='${source}'`);
+    const save = (id = "null", name = "Site delivery van", type = "6-wheel concrete mixer", plate = "SIM 9876", status = "available", target = `'${assetLocation}'`) =>
+      `select public.save_vehicle(${id},'','${name}','${type}','${plate}',${target},'company_owned','${status}','Roadworthy')`;
+    for (const role of ["finance", "engineer", "foreman", "warehouse_staff"]) await assert.rejects(as(role, save()), /not authorized/);
+    const vehicle = result(await as("admin", save()));
+    const details = await json("admin", `select row_to_json(v) from (
+      select a.code,a.category_id,a.brand,a.model,a.acquisition_date,v.vehicle_type,v.manufacture_year
+      from public.assets a join public.vehicle_details v on v.asset_id=a.id where a.id='${vehicle}'
+    ) v`);
+    assert.match(details.code, /^VEH-\d{4,}$/);
+    assert.equal(details.vehicle_type, "6-wheel concrete mixer");
+    for (const field of ["category_id", "brand", "model", "acquisition_date", "manufacture_year"]) assert.equal(details[field], null);
+    await assert.rejects(as("admin", save()), /duplicate key/);
+    await assert.rejects(as("admin", save("null", "Invalid truck", "", "SIM 9877")), /invalid vehicle/);
+    await assert.rejects(as("admin", save("null", "Invalid truck", "Van", "SIM 9877", "assigned")), /invalid vehicle/);
+    await assert.rejects(as("admin", save("null", "Invalid truck", "Van", "SIM 9877", "available", "null")), /location is unavailable/);
+    await assert.rejects(as("admin", `select public.save_asset_category(null,'vehicle','Fixed type',null)`), /invalid equipment category/);
+    await sql(`begin; select set_config('request.jwt.claim.sub','${users.admin}',true);
+      update public.assets set brand='Legacy brand',model='Legacy model',acquisition_date=current_date where id='${vehicle}';
+      update public.vehicle_details set manufacture_year=2024,current_mileage=12000 where asset_id='${vehicle}'; commit;`);
+    await as("admin", save(`'${vehicle}'`, "Updated delivery van", "Pickup / service van"));
+    assert.equal(await value(`select brand from public.assets where id='${vehicle}'`), "Legacy brand");
+    assert.equal(await value(`select manufacture_year from public.vehicle_details where asset_id='${vehicle}'`), "2024");
+    assert.equal(await value(`select current_mileage from public.vehicle_details where asset_id='${vehicle}'`), "12000.00");
+    const loan = result(await as("engineer", `select public.submit_equipment_request('${vehicle}','${project}','${site}',current_date,current_date+7,'Transport project materials')`));
+    await as("admin", `select public.decide_equipment_request('${loan}',true,null); select public.checkout_equipment_request('${loan}')`);
+    await assert.rejects(as("admin", save(`'${vehicle}'`)), /return the vehicle/);
+    assert.equal(await value(`select status from public.assets where id='${vehicle}'`), "assigned");
+    await as("admin", `select public.return_equipment_request('${loan}',false,'Returned in good condition')`);
+    await as("admin", save(`'${vehicle}'`, "Returned van", "Service van"));
+    assert.equal(await value(`select count(*) from public.asset_events where asset_id='${vehicle}' and event_type='registered'`), "1");
+    assert.equal(await value(`select count(*) from public.asset_events where asset_id='${vehicle}' and event_type='details_updated'`), "2");
+  });
   await check("inventory lists zero-stock catalog materials and enforces location and status filters", async () => {
     const category = await value(`select category_id from public.materials where id='${material}'`);
     const empty = result(await as("admin", `select public.save_material(null,'MAT-UNSTOCKED','Unstocked Test Material',null,'${category}','${unit}','consumable',5,true)`));
@@ -187,6 +221,16 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     insert into public.supplier_prices(supplier_material_id,unit_price,effective_start_date,recorded_by)
     values('${catalog}',250,current_date,'${users.admin}'); commit;`);
   const issue = (key) => `select public.issue_purchase_order('${key}','${supplier}','${warehouse}',current_date,current_date+7,'Test purchase','[{"materialId":"${material}","quantity":"100","unitPrice":"250"}]')`;
+  await check("supplier categories are retired without losing existing suppliers or their historical links", async () => {
+    assert.equal(await value(`select to_regprocedure('public.save_supplier_category(uuid,text,text)') is null`), "t");
+    assert.equal(await value(`select to_regprocedure('public.archive_supplier_category(uuid)') is null`), "t");
+    await assert.rejects(as("admin", "select * from public.supplier_categories"), /permission denied/);
+    const save = (categoryId) => `select public.save_supplier('${supplier}','','Test Hardware',null,${categoryId},null,'09123456789',null,'Test address',null,null,null,'Cash','active',null)`;
+    await assert.rejects(as("admin", save(`'${category}'`)), /categories have been retired/);
+    await as("admin", save("null"));
+    assert.equal(await value(`select category_id from public.suppliers where id='${supplier}'`), category);
+    assert.equal(scalar(await as("finance", `select count(*) from public.suppliers where id='${supplier}'`)), "1");
+  });
   const quoteLines = `[{"materialId":"${material}","quantity":"100","unitPrice":"250"}]`;
   const quoteKey = randomUUID();
   const quoteCommand = (key, price = 250) => `select public.record_supplier_quotation('${key}','${supplier}','TEST-Q-1',current_date,current_date+7,'Initial written offer','[{"materialId":"${material}","quantity":"100","unitPrice":"${price}"}]')`;
@@ -399,7 +443,7 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
         insert into public.assets(code,name,asset_kind,category_id,brand,model,acquisition_date,ownership_type,status,current_location_id,created_by,updated_by)
         select 'PAGED-V-'||lpad(n::text,4,'0'),'Test fleet vehicle '||n,'vehicle','80000000-0000-0000-0000-000000000003','Test Brand','Test Model',current_date,'company_owned','available',
         (select id from public.asset_locations where inventory_location_id='${source}'),'${users.admin}','${users.admin}' from generate_series(1,505) n returning id,code
-      ) insert into public.vehicle_details(asset_id,plate_number,manufacture_year,current_mileage) select id,code,2026,0 from inserted;
+      ) insert into public.vehicle_details(asset_id,vehicle_type,plate_number,manufacture_year,current_mileage) select id,'Truck',code,2026,0 from inserted;
       commit;`);
     const choices = await json("warehouse_staff", "select json_agg(row_to_json(v)) from public.get_delivery_vehicle_choices('',500,20) v");
     assert(choices.length > 0); assert(choices[0].total_count > 500);

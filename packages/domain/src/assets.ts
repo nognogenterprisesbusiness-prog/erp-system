@@ -17,7 +17,7 @@ export function assetChoiceLabel(asset: { code: string; name: string; kind?: (ty
 
 export const assetCategoryInputSchema = z.object({
   id: uuidSchema.optional(),
-  assetKind: z.enum(assetKinds),
+  assetKind: z.literal("equipment"),
   name: z.string().trim().min(2).max(120),
   description: optionalTextSchema,
 });
@@ -47,10 +47,15 @@ export const equipmentInputSchema = z.object({
 });
 
 export const vehicleInputSchema = z.object({
-  ...commonAssetFields,
+  id: uuidSchema.optional(),
+  code: z.string().trim().max(32).regex(/^[A-Z0-9-]*$/, "Use uppercase letters, numbers, and hyphens only").refine((value) => value === "" || value.length >= 2, "Enter at least 2 characters"),
+  name: z.string().trim().min(2).max(160),
+  vehicleType: z.string().trim().min(2, "Enter the vehicle type").max(120),
   plateNumber: z.string().trim().min(2).max(20).regex(/^[A-Z0-9 -]+$/, "Enter a valid uppercase plate number"),
-  manufactureYear: z.coerce.number().int().min(1886).max(new Date().getFullYear() + 1),
-  currentMileage: decimalMoneySchema,
+  currentLocationId: uuidSchema,
+  ownershipType: z.enum(assetOwnershipTypes),
+  status: z.enum(registryAssetStatuses),
+  conditionNotes: optionalTextSchema,
 });
 
 export const equipmentRequestInputSchema = z.object({

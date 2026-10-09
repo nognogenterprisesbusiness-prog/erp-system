@@ -15,11 +15,11 @@ export type AssetView = AssetRow & {
   vehicle: VehicleDetailRow | undefined;
 };
 
-export const getAssetCategories = cache(async function getAssetCategories(kind?: AssetKind, includeArchived = false) {
+export const getEquipmentCategories = cache(async function getEquipmentCategories(includeArchived = false) {
   const supabase = await createClient();
   return readAllPages((from, to) => {
     let query = supabase.from("asset_categories").select("id,asset_kind,name,description,created_by,updated_by,archived_at,archived_by,created_at,updated_at").order("asset_kind").order("name").order("id");
-    if (kind) query = query.eq("asset_kind", kind);
+    query = query.eq("asset_kind", "equipment");
     if (!includeArchived) query = query.is("archived_at", null);
     return query.range(from, to);
   }, "asset categories");
@@ -52,7 +52,7 @@ export const getAssetLocations = cache(async function getAssetLocations(includeA
 });
 
 export async function getAssetReferences(kind: AssetKind) {
-  const [categories, locations] = await Promise.all([getAssetCategories(kind, false), getAssetLocations(false)]);
+  const [categories, locations] = await Promise.all([kind === "equipment" ? getEquipmentCategories(false) : Promise.resolve([]), getAssetLocations(false)]);
   return { categories, locations };
 }
 
@@ -101,12 +101,12 @@ export async function getAssets(params: { id?: string; kind: AssetKind; query?: 
   if (error) throw new Error(`Unable to load ${params.kind} records.`);
   const ids = (assets ?? []).map((item) => item.id);
   const [categories, locations, detailResult] = await Promise.all([
-    getAssetCategories(params.kind, params.includeArchived ?? false),
+    params.kind === "equipment" ? getEquipmentCategories(params.includeArchived ?? false) : Promise.resolve([]),
     getAssetLocations(params.includeArchived ?? false),
     ids.length
       ? params.kind === "equipment"
         ? supabase.from("equipment_details").select("asset_id,equipment_type,serial_number,acquisition_cost,sku").in("asset_id", ids)
-        : supabase.from("vehicle_details").select("asset_id,plate_number,manufacture_year,current_mileage").in("asset_id", ids)
+        : supabase.from("vehicle_details").select("asset_id,vehicle_type,plate_number,manufacture_year,current_mileage").in("asset_id", ids)
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (detailResult.error) throw new Error(`Unable to load ${params.kind} details.`);
@@ -114,7 +114,7 @@ export async function getAssets(params: { id?: string; kind: AssetKind; query?: 
   const locationMap = new Map(locations.map((item) => [item.id, item]));
   const equipmentMap = params.kind === "equipment" ? new Map((detailResult.data ?? []).map((item) => [item.asset_id, item as EquipmentDetailRow])) : new Map<string, EquipmentDetailRow>();
   const vehicleMap = params.kind === "vehicle" ? new Map((detailResult.data ?? []).map((item) => [item.asset_id, item as VehicleDetailRow])) : new Map<string, VehicleDetailRow>();
-  return (assets ?? []).map((asset): AssetView => ({ ...asset, categoryName: categoryMap.get(asset.category_id) ?? "Unavailable classification", location: locationMap.get(asset.current_location_id), equipment: equipmentMap.get(asset.id), vehicle: vehicleMap.get(asset.id) }));
+  return (assets ?? []).map((asset): AssetView => ({ ...asset, categoryName: asset.asset_kind === "vehicle" ? vehicleMap.get(asset.id)?.vehicle_type ?? "Vehicle" : categoryMap.get(asset.category_id ?? "") ?? "Unavailable category", location: locationMap.get(asset.current_location_id), equipment: equipmentMap.get(asset.id), vehicle: vehicleMap.get(asset.id) }));
 }
 
 export async function getAsset(id: string, expectedKind: AssetKind, eventPage = 1) {

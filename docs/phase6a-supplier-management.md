@@ -1,5 +1,7 @@
 # Phase 6A — Supplier management foundation
 
+These are historical phase notes. Supplier category management was retired on 2026-10-09; supplier purchasing, quotations and receipts have since been implemented. See [current simplification and rollout notes](simple-supplier-and-vehicle-setup.md).
+
 ## Implemented boundary
 
 Phase 6A implements the supplier foundation required by later procurement stages:
