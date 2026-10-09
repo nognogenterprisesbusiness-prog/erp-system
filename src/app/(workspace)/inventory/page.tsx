@@ -4,7 +4,6 @@ import { pageNumber } from "@/lib/data/pagination";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Download04Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { InventoryStockLocations } from "@/components/inventory/inventory-stock-locations";
 import { InventoryLocationPicker } from "@/components/inventory/inventory-location-picker";
 import { RecordThumbnail } from "@/components/ui/record-thumbnail";
 import { RecordListView } from "@/components/ui/record-list-view";
@@ -85,11 +84,11 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <span className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 peer-checked:border-[#07152d] peer-checked:bg-[#07152d] peer-checked:text-white peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-600 peer-focus-visible:ring-offset-2">Low stock</span>
       </label>
     </ListFilterBar>
-    <RecordListView storageKey="inventory" title="Inventory" columns={["Material", "Category", "Type", "Stock location", "On hand", "Reserved", "Available", "Minimum", "Status", ...(user.canViewLaborRates ? ["Stock value"] : [])]} rows={data.rows.map((item) => ({ id: item.material_id, cells: [
+    <RecordListView storageKey="inventory" title="Inventory" columns={["Material", "Category", "Type", "Stock location", data.selectedLocationId ? "On hand" : "Total stock", "Reserved", "Available", "Minimum", "Status", ...(user.canViewLaborRates ? ["Stock value"] : [])]} rows={data.rows.map((item) => ({ id: item.material_id, cells: [
       <div key="record" className="flex min-w-56 items-center gap-3"><RecordThumbnail icon={PackageIcon} name={item.name} photo={item.photo_path ? recordPhotoUrl("materials", item.material_id) : null} /><Link key="material" href={`/materials/${item.material_id}`} className="font-semibold hover:text-cyan-700">{item.code} · {item.name}</Link></div>,
       item.category_name,
       item.material_kind === "consumable" ? "Consumable" : "Reusable",
-      <div key="stock-locations">{selectedLocationName ?? "All locations"}{!data.selectedLocationId && <InventoryStockLocations stocks={item.stockLocations} unit={item.unit_symbol} />}</div>,
+      selectedLocationName ?? "All locations",
       ...[item.quantity_on_hand, item.reserved_quantity, item.available_quantity, item.minimum_stock_level].map((value) => `${Number(value).toLocaleString("en-PH", { maximumFractionDigits: 4 })} ${item.unit_symbol}`),
       <Badge key="status" variant={item.is_active ? "active" : "neutral"}>{item.is_active ? "Active" : "Inactive"}</Badge>,
       ...(user.canViewLaborRates ? [item.stockValue == null ? "Not valued" : Number(item.stockValue).toLocaleString("en-PH", { style: "currency", currency: "PHP" })] : []),
