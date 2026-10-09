@@ -1,3 +1,6 @@
-import { ListPageSkeleton } from "@/components/ui/table-skeleton";
+import { PageHeader } from "@/components/ui/page-header";
+import { RecordListSkeleton } from "@/components/ui/record-list-view";
 
-export default function Loading() { return <ListPageSkeleton eyebrow="Materials control" title="Inventory" description="Stock balances" columns={6} filters={3} />; }
+export default function Loading() {
+  return <><PageHeader title="Inventory" description="Materials and stock by warehouse or site." /><RecordListSkeleton storageKey="inventory" columns={9} /></>;
+}

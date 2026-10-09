@@ -8,7 +8,7 @@ import { readAllPages, readByIds } from "./read-all-pages";
 import type { InventoryLocationRow, InventoryTransactionType, MaterialKind } from "@/types/database";
 import { inventoryLocationKind, resolveInventoryScope, type InventoryScope } from "@/lib/inventory/scope";
 
-export type MaterialView = { id: string; code: string; name: string; description: string | null; photo_path: string | null; category_id: string; base_unit_id: string; material_kind: MaterialKind; minimum_stock_level: number; is_active: boolean; archived_at: string | null; categoryName: string; unitName: string; unitSymbol: string };
+export type MaterialView = { id: string; code: string; name: string; description: string | null; photo_path: string | null; base_unit_id: string; material_kind: MaterialKind; minimum_stock_level: number; is_active: boolean; archived_at: string | null; unitName: string; unitSymbol: string };
 export type LocationView = InventoryLocationRow & { name: string; detail: string; projectId: string | null };
 
 const getLocationViews = cache(async function getLocationViews() {
@@ -31,37 +31,23 @@ const getLocationViews = cache(async function getLocationViews() {
 
 export const getMaterialReferences = cache(async function getMaterialReferences() {
   const supabase = await createClient();
-  const [categories, units] = await Promise.all([
-    readAllPages((from, to) => supabase.from("material_categories").select("id,name,description,created_by,updated_by,archived_at,archived_by,created_at,updated_at").is("archived_at", null).order("name").order("id").range(from, to), "material categories"),
-    readAllPages((from, to) => supabase.from("units_of_measure").select("id,code,name,symbol,dimension,decimal_scale,is_active,created_at").eq("is_active", true).order("name").order("id").range(from, to), "units of measure"),
-  ]);
-  return { categories, units };
+  const units = await readAllPages((from, to) => supabase.from("units_of_measure").select("id,code,name,symbol,dimension,decimal_scale,is_active,created_at").eq("is_active", true).order("name").order("id").range(from, to), "units of measure");
+  return { units };
 });
 
-export async function getMaterialCategories(includeArchived = false) {
-  const supabase = await createClient();
-  return readAllPages((from, to) => {
-    let query = supabase.from("material_categories").select("id,name,description,created_by,updated_by,archived_at,archived_by,created_at,updated_at").order("name").order("id");
-    if (!includeArchived) query = query.is("archived_at", null);
-    return query.range(from, to);
-  }, "material categories");
-}
-
-export async function getMaterials(params: { query?: string; categoryId?: string; status?: "all" | "active" | "inactive"; includeArchived?: boolean } = {}) {
+export async function getMaterials(params: { query?: string; status?: "all" | "active" | "inactive"; includeArchived?: boolean } = {}) {
   const supabase = await createClient();
   const search = safeSearchTerm(params.query);
   const [materials, references] = await Promise.all([readAllPages((from, to) => {
-    let request = supabase.from("materials").select("id,code,name,description,photo_path,category_id,base_unit_id,material_kind,minimum_stock_level,is_active,archived_at").order("name").order("id");
+    let request = supabase.from("materials").select("id,code,name,description,photo_path,base_unit_id,material_kind,minimum_stock_level,is_active,archived_at").order("name").order("id");
     if (!params.includeArchived) request = request.is("archived_at", null);
     if (search) request = request.or(`name.ilike.%${search}%,code.ilike.%${search}%`);
-    if (params.categoryId) request = request.eq("category_id", params.categoryId);
     if (params.status === "active") request = request.eq("is_active", true);
     if (params.status === "inactive") request = request.eq("is_active", false);
     return request.range(from, to);
   }, "materials"), getMaterialReferences()]);
-  const categories = new Map(references.categories.map((item) => [item.id, item.name]));
   const units = new Map(references.units.map((item) => [item.id, item]));
-  return materials.map((item): MaterialView => ({ ...item, categoryName: categories.get(item.category_id) ?? "Unavailable category", unitName: units.get(item.base_unit_id)?.name ?? "Unavailable unit", unitSymbol: units.get(item.base_unit_id)?.symbol ?? "" }));
+  return materials.map((item): MaterialView => ({ ...item, unitName: units.get(item.base_unit_id)?.name ?? "Unavailable unit", unitSymbol: units.get(item.base_unit_id)?.symbol ?? "" }));
 }
 
 export async function getMaterial(id: string) {
@@ -73,12 +59,11 @@ export async function getMaterial(id: string) {
   ]);
   if (error) throw new Error(`Unable to load material: ${error.message}`, { cause: error });
   if (!material) notFound();
-  const category = references.categories.find((item) => item.id === material.category_id);
   const unit = references.units.find((item) => item.id === material.base_unit_id);
   const balances = await readAllPages((from, to) => supabase.from("inventory_balances").select("id,material_id,inventory_location_id,quantity_on_hand,reserved_quantity,available_quantity,updated_at").eq("material_id", id).order("updated_at", { ascending: false }).order("id").range(from, to), "material balances");
   const locations = await getLocationViews();
   const locationMap = new Map(locations.map((item) => [item.id, item]));
-  return { material, category, unit, references, balances: balances.map((balance) => ({ ...balance, location: locationMap.get(balance.inventory_location_id) })) };
+  return { material, unit, references, balances: balances.map((balance) => ({ ...balance, location: locationMap.get(balance.inventory_location_id) })) };
 }
 
 // Admin and Finance only; the RPC enforces the same rule.
@@ -125,7 +110,7 @@ export async function getInventoryBalances(params: { query?: string; locationId?
 
 // Warehouse totals by default; site and company summaries remain location-scoped.
 // Unstocked catalog materials remain visible as zero.
-export async function getInventoryMaterials(params: { query?: string; locationId?: string; scope?: InventoryScope; categoryId?: string; status?: "active" | "inactive" | "all"; lowStock?: boolean; page?: number; pageSize?: number; includeValues?: boolean } = {}) {
+export async function getInventoryMaterials(params: { query?: string; locationId?: string; scope?: InventoryScope; status?: "active" | "inactive" | "all"; lowStock?: boolean; page?: number; pageSize?: number; includeValues?: boolean } = {}) {
   const supabase = await createClient();
   const locations = await getLocationViews();
   const selectedLocationId = params.locationId || "";
@@ -137,7 +122,7 @@ export async function getInventoryMaterials(params: { query?: string; locationId
   const pageSize = Math.min(500, Math.max(1, params.pageSize ?? 24));
   let page = Number.isSafeInteger(params.page) && params.page! > 0 ? Math.min(params.page!, 10000) : 1;
   const args = { p_query: safeSearchTerm(params.query), p_location_id: selectedLocationId || null,
-    p_category_id: params.categoryId || null, p_status: params.status ?? "active",
+    p_status: params.status ?? "active",
     p_low: params.lowStock ?? false, p_limit: pageSize, p_location_kind: locationKind };
   const readPage = async (target: number) => {
     const { data, error } = await supabase.rpc("list_inventory_materials", { ...args, p_offset: (target - 1) * pageSize });

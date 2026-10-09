@@ -6,18 +6,11 @@ export const moneyInputSchema = z.string().trim().regex(/^\d{1,22}(\.\d{1,2})?$/
 export const materialKinds = ["consumable", "reusable"] as const;
 export const materialKindSchema = z.enum(materialKinds);
 
-export const categoryInputSchema = z.object({
-  id: uuidSchema.optional(),
-  name: z.string().trim().min(2).max(120),
-  description: optionalTextSchema,
-});
-
 export const materialInputSchema = z.object({
   id: uuidSchema.optional(),
   code: z.string().trim().min(2).max(32).regex(/^[A-Z0-9-]+$/, "Use uppercase letters, numbers, and hyphens only"),
   name: z.string().trim().min(2).max(160),
   description: optionalTextSchema,
-  categoryId: uuidSchema,
   baseUnitId: uuidSchema,
   materialKind: materialKindSchema,
   minimumStockLevel: z.string().trim().regex(/^\d+(\.\d{1,4})?$/, "Enter a non-negative quantity with up to four decimal places"),
@@ -52,7 +45,6 @@ export const reversalInputSchema = z.object({ idempotencyKey: uuidSchema, transa
 export const transferVarianceInputSchema = z.object({ idempotencyKey: uuidSchema, transferItemId: uuidSchema, quantity: quantitySchema, reason: z.string().trim().min(3).max(500), returnPath: z.string().regex(/^\/(requests\/[0-9a-f-]{36}|inventory\/transfers)$/) });
 
 export type MaterialInput = z.infer<typeof materialInputSchema>;
-export type CategoryInput = z.infer<typeof categoryInputSchema>;
 export type StockInInput = z.infer<typeof stockInInputSchema>;
 export type StockOutInput = z.infer<typeof stockOutInputSchema>;
 export type TransferInput = z.infer<typeof transferInputSchema>;

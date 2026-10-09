@@ -7,10 +7,10 @@ import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
-import type { MaterialCategoryRow, MaterialRow, UnitRow } from "@/types/database";
+import type { MaterialRow, UnitRow } from "@/types/database";
 
 const initialState: MaterialActionState = { ok: false, message: "" };
-export function MaterialForm({ material, categories, units }: { material?: MaterialRow; categories: MaterialCategoryRow[]; units: UnitRow[] }) {
+export function MaterialForm({ material, units }: { material?: MaterialRow; units: UnitRow[] }) {
   const [state, action, pending] = useActionState(saveMaterialAction, initialState);
   const [processingPhoto, setProcessingPhoto] = useState(false);
   const dialog = useRecordDialog();
@@ -30,7 +30,6 @@ export function MaterialForm({ material, categories, units }: { material?: Mater
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="SKU / material code" htmlFor="code" error={error("code")}><input className={fieldControlClass} id="code" name="code" defaultValue={material?.code} placeholder="MAT-CEMENT" required /></FormField>
       <FormField label="Material name" htmlFor="name" error={error("name")}><input className={fieldControlClass} id="name" name="name" defaultValue={material?.name} required /></FormField>
-      <FormField label="Category" htmlFor="categoryId" error={error("categoryId")}><SelectPicker id="categoryId" name="categoryId" label="Category" defaultValue={material?.category_id} required placeholder="Select category" options={categories.map((item) => ({ value: item.id, label: item.name }))} /></FormField>
       <FormField label="Base unit" htmlFor="baseUnitId" error={error("baseUnitId")}><SelectPicker label="Base unit" name="baseUnitId" defaultValue={material?.base_unit_id} placeholder="Select unit" options={units.map((item) => ({ value: item.id, label: `${item.name} (${item.symbol})` }))} /></FormField>
       <input type="hidden" name="materialKind" value="consumable" />
       <FormField label="Minimum stock level" htmlFor="minimumStockLevel" error={error("minimumStockLevel")}><input className={fieldControlClass} id="minimumStockLevel" name="minimumStockLevel" inputMode="decimal" defaultValue={material?.minimum_stock_level ?? "0"} required /></FormField>

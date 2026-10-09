@@ -1,4 +1,3 @@
-import { uuidSchema } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { getInventoryMaterials } from "@/lib/data/inventory";
 import { csvAttachment } from "@/lib/export/csv";
@@ -7,10 +6,8 @@ import { inventoryScopeLabel, parseInventoryScope } from "@/lib/inventory/scope"
 export async function GET(request: Request): Promise<Response> {
   const user = await requireUser();
   const params = new URL(request.url).searchParams;
-  const category = uuidSchema.safeParse(params.get("category"));
   const filters: Parameters<typeof getInventoryMaterials>[0] = {
     query: params.get("q") ?? "", locationId: params.get("location") ?? "", scope: parseInventoryScope(params.get("scope")),
-    categoryId: category.success ? category.data : "",
     status: params.get("status") === "inactive" ? "inactive" : params.get("status") === "any" ? "all" : "active",
     lowStock: params.get("low") === "true", includeValues: user.canViewLaborRates, pageSize: 500,
   };

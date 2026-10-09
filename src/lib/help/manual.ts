@@ -88,16 +88,16 @@ export const manualGuides: readonly ManualGuide[] = [
     steps: [
       { title: "Choose warehouse or site stock", detail: "Inventory opens with All warehouses when your account can read warehouse stock. Site-only staff starts with All sites. Use the Stock location filter to choose a warehouse, a project site, All sites or the combined All locations overview. Warehouse totals exclude materials already held at sites. Check Materials, Equipment or Vehicles for the correct item type." },
       { title: "Read the quantities", detail: "On hand is stock physically recorded at the selected location. Warehouse stock or Site stock totals only that group of permitted locations. Reserved is approved stock awaiting release. Available is what remains after reservations. Choose a specific source warehouse before requesting or dispatching; a combined total cannot supply a delivery itself. A zero-stock catalog item can still appear so Admin can source it." },
-      { title: "Maintain catalog items", detail: "Admin selects Add material in Inventory and enters a unique code, name, category, unit and minimum stock level. Adding a material creates its catalog entry; it does not create stock." },
+      { title: "Maintain catalog items", detail: "Admin selects Add material in Inventory and enters a unique code, clear name, unit and minimum stock level. Adding a material creates its catalog entry; it does not create stock." },
       { title: "Trace a quantity", detail: "Choose the location and open History or stock details. Follow the purchase receipt, supplier, price batch, dispatch, site receipt and usage references instead of relying only on the total." },
       { title: "Record the correct movement", detail: "Admin records authorized non-purchase stock-in/out. Assigned Warehouse staff receives supplier purchases and releases approved requests or permitted transfers. Supplier deliveries use inspection and receipt. Assigned site staff records actual use from site stock." },
     ],
     result: "You can explain both the total and where the stock is held. No extra stock is created by a payment or by adding a catalog item.",
     tips: ["Example: if Warehouse 1 holds 1,000 bags, approving 100 leaves on hand at 1,000 and available at 900. Dispatching those 100 reduces warehouse on hand to 900. Site stock increases only when receipt is recorded.", "The same catalog material can come from different suppliers. Receipt batches preserve their supplier and price history."],
-    figure: { src: "/manual/material-form.webp", width: 730, height: 270, alt: "Empty Add material fields showing catalog identity, category and unit, and minimum stock.", marks: [
+    figure: { src: "/manual/material-form.webp", width: 740, height: 276, alt: "Empty Add material fields showing catalog identity, base unit, status and minimum stock.", marks: [
       { x: 0.5, y: 2, width: 99, height: 28, label: "Enter a unique material code and clear name. The unit distinguishes materials sold in different measures." },
-      { x: 0.5, y: 36, width: 99, height: 28, label: "Select the category and base unit before saving; these describe the catalog item." },
-      { x: 0.5, y: 70, width: 49, height: 28, label: "Set the minimum stock alert level. This is not an opening stock quantity." },
+      { x: 0.5, y: 36, width: 99, height: 28, label: "Select the base unit and set the minimum stock level. The material name identifies what staff should request." },
+      { x: 0.5, y: 70, width: 49, height: 28, label: "Keep the material Active so staff can choose it. Historical stock records are preserved when it is made Inactive." },
     ] },
   },
   {
