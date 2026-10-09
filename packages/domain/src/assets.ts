@@ -15,20 +15,12 @@ export function assetChoiceLabel(asset: { code: string; name: string; kind?: (ty
   return `${asset.code} · ${asset.name}${vehicleTag(asset.kind)}`;
 }
 
-export const assetCategoryInputSchema = z.object({
-  id: uuidSchema.optional(),
-  assetKind: z.literal("equipment"),
-  name: z.string().trim().min(2).max(120),
-  description: optionalTextSchema,
-});
-
 const decimalMoneySchema = z.string().trim().regex(/^\d+(\.\d{1,2})?$/, "Enter a non-negative amount with up to two decimal places");
 const commonAssetFields = {
   id: uuidSchema.optional(),
   code: z.string().trim().min(2).max(32).regex(/^[A-Z0-9-]+$/, "Use uppercase letters, numbers, and hyphens only"),
   name: z.string().trim().min(2).max(160),
   description: optionalTextSchema,
-  categoryId: uuidSchema,
   brand: z.string().trim().min(1).max(120),
   model: z.string().trim().min(1).max(120),
   acquisitionDate: z.iso.date(),
@@ -79,6 +71,5 @@ export const equipmentReturnInputSchema = z.object({
   note: z.string().trim().min(3).max(500),
 });
 
-export type AssetCategoryInput = z.infer<typeof assetCategoryInputSchema>;
 export type EquipmentInput = z.infer<typeof equipmentInputSchema>;
 export type VehicleInput = z.infer<typeof vehicleInputSchema>;

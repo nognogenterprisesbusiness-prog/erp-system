@@ -1,4 +1,5 @@
 "use client";
+import { FieldGuide } from "@/components/ui/field-guide";
 
 import { useActionState, useRef, useState } from "react";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
@@ -22,9 +23,9 @@ function UserInviteForm({ roles, onClose }: { roles: AppRole[]; onClose: () => v
     {state.ok ? <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{state.message}</p> : <>
     <p className="text-sm text-slate-500">An invitation will be sent by email. The user sets their own password.</p>
     <div className="grid gap-4">
-      <label className="grid gap-1.5 text-xs font-medium text-slate-600">Full name<input className={fieldControlClass} name="fullName" autoComplete="name" minLength={2} maxLength={160} required /></label>
-      <label className="grid gap-1.5 text-xs font-medium text-slate-600">Email address<input className={fieldControlClass} name="email" type="email" autoComplete="email" required /></label>
-      <label className="grid gap-1.5 text-xs font-medium text-slate-600">Initial role<SelectPicker label="Initial role" name="role" value={role} onValueChange={setRole} placeholder="Select role" options={roles.map((item) => ({ value: item, label: roleLabels[item] }))} /></label>
+      <label className="grid min-w-0 content-start gap-1.5 text-xs font-medium text-slate-600">Full name<input className={fieldControlClass} name="fullName" autoComplete="name" minLength={2} maxLength={160} required /><FieldGuide label="Full name" name="fullName" /></label>
+      <label className="grid min-w-0 content-start gap-1.5 text-xs font-medium text-slate-600">Email address<input className={fieldControlClass} name="email" type="email" autoComplete="email" required /><FieldGuide label="Email address" name="email" type="email" /></label>
+      <label className="grid min-w-0 content-start gap-1.5 text-xs font-medium text-slate-600">Initial role<SelectPicker label="Initial role" name="role" value={role} onValueChange={setRole} placeholder="Select role" options={roles.map((item) => ({ value: item, label: roleLabels[item] }))} /><FieldGuide label="Initial role" name="role" placeholder="Select role" /></label>
     </div>
     {state.message && <p role="alert" className="text-sm text-red-700">{state.message}</p>}
     </>}
@@ -44,9 +45,9 @@ export function UserInviteDialog({ roles }: { roles: AppRole[] }) {
 
 export function InitialRoleForm({ userId, roles }: { userId: string; roles: AppRole[] }) {
   const [state, action, pending] = useActionState(assignInitialRoleAction, initialState);
-  return <form action={action} className="flex flex-wrap items-center justify-end gap-2">
+  return <form action={action} className="flex flex-wrap items-start justify-end gap-2">
     <input type="hidden" name="userId" value={userId} />
-    <select name="role" aria-label="Initial role" className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs" defaultValue="" required><option value="" disabled>Select role</option>{roles.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}</select>
+    <label className="grid min-w-0 content-start gap-2"><span className="sr-only">Initial role</span><select name="role" aria-label="Initial role" className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs" defaultValue="" required><option value="" disabled>Select role</option>{roles.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}</select><FieldGuide label="Initial role" /></label>
     <Button type="submit" size="sm" disabled={pending}>Assign role</Button>
     {state.message ? <span role={state.ok ? "status" : "alert"} className={`w-full text-right text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</span> : null}
   </form>;

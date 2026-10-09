@@ -65,7 +65,7 @@ export function NotificationBell({ userId }: { userId: string }) {
 
   const closeMenu = (event: React.MouseEvent<HTMLAnchorElement>) => event.currentTarget.closest("details")?.removeAttribute("open");
   return <details data-header-menu="notifications" className="relative" onToggle={(event) => { menuOpen.current = event.currentTarget.open; if (menuOpen.current) refreshMenu.current(); }}>
-    <summary aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`} className="relative grid size-10 cursor-pointer list-none place-items-center rounded-lg text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 [&::-webkit-details-marker]:hidden">
+    <summary aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`} className="relative grid size-10 cursor-pointer list-none place-items-center rounded-full text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 [&::-webkit-details-marker]:hidden">
       <HugeiconsIcon icon={Notification01Icon} size={20} />
       {unreadCount > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-cyan-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
     </summary>

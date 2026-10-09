@@ -75,6 +75,7 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
       <HugeiconsIcon icon={Search01Icon} size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
       <input id={`${listId}-input`} type="search" value={query} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setCode(""); setOptions([]); setActiveIndex(0); setOpen(true); }} onKeyDown={handleKeyDown} role="combobox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-activedescendant={open && options[activeIndex] ? `${listId}-option-${activeIndex}` : undefined} aria-autocomplete="list" autoComplete="off" placeholder="Search any city or municipality" className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10" />
     </div>
+    <p className="mt-2 text-xs font-normal leading-5 text-slate-500">Type a city or municipality, then choose a result from the list.</p>
     <input type="hidden" name={name} value={code} />
     {displayNameName && <input type="hidden" name={displayNameName} value={query} />}
     {open && <div id={listId} role="listbox" aria-label={label} className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ViewIcon, ViewOffSlashIcon, LockPasswordIcon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
+import { FieldGuide } from "@/components/ui/field-guide";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { loginAction } from "@/app/auth/actions";
@@ -21,6 +22,7 @@ export function LoginForm() {
           <HugeiconsIcon icon={Mail01Icon} size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input id="email" name="email" type="email" autoComplete="email" placeholder="name@nognogenterprises.com" required className="pl-11" />
         </div>
+        <FieldGuide label="Email address" />
       </div>
 
       <div className="space-y-2">
@@ -28,10 +30,11 @@ export function LoginForm() {
         <div className="relative">
           <HugeiconsIcon icon={LockPasswordIcon} size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input id="password" name="password" type={showPassword ? "text" : "password"} autoComplete="current-password" placeholder="Enter your password" minLength={6} required className="px-11" />
-          <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+          <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
             <HugeiconsIcon icon={showPassword ? ViewOffSlashIcon : ViewIcon} size={18} />
           </button>
         </div>
+        <FieldGuide label="Password" />
       </div>
 
       <div className="text-right"><Link href="/auth/forgot-password" className="text-xs font-semibold text-cyan-700 hover:underline">Forgot password?</Link></div>

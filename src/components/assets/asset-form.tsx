@@ -11,15 +11,15 @@ import { saveAssetAction, type AssetActionState } from "@/app/(workspace)/equipm
 import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import type { AssetLocationView, AssetView } from "@/lib/data/assets";
-import type { AssetCategoryRow, AssetKind } from "@/types/database";
+import type { AssetKind } from "@/types/database";
 
 const initialState: AssetActionState = { ok: false, message: "" };
-type AssetFormProps = { kind: AssetKind; asset?: AssetView; categories: AssetCategoryRow[]; locations: AssetLocationView[] };
+type AssetFormProps = { kind: AssetKind; asset?: AssetView; locations: AssetLocationView[] };
 export function AssetForm({ kind, ...props }: AssetFormProps) {
   return kind === "vehicle" ? <VehicleForm asset={props.asset} locations={props.locations} /> : <EquipmentForm {...props} />;
 }
 
-function EquipmentForm({ asset, categories, locations }: Omit<AssetFormProps, "kind">) {
+function EquipmentForm({ asset, locations }: Omit<AssetFormProps, "kind">) {
   const [state, action, pending] = useActionState(saveAssetAction, initialState);
   const dialog = useRecordDialog();
   const router = useRouter();
@@ -47,7 +47,6 @@ function EquipmentForm({ asset, categories, locations }: Omit<AssetFormProps, "k
       <FormField label="Equipment code" htmlFor="code" error={error("code")}><input className={fieldControlClass} id="code" name="code" defaultValue={asset?.code} placeholder="EQ-EXC-001" required /></FormField>
       <FormField label="SKU" htmlFor="sku" hint="Optional model or catalog number." error={error("sku")}><input className={fieldControlClass} id="sku" name="sku" defaultValue={asset?.equipment?.sku ?? ""} placeholder="CAT-320-GX" /></FormField>
       <FormField label="Equipment name" htmlFor="name" error={error("name")}><input className={fieldControlClass} id="name" name="name" defaultValue={asset?.name} required /></FormField>
-      <FormField label="Equipment category" htmlFor="categoryId" error={error("categoryId")}><SelectPicker id="categoryId" name="categoryId" label="Equipment category" defaultValue={asset?.category_id ?? undefined} placeholder="Select classification" required options={categories.map((item) => ({ value: item.id, label: item.name }))} /></FormField>
       <FormField label="Equipment type" htmlFor="equipmentType" error={error("equipmentType")}><input className={fieldControlClass} id="equipmentType" name="equipmentType" defaultValue={asset?.equipment?.equipment_type} placeholder="Hydraulic excavator" required /></FormField>
       <FormField label="Brand" htmlFor="brand" error={error("brand")}><input className={fieldControlClass} id="brand" name="brand" defaultValue={asset?.brand ?? ""} required /></FormField>
       <FormField label="Model" htmlFor="model" error={error("model")}><input className={fieldControlClass} id="model" name="model" defaultValue={asset?.model ?? ""} required /></FormField>

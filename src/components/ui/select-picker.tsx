@@ -29,7 +29,7 @@ export function SelectPicker({ id, options, label, name, value, defaultValue, on
   const filterChange = useContext(FilterBarContext);
   const attachTrigger = useCallback((node: HTMLButtonElement | null) => setPortalContainer(node?.closest("dialog") ?? undefined), []);
   return <Select.Root name={name} value={value} defaultValue={defaultValue} onValueChange={(next) => { onValueChange?.(next); if (name) filterChange?.(name, next); }} disabled={disabled} required={required}>
-    <Select.Trigger id={id} ref={attachTrigger} aria-label={label} className={cn("inline-flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm text-slate-800 outline-none transition-colors focus-visible:border-cyan-600 focus-visible:ring-2 focus-visible:ring-cyan-600/20 disabled:cursor-not-allowed disabled:opacity-50", className)}>
+    <Select.Trigger id={id} ref={attachTrigger} aria-label={label} className={cn("inline-flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm text-slate-800 outline-none transition-colors focus-visible:border-cyan-600 focus-visible:ring-2 focus-visible:ring-cyan-600/20 disabled:cursor-not-allowed disabled:opacity-50", className)}>
       <span className="min-w-0 flex-1 truncate"><Select.Value placeholder={placeholder} /></span>
       <Select.Icon><HugeiconsIcon icon={ArrowDown01Icon} size={16} /></Select.Icon>
     </Select.Trigger>

@@ -81,7 +81,6 @@ export type InventoryTransferVarianceRow = { id: string; transfer_item_id: strin
 export type InventoryTransactionRow = { id: string; material_id: string; quantity: number; unit_of_measure_id: string; source_location_id: string | null; destination_location_id: string | null; transaction_type: InventoryTransactionType; transfer_id: string | null; transfer_item_id: string | null; transfer_phase: "dispatch" | "receipt" | null; reference_document: string; project_id: string | null; responsible_user_id: string; transaction_date: string; remarks: string | null; reversal_of: string | null; cost_total: number | null; cost_unit: number | null; created_at: string };
 export type InventoryValuationRow = { id: string; material_id: string; inventory_location_id: string; quantity_on_hand: number; total_value: number | null; updated_at: string };
 export type InventoryOpeningValueRow = { id: string; material_id: string; inventory_location_id: string; verified_quantity: number; verified_total_value: number; reason: string; verified_by: string; verified_at: string };
-export type AssetCategoryRow = { id: string; asset_kind: AssetKind; name: string; description: string | null; created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
 export type AssetLocationRow = { id: string; location_kind: AssetLocationKind; inventory_location_id: string | null; name: string | null; address: string | null; created_by: string | null; updated_by: string | null; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
 export type AssetRow = { photo_path: string | null; id: string; asset_kind: AssetKind; code: string; name: string; description: string | null; category_id: string | null; brand: string | null; model: string | null; acquisition_date: string | null; ownership_type: AssetOwnershipType; status: AssetStatus; current_location_id: string; condition_notes: string | null; created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
 export type EquipmentDetailRow = { asset_id: string; equipment_type: string; serial_number: string; acquisition_cost: number; sku: string | null };
@@ -188,7 +187,6 @@ export type Database = {
       material_request_fulfillment_events: Table<MaterialRequestFulfillmentEventRow, never>;
       material_request_decision_receipts: Table<{ idempotency_key: string; request_id: string; actor_id: string; payload_hash: string; created_at: string }, never>;
       material_request_cancellation_receipts: Table<{ idempotency_key: string; request_id: string; actor_id: string; payload_hash: string; created_at: string }, never>;
-      asset_categories: Table<AssetCategoryRow, never>;
       asset_locations: Table<AssetLocationRow, never>;
       assets: Table<AssetRow, never>;
       equipment_details: Table<EquipmentDetailRow, never>;
@@ -295,12 +293,10 @@ export type Database = {
       get_requestable_warehouses: { Args: Record<string, never>; Returns: { project_id: string; warehouse_id: string; code: string; name: string }[] };
       get_material_request_context: { Args: { p_request_ids: string[] }; Returns: { request_id: string; project_id: string; project_code: string; project_name: string; site_id: string; site_name: string }[] };
       get_approved_request_queue: { Args: { p_limit?: number; p_offset?: number }; Returns: ApprovedRequestQueueRow[] };
-      save_asset_category: { Args: { p_id: string | null; p_asset_kind: AssetKind; p_name: string; p_description: string }; Returns: string };
-      archive_asset_category: { Args: { p_id: string }; Returns: undefined };
       save_asset_location: { Args: { p_id: string | null; p_location_kind: AssetLocationKind; p_name: string; p_address: string }; Returns: string };
       archive_asset_location: { Args: { p_id: string }; Returns: undefined };
-      save_equipment: { Args: { p_id: string | null; p_code: string; p_name: string; p_description: string; p_category_id: string; p_brand: string; p_model: string; p_acquisition_date: string; p_ownership_type: AssetOwnershipType; p_status: AssetStatus; p_location_id: string; p_condition_notes: string; p_equipment_type: string; p_serial_number: string; p_acquisition_cost: number | string }; Returns: string };
-      save_equipment_with_sku: { Args: { p_id: string | null; p_code: string; p_name: string; p_description: string; p_category_id: string; p_brand: string; p_model: string; p_acquisition_date: string; p_ownership_type: AssetOwnershipType; p_status: AssetStatus; p_location_id: string; p_condition_notes: string; p_equipment_type: string; p_serial_number: string; p_acquisition_cost: number | string; p_sku: string }; Returns: string };
+      save_equipment: { Args: { p_id: string | null; p_code: string; p_name: string; p_description: string; p_category_id: string | null; p_brand: string; p_model: string; p_acquisition_date: string; p_ownership_type: AssetOwnershipType; p_status: AssetStatus; p_location_id: string; p_condition_notes: string; p_equipment_type: string; p_serial_number: string; p_acquisition_cost: number | string }; Returns: string };
+      save_equipment_with_sku: { Args: { p_id: string | null; p_code: string; p_name: string; p_description: string; p_category_id: string | null; p_brand: string; p_model: string; p_acquisition_date: string; p_ownership_type: AssetOwnershipType; p_status: AssetStatus; p_location_id: string; p_condition_notes: string; p_equipment_type: string; p_serial_number: string; p_acquisition_cost: number | string; p_sku: string }; Returns: string };
       save_vehicle: { Args: { p_id: string | null; p_code: string; p_name: string; p_vehicle_type: string; p_plate_number: string; p_location_id: string; p_ownership_type: AssetOwnershipType; p_status: AssetStatus; p_condition_notes: string }; Returns: string };
       archive_asset: { Args: { p_id: string; p_reason: string }; Returns: undefined };
       get_requestable_equipment: { Args: { p_project_id: string; p_project_site_id: string }; Returns: { asset_id: string; asset_code: string; asset_name: string; asset_kind: AssetKind }[] };
@@ -353,6 +349,7 @@ export type Database = {
       get_project_management_summary: { Args: { p_project_id: string }; Returns: ProjectManagementSummaryRow[] };
       get_project_profitability: { Args: { p_project_id: string }; Returns: ProjectProfitabilityRow[] };
       get_dashboard_monthly_project_costs: { Args: { p_months?: number }; Returns: DashboardMonthlyCostRow[] };
+      get_dashboard_project_counts: { Args: Record<string, never>; Returns: { total: number; active: number; on_hold: number }[] };
       get_dashboard_totals: { Args: Record<string, never>; Returns: { total_sales: number; total_expenses: number | null; total_material_value: number | null; unvalued_stock: number; unvalued_expenses: number }[] };
       get_project_material_plan: { Args: { p_project_id: string }; Returns: ProjectMaterialPlanView[] };
       get_project_material_estimate: { Args: { p_project_id: string }; Returns: ProjectMaterialEstimateView[] };

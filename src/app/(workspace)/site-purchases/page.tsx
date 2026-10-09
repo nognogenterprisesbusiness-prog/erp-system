@@ -6,6 +6,7 @@ import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { HistoryPagination } from "@/components/ui/history-pagination";
 import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { requireUser } from "@/lib/auth";
@@ -30,7 +31,7 @@ export default async function SitePurchasesPage({ searchParams }: { searchParams
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   return <>
     <PageHeader eyebrow="Purchasing" title="Site purchases" description={user.canViewLaborRates ? "Materials an Engineer bought at a hardware store. Approve to add them to the site's stock." : "Record materials you bought at a hardware store for your site. Admin or Finance approves them."}
-      action={canSubmit && <Link href={`/site-purchases?status=${status}&create=1`} className="inline-flex h-10 items-center rounded-lg bg-[#07152d] px-4 text-sm font-medium text-white hover:bg-[#102647]">+ New site purchase</Link>} />
+      action={canSubmit && <Button asChild><Link href={`/site-purchases?status=${status}&create=1`}>+ New site purchase</Link></Button>} />
     {choices && <RecordCreateDialog title="New site purchase" initialOpen hideTrigger closeHref={`/site-purchases?status=${status}`}>{choices.sites.length ? <SitePurchaseForm choices={choices} idempotencyKey={randomUUID()} today={today} /> : <EmptyState compact title="No sites to buy for" description="You can record purchases for sites where you are the Engineer." />}</RecordCreateDialog>}
     <nav aria-label="Site purchase status" className="mt-6 flex flex-wrap gap-2">{tabs.map((tab) => <Link key={tab.status} href={`/site-purchases?status=${tab.status}`} aria-current={tab.status === status ? "page" : undefined} className={`rounded-full px-3.5 py-1.5 text-sm font-medium ${tab.status === status ? "bg-[#07152d] text-white" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>{tab.label}</Link>)}</nav>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState kind="items" title="No site purchases here" description={status === "submitted" ? "New hardware store purchases appear here for approval." : "Nothing in this list yet."} /> : undefined}>

@@ -39,8 +39,8 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
       </FormField>
       {mode === "dispatch" && <>
         <input type="hidden" name="vehicleAssetId" value={vehicleId} />
-        <FormField label="Delivery vehicle" htmlFor={`vehicle-${id}`}>
-          <SelectPicker label="Transport type" value={companyTransport ? "company" : "other"} onValueChange={(next) => { setCompanyTransport(next === "company"); setVehicleId(""); }} options={[{ value: "other", label: "Other / external transport" }, { value: "company", label: "Company vehicle" }]} />
+        <FormField label="Delivery vehicle" htmlFor={`vehicle-${id}`} hint="Choose Company vehicle and select it below, or choose Other / external transport and describe it.">
+          <SelectPicker id={`vehicle-${id}`} label="Transport type" value={companyTransport ? "company" : "other"} onValueChange={(next) => { setCompanyTransport(next === "company"); setVehicleId(""); }} options={[{ value: "other", label: "Other / external transport" }, { value: "company", label: "Company vehicle" }]} />
           {companyTransport && <PagedReferencePicker kind="delivery_vehicle" label="Delivery vehicle" value={vehicleId} onValueChange={setVehicleId} initialOptions={vehicles.map((item) => ({ value: item.id, label: item.label }))} />}
         </FormField>
         {!vehicleId && <FormField label="Vehicle or transport description" htmlFor={`vehicle-label-${id}`}><input id={`vehicle-label-${id}`} name="vehicleLabel" className={fieldControlClass} maxLength={120} placeholder="Plate number or transport type" required /></FormField>}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { FieldGuide } from "@/components/ui/field-guide";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SelectPicker } from "@/components/ui/select-picker";
@@ -144,11 +145,13 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
     <div>
       <label htmlFor="documentProject" className="mb-2 block text-sm font-medium text-slate-700">Project</label>
       <SelectPicker id="documentProject" label="Project" value={projectId} onValueChange={setProjectId} options={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))} placeholder="Choose a project" disabled={uploading} required />
+      <FieldGuide label="Project" />
     </div>
     <div className="grid gap-4 sm:grid-cols-2">
       <div>
         <label htmlFor="documentCategory" className="mb-2 block text-sm font-medium text-slate-700">Document type</label>
         <SelectPicker id="documentCategory" label="Document type" value={category} onValueChange={(value) => setCategory(value as ProjectDocumentCategory)} options={projectDocumentCategories} disabled={uploading} />
+        <FieldGuide label="Document type" />
       </div>
       <div>
         <label htmlFor="projectDocuments" className="mb-2 block text-sm font-medium text-slate-700">Files</label>
@@ -161,6 +164,7 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
       {selected.map((file, index) => <div key={`${file.name}-${file.size}-${index}`}>
         <label htmlFor={`documentName-${index}`} className="sr-only">Name for {file.name}</label>
         <Input id={`documentName-${index}`} value={names[index] ?? ""} onChange={(event) => { const value = event.currentTarget.value; setNames((current) => current.map((name, position) => position === index ? value : name)); }} maxLength={180} required disabled={uploading} placeholder="e.g. Signed contract, Site plan v2" />
+        <FieldGuide label="Document name" />
         <p className="mt-1 truncate text-xs text-slate-500" title={file.name}>File: {file.name}</p>
       </div>)}
     </fieldset>}

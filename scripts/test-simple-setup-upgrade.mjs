@@ -19,6 +19,8 @@ await withIsolatedPostgres(async ({ sql, scalar, as }) => {
   assert.equal(row.category_id, "80000000-0000-0000-0000-000000000003");
   assert.equal(scalar(await sql("select count(*) from public.employee_categories")), "3");
   assert.equal(scalar(await as("admin", "select count(*) from public.assets where code='VEH-DT-001'")), "1");
+  assert.equal(scalar(await sql("select count(*) from public.assets where asset_kind='equipment' and category_id is not null")), "1");
+  assert.equal(scalar(await as("admin", "select count(*) from public.assets where asset_kind='equipment'")), "1");
   console.log("PASS: populated upgrade backfills vehicle types and retains legacy vehicle and employee data");
 }, {
   seedAfterMigrations: false,

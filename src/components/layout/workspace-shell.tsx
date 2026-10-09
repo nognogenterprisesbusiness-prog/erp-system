@@ -1,6 +1,6 @@
 "use client";
 
-import { AssignmentsIcon, Audit01Icon, Building03Icon, DashboardSquare01Icon, File02Icon, FilePenLineIcon, Logout01Icon, Invoice01Icon, Package01Icon, ShoppingCart01Icon, PackageReceiveIcon, QrCodeIcon, Store02Icon, Tag01Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Audit01Icon, Building03Icon, DashboardSquare01Icon, File02Icon, FilePenLineIcon, Logout01Icon, Invoice01Icon, Package01Icon, ShoppingCart01Icon, PackageReceiveIcon, QrCodeIcon, Store02Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { logoutAction } from "@/app/auth/actions";
@@ -27,7 +27,6 @@ const navItems = [
   { href: "/reports/daily", label: "Daily reports", icon: FilePenLineIcon, reports: true, group: "Project tools" },
   { href: "/warehouses", label: "Warehouses", icon: WarehouseIcon, group: "Inventory tools" },
   { href: "/qr-codes", label: "QR tools", icon: QrCodeIcon, group: "Inventory tools" },
-  { href: "/equipment/categories", label: "Equipment categories", icon: Tag01Icon, manager: true, group: "Inventory tools" },
   { href: "/site-purchases", label: "Site purchases", icon: Invoice01Icon, financeSitePurchase: true, group: "Purchasing tools" },
   { href: "/employees", label: "Employees", icon: UserGroupIcon, group: "People" },
   { href: "/attendance", label: "Attendance", icon: AssignmentsIcon, finance: true, group: "People" },

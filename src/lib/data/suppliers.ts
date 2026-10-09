@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
@@ -17,14 +18,14 @@ function resolvePrices(prices: SupplierPriceRow[], asOf = todayInManila()) {
   return { current, previous, history: ordered };
 }
 
-export async function getSupplierReferences() {
+export const getSupplierReferences = cache(async function getSupplierReferences() {
   const supabase = await createClient();
   const [materials, units] = await Promise.all([
     readAllPages((from, to) => supabase.from("materials").select("id,code,name,base_unit_id,material_kind,is_active,archived_at").eq("is_active", true).is("archived_at", null).order("name").order("id").range(from, to), "supplier material choices"),
     readAllPages((from, to) => supabase.from("units_of_measure").select("id,code,name,symbol,dimension,decimal_scale,is_active,created_at").eq("is_active", true).order("name").order("id").range(from, to), "supplier units"),
   ]);
   return { materials, units };
-}
+});
 
 export type SupplierListView = SupplierRow & { catalogCount: number };
 export async function getSuppliers(params: { query?: string; status?: SupplierStatus | "archived" | "all"; page?: number } = {}) {

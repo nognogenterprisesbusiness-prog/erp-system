@@ -1,7 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { assetCategoryInputSchema,equipmentInputSchema, vehicleInputSchema, uuidSchema } from "@nognog/domain";
+import { equipmentInputSchema, vehicleInputSchema, uuidSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireManager } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +17,6 @@ function assetPayload(form: FormData) {
     code: value(form, "code").toUpperCase(),
     name: value(form, "name"),
     description: value(form, "description"),
-    categoryId: value(form, "categoryId"),
     brand: value(form, "brand"),
     model: value(form, "model"),
     acquisitionDate: value(form, "acquisitionDate"),
@@ -32,9 +30,9 @@ function assetPayload(form: FormData) {
 function friendlyAssetError(error: { code?: string; message: string }) {
   if (error.code === "42501") return "You do not have permission to manage the asset registry.";
   if (error.code === "23505") return "The asset code, serial number or plate number is already in use.";
-  if (error.message.includes("category")) return "The selected classification is unavailable or does not match this asset type.";
   if (error.message.includes("location")) return "The selected location is unavailable.";
   if (error.message.includes("return the vehicle")) return "Return the vehicle before changing its status or location.";
+  if (error.message.includes("return the equipment")) return "Return the equipment before editing its registry details.";
   if (error.message.includes("assigned or in-use")) return "Return the asset before archiving it.";
   return "The asset registry change could not be saved.";
 }
@@ -55,7 +53,7 @@ export async function saveAssetAction(_: AssetActionState, form: FormData): Prom
     if (!parsed.success) return fail("Review the highlighted equipment details.", parsed.error.flatten().fieldErrors);
     const input = parsed.data;
     const result = await supabase.rpc("save_equipment_with_sku", {
-      p_id: input.id ?? null, p_code: input.code, p_name: input.name, p_description: input.description || "", p_category_id: input.categoryId,
+      p_id: input.id ?? null, p_code: input.code, p_name: input.name, p_description: input.description || "", p_category_id: null,
       p_brand: input.brand, p_model: input.model, p_acquisition_date: input.acquisitionDate, p_ownership_type: input.ownershipType, p_status: input.status,
       p_location_id: input.currentLocationId, p_condition_notes: input.conditionNotes || "", p_equipment_type: input.equipmentType,
       p_serial_number: input.serialNumber, p_acquisition_cost: input.acquisitionCost, p_sku: input.sku,
@@ -97,25 +95,4 @@ export async function archiveAssetAction(_: AssetActionState, form: FormData): P
   revalidatePath(kind === "equipment" ? "/equipment" : "/vehicles");
   revalidatePath(`/${kind === "equipment" ? "equipment" : "vehicles"}/${id}`);
   return { ok: true, data: { id } };
-}
-
-export async function saveAssetCategoryAction(_: AssetActionState, form: FormData): Promise<AssetActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to manage classifications."); }
-  const parsed = assetCategoryInputSchema.safeParse({ id: value(form, "id") || undefined, assetKind: value(form, "assetKind"), name: value(form, "name"), description: value(form, "description") });
-  if (!parsed.success) return failure("Review the classification details.", parsed.error.flatten().fieldErrors);
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("save_asset_category", { p_id: parsed.data.id ?? null, p_asset_kind: parsed.data.assetKind, p_name: parsed.data.name, p_description: parsed.data.description || "" });
-  if (error) return failure(friendlyAssetError(error));
-  revalidatePath("/equipment/categories"); revalidatePath("/equipment");
-  redirect("/equipment/categories");
-}
-
-export async function archiveAssetCategoryAction(form: FormData) {
-  await requireManager();
-  const id = value(form, "id");
-  if (!uuidSchema.safeParse(id).success) throw new Error("Invalid equipment category.");
-  const supabase = await createClient(); const { error } = await supabase.rpc("archive_asset_category", { p_id: id });
-  if (error) throw new Error(friendlyAssetError(error));
-  revalidatePath("/equipment/categories"); revalidatePath("/equipment");
-  redirect("/equipment/categories");
 }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { assetCategoryInputSchema, assetChoiceLabel, vehicleInputSchema, vehicleTag } from "./assets";
+import { equipmentInputSchema, assetChoiceLabel, vehicleInputSchema, vehicleTag } from "./assets";
 
 test("asset pickers mark vehicles and leave equipment unchanged", () => {
   assert.equal(assetChoiceLabel({ code: "EQ-001", name: "Excavator", kind: "equipment" }), "EQ-001 · Excavator");
@@ -28,7 +28,11 @@ test("vehicle entry requires identification and location and rejects custody-man
   }
 });
 
-test("classifications apply to equipment while vehicle types are free text", () => {
-  assert.equal(assetCategoryInputSchema.safeParse({ assetKind: "equipment", name: "Power tools" }).success, true);
-  assert.equal(assetCategoryInputSchema.safeParse({ assetKind: "vehicle", name: "Trucks" }).success, false);
+test("equipment entry uses a free-text type without a category", () => {
+  const input = { code: "EQ-001", name: "Site mixer", equipmentType: "Portable mixer / concrete",
+    serialNumber: "MIX-001", sku: "", brand: "Test", model: "Mixer", acquisitionDate: "2026-10-09",
+    acquisitionCost: "1000.00", ownershipType: "company_owned", status: "available",
+    currentLocationId: vehicle.currentLocationId, description: "", conditionNotes: "" };
+  assert.equal(equipmentInputSchema.safeParse(input).success, true);
+  assert.equal(equipmentInputSchema.safeParse({ ...input, equipmentType: " " }).success, false);
 });

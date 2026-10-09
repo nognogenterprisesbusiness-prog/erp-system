@@ -154,7 +154,7 @@ export function QrScanner() {
     </div>
     <form className="mt-6 border-t border-slate-100 pt-5" onSubmit={(event) => { event.preventDefault(); void resolve(manualCode); }}>
       <label htmlFor="manualQrCode" className="block text-sm font-semibold text-slate-800">Enter printed identifier</label>
-      <p className="mt-1 text-xs text-slate-500">Use this when the camera is unavailable or the label is damaged.</p>
+      <p className="mt-1 text-xs text-slate-500">Copy the complete NQ- identifier printed below the QR code, including hyphens.</p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input id="manualQrCode" value={manualCode} onChange={(event) => setManualCode(event.target.value)} autoCapitalize="characters" autoComplete="off" spellCheck={false} maxLength={35} placeholder="NQ-…" className={`${fieldControlClass} font-mono uppercase`} />
         <Button type="submit" variant="outline" disabled={loading || !manualCode.trim()}>Look up</Button>

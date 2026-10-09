@@ -65,7 +65,7 @@ export function RecordPhotoInput({ label, currentPhoto, convertBeforeSubmit = fa
         <span className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 text-xs text-slate-500">
           {preview || (currentPhoto && !currentPhotoFailed) ? <Image src={preview ?? currentPhoto ?? ""} alt="Selected record photo" fill sizes="80px" unoptimized className="object-cover" onError={() => { if (!preview) setCurrentPhotoFailed(true); }} /> : processing ? "Processing…" : "No photo"}
         </span>
-        <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-slate-700">{processing ? "Processing photo…" : "Choose PNG or JPEG"}</span><span className="mt-1 block text-xs font-normal text-slate-500">Verified and converted to WebP when saved</span></span>
+        <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-slate-700">{processing ? "Processing photo…" : "Choose PNG or JPEG"}</span><span className="mt-1 block text-xs font-normal text-slate-500">Choose a clear PNG or JPEG photo under 12 MB.</span></span>
         <input name={inputName} type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" required={required} className="sr-only" onChange={(event) => void choose(event.currentTarget)} />
       </span>
     </label>

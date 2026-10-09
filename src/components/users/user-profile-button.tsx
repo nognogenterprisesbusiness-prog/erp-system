@@ -15,7 +15,7 @@ export function UserProfileButton({ name, email, phone, roles, status, avatarUrl
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   return <>
-    <button type="button" onClick={() => dialog.current?.showModal()} className="flex items-center gap-3 text-left hover:text-cyan-700 focus-visible:rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
+    <button type="button" onClick={() => dialog.current?.showModal()} className="flex items-center gap-3 text-left hover:text-cyan-700 focus-visible:rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
       <AccountAvatar name={name} photo={avatarUrl} className="bg-cyan-50 font-semibold text-cyan-700" />
       <span><span className="block font-semibold">{name}</span><span className="block text-xs text-slate-500">{email}</span></span>
     </button>

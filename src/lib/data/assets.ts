@@ -5,25 +5,15 @@ import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
 import { readAllPages, readByIds } from "./read-all-pages";
-import type { AssetCategoryRow, AssetKind, AssetLocationKind, AssetLocationRow, AssetRow, AssetStatus, EquipmentDetailRow, VehicleDetailRow } from "@/types/database";
+import type { AssetKind, AssetLocationKind, AssetLocationRow, AssetRow, AssetStatus, EquipmentDetailRow, VehicleDetailRow } from "@/types/database";
 
 export type AssetLocationView = AssetLocationRow & { displayName: string; displayAddress: string };
 export type AssetView = AssetRow & {
-  categoryName: string;
+  typeName: string;
   location: AssetLocationView | undefined;
   equipment: EquipmentDetailRow | undefined;
   vehicle: VehicleDetailRow | undefined;
 };
-
-export const getEquipmentCategories = cache(async function getEquipmentCategories(includeArchived = false) {
-  const supabase = await createClient();
-  return readAllPages((from, to) => {
-    let query = supabase.from("asset_categories").select("id,asset_kind,name,description,created_by,updated_by,archived_at,archived_by,created_at,updated_at").order("asset_kind").order("name").order("id");
-    query = query.eq("asset_kind", "equipment");
-    if (!includeArchived) query = query.is("archived_at", null);
-    return query.range(from, to);
-  }, "asset categories");
-});
 
 export const getAssetLocations = cache(async function getAssetLocations(includeArchived = false): Promise<AssetLocationView[]> {
   const supabase = await createClient();
@@ -51,9 +41,8 @@ export const getAssetLocations = cache(async function getAssetLocations(includeA
   });
 });
 
-export async function getAssetReferences(kind: AssetKind) {
-  const [categories, locations] = await Promise.all([kind === "equipment" ? getEquipmentCategories(false) : Promise.resolve([]), getAssetLocations(false)]);
-  return { categories, locations };
+export async function getAssetReferences() {
+  return { locations: await getAssetLocations(false) };
 }
 
 /** Wage/rate-free equipment choices at this project's active sites. The posting RPC rechecks custody. */
@@ -81,7 +70,7 @@ export async function getProjectEquipmentChoices(projectId: string) {
   return assets.sort((a, b) => a.code.localeCompare(b.code) || a.id.localeCompare(b.id));
 }
 
-export async function getAssets(params: { id?: string; kind: AssetKind; query?: string; categoryId?: string; status?: AssetStatus | "all"; locationId?: string; includeArchived?: boolean; page?: number; pageSize?: number }) {
+export async function getAssets(params: { id?: string; kind: AssetKind; query?: string; status?: AssetStatus | "all"; locationId?: string; includeArchived?: boolean; page?: number; pageSize?: number }) {
   const supabase = await createClient();
   let request = supabase.from("assets").select("id,asset_kind,code,name,description,category_id,brand,model,acquisition_date,ownership_type,status,current_location_id,condition_notes,photo_path,created_by,updated_by,archived_at,archived_by,created_at,updated_at").eq("asset_kind", params.kind).order("updated_at", { ascending: false }).order("id");
   if (params.id) request = request.eq("id", params.id);
@@ -92,7 +81,6 @@ export async function getAssets(params: { id?: string; kind: AssetKind; query?: 
     request = request.range(offset, offset + size);
   }
   if (!params.includeArchived) request = request.is("archived_at", null);
-  if (params.categoryId) request = request.eq("category_id", params.categoryId);
   if (params.locationId) request = request.eq("current_location_id", params.locationId);
   if (params.status && params.status !== "all") request = request.eq("status", params.status);
   const search = safeSearchTerm(params.query);
@@ -100,8 +88,7 @@ export async function getAssets(params: { id?: string; kind: AssetKind; query?: 
   const { data: assets, error } = await request;
   if (error) throw new Error(`Unable to load ${params.kind} records.`);
   const ids = (assets ?? []).map((item) => item.id);
-  const [categories, locations, detailResult] = await Promise.all([
-    params.kind === "equipment" ? getEquipmentCategories(params.includeArchived ?? false) : Promise.resolve([]),
+  const [locations, detailResult] = await Promise.all([
     getAssetLocations(params.includeArchived ?? false),
     ids.length
       ? params.kind === "equipment"
@@ -110,11 +97,10 @@ export async function getAssets(params: { id?: string; kind: AssetKind; query?: 
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (detailResult.error) throw new Error(`Unable to load ${params.kind} details.`);
-  const categoryMap = new Map(categories.map((item) => [item.id, item.name]));
   const locationMap = new Map(locations.map((item) => [item.id, item]));
   const equipmentMap = params.kind === "equipment" ? new Map((detailResult.data ?? []).map((item) => [item.asset_id, item as EquipmentDetailRow])) : new Map<string, EquipmentDetailRow>();
   const vehicleMap = params.kind === "vehicle" ? new Map((detailResult.data ?? []).map((item) => [item.asset_id, item as VehicleDetailRow])) : new Map<string, VehicleDetailRow>();
-  return (assets ?? []).map((asset): AssetView => ({ ...asset, categoryName: asset.asset_kind === "vehicle" ? vehicleMap.get(asset.id)?.vehicle_type ?? "Vehicle" : categoryMap.get(asset.category_id ?? "") ?? "Unavailable category", location: locationMap.get(asset.current_location_id), equipment: equipmentMap.get(asset.id), vehicle: vehicleMap.get(asset.id) }));
+  return (assets ?? []).map((asset): AssetView => ({ ...asset, typeName: asset.asset_kind === "vehicle" ? vehicleMap.get(asset.id)?.vehicle_type ?? "Vehicle" : equipmentMap.get(asset.id)?.equipment_type ?? "Equipment", location: locationMap.get(asset.current_location_id), equipment: equipmentMap.get(asset.id), vehicle: vehicleMap.get(asset.id) }));
 }
 
 export async function getAsset(id: string, expectedKind: AssetKind, eventPage = 1) {
@@ -150,5 +136,4 @@ export async function getEquipmentUsage(assetId: string, page = 1) {
   return { page, rows: (entries ?? []).map((entry) => ({ ...entry, projectName: projectNames.get(entry.project_id) ?? "Project", reversal: reversed.get(entry.id) })), count: count ?? 0 };
 }
 
-export type AssetCategory = AssetCategoryRow;
 export type AssetLocationKindValue = AssetLocationKind;

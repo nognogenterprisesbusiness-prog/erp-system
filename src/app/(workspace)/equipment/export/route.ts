@@ -12,7 +12,6 @@ export async function GET(request: Request): Promise<Response> {
   const filters = {
     kind: "equipment" as const,
     query: params.get("q") ?? "",
-    categoryId: params.get("category") ?? "",
     locationId: params.get("location") ?? "",
     status,
     includeArchived: status === "retired",
@@ -23,7 +22,7 @@ export async function GET(request: Request): Promise<Response> {
     assets.push(...batch.slice(0, 100));
     if (batch.length <= 100) break;
   }
-  return csvAttachment(`nognog-equipment-${new Date().toISOString().slice(0, 10)}.csv`, ["Asset code", "SKU", "Equipment", "Classification", "Type", "Brand", "Model", "Serial number", "Current location", "Status"], assets.map((asset) => [
-    asset.code, asset.equipment?.sku ?? "", asset.name, asset.categoryName, asset.equipment?.equipment_type ?? "", asset.brand ?? "", asset.model ?? "", asset.equipment?.serial_number ?? "", asset.location?.displayName ?? "", asset.status.replaceAll("_", " "),
+  return csvAttachment(`nognog-equipment-${new Date().toISOString().slice(0, 10)}.csv`, ["Asset code", "SKU", "Equipment", "Type", "Brand", "Model", "Serial number", "Current location", "Status"], assets.map((asset) => [
+    asset.code, asset.equipment?.sku ?? "", asset.name, asset.equipment?.equipment_type ?? "", asset.brand ?? "", asset.model ?? "", asset.equipment?.serial_number ?? "", asset.location?.displayName ?? "", asset.status.replaceAll("_", " "),
   ]));
 }

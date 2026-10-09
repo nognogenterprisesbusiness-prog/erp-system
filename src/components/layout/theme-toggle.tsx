@@ -54,7 +54,7 @@ export function ThemeSettings() {
   const { theme, selectTheme } = useAppearance();
   const current = options.find((option) => option.value === theme) ?? options[0];
   const next = options.find((option) => option.value === nextTheme(theme)) ?? options[1];
-  return <button type="button" onClick={() => selectTheme(next.value)} aria-label={`Appearance: ${current.label}. Switch to ${next.label}`} className="mt-4 inline-flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-800 hover:border-cyan-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"><HugeiconsIcon icon={current.icon} size={19} strokeWidth={1.7} aria-hidden="true" /><span>{current.label}</span><span className="text-xs font-normal text-slate-500">Switch to {next.label}</span></button>;
+  return <button type="button" onClick={() => selectTheme(next.value)} aria-label={`Appearance: ${current.label}. Switch to ${next.label}`} className="mt-4 inline-flex min-h-11 items-center gap-3 rounded-full border border-slate-200 px-4 text-sm font-medium text-slate-800 hover:border-cyan-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"><HugeiconsIcon icon={current.icon} size={19} strokeWidth={1.7} aria-hidden="true" /><span>{current.label}</span><span className="text-xs font-normal text-slate-500">Switch to {next.label}</span></button>;
 }
 
 export function ThemeToggle() {

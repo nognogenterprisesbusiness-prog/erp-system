@@ -1,4 +1,5 @@
 "use client";
+import { FieldGuide } from "@/components/ui/field-guide";
 import { startTransition, useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { saveProjectAction, type ProjectActionState } from "@/app/(workspace)/projects/actions";
@@ -17,6 +18,7 @@ function Field({ label, name, error, children }: { label: string; name: string; 
   return <div className="grid min-w-0 content-start gap-2 text-sm">
     <label className="font-medium leading-5 text-slate-700" htmlFor={name}>{label}</label>
     {children}
+    {!error?.[0] && <FieldGuide label={label} name={name} />}
     {error?.[0] && <span role="alert" className="text-xs text-red-600">{error[0]}</span>}
   </div>;
 }

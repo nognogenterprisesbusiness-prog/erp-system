@@ -6,9 +6,9 @@ import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { AssetForm } from "./asset-form";
 import { ArchiveAssetForm } from "./archive-asset-form";
 import type { AssetLocationView, AssetView } from "@/lib/data/assets";
-import type { AssetCategoryRow, AssetKind } from "@/types/database";
+import type { AssetKind } from "@/types/database";
 
-export function AssetCardActions({ asset, kind, canManage, categories, locations }: { asset: AssetView; kind: AssetKind; canManage: boolean; categories: AssetCategoryRow[]; locations: AssetLocationView[] }) {
+export function AssetCardActions({ asset, kind, canManage, locations }: { asset: AssetView; kind: AssetKind; canManage: boolean; locations: AssetLocationView[] }) {
   const [mode, setMode] = useState<"edit" | "remove" | null>(null);
   const base = kind === "equipment" ? "/equipment" : "/vehicles";
   const editable = canManage && !asset.archived_at && !["assigned", "in_use"].includes(asset.status);
@@ -18,7 +18,7 @@ export function AssetCardActions({ asset, kind, canManage, categories, locations
       ...(editable ? [{ label: "Edit", onSelect: () => setMode("edit") }, { label: "Delete", destructive: true, onSelect: () => setMode("remove") }] : []),
     ]} />
     {mode && <RecordCreateDialog title={`${mode === "edit" ? "Edit" : "Delete"} ${kind}`} initialOpen hideTrigger onClosed={() => setMode(null)}>
-      {mode === "edit" ? <AssetForm kind={kind} asset={asset} categories={categories} locations={locations} /> : <ArchiveAssetForm id={asset.id} kind={kind} />}
+      {mode === "edit" ? <AssetForm kind={kind} asset={asset} locations={locations} /> : <ArchiveAssetForm id={asset.id} kind={kind} />}
     </RecordCreateDialog>}
   </>;
 }

@@ -88,7 +88,7 @@ export async function getEmployees(params: { query?: string; categoryId?: string
   };
 }
 
-export async function getWorkforceReferences() {
+export const getWorkforceReferences = cache(async function getWorkforceReferences() {
   const supabase = await createClient();
   const [categories, profiles, projects, sites] = await Promise.all([
     getEmployeeCategories(false),
@@ -97,7 +97,7 @@ export async function getWorkforceReferences() {
     readAllPages((from, to) => supabase.from("project_sites").select("*").eq("status", "active").order("name").order("id").range(from, to), "workforce sites"),
   ]);
   return { categories, profiles, projects, sites };
-}
+});
 
 export async function getEmployee(id: string) {
   if (!uuidSchema.safeParse(id).success) notFound();

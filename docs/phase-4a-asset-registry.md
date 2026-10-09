@@ -1,5 +1,8 @@
 # Phase 4A — Equipment and vehicle registry
 
+> Historical implementation record. The 2026-10-09 [simplified supplier and asset setup](simple-supplier-and-vehicle-setup.md) replaces configurable equipment categories and vehicle types with free-text types. Historical category data remains; those screens and write commands are retired.
+
+
 ## Stage boundary
 
 This stage implements the shared asset identity, configurable equipment categories and vehicle types, current operational status, current authorized location, equipment/vehicle subtype details, archival, web management, RLS, audit logging, and append-only registry history.

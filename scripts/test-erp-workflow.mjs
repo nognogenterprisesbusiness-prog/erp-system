@@ -22,6 +22,17 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     update public.project_sites set engineer_id='${users.engineer}',foreman_id='${users.foreman}' where id='${site}';
     insert into public.project_sites(id,project_id,name,address,created_by,updated_by)
     values('${sibling}','${project}','Other site','Different physical site','${users.admin}','${users.admin}');`);
+  await check("dashboard counts match visible projects for every role and deny anonymous access", async () => {
+    await assert.rejects(sql("select * from public.get_dashboard_project_counts()"), /Authentication required/);
+    for (const role of ["admin", "finance", "engineer", "foreman", "warehouse_staff"]) {
+      const actual = await json(role, "select row_to_json(c) from public.get_dashboard_project_counts() c");
+      const expected = await json(role, `select row_to_json(c) from (
+        select count(*) as total,count(*) filter (where status='active') as active,
+          count(*) filter (where status='on_hold') as on_hold
+          from public.projects where archived_at is null) c`);
+      assert.deepEqual(actual, expected, role);
+    }
+  });
   await check("site assignments agree across database, web and mobile capabilities", async () => {
     for (const role of ["engineer", "foreman"]) {
       const permitted = await json(role, `select row_to_json(c) from public.get_project_site_capabilities('${project}','${site}') c`);
@@ -36,6 +47,27 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
       assert(mobile.some((p) => JSON.stringify(p).includes(site)));
       assert(!mobile.some((p) => JSON.stringify(p).includes(sibling)));
     }
+  });
+  await check("equipment uses free-text types without categories and retains request, custody and rate safeguards", async () => {
+    const assetLocation = await value(`select id from public.asset_locations where inventory_location_id='${source}'`);
+    const save = (id = "null", type = "Portable mixer / concrete", status = "available") => `select public.save_equipment_with_sku(
+      ${id},'EQ-SIMPLE','Site mixer','',null,'Test brand','Mixer',current_date,'company_owned','${status}',
+      '${assetLocation}','','${type}','MIX-123',1000,'MIXER-01')`;
+    for (const role of ["finance","engineer","foreman","warehouse_staff"]) await assert.rejects(as(role, save()), /not authorized/);
+    const equipment = result(await as("admin", save()));
+    assert.equal(await value(`select category_id is null from public.assets where id='${equipment}'`), "t");
+    assert.equal(await value(`select equipment_type from public.equipment_details where asset_id='${equipment}'`), "Portable mixer / concrete");
+    assert.equal(await value(`select sku from public.equipment_details where asset_id='${equipment}'`), "MIXER-01");
+    await assert.rejects(as("admin", "select * from public.asset_categories"), /permission denied/);
+    await assert.rejects(as("admin", save(`'${equipment}'`, " ")), /invalid equipment/);
+    await assert.rejects(as("admin", save(`'${equipment}'`, "Mixer", "assigned")), /workflow-managed/);
+    const loan = result(await as("foreman", `select public.submit_equipment_request('${equipment}','${project}','${site}',current_date,current_date+7,'Mix concrete at site')`));
+    await as("admin", `select public.decide_equipment_request('${loan}',true,null); select public.checkout_equipment_request('${loan}')`);
+    await assert.rejects(as("admin", save(`'${equipment}'`)), /return the equipment/);
+    await as("admin", `select public.return_equipment_request('${loan}',false,'Returned in good condition')`);
+    await as("admin", save(`'${equipment}'`, "Site concrete mixer"));
+    assert.equal(await value(`select acquisition_cost from public.equipment_details where asset_id='${equipment}'`), "1000.00");
+    assert.equal(await value(`select status from public.assets where id='${equipment}'`), "available");
   });
   await check("simple vehicle entry generates codes, permits free-text types and preserves tracking safeguards", async () => {
     const assetLocation = await value(`select id from public.asset_locations where inventory_location_id='${source}'`);
@@ -54,7 +86,7 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     await assert.rejects(as("admin", save("null", "Invalid truck", "", "SIM 9877")), /invalid vehicle/);
     await assert.rejects(as("admin", save("null", "Invalid truck", "Van", "SIM 9877", "assigned")), /invalid vehicle/);
     await assert.rejects(as("admin", save("null", "Invalid truck", "Van", "SIM 9877", "available", "null")), /location is unavailable/);
-    await assert.rejects(as("admin", `select public.save_asset_category(null,'vehicle','Fixed type',null)`), /invalid equipment category/);
+    assert.equal(await value(`select to_regprocedure('public.save_asset_category(uuid,public.asset_kind,text,text)') is null`), "t");
     await sql(`begin; select set_config('request.jwt.claim.sub','${users.admin}',true);
       update public.assets set brand='Legacy brand',model='Legacy model',acquisition_date=current_date where id='${vehicle}';
       update public.vehicle_details set manufacture_year=2024,current_mileage=12000 where asset_id='${vehicle}'; commit;`);

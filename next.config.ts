@@ -3,8 +3,15 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   transpilePackages: ["@nognog/domain"],
   poweredByHeader: false,
+  outputFileTracingExcludes: {
+    // Desktop and Vercel Node runtimes use native Sharp binaries.
+    "/*": ["node_modules/@img/sharp-wasm32/**/*"],
+  },
   async redirects() {
-    return [{ source: "/suppliers/categories", destination: "/suppliers", permanent: true }];
+    return [
+      { source: "/suppliers/categories", destination: "/suppliers", permanent: true },
+      { source: "/equipment/categories", destination: "/equipment", permanent: true },
+    ];
   },
   async headers() {
     if (process.env.NODE_ENV !== "development") return [];
@@ -22,6 +29,7 @@ const nextConfig: NextConfig = {
     ];
   },
   experimental: {
+    optimizePackageImports: ["@hugeicons/core-free-icons"],
     serverActions: { bodySizeLimit: "4mb" },
     staleTimes: { dynamic: 600, static: 600 },
   },
