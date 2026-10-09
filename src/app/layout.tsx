@@ -26,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head><Script id="nognog-theme" strategy="beforeInteractive">{'try{const theme=localStorage.getItem("nognog.theme");if(theme==="blue"||theme==="dark")document.documentElement.dataset.theme=theme}catch{}'}</Script></head>
       <body className={`${inter.className} ${inter.variable} min-h-screen bg-white text-neutral-900 antialiased selection:bg-cyan-200 selection:text-[#061228]`}>
         {children}

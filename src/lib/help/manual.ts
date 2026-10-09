@@ -2,6 +2,7 @@ import type { AppRole } from "@/types/database";
 
 export type ManualFigure = {
   src: string; width: number; height: number; alt: string;
+  title?: string;
   marks: { x: number; y: number; width: number; height: number; label: string }[];
 };
 export type ManualGuide = {
@@ -233,6 +234,49 @@ export const manualGuides: readonly ManualGuide[] = [
     tips: ["A web deployment does not install a new native app build on a phone.", "If the app reports a failure, give support the action, date/time and error reference. Do not send your password."],
   },
   {
+    id: "roles", title: "Roles and access", description: "Know who requests, approves, receives, records and pays.", href: "/dashboard", roles: everyone,
+    before: "Your account role and active site or warehouse assignments work together. The manual shows the tasks relevant to your account.",
+    steps: everyone.map((role) => ({ title: ({ admin: "Admin", finance: "Finance", engineer: "Engineer", foreman: "Foreman", warehouse_staff: "Warehouse staff" })[role], detail: [roleResponsibilities[role].summary, ...roleResponsibilities[role].tasks, roleResponsibilities[role].boundary].join(" ") })),
+    result: "You know which colleague handles the next stage without sharing accounts or bypassing approval.",
+    tips: ["If the expected button is missing, check your role, assignment and the record's status with Admin.", "The web app supports all five roles. The mobile companion is for Engineer and Foreman accounts."],
+  },
+  {
+    id: "warehouses", title: "Warehouses and stock locations", description: "Know where stock is stored and where it must be delivered.", href: "/warehouses", roles: everyone,
+    before: "Admin sets up warehouses and project links. Assigned Warehouse staff operates only the locations they are authorized to use.",
+    steps: [
+      { title: "Create a clear warehouse identity", detail: "Admin opens Warehouses → Add warehouse. Enter a unique code such as WH-CEBU-01 and a clear name. Fill in its location and contact fields, then save." },
+      { title: "Link staff and projects", detail: "Admin opens the warehouse detail to maintain its staff and project links. Confirm the required project can request from this warehouse before staff begins a material request." },
+      { title: "Select the correct destination", detail: "When purchasing for a warehouse, choose its actual delivery destination. Buying directly for a project site uses the Engineer site-purchase workflow instead." },
+      { title: "Check a location's balance", detail: "In Inventory, choose All locations for your permitted total, then select a particular warehouse or site to see its own balance and stock history." },
+    ],
+    result: "The stock balance identifies the actual warehouse or site, and movements show where quantities came from and went.",
+    tips: ["A project site and a warehouse are different locations. An approved site purchase will not appear as warehouse stock.", "Changing the selected location changes the view; it does not transfer stock."],
+  },
+  {
+    id: "people", title: "Employees and attendance setup", description: "Maintain the workers used in attendance and project labour records.", href: "/employees", roles: everyone,
+    before: "An employee record represents a worker. A staff login is a separate user account with a role and assignments.",
+    steps: [
+      { title: "Register the employee", detail: "Admin opens Employees → Add employee. Enter a unique code, category/trade and name. Complete contact, employment and hire-date fields. Use the Categories button on Employees when a trade needs setup." },
+      { title: "Keep private details private", detail: "Personal contact details and wage information are shown only where your role permits. An optional linked user account does not automatically grant project access." },
+      { title: "Prepare the project's workforce", detail: "Admin maintains worker assignments and the applicable labour costing basis/rates before the Foreman records attendance. Rates are historical snapshots when attendance posts." },
+      { title: "Record actual work", detail: "Admin or the assigned Foreman records supported daily full/half-day attendance or actual hourly work. Finance reviews attendance costs; Engineer reviews permitted site attendance." },
+    ],
+    result: "Attendance refers to the correct worker and actual work date, with the configured cost basis.",
+    tips: ["Employees do not need a login merely to be included in attendance.", "Do not create a second employee to correct an attendance entry; use the supported Admin correction action."],
+  },
+  {
+    id: "suppliers", title: "Suppliers and material prices", description: "Maintain hardware-store details and compare current material prices.", href: "/suppliers", roles: financeTeam,
+    before: "Admin maintains suppliers. Finance can review their purchasing, prices and payment history.",
+    steps: [
+      { title: "Add the supplier", detail: "Admin opens Suppliers → Add supplier. Enter the store name, contact number and address. These are the main fields; More details is optional. Supplier categories are not required." },
+      { title: "Maintain the supplier's materials", detail: "Open the supplier and review its catalog materials, units and dated prices. Use existing catalog items so purchases from different stores still refer to the same material." },
+      { title: "Compare like-for-like prices", detail: "Use Material price comparison under Suppliers. Filter the same material and unit, supplier, availability and dates before comparing offers. A saved formal quotation can be linked to a purchase when used." },
+      { title: "Keep historical prices intact", detail: "New supplier purchases update the latest supplier price when issued, including after required owner approval. Posted receipts and past project cost snapshots retain their original prices." },
+    ],
+    result: "The store's details and price history are available without duplicating catalog materials or changing past costs.",
+    tips: ["A price comparison does not create stock. Create the purchase, inspect delivery and post accepted receipt.", "Do not rename a supplier or material to hide an incorrect purchase; retain the original history and use supported corrections."],
+  },
+  {
     id: "account", title: "Your profile, notifications and common problems", description: "Resolve common issues without duplicating records.", href: "/notifications", roles: everyone,
     before: "Use your own account and keep the selected project/site and transaction reference available when investigating an issue.",
     steps: [
@@ -251,12 +295,6 @@ export const manualGuides: readonly ManualGuide[] = [
   },
 ];
 
-export function getManualGuides(roles: readonly AppRole[], query = "") {
-  const terms = query.trim().toLocaleLowerCase("en").split(/\s+/).filter(Boolean);
-  return manualGuides.filter((guide) => {
-    if (!guide.roles.some((role) => roles.includes(role))) return false;
-    const text = [guide.title, guide.description, guide.before, guide.result, ...guide.tips,
-      ...guide.steps.flatMap((step) => [step.title, step.detail])].join(" ").toLocaleLowerCase("en");
-    return terms.every((term) => text.includes(term));
-  });
+export function getManualGuides(roles: readonly AppRole[]) {
+  return manualGuides.filter((guide) => guide.roles.some((role) => roles.includes(role)));
 }
