@@ -34,7 +34,8 @@ assert.match(compatibility.headers.get('cache-control') ?? '', /no-store/);
 const metadata = await compatibility.json();
 assert.equal(metadata.ok, true);
 assert.equal(metadata.data.minimumProtocol, 1);
-assert.equal(metadata.data.currentProtocol, 1);
+assert.equal(metadata.data.currentProtocol, 2);
+assert.deepEqual(metadata.data.minimumBuilds, { android: null, ios: null });
 for (const [protocol, expected] of [['invalid', 400], ['9999', 503]]) {
   const response = await fetch(new URL('/api/mobile/v1/commands', base), { method: 'POST', headers: { Authorization: 'Bearer test', 'X-Nognog-Mobile-Protocol': protocol, 'Content-Type': 'application/json' }, body: '{}' });
   assert.equal(response.status, expected);
