@@ -684,6 +684,8 @@ nognog-enterprises/
 
 ### Progress log
 
+2026-10-09 user manual: replaced the short Help centre with searchable, role-filtered workflow instructions, role responsibilities, expected results, troubleshooting and three annotated crops of actual empty forms. Kept the existing `/help` route and topic bookmarks. Verification includes five supplied-account read-only checks, 40 isolated PostgreSQL workflows, the populated upgrade regression, 93 web checks and 18 mobile checks; physical device acceptance remains outstanding. See [verification boundaries](docs/manual-verification-2026-10-09.md).
+
 2026-10-09 supplier/vehicle simplification: supplier category screens, actions, filters and application queries are removed; historical links/data are retained. Employee categories move to an Admin button on Employees. Vehicle registration uses free-text type, generated code and four main fields, with optional ownership/status/photo/notes. Equipment requirements and operational custody/costing flows remain enforced. Apply `20261009140000_simple_supplier_and_vehicle_setup.sql` before deploying; see [rollout and verification](docs/simple-supplier-and-vehicle-setup.md).
 
 2026-10-09 populated migration correction: vehicle subtype triggers validate immediately during the type backfill before further table alterations, then return to deferred mode. The upgrade regression reproduces PostgreSQL `55006`, proves transaction rollback and confirms preserved legacy vehicle data after the corrected migration.

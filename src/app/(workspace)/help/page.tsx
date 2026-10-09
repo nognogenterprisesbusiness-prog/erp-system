@@ -1,26 +1,65 @@
+import Image from "next/image";
+import { ManualTopics } from "@/components/help/manual-topics";
 import { IntentLink as Link } from "@/components/layout/intent-link";
-import { requireUser } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
+import { SearchField } from "@/components/ui/search-field";
+import { requireUser } from "@/lib/auth";
+import { getManualGuides, roleResponsibilities, type ManualFigure } from "@/lib/help/manual";
+import { roleLabels } from "@/lib/users/access";
 
-type Guide = { id: string; title: string; detail: string; href: string; steps: string[] };
+function AnnotatedScreenshot({ figure, id }: { figure: ManualFigure; id: string }) {
+  return <figure className="mt-5" aria-labelledby={`${id}-caption`}>
+    <div className="relative isolate overflow-hidden rounded-xl border border-slate-200 bg-white" style={{ maxWidth: figure.width }}>
+      <Image src={figure.src} width={figure.width} height={figure.height} alt={figure.alt} sizes="(max-width: 768px) 90vw, 800px" className="h-auto w-full" />
+      {figure.marks.map((mark, index) => <span key={mark.label} aria-hidden="true" className="pointer-events-none absolute rounded border-2 border-cyan-700 bg-cyan-500/5" style={{ left: `${mark.x}%`, top: `${mark.y}%`, width: `${mark.width}%`, height: `${mark.height}%` }}>
+        <span className="absolute -left-1 -top-1 flex size-6 items-center justify-center rounded-full bg-cyan-800 text-sm font-bold text-white ring-2 ring-white">{index + 1}</span>
+      </span>)}
+    </div>
+    <figcaption id={`${id}-caption`} className="mt-3 text-sm leading-6 text-slate-600">
+      <p className="font-medium text-slate-800">Example screen: an empty form. Your available choices depend on your access.</p>
+      <ol className="mt-2 list-decimal space-y-1 pl-5">{figure.marks.map((mark) => <li key={mark.label}>{mark.label}</li>)}</ol>
+    </figcaption>
+  </figure>;
+}
 
-export default async function HelpPage() {
-  const user = await requireUser();
-  const siteStaff = user.roles.some((role) => role === "engineer" || role === "foreman");
-  const guides: Guide[] = [
-    { id: "start", title: "Find your way around", detail: "Navigation, search and your account", href: "/dashboard", steps: ["Expand a sidebar category and choose a page. Use the project search in the header to find a project.", "Open your account menu to update your profile or sign out. Settings and Help centre are in the sidebar's Settings group.", "Only actions permitted for your account and assignments are shown."] },
-    { id: "projects", title: "Projects and sites", detail: "Review work, progress and project costs", href: "/projects", steps: ["Open a project to review its Overview, Sites, Labour, Materials, Finance and Documents sections, subject to your access.", "Check the material plan for shortages before requesting stock or purchasing materials.", "Record actual progress in dated reports. A request or delivery is not material use or project cost.", "View and download project files in the project's Documents tab. Admin uploads, renames and deletes them on the Documents page."] },
-    { id: "inventory", title: "Materials and inventory", detail: "Balances, locations and transaction history", href: "/inventory", steps: ["Choose a warehouse or project site to view stock balances for that location.", "Use Stock in/out or Transfers only when your role allows it. A transfer reduces source stock at dispatch and increases destination stock at receipt.", "Open History to trace stock movements; equipment and vehicles are separate from consumable materials."] },
-    ...(user.canManage || user.canOperateInventory || siteStaff ? [{ id: "requests", title: "Requests", detail: "Materials, equipment and vehicles", href: "/requests", steps: ["Choose the request type in Requests. Assigned site staff can submit materials, equipment or vehicle requests for an active project site.", "Material approval authorizes stock; warehouse dispatch and site receipt record the movement. Actual site use posts material cost.", "Equipment and vehicle requests follow approval, handover and return without changing material stock balances."] }] : []),
-    ...(user.canOperateInventory ? [{ id: "deliveries", title: "Receive deliveries", detail: "Purchase orders for your warehouse", href: "/purchase-orders/receive", steps: ["Open Receive deliveries to see purchase orders an Admin issued for your warehouse.", "Choose Receive, then enter the quantity that arrived and the delivery receipt number.", "The stock is added to your warehouse at the purchase order price."] }] : []),
-    ...(user.canManage || user.canViewLaborRates || user.roles.includes("engineer") ? [{ id: "site-purchases", title: "Site purchases", detail: "Buying at a hardware store", href: "/site-purchases", steps: [user.roles.includes("engineer") ? "Bought materials at a hardware store? Open Site purchases, choose the site and store, enter the receipt number, items, quantities and prices, and add a photo of the receipt." : "Engineers record what they bought at a hardware store, with a photo of the receipt.", "Admin or Finance checks the receipt and approves. Approved items are added to that site's stock at the receipt price.", "If the Engineer paid with their own money, Finance marks the purchase reimbursed after paying them back."] }] : []),
-    ...(user.canViewProcurement ? [{ id: "purchases", title: "Purchases and suppliers", detail: "Every item bought, by supplier", href: "/purchase-orders", steps: [user.canManage ? "Maintain suppliers, their materials and dated PHP prices." : "Review suppliers, their materials and price history. Only Admin can change them.", user.canManage ? "Add a purchase: supplier, warehouse, then each item with its quantity and price. The price you enter becomes the supplier's latest price." : "Review purchase orders, what has been received and what is still unpaid.", "Use the pencil beside Supplier Payment to enter cash or check details for the whole purchase. Fully paid purchases open their payment history. Each supplier page also lists its payments in Supplier history.", "Record the actual delivered quantity and cost. Each delivery becomes a price batch, and the newest batch is used first. A later price change never rewrites past costs."] }] : []),
-    ...(siteStaff || user.canManage ? [{ id: "reports", title: "Daily reports", detail: "Dated site updates", href: "/reports/daily", steps: ["Choose an assigned project and site, then enter the date and work summary.", "Review progress and any linked material or labour entries on the project pages.", "Do not count the same labour, equipment or material entry twice when reviewing project costs."] }] : []),
-    ...(user.canManage ? [{ id: "access", title: "Users and audit history", detail: "Accounts, assignments and recorded changes", href: "/users", steps: ["Invite Engineer, Foreman, Warehouse Staff and Finance accounts and assign their project or warehouse access.", "Use Audit logs to see who made recorded changes and when.", "For a denied operation, check the account's role and assignment rather than sharing another account."] }] : []),
-    { id: "account", title: "Your account and notifications", detail: "Profile, alerts and appearance", href: "/profile", steps: ["Change your name, phone, email or profile photo in Settings. Email changes need confirmation.", "Open Notifications to review in-app alerts and mark them read.", "Use the appearance button to cycle through Light, Blue dark and Charcoal."] },
-  ];
-  return <div className="mx-auto max-w-3xl"><PageHeader title="Help centre" description="Short guides for the workflows available to your account." />
-    <nav aria-label="Guide topics" className="mt-7 flex flex-wrap gap-2">{guides.map((guide) => <a key={guide.id} href={`#${guide.id}`} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:border-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">{guide.title}</a>)}</nav>
-    <div className="mt-5 space-y-4">{guides.map((guide) => <section key={guide.id} id={guide.id} className="scroll-mt-28 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-base font-semibold text-slate-900">{guide.title}</h2><p className="mt-1 text-sm text-slate-600">{guide.detail}</p></div><Link href={guide.href} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-cyan-700 hover:border-cyan-400">Open section →</Link></div><ol className="mt-4 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-600">{guide.steps.map((step) => <li key={step}>{step}</li>)}</ol></section>)}</div>
+export default async function HelpPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
+  const [user, params] = await Promise.all([requireUser(), searchParams]);
+  const query = (typeof params.q === "string" ? params.q : "").trim().slice(0, 100);
+  const guides = getManualGuides(user.roles, query);
+  return <div className="mx-auto max-w-4xl">
+    <PageHeader title="User manual" description="Step-by-step guides for your role, from setup and requests to delivery, actual use and payments." />
+    <section aria-labelledby="your-role" className="mt-7 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+      <h2 id="your-role" className="text-base font-semibold text-slate-900">Your work and access</h2>
+      <div className="mt-3 space-y-4">{user.roles.map((role) => <div key={role}>
+        <h3 className="text-sm font-semibold text-cyan-800">{roleLabels[role]}</h3>
+        <p className="mt-1 text-sm leading-6 text-slate-600">{roleResponsibilities[role].summary}</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-600">{roleResponsibilities[role].tasks.map((task) => <li key={task}>{task}</li>)}</ul>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{roleResponsibilities[role].boundary}</p>
+      </div>)}</div>
+      <details className="mt-4 border-t border-slate-100 pt-4">
+        <summary className="cursor-pointer text-sm font-semibold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">Who does what? All five roles</summary>
+        <dl className="mt-3 space-y-3 text-sm leading-6">{Object.entries(roleResponsibilities).map(([role, responsibility]) => <div key={role}><dt className="font-semibold text-slate-900">{roleLabels[role as keyof typeof roleLabels]}</dt><dd className="text-slate-600">{responsibility.summary} {responsibility.boundary}</dd></div>)}</dl>
+      </details>
+    </section>
+    <ListFilterBar role="search" aria-label="Search the user manual">
+      <SearchField key={query} name="q" defaultValue={query} label="Search the manual" placeholder="Search: receipt, approval, stock…" maxLength={100} />
+      <Button type="submit" variant="outline">Search</Button>
+      {query && <Button asChild variant="ghost"><Link href="/help">Clear search</Link></Button>}
+    </ListFilterBar>
+    <ManualTopics topics={guides.map(({ id, title }) => ({ id, title }))} />
+    {guides.length === 0 ? <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-6"><h2 className="text-base font-semibold">No matching guides</h2><p className="mt-2 text-sm text-slate-600">Try a shorter search such as stock, receipt or request. Guides are limited to the workflows available to your role.</p></div> : <div className="mt-5 space-y-4">{guides.map((guide) => <details key={`${query}:${guide.id}`} id={guide.id} open={Boolean(query) || guide.id === "start"} className="group scroll-mt-28 rounded-2xl border border-slate-200 bg-white p-5 target:ring-2 target:ring-cyan-600 sm:p-6">
+      <summary className="cursor-pointer rounded text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"><span className="ml-1 text-base font-semibold">{guide.title}</span><span className="mt-1 block pl-5 text-sm font-normal leading-6 text-slate-500">{guide.description}</span></summary>
+      <div className="mt-4 border-t border-slate-100 pt-4">
+        <p className="text-sm leading-6 text-slate-600"><strong className="font-semibold text-slate-800">Before you start: </strong>{guide.before}</p>
+        <ol className="mt-4 list-decimal space-y-4 pl-5 text-sm leading-6 text-slate-600">{guide.steps.map((step) => <li key={step.title}><h3 className="font-semibold text-slate-900">{step.title}</h3><p>{step.detail}</p></li>)}</ol>
+        {guide.figure && <AnnotatedScreenshot figure={guide.figure} id={guide.id} />}
+        <div className="mt-5 rounded-xl bg-slate-50 p-4"><h3 className="text-sm font-semibold text-slate-900">What should happen</h3><p className="mt-1 text-sm leading-6 text-slate-600">{guide.result}</p></div>
+        <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-6 text-slate-600">{guide.tips.map((tip) => <li key={tip}>{tip}</li>)}</ul>
+        <Button asChild variant="outline" className="mt-5 max-w-full whitespace-normal text-center"><Link href={guide.href}>Open section →</Link></Button>
+      </div>
+    </details>)}</div>}
+    <p className="mt-6 text-sm leading-6 text-slate-500">This guide describes the supported workflow. Your role, active assignments and the status of the record determine which actions are available.</p>
   </div>;
 }
