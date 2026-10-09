@@ -30,6 +30,11 @@ export default async function SitePurchasePage({ params, searchParams }: { param
   return <div className="max-w-5xl">
     <PageHeader eyebrow="Site purchase" title={purchase.purchase_number} description={`${data.project?.name ?? ""} · ${data.siteName}`} action={<Button variant="outline" asChild><Link href={`/site-purchases?status=${purchase.status}`}>Back to site purchases</Link></Button>} />
     {posted && postedMessages[posted] && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{postedMessages[posted]}</p>}
+    {purchase.status === "approved" && data.stockLocationId && <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-slate-700">
+      <span>Stock was posted to {data.siteName}. Check this site’s balance and stock history.</span>
+      <Button variant="outline" size="sm" asChild><Link href={`/inventory?location=${data.stockLocationId}`}>View site inventory</Link></Button>
+      <Button variant="outline" size="sm" asChild><Link href={`/inventory/transactions?location=${data.stockLocationId}`}>View stock history</Link></Button>
+    </div>}
     <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle[purchase.status]}`}>{statusLabel[purchase.status]}</span><span className="text-lg font-semibold tabular-nums">{peso.format(data.total)}</span></div>

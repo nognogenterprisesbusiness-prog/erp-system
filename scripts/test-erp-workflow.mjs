@@ -513,6 +513,10 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     await assert.rejects(as("engineer", `select public.approve_site_purchase('${purchase}')`), /Admin or Finance/);
     await Promise.all([as("finance", `select public.approve_site_purchase('${purchase}')`), as("finance", `select public.approve_site_purchase('${purchase}')`)]);
     assert.equal(await onHand(), before + 10, "approved once, posted once");
+    const mobileStock = await json("engineer", `select row_to_json(m) from public.list_inventory_materials('Portland Cement','${location}',null,'active',false,0,20) m where m.material_id='${material}'`);
+    assert.equal(Number(mobileStock.quantity_on_hand), before + 10, "the mobile site inventory reads the posted balance");
+    assert.equal(scalar(await as("engineer", `select status from public.site_purchases where id='${purchase}'`)), "approved", "the Engineer can see the approval");
+    assert.equal(Number(scalar(await as("foreman", `select quantity_on_hand from public.list_inventory_materials('Portland Cement','${location}',null,'active',false,0,20) where material_id='${material}'`))), before + 10);
     assert.equal(await value(`select cost_total from public.inventory_transactions t join public.site_purchase_lines l on l.inventory_transaction_id = t.id where l.site_purchase_id='${purchase}'`), "2600.00");
     assert.equal(await value(`select count(*) from public.inventory_cost_layers where inventory_location_id='${location}' and material_id='${material}' and unit_cost=260 and remaining_quantity>0`), "1");
     assert.equal(await value(`select p.unit_price from public.supplier_prices p join public.supplier_materials m on m.id=p.supplier_material_id where m.supplier_id='${ace}' and p.effective_end_date is null`), "260.00");
@@ -626,6 +630,9 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     const count = Number(scalar(await as("admin", `select max(total_count) from public.list_inventory_materials('Paged material','${source}',null,'active',false,500,24)`)));
     assert.equal(count, 505);
     assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('Paged material','${source}',null,'active',false,500,24)`)), "5");
+    const firstSiteRow = await json("engineer", `select row_to_json(m) from public.list_inventory_materials('','${location}',null,'active',false,0,1) m`);
+    assert.ok(Number(firstSiteRow.quantity_on_hand) > 0, "stocked site materials appear before zero-stock catalog entries");
+    assert.equal(scalar(await sql("select count(*) from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='site_purchases'")), "1");
   });
   await check("all balances, valuations and batches reconcile after corrections", async () => {
     assert.equal(await value("select count(*) from public.inventory_balances where available_quantity<0 or quantity_on_hand<0"), "0");

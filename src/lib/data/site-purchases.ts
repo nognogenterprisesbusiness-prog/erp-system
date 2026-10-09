@@ -48,6 +48,9 @@ export async function getSitePurchase(id: string) {
   if (error) throw new Error("Unable to load the site purchase.", { cause: error });
   if (!purchase) notFound();
   const lines = await readAllPages((from, to) => supabase.from("site_purchase_lines").select("id,material_id,material_code,material_name,unit_symbol,quantity,unit_price,inventory_transaction_id").eq("site_purchase_id", id).order("material_name").order("id").range(from, to), "site purchase lines");
+  const { data: stockLocation, error: stockLocationError } = await supabase.from("inventory_locations")
+    .select("id").eq("project_site_id", purchase.project_site_id).maybeSingle();
+  if (stockLocationError) throw new Error("Unable to load the purchase stock location.", { cause: stockLocationError });
   const names = await describe([purchase]);
   const deciderIds = [purchase.decided_by, purchase.reimbursed_by].filter((value): value is string => Boolean(value));
   const { data: deciders } = deciderIds.length ? await supabase.from("profiles").select("id,full_name").in("id", deciderIds) : { data: [] };
@@ -55,7 +58,8 @@ export async function getSitePurchase(id: string) {
   return {
     purchase, lines: lines.map((line) => ({ ...line, total: lineTotal(line.quantity, line.unit_price) })),
     total: names.totals.get(purchase.id) ?? 0, project: names.projectMap.get(purchase.project_id) ?? null,
-    siteName: names.siteMap.get(purchase.project_site_id) ?? "", submittedByName: names.peopleMap.get(purchase.submitted_by) ?? "",
+    siteName: names.siteMap.get(purchase.project_site_id) ?? "", stockLocationId: stockLocation?.id ?? null,
+    submittedByName: names.peopleMap.get(purchase.submitted_by) ?? "",
     decidedByName: purchase.decided_by ? deciderNames.get(purchase.decided_by) ?? "" : "",
     reimbursedByName: purchase.reimbursed_by ? deciderNames.get(purchase.reimbursed_by) ?? "" : "",
   };
