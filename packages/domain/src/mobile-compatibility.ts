@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Increment for an incompatible API contract, not a visual or additive release.
-export const mobileProtocolVersion = 1;
+export const mobileProtocolVersion = 2;
 export const legacyMobileProtocolVersion = 1;
 const protocol = z.number().int().min(1).max(9999);
 export const mobileUpdateUrlSchema = z.string().max(2048).url().refine((value) => {
@@ -14,8 +14,10 @@ export const mobileCompatibilitySchema = z.object({
   minimumProtocol: protocol,
   currentProtocol: protocol,
   updateUrls: z.object({ android: mobileUpdateUrlSchema.nullable(), ios: mobileUpdateUrlSchema.nullable() }),
+  minimumBuilds: z.object({ android: z.number().int().min(1).nullable(), ios: z.number().int().min(1).nullable() }).optional(),
 }).refine((value) => value.minimumProtocol <= value.currentProtocol, "The minimum protocol cannot exceed the current protocol");
 export type MobileCompatibility = z.infer<typeof mobileCompatibilitySchema>;
+export type MobilePlatform = "android" | "ios" | "web";
 export const mobileUpdateRequiredSchema = z.object({
   code: z.literal("APP_UPDATE_REQUIRED"),
   compatibility: mobileCompatibilitySchema,
@@ -26,4 +28,11 @@ export function mobileProtocolStatus(version: number, policy: Pick<MobileCompati
   if (version < policy.minimumProtocol) return "update_required";
   if (version > policy.currentProtocol) return "server_outdated";
   return "compatible";
+}
+
+export function mobileBuildStatus(platform: MobilePlatform | null, build: number | null, policy: Pick<MobileCompatibility, "minimumBuilds">) {
+  const minimum = platform === "android" || platform === "ios" ? policy.minimumBuilds?.[platform] : null;
+  if (platform === null) return "compatible";
+  if (minimum == null) return "compatible";
+  return build !== null && Number.isSafeInteger(build) && build >= minimum ? "compatible" : "update_required";
 }

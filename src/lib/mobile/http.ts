@@ -3,7 +3,7 @@ import { mobileAccess, mobileRoles } from "@nognog/domain";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
 import type { MobileCompatibility } from "@nognog/domain";
-import { inspectMobileProtocol, mobileCompatibility } from "./compatibility";
+import { inspectMobileBuild, inspectMobileProtocol, mobileCompatibility } from "./compatibility";
 
 export class MobileError extends Error {
   constructor(
@@ -42,6 +42,9 @@ export function assertMobileCompatibility(request: Request, compatibility = mobi
   if (protocol === "invalid") throw new MobileError(400, "The mobile compatibility header is invalid.");
   if (protocol === "update_required") throw new MobileError(426, "Please update Nognog to continue safely with this ERP.", undefined, compatibility);
   if (protocol === "server_outdated") throw new MobileError(503, "The ERP needs an update to support this app. Contact your administrator.");
+  const build = inspectMobileBuild(request.headers.get("x-nognog-mobile-platform"), request.headers.get("x-nognog-mobile-build"), compatibility);
+  if (build === "invalid") throw new MobileError(400, "The mobile build headers are invalid.");
+  if (build === "update_required") throw new MobileError(426, "A newer Nognog app is required to continue.", undefined, compatibility);
 }
 export async function mobileContext(request: Request, write: boolean) {
   const token = bearerToken(request.headers.get("authorization"));

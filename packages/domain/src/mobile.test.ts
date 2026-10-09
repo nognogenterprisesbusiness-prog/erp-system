@@ -8,6 +8,16 @@ import {
   mobileQuerySchema,
   mobileResponseSchemas,
 } from "./mobile";
+import { mobileBuildStatus } from "./mobile-compatibility";
+test("released minimum builds apply per platform without forcing the web preview", () => {
+  const policy = { minimumBuilds: { android: 7, ios: 2 } };
+  assert.equal(mobileBuildStatus("android", 6, policy), "update_required");
+  assert.equal(mobileBuildStatus("android", 7, policy), "compatible");
+  assert.equal(mobileBuildStatus("ios", 1, policy), "update_required");
+  assert.equal(mobileBuildStatus("ios", 2, policy), "compatible");
+  assert.equal(mobileBuildStatus("web", null, policy), "compatible");
+  assert.equal(mobileBuildStatus(null, null, policy), "compatible");
+});
 test("mobile access requires an active onboarded site role and excludes administration", () => {
   assert.equal(mobileAccess(["foreman"], true, false), true);
   assert.equal(mobileAccess(["engineer"], true, false), true);
