@@ -4,7 +4,11 @@
 
 Staff keep the existing purchasing, requests, inventory, attendance and financial flows. Equipment categories are retired in favor of the existing free-text type. Employee categories remain on Employees. No stock, audit, supplier price, cost or payment history is deleted.
 
-Web entry forms receive visible guidance through the shared FormField and PesoAmountInput components and the remaining custom form wrappers. Examples explain warehouse and asset codes, names, quantities in their unit, unit prices, dates, contacts, reviews, document names and attachments. Existing field-specific hints take priority; errors replace generic guidance. Purchasing lines share one example below the rows, preserving alignment. File fields retain their specific format and size instructions. Search and checkbox controls do not receive generic entry guidance.
+Web entry examples now appear as placeholders inside empty inputs, through shared FormField and PesoAmountInput components and custom form wrappers. Examples include WH-CEBU-01, Rich Manoloy and 09150365602. They never become submitted values. The previous generic guide paragraphs and their unused component are removed. Specific validation, privacy, payment-balance and attachment requirements remain visible when needed. Select/date widgets keep their existing prompts.
+
+Inventory defaults to all permitted locations, showing consumable totals and each stocked warehouse/site. Selecting a location shows only its balance; zero-stock catalog materials remain visible. Export uses the same search, category, status, low-stock and location filters. Only Admin/Finance receive valuation data. This changes stock presentation, not posting: receipt adds stock once, approval reserves, dispatch reduces the source, consumption reduces site stock, and payment does not receive stock again.
+
+Notifications in the bell, center and detail page show the same Philippine date/time with a PHT label. A selected city/municipality is read-only; staff use its remove button before searching for a replacement. The picker retains keyboard selection and aborts obsolete search responses.
 
 Text inputs, dropdown triggers and date triggers default to 44px. Labels and controls use start-aligned grid wrappers so wrapping guidance stays below its control. Action buttons use the existing pill style, including New site purchase, purchasing line actions, theme controls and calendar actions. Navigation tabs and picker options retain their established design.
 
@@ -34,11 +38,10 @@ These are uncompressed local build traces, not Vercel's per-function regional pa
 
 ## Rollout and verification
 
-Apply these after the already-corrected 1400 migration, before deploying this web update:
+The user confirmed applying migrations through 1600. Apply the new migration before deploying the all-locations web update:
 
-1. `supabase/migrations/20261009150000_retire_equipment_categories.sql`
-2. `supabase/migrations/20261009160000_dashboard_project_counts.sql`
+1. `supabase/migrations/20261009170000_inventory_all_locations.sql`
 
-Local verification: 88 automated tests; 39 PostgreSQL workflow checks across all five roles; populated upgrade regression; 110 unique migration versions; TypeScript, ESLint and production build. The workflow checks include role-scoped dashboard counts, equipment custody and returns, denied access, concurrent stock postings, partial deliveries, retries, corrections and financial reconciliation.
+Local verification: 90 automated tests; 40 PostgreSQL workflow checks across all five roles; populated upgrade regression; 111 unique migration versions; TypeScript, ESLint and production build. The workflow checks include all-location totals under RLS, hidden warehouse stock, zero-stock consumables, pagination, role-scoped dashboard counts, custody and returns, denied access, concurrent stock postings, partial deliveries, retries, corrections and financial reconciliation. Payment posting and voiding leave stock balances and movement counts unchanged.
 
-No hosted migration or authenticated browser/device acceptance was performed. Check the deployed Admin equipment form, dashboard counts, warehouse code guidance, purchase line alignment and Engineer/Foreman stock flows after migration and deployment. Mobile endpoints and native code are unchanged; this release does not require rebuilding or forcing mobile users to update.
+A local browser fixture using the actual city picker, shared form fields and notification-time component verified selected-city locking, removal, replacement by keyboard, submitted city code, empty placeholder values and Philippine timestamp rendering. It used isolated test choices, not hosted data, and is not full-page visual acceptance. No hosted migration or authenticated production browser/device acceptance was performed. After deployment, check the all-locations view against the client's warehouse/site balances. Mobile endpoints and native code are unchanged; this release does not require rebuilding or forcing mobile users to update.

@@ -50,7 +50,7 @@ export function PurchaseLineItems({ title = "Items", totalLabel = "Total", lines
       </div>
     </fieldset>)}
     </div>
-    <p className="mt-3 text-xs leading-5 text-slate-500">Choose a material, enter the quantity in its unit and the price for one unit, e.g. 100 bags at 150.00 each.</p><div className="mt-3 flex justify-end gap-4 text-sm"><span className="text-slate-500">{totalLabel}</span><span className="font-semibold tabular-nums text-slate-900">{peso.format(lines.reduce((sum, line) => sum + lineTotal(line), 0))}</span></div>
+    <div className="mt-3 flex justify-end gap-4 text-sm"><span className="text-slate-500">{totalLabel}</span><span className="font-semibold tabular-nums text-slate-900">{peso.format(lines.reduce((sum, line) => sum + lineTotal(line), 0))}</span></div>
     {lines.some((line) => !line.materialId || !isValidPurchaseQuantity(line.quantity) || !isValidPurchaseUnitPrice(line.unitPrice)) && <p className="mt-2 text-xs text-slate-500">Complete each line with a material, a positive quantity, and a positive price to save.</p>}
   </section>;
 }

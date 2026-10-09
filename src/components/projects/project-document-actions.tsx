@@ -1,8 +1,8 @@
 "use client";
 
+import { getFieldPlaceholder } from "@/components/ui/field-placeholder";
 import { useState, type FormEvent } from "react";
 import { deleteProjectDocumentAction, updateProjectDocumentAction } from "@/app/(workspace)/projects/document-actions";
-import { FieldGuide } from "@/components/ui/field-guide";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RecordActionMenu } from "@/components/ui/record-action-menu";
@@ -31,8 +31,8 @@ function EditDocumentForm({ document }: { document: EditableDocument }) {
     dialog?.complete();
   }
   return <form onSubmit={submit} className="space-y-4">
-    <div><label htmlFor={`document-name-${document.id}`} className="mb-2 block text-sm font-medium text-slate-700">Document name</label><Input id={`document-name-${document.id}`} value={name} onChange={(event) => setName(event.currentTarget.value)} maxLength={180} required disabled={busy} /><FieldGuide label="Document name" /></div>
-    <div><label htmlFor={`document-category-${document.id}`} className="mb-2 block text-sm font-medium text-slate-700">Document type</label><SelectPicker id={`document-category-${document.id}`} label="Document type" value={category} onValueChange={(value) => setCategory(value as ProjectDocumentCategory)} options={projectDocumentCategories} disabled={busy} /><FieldGuide label="Document type" /></div>
+    <div><label htmlFor={`document-name-${document.id}`} className="mb-2 block text-sm font-medium text-slate-700">Document name</label><Input id={`document-name-${document.id}`} value={name} onChange={(event) => setName(event.currentTarget.value)} maxLength={180} required disabled={busy} placeholder={getFieldPlaceholder("Document name")} /></div>
+    <div><label htmlFor={`document-category-${document.id}`} className="mb-2 block text-sm font-medium text-slate-700">Document type</label><SelectPicker id={`document-category-${document.id}`} label="Document type" value={category} onValueChange={(value) => setCategory(value as ProjectDocumentCategory)} options={projectDocumentCategories} disabled={busy} /></div>
     {message && <p role="alert" className="text-sm text-red-700">{message}</p>}
     <RecordFormControls busy={busy} label="Save changes" />
   </form>;

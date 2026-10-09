@@ -495,6 +495,8 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     await sql(`update public.profiles set is_active=true where id='${users.warehouse_staff}'`);
   });
   await check("supplier payments: postdated check and cash up to the PO balance, retries post once, only Admin voids", async () => {
+    const stockBeforePayment = await value(`select coalesce(jsonb_agg(to_jsonb(b) order by b.id),'[]') from public.inventory_balances b`);
+    const movementsBeforePayment = await value("select count(*) from public.inventory_transactions");
     const total = Number(await value(`select sum(round(ordered_quantity * unit_price, 2)) from public.purchase_order_lines where purchase_order_id='${po}'`));
     const pay = (key, method, amount, bank = "null", check = "null", date = "current_date") => `select public.record_supplier_payment('${key}','${po}','${method}',${bank},${check},${amount},${date},null)`;
     const checkKey = randomUUID(); const first = total - 5000;
@@ -514,6 +516,8 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     assert.equal(scalar(await as("finance", `select count(*) from public.supplier_payments where supplier_id=(select supplier_id from public.purchase_orders where id='${po}')`)), "2");
     assert.equal(scalar(await as("warehouse_staff", "select count(*) from public.supplier_payments")), "0");
     await assert.rejects(as("finance", "update public.supplier_payments set amount = 1"), /permission denied/);
+    assert.equal(await value(`select coalesce(jsonb_agg(to_jsonb(b) order by b.id),'[]') from public.inventory_balances b`), stockBeforePayment, "payments and voids do not add received stock twice");
+    assert.equal(await value("select count(*) from public.inventory_transactions"), movementsBeforePayment);
   });
   await check("Finance reads purchasing, stock value and movement costs without write access; other roles stay cost-blind", async () => {
     const count = async (role, query) => Number(scalar(await as(role, `select count(*) from (${query}) visible`)));
@@ -696,6 +700,29 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     assert.equal(await value(`select status from public.material_sourcing_requests where id='${partialReport}'`), "submitted");
     await as("admin", `select public.create_sourcing_material_request('${randomUUID()}','${partialReport}','${material}',1,'Remaining site need')`);
     assert.equal(await value(`select status from public.material_sourcing_requests where id='${partialReport}'`), "resolved");
+  });
+  await check("all-location consumable totals preserve role scope, zero-stock materials and single-location balances", async () => {
+    const unassignedWarehouse = randomUUID();
+    await sql(`insert into public.warehouses(id,code,name,address,created_by,updated_by)
+      values('${unassignedWarehouse}','WH-HIDDEN','Other Test Warehouse','Different warehouse','${users.admin}','${users.admin}')`);
+    const other = await value(`select id from public.inventory_locations where warehouse_id='${unassignedWarehouse}'`);
+    await sql(`select private.post_valued_stock_in_core('${users.admin}','${material}','${other}',999,'${unit}',9990,'OTHER-WAREHOUSE-STOCK',current_date,null)`);
+    for (const role of ["admin", "finance", "engineer", "foreman", "warehouse_staff"]) {
+      const totals = await json(role, `select row_to_json(t) from (
+        select coalesce(sum(quantity_on_hand),0) as on_hand,coalesce(sum(reserved_quantity),0) as reserved,
+          coalesce(sum(available_quantity),0) as available from public.inventory_balances where material_id='${material}') t`);
+      const row = await json(role, `select row_to_json(m) from public.list_inventory_materials('',null,null,'active',false,0,500) m where material_id='${material}'`);
+      assert.equal(Number(row.quantity_on_hand), Number(totals.on_hand), role);
+      assert.equal(Number(row.reserved_quantity), Number(totals.reserved), role);
+      assert.equal(Number(row.available_quantity), Number(totals.available), role);
+      assert.equal(row.balance_id, null);
+    }
+    assert.equal(scalar(await as("foreman", `select count(*) from public.inventory_balances where inventory_location_id='${other}'`)), "0");
+    const siteStock = Number(await value(`select quantity_on_hand from public.inventory_balances where material_id='${material}' and inventory_location_id='${location}'`));
+    assert.equal(Number(scalar(await as("foreman", `select quantity_on_hand from public.list_inventory_materials('',null,null,'active',false,0,500) where material_id='${material}'`))), siteStock);
+    assert.equal(scalar(await as("admin", `select quantity_on_hand from public.list_inventory_materials('Unstocked Test Material',null,null,'active',true,0,24)`)), "0");
+    assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('',null,null,'active',false,0,500) where material_kind<>'consumable'`)), "0");
+    await assert.rejects(as("foreman", `select * from public.list_inventory_materials('','${other}',null,'active',false,0,24)`), /Inventory location is not available/);
   });
   await check("inventory catalog pagination keeps materials beyond 500 reachable", async () => {
     const category = await value(`select category_id from public.materials where id='${material}'`);

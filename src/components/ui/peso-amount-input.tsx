@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FieldGuide } from "./field-guide";
 
 function formatAmount(value: string) {
   const cleaned = value.replace(/[^0-9.]/g, "");
@@ -11,7 +10,7 @@ function formatAmount(value: string) {
   return dot < 0 ? grouped : `${grouped}.${cleaned.slice(dot + 1).replaceAll(".", "").slice(0, 2)}`;
 }
 
-export function PesoAmountInput({ name, label, defaultValue = "", placeholder = "0.00", required = false, submitUngrouped = false }: {
+export function PesoAmountInput({ name, label, defaultValue = "", placeholder = "1500.00", required = false, submitUngrouped = false }: {
   name: string;
   label: string;
   defaultValue?: string;
@@ -26,6 +25,5 @@ export function PesoAmountInput({ name, label, defaultValue = "", placeholder = 
       <input name={submitUngrouped ? undefined : name} aria-label={label} value={display} onChange={(event) => setDisplay(formatAmount(event.target.value))} inputMode="decimal" autoComplete="off" required={required} placeholder={placeholder} className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-3 text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" />
       {submitUngrouped && <input type="hidden" name={name} value={display.replaceAll(",", "")} />}
     </span>
-    <FieldGuide label={label} name={name} />
   </label>;
 }

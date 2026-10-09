@@ -1,26 +1,31 @@
+import { uuidSchema } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
-import { getInventoryBalances } from "@/lib/data/inventory";
+import { getInventoryMaterials } from "@/lib/data/inventory";
 import { csvAttachment } from "@/lib/export/csv";
 
 export async function GET(request: Request): Promise<Response> {
   const user = await requireUser();
-  const withValues = user.canViewLaborRates;
   const params = new URL(request.url).searchParams;
-  const kind = params.get("kind");
-  const filters: Parameters<typeof getInventoryBalances>[0] = {
-    query: params.get("q") ?? "",
-    locationId: params.get("location") ?? "",
-    kind: kind === "warehouse" || kind === "project_site" ? kind : "all" as const,
-    lowStock: params.get("low") === "true",
-    includeValues: withValues,
+  const category = uuidSchema.safeParse(params.get("category"));
+  const filters: Parameters<typeof getInventoryMaterials>[0] = {
+    query: params.get("q") ?? "", locationId: params.get("location") ?? "",
+    categoryId: category.success ? category.data : "",
+    status: params.get("status") === "inactive" ? "inactive" : params.get("status") === "any" ? "all" : "active",
+    lowStock: params.get("low") === "true", includeValues: user.canViewLaborRates, pageSize: 500,
   };
-  const first = await getInventoryBalances({ ...filters, pageSize: 500 });
-  const balances = [...first.balances];
+  const first = await getInventoryMaterials(filters);
+  const materials = [...first.rows];
   for (let page = 2; (page - 1) * 500 < first.count; page++) {
-    balances.push(...(await getInventoryBalances({ ...filters, page, pageSize: 500 })).balances);
+    materials.push(...(await getInventoryMaterials({ ...filters, page })).rows);
   }
-  return csvAttachment(`nognog-inventory-${new Date().toISOString().slice(0, 10)}.csv`, ["SKU", "Material", "Location", "Location type", "On hand", "Reserved", "Available", "Unit", "Level", ...(withValues ? ["Stock value (PHP)"] : [])], balances.map((item) => [
-    item.material?.code ?? "", item.material?.name ?? "", item.location?.name ?? "", item.location?.location_type ?? "", item.quantity_on_hand, item.reserved_quantity, item.available_quantity, item.material?.unitSymbol ?? "", item.available_quantity <= (item.material?.minimum_stock_level ?? 0) ? "Low" : "Available",
-    ...(withValues ? [item.stockValue ?? ""] : []),
+  const location = first.locations.find((item) => item.id === first.selectedLocationId)?.name ?? "All locations";
+  return csvAttachment(`nognog-inventory-${new Date().toISOString().slice(0, 10)}.csv`, [
+    "SKU", "Material", "Location", "On hand", "Reserved", "Available", "Unit", "Level", "Stock by location",
+    ...(user.canViewLaborRates ? ["Stock value (PHP)"] : []),
+  ], materials.filter((item) => Number(item.quantity_on_hand) > 0).map((item) => [
+    item.code, item.name, location, item.quantity_on_hand, item.reserved_quantity, item.available_quantity,
+    item.unit_symbol, Number(item.available_quantity) <= Number(item.minimum_stock_level) ? "Low" : "Available",
+    item.stockLocations.map((stock) => `${stock.name}: ${stock.onHand} ${item.unit_symbol} on hand, ${stock.available} available`).join("; "),
+    ...(user.canViewLaborRates ? [item.stockValue ?? ""] : []),
   ]));
 }

@@ -122,12 +122,12 @@ export async function getInventoryBalances(params: { query?: string; locationId?
   return { balances, materials: balances.map((b) => b.material), locations, selectedLocationId, count: data?.[0]?.total_count ?? 0 };
 }
 
-// The Inventory page lists the material catalog with the balance at one
-// authorized location. A material without posted stock remains visible as zero.
+// Consumable totals across authorized locations, or one explicitly selected location.
+// Unstocked catalog materials remain visible as zero.
 export async function getInventoryMaterials(params: { query?: string; locationId?: string; categoryId?: string; status?: "active" | "inactive" | "all"; lowStock?: boolean; page?: number; pageSize?: number; includeValues?: boolean } = {}) {
   const supabase = await createClient();
   const locations = await getLocationViews();
-  const selectedLocationId = params.locationId || locations[0]?.id || "";
+  const selectedLocationId = params.locationId || "";
   if (selectedLocationId && !locations.some((item) => item.id === selectedLocationId)) notFound();
   const pageSize = Math.min(500, Math.max(1, params.pageSize ?? 24));
   let page = Number.isSafeInteger(params.page) && params.page! > 0 ? Math.min(params.page!, 10000) : 1;
@@ -147,15 +147,40 @@ export async function getInventoryMaterials(params: { query?: string; locationId
     page = Math.max(1, Math.ceil(count / pageSize));
     rows = page === 1 ? first : await readPage(page);
   }
+  const materialIds = rows.map((item) => item.material_id);
+  const [balances, valueRows] = await Promise.all([
+    !selectedLocationId && rows.length ? readByIds(materialIds, (ids, from, to) => supabase.from("inventory_balances")
+      .select("id,material_id,inventory_location_id,quantity_on_hand,available_quantity")
+      .in("material_id", ids).gt("quantity_on_hand", 0).order("id").range(from, to), "material stock locations") : Promise.resolve([]),
+    params.includeValues && rows.length ? readByIds(materialIds, (ids, from, to) => {
+      let query = supabase.from("inventory_valuations").select("id,material_id,total_value,quantity_on_hand")
+        .in("material_id", ids).order("id");
+      if (selectedLocationId) query = query.eq("inventory_location_id", selectedLocationId);
+      return query.range(from, to);
+    }, "inventory material values") : Promise.resolve([]),
+  ]);
   const values = new Map<string, number | null>();
-  if (params.includeValues && selectedLocationId && rows.length) {
-    const valueRows = await readByIds(rows.map((item) => item.material_id), (ids, from, to) => supabase.from("inventory_valuations")
-      .select("material_id,total_value").eq("inventory_location_id", selectedLocationId)
-      .in("material_id", ids).order("material_id").range(from, to), "inventory material values");
-    for (const item of valueRows) values.set(item.material_id, item.total_value);
+  const valueQuantities = new Map<string, number>();
+  for (const item of valueRows) {
+    valueQuantities.set(item.material_id, (valueQuantities.get(item.material_id) ?? 0) + Math.round(Number(item.quantity_on_hand) * 10000));
+    const previous = values.get(item.material_id) ?? 0;
+    if (values.has(item.material_id) && values.get(item.material_id) === null) continue;
+    values.set(item.material_id, Number(item.quantity_on_hand) > 0 && item.total_value === null
+      ? null : previous + Number(item.total_value ?? 0));
   }
-  return { rows: rows.map((item) => ({ ...item, stockValue: Number(item.quantity_on_hand) === 0 ? 0 : values.get(item.material_id) ?? null })),
-    locations, selectedLocationId, count, page };
+  const locationMap = new Map(locations.map((item) => [item.id, item]));
+  const stocks = new Map<string, { id: string; name: string; onHand: number; available: number }[]>();
+  for (const balance of balances) {
+    const location = locationMap.get(balance.inventory_location_id);
+    if (!location) continue;
+    const entries = stocks.get(balance.material_id) ?? [];
+    entries.push({ id: location.id, name: location.name, onHand: Number(balance.quantity_on_hand), available: Number(balance.available_quantity) });
+    stocks.set(balance.material_id, entries);
+  }
+  return { rows: rows.map((item) => ({ ...item,
+    stockValue: Number(item.quantity_on_hand) === 0 ? 0 : valueQuantities.get(item.material_id) === Math.round(Number(item.quantity_on_hand) * 10000) ? values.get(item.material_id) ?? null : null,
+    stockLocations: (stocks.get(item.material_id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
+  })), locations, selectedLocationId, count, page };
 }
 
 // includeCosts (Admin/Finance) adds each movement's cost through a guarded RPC;

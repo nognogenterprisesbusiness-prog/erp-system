@@ -4,6 +4,7 @@ import { pageNumber } from "@/lib/data/pagination";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Download04Icon, PackageIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { InventoryStockLocations } from "@/components/inventory/inventory-stock-locations";
 import { InventoryLocationPicker } from "@/components/inventory/inventory-location-picker";
 import { RecordThumbnail } from "@/components/ui/record-thumbnail";
 import { RecordListView } from "@/components/ui/record-list-view";
@@ -53,12 +54,14 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   if (query) exportParams.set("q", query);
   if (data.selectedLocationId) exportParams.set("location", data.selectedLocationId);
   if (lowStock) exportParams.set("low", "true");
+  if (categoryId) exportParams.set("category", categoryId);
+  exportParams.set("status", status === "all" ? "any" : status);
   const pageFilters = { q: query, location: data.selectedLocationId, low: String(lowStock),
     category: categoryId, status: status === "all" ? "any" : status };
   const selectedLocationName = data.locations.find((item) => item.id === data.selectedLocationId)?.name;
 
   return <>
-    <PageHeader title="Inventory" description={selectedLocationName ? `Materials and stock at ${selectedLocationName}` : "Materials and stock by location"} action={<div className="flex flex-wrap items-center gap-2">
+    <PageHeader title="Inventory" description={selectedLocationName ? `Materials and stock at ${selectedLocationName}` : "Consumable materials across all permitted locations"} action={<div className="flex flex-wrap items-center gap-2">
       <InventoryLocationPicker locations={data.locations} value={data.selectedLocationId} />
       <Button variant="outline" asChild><a href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export stocked items</a></Button>
       {user.canManage && <RecordCreateDialog title="Add material" initialOpen={params.create === "1"} closeHref={`/inventory?${new URLSearchParams(pageFilters)}`}><MaterialForm {...references} /></RecordCreateDialog>}
@@ -86,12 +89,12 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       <div key="record" className="flex min-w-56 items-center gap-3"><RecordThumbnail icon={PackageIcon} name={item.name} photo={item.photo_path ? recordPhotoUrl("materials", item.material_id) : null} /><Link key="material" href={`/materials/${item.material_id}`} className="font-semibold hover:text-cyan-700">{item.code} · {item.name}</Link></div>,
       item.category_name,
       item.material_kind === "consumable" ? "Consumable" : "Reusable",
-      selectedLocationName ?? "No stock location",
+      <div key="stock-locations">{selectedLocationName ?? "All locations"}{!data.selectedLocationId && <InventoryStockLocations stocks={item.stockLocations} unit={item.unit_symbol} />}</div>,
       ...[item.quantity_on_hand, item.reserved_quantity, item.available_quantity, item.minimum_stock_level].map((value) => `${Number(value).toLocaleString("en-PH", { maximumFractionDigits: 4 })} ${item.unit_symbol}`),
       <Badge key="status" variant={item.is_active ? "active" : "neutral"}>{item.is_active ? "Active" : "Inactive"}</Badge>,
       ...(user.canViewLaborRates ? [item.stockValue == null ? "Not valued" : Number(item.stockValue).toLocaleString("en-PH", { style: "currency", currency: "PHP" })] : []),
     ] }))}>
-    {data.rows.length === 0 ? <section className="mt-5 rounded-xl border border-slate-200 bg-white"><EmptyState title="No materials found" description="Change the search or filters, or add a material." /></section> : <section className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3" aria-label="Materials and stock balances">{data.rows.map((item) => <InventoryBalanceCard key={item.material_id} name={item.name} sku={item.code} photo={item.photo_path ? recordPhotoUrl("materials", item.material_id) : undefined} unit={item.unit_symbol} category={`${item.category_name} · ${item.material_kind === "consumable" ? "Consumable" : "Reusable"}`} active={item.is_active} location={selectedLocationName ?? "No stock location"} onHand={item.quantity_on_hand} reserved={item.reserved_quantity} available={item.available_quantity} minimum={item.minimum_stock_level} href={`/materials/${item.material_id}`} />)}</section>}
+    {data.rows.length === 0 ? <section className="mt-5 rounded-xl border border-slate-200 bg-white"><EmptyState title="No materials found" description="Change the search or filters, or add a material." /></section> : <section className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3" aria-label="Materials and stock balances">{data.rows.map((item) => <InventoryBalanceCard key={item.material_id} name={item.name} sku={item.code} photo={item.photo_path ? recordPhotoUrl("materials", item.material_id) : undefined} unit={item.unit_symbol} category={`${item.category_name} · ${item.material_kind === "consumable" ? "Consumable" : "Reusable"}`} active={item.is_active} location={selectedLocationName ?? "All locations"} stockLocations={!data.selectedLocationId ? item.stockLocations : undefined} onHand={item.quantity_on_hand} reserved={item.reserved_quantity} available={item.available_quantity} minimum={item.minimum_stock_level} href={`/materials/${item.material_id}`} />)}</section>}
     </RecordListView>
     <HistoryPagination path="/inventory" page={data.page} count={data.count} pageSize={24} filters={pageFilters} />
   </>;

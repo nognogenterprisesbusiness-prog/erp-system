@@ -7,10 +7,11 @@ export function InventoryLocationPicker({ locations, value }: { locations: { id:
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const options = locations.map((location) => ({ value: location.id, label: `${location.name}${location.location_type === "project_site" ? " · Site" : ""}` }));
-  return <div className="w-full min-w-[190px] sm:w-[240px]"><SelectPicker label="Stock location" value={value} options={options} disabled={!options.length} onValueChange={(locationId) => {
+  const options = [{ value: "all", label: "All locations" }, ...locations.map((location) => ({ value: location.id, label: `${location.name}${location.location_type === "project_site" ? " · Site" : ""}` }))];
+  return <div className="w-full min-w-[190px] sm:w-[240px]"><SelectPicker label="Stock location" value={value || "all"} options={options} disabled={!options.length} onValueChange={(locationId) => {
       const next = new URLSearchParams(searchParams.toString());
-      next.set("location", locationId);
+      if (locationId === "all") next.delete("location");
+      else next.set("location", locationId);
       next.delete("page");
       router.push(`${pathname}?${next.toString()}`);
     }} /></div>;

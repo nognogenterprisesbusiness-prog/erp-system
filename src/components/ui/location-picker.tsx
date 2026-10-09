@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Location01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Location01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -22,10 +22,11 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
   const [error, setError] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const root = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
   const listId = useId();
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || code) return;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true); setError("");
@@ -34,6 +35,7 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
         const response = await fetch(`/api/locations?${params}`, { signal: controller.signal });
         if (!response.ok) throw new Error("Location search is unavailable.");
         const result = await response.json() as { items: Option[] };
+        if (controller.signal.aborted) return;
         setOptions(result.items);
         setActiveIndex(0);
       } catch (cause) {
@@ -41,7 +43,7 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
       } finally { if (!controller.signal.aborted) setLoading(false); }
     }, 150);
     return () => { controller.abort(); window.clearTimeout(timer); };
-  }, [query, open]);
+  }, [query, open, code]);
 
   useEffect(() => {
     if (!open) return;
@@ -54,10 +56,14 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
     setCode(option.code);
     setQuery(option.displayName);
     setOpen(false);
+    setOptions([]);
+    setLoading(false);
+    setError("");
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape" && open) { event.preventDefault(); event.stopPropagation(); setOpen(false); return; }
+    if (code) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       setOpen(true);
@@ -73,9 +79,9 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
     <label htmlFor={`${listId}-input`} className="mb-2 block text-sm font-medium leading-5 text-slate-700">{label}</label>
     <div className="relative">
       <HugeiconsIcon icon={Search01Icon} size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-      <input id={`${listId}-input`} type="search" value={query} onFocus={() => setOpen(true)} onChange={(event) => { setQuery(event.target.value); setCode(""); setOptions([]); setActiveIndex(0); setOpen(true); }} onKeyDown={handleKeyDown} role="combobox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-activedescendant={open && options[activeIndex] ? `${listId}-option-${activeIndex}` : undefined} aria-autocomplete="list" autoComplete="off" placeholder="Search any city or municipality" className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10" />
+      <input ref={input} id={`${listId}-input`} type="search" value={query} readOnly={Boolean(code)} onFocus={() => { if (!code) setOpen(true); }} onChange={(event) => { if (code) return; setQuery(event.target.value); setOptions([]); setActiveIndex(0); setOpen(true); }} onKeyDown={handleKeyDown} role="combobox" aria-expanded={open} aria-controls={open ? listId : undefined} aria-activedescendant={open && options[activeIndex] ? `${listId}-option-${activeIndex}` : undefined} aria-autocomplete="list" autoComplete="off" placeholder="Cebu City" className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-12 text-sm outline-none focus:border-cyan-600 focus:ring-4 focus:ring-cyan-600/10" />
+      {code && <button type="button" aria-label="Remove selected city or municipality" title="Change city / municipality" onClick={() => { setCode(""); setQuery(""); setOptions([]); setError(""); setLoading(false); setActiveIndex(0); setOpen(true); input.current?.focus(); }} className="absolute right-1.5 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600"><HugeiconsIcon icon={Cancel01Icon} size={16} /></button>}
     </div>
-    <p className="mt-2 text-xs font-normal leading-5 text-slate-500">Type a city or municipality, then choose a result from the list.</p>
     <input type="hidden" name={name} value={code} />
     {displayNameName && <input type="hidden" name={displayNameName} value={query} />}
     {open && <div id={listId} role="listbox" aria-label={label} className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">

@@ -1,6 +1,6 @@
 "use client";
-import { FieldGuide } from "@/components/ui/field-guide";
 
+import { getFieldPlaceholder } from "@/components/ui/field-placeholder";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import {
   addLaborRateAction,
@@ -51,12 +51,12 @@ export function WorkforceAssignmentForm({ employees, projects, sites, fixedEmplo
   const [projectId, setProjectId] = useState(fixedProjectId ?? projects[0]?.id ?? "");
   const filteredSites = useMemo(() => sites.filter((site) => site.project_id === projectId), [sites, projectId]);
   return <form action={action} className={inDialog ? "grid gap-4 sm:grid-cols-2" : "grid gap-3 rounded-lg bg-slate-50 p-4 md:grid-cols-2 xl:grid-cols-6"}>
-    {fixedEmployeeId ? <input type="hidden" name="employeeId" value={fixedEmployeeId} /> : <label className="grid min-w-0 content-start gap-2 text-sm font-medium">Employee<select className={fieldControlClass} name="employeeId" aria-label="Employee" required defaultValue=""><option value="" disabled>Select employee</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}</select><FieldGuide label="Employee assignment" /></label>}
-    {fixedProjectId ? <input type="hidden" name="projectId" value={fixedProjectId} /> : <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Project<select className={fieldControlClass} name="projectId" required value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="" disabled>Select project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select><FieldGuide label="Project" name="projectId" /></label>}
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Project site<select key={projectId} className={fieldControlClass} name="projectSiteId" required defaultValue=""><option value="" disabled>Select site</option>{filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select><FieldGuide label="Project site" name="projectSiteId" /></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Assigned position<input className={fieldControlClass} name="positionTitle" placeholder="e.g. Mason" required /><FieldGuide label="Assigned position" name="positionTitle" placeholder="e.g. Mason" /></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Start date<input className={fieldControlClass} name="startDate" type="date" defaultValue={today} required /><FieldGuide label="Start date" name="startDate" type="date" /></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium sm:col-span-2">Remarks (optional)<input className={fieldControlClass} name="remarks" placeholder="Add context for this assignment" /><FieldGuide label="Remarks (optional)" name="remarks" placeholder="Add context for this assignment" /></label>
+    {fixedEmployeeId ? <input type="hidden" name="employeeId" value={fixedEmployeeId} /> : <label className="grid min-w-0 content-start gap-2 text-sm font-medium">Employee<select className={fieldControlClass} name="employeeId" aria-label="Employee" required defaultValue=""><option value="" disabled>Select employee</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}</select></label>}
+    {fixedProjectId ? <input type="hidden" name="projectId" value={fixedProjectId} /> : <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Project<select className={fieldControlClass} name="projectId" required value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="" disabled>Select project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>}
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Project site<select key={projectId} className={fieldControlClass} name="projectSiteId" required defaultValue=""><option value="" disabled>Select site</option>{filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Assigned position<input className={fieldControlClass} name="positionTitle" placeholder={getFieldPlaceholder("Assigned position")} required /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Start date<input className={fieldControlClass} name="startDate" type="date" defaultValue={today} required /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium sm:col-span-2">Remarks (optional)<input className={fieldControlClass} name="remarks" placeholder={getFieldPlaceholder("Remarks (optional)")} /></label>
     <div className={inDialog ? "sm:col-span-2" : "md:col-span-2 xl:col-span-6"}><FormMessage state={state} />{!filteredSites.length && projectId && <p className="text-xs text-amber-700">This project has no active site.</p>}<RecordFormControls busy={pending} disabled={!filteredSites.length} label="Assign employee" /></div>
   </form>;
 }
@@ -66,8 +66,8 @@ export function EndAssignmentForm({ assignment }: { assignment: EmployeeProjectA
   const inDialog = useCompleteWorkforceDialog(state);
   return <form action={action} className={inDialog ? "grid gap-4" : "flex flex-wrap items-center justify-end gap-2"}>
     <input type="hidden" name="assignmentId" value={assignment.id} /><input type="hidden" name="employeeId" value={assignment.employee_id} /><input type="hidden" name="projectId" value={assignment.project_id} />
-    <label className={inDialog ? "grid gap-1 text-sm font-medium" : "text-xs"}>{inDialog && "End date"}<input className={inDialog ? fieldControlClass : "h-9 rounded-md border border-slate-200 px-2 text-xs"} name="endDate" aria-label="Assignment end date" type="date" min={assignment.start_date} defaultValue={today < assignment.start_date ? assignment.start_date : today} required /><FieldGuide label="Assignment end date" name="endDate" type="date" /></label>
-    <label className={inDialog ? "grid gap-1 text-sm font-medium" : "text-xs"}>{inDialog && "Reason"}<input className={inDialog ? fieldControlClass : "h-9 min-w-40 rounded-md border border-slate-200 px-2 text-xs"} name="remarks" aria-label="Assignment end reason" placeholder={inDialog ? "Why is this assignment ending?" : "End reason"} required /><FieldGuide label="Assignment end reason" name="remarks" /></label>
+    <label className={inDialog ? "grid gap-1 text-sm font-medium" : "text-xs"}>{inDialog && "End date"}<input className={inDialog ? fieldControlClass : "h-9 rounded-md border border-slate-200 px-2 text-xs"} name="endDate" aria-label="Assignment end date" type="date" min={assignment.start_date} defaultValue={today < assignment.start_date ? assignment.start_date : today} required /></label>
+    <label className={inDialog ? "grid gap-1 text-sm font-medium" : "text-xs"}>{inDialog && "Reason"}<input className={inDialog ? fieldControlClass : "h-9 min-w-40 rounded-md border border-slate-200 px-2 text-xs"} name="remarks" aria-label="Assignment end reason" placeholder={getFieldPlaceholder("Assignment end reason")} required /></label>
     {inDialog ? <><FormMessage state={state} /><RecordFormControls busy={pending} label="End assignment" /></> : <><Button variant="outline" size="sm" disabled={pending}>{pending ? "Ending…" : "End"}</Button><FormMessage state={state} /></>}
   </form>;
 }
@@ -83,12 +83,12 @@ export function TransferAssignmentForm({ assignment, projects, sites }: {
   const filteredSites = useMemo(() => sites.filter((site) => site.project_id === projectId), [sites, projectId]);
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="assignmentId" value={assignment.id} /><input type="hidden" name="employeeId" value={assignment.employee_id} />
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New project<select className={fieldControlClass} name="projectId" value={projectId} onChange={(event) => setProjectId(event.target.value)} required><option value="" disabled>Select new project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select><FieldGuide label="New project" name="projectId" /></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New site<select key={projectId} className={fieldControlClass} name="projectSiteId" defaultValue="" required><option value="" disabled>Select new site</option>{filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select><FieldGuide label="New site" name="projectSiteId" /></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium sm:col-span-2">Position at new site<input className={fieldControlClass} name="positionTitle" defaultValue={assignment.position_title} required /><FieldGuide label="Position at new site" name="positionTitle" /></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Current assignment end date<input className={fieldControlClass} name="currentEndDate" type="date" min={assignment.start_date} defaultValue={today < assignment.start_date ? assignment.start_date : today} required /><FieldGuide label="Current assignment end date" name="currentEndDate" type="date" /></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New assignment start date<input className={fieldControlClass} name="newStartDate" type="date" min={today} required /><FieldGuide label="New assignment start date" name="newStartDate" type="date" /></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium sm:col-span-2">Remarks (optional)<input className={fieldControlClass} name="remarks" placeholder="Add transfer context" /><FieldGuide label="Remarks (optional)" name="remarks" placeholder="Add transfer context" /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New project<select className={fieldControlClass} name="projectId" value={projectId} onChange={(event) => setProjectId(event.target.value)} required><option value="" disabled>Select new project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New site<select key={projectId} className={fieldControlClass} name="projectSiteId" defaultValue="" required><option value="" disabled>Select new site</option>{filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium sm:col-span-2">Position at new site<input className={fieldControlClass} name="positionTitle" defaultValue={assignment.position_title} required placeholder={getFieldPlaceholder("Position at new site")} /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Current assignment end date<input className={fieldControlClass} name="currentEndDate" type="date" min={assignment.start_date} defaultValue={today < assignment.start_date ? assignment.start_date : today} required /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New assignment start date<input className={fieldControlClass} name="newStartDate" type="date" min={today} required /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium sm:col-span-2">Remarks (optional)<input className={fieldControlClass} name="remarks" placeholder={getFieldPlaceholder("Remarks (optional)")} /></label>
     <div className="sm:col-span-2"><FormMessage state={state} />{!filteredSites.length && projectId && <p className="text-xs text-amber-700">This project has no active site.</p>}<RecordFormControls busy={pending} disabled={!filteredSites.length} label="Transfer employee" /></div>
   </form>;
 }
@@ -98,10 +98,10 @@ export function LaborRateForm({ employeeId }: { employeeId: string }) {
   useCompleteWorkforceDialog(state);
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="employeeId" value={employeeId} />
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Rate type<select className={fieldControlClass} name="rateType" defaultValue="daily"><option value="daily">Daily</option><option value="hourly">Hourly</option></select><FieldGuide label="Rate type" name="rateType" /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Rate type<select className={fieldControlClass} name="rateType" defaultValue="daily"><option value="daily">Daily</option><option value="hourly">Hourly</option></select></label>
     <PesoAmountInput name="amount" label="Rate amount (PHP)" required submitUngrouped />
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Effective from<input className={fieldControlClass} name="effectiveStartDate" type="date" defaultValue={today} required /><FieldGuide label="Effective from" name="effectiveStartDate" type="date" /></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Effective until (optional)<input className={fieldControlClass} name="effectiveEndDate" type="date" /><FieldGuide label="Effective until (optional)" name="effectiveEndDate" type="date" /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Effective from<input className={fieldControlClass} name="effectiveStartDate" type="date" defaultValue={today} required /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Effective until (optional)<input className={fieldControlClass} name="effectiveEndDate" type="date" /></label>
     <div className="sm:col-span-2"><FormMessage state={state} /><RecordFormControls busy={pending} label="Add rate" /></div>
   </form>;
 }
@@ -109,13 +109,13 @@ export function LaborRateForm({ employeeId }: { employeeId: string }) {
 export function AttendanceBasisForm({ employeeId }: { employeeId: string }) {
   const [state, action, pending] = useActionState(setAttendanceBasisAction, initialState);
   useCompleteWorkforceDialog(state);
-  return <form action={action} className="grid gap-4"><input type="hidden" name="employeeId" value={employeeId} /><p className="text-sm text-slate-600">Choose how this employee&apos;s future attendance is costed. Historical costs stay unchanged.</p><label className="grid min-w-0 content-start gap-1 text-sm font-medium">Attendance costing basis<select name="rateType" className={fieldControlClass} defaultValue="" required><option value="" disabled>Choose basis</option><option value="daily">Daily</option><option value="hourly">Hourly</option></select><FieldGuide label="Attendance costing basis" name="rateType" /></label><FormMessage state={state} /><RecordFormControls busy={pending} label="Save basis" /></form>;
+  return <form action={action} className="grid gap-4"><input type="hidden" name="employeeId" value={employeeId} /><p className="text-sm text-slate-600">Choose how this employee&apos;s future attendance is costed. Historical costs stay unchanged.</p><label className="grid min-w-0 content-start gap-1 text-sm font-medium">Attendance costing basis<select name="rateType" className={fieldControlClass} defaultValue="" required><option value="" disabled>Choose basis</option><option value="daily">Daily</option><option value="hourly">Hourly</option></select></label><FormMessage state={state} /><RecordFormControls busy={pending} label="Save basis" /></form>;
 }
 
 export function CloseLaborRateForm({ employeeId, rate }: { employeeId: string; rate: LaborRateRow }) {
   const [state, action, pending] = useActionState(closeLaborRateAction, initialState);
   useCompleteWorkforceDialog(state);
-  return <form action={action} className="grid gap-4"><input type="hidden" name="employeeId" value={employeeId} /><input type="hidden" name="rateId" value={rate.id} /><label className="grid min-w-0 content-start gap-1 text-sm font-medium">Rate end date<input className={fieldControlClass} name="effectiveEndDate" type="date" min={rate.effective_start_date} defaultValue={today < rate.effective_start_date ? rate.effective_start_date : today} required /><FieldGuide label="Rate end date" name="effectiveEndDate" type="date" /></label><FormMessage state={state} /><RecordFormControls busy={pending} label="Close rate" /></form>;
+  return <form action={action} className="grid gap-4"><input type="hidden" name="employeeId" value={employeeId} /><input type="hidden" name="rateId" value={rate.id} /><label className="grid min-w-0 content-start gap-1 text-sm font-medium">Rate end date<input className={fieldControlClass} name="effectiveEndDate" type="date" min={rate.effective_start_date} defaultValue={today < rate.effective_start_date ? rate.effective_start_date : today} required /></label><FormMessage state={state} /><RecordFormControls busy={pending} label="Close rate" /></form>;
 }
 
 export function ArchiveEmployeeForm({ employeeId }: { employeeId: string }) {

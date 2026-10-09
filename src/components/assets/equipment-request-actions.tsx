@@ -1,8 +1,8 @@
 "use client";
 
+import { getFieldPlaceholder } from "@/components/ui/field-placeholder";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { checkoutEquipmentRequestAction, decideEquipmentRequestAction, returnEquipmentRequestAction, type EquipmentRequestActionState } from "@/app/(workspace)/equipment/requests/actions";
-import { FieldGuide } from "@/components/ui/field-guide";
 import { Button } from "@/components/ui/button";
 import { DialogHeading } from "@/components/ui/dialog-heading";
 import { RecordActionIcon } from "@/components/ui/record-action-menu";
@@ -39,8 +39,8 @@ export function EquipmentRequestActions({ id, status }: { id: string; status: Eq
         <input type="hidden" name="id" value={id} />
         {mode !== "return" && mode !== "checkout" && <input type="hidden" name="decision" value={mode === "approve" ? "approve" : "reject"} />}
         {mode === "checkout" ? <p className="text-sm text-slate-600">Confirm the equipment has been handed over to the approved project site.</p> : <label className="grid gap-1.5 text-sm font-medium">{mode === "return" ? "Return condition" : mode === "approve" ? "Approval note (optional)" : "Reason"}
-          <textarea name="note" required={mode !== "approve"} minLength={mode === "approve" ? undefined : 3} maxLength={500} className="min-h-24 rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" />
-          <FieldGuide label={mode === "return" ? "Return condition" : mode === "approve" ? "Approval note" : "Reason"} />
+          <textarea name="note" required={mode !== "approve"} minLength={mode === "approve" ? undefined : 3} maxLength={500} className="min-h-24 rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-cyan-600" placeholder={getFieldPlaceholder(mode === "return" ? "Return condition" : mode === "approve" ? "Approval note" : "Reason")} />
+
         </label>}
         {mode === "return" && <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="needsMaintenance" />Needs maintenance</label>}
         {activeResult.message && <p role={activeResult.ok ? "status" : "alert"} className={`text-sm ${activeResult.ok ? "text-emerald-700" : "text-red-600"}`}>{activeResult.message}</p>}
