@@ -18,12 +18,16 @@ alter table public.assets add constraint assets_equipment_required_details check
 );
 alter table public.vehicle_details alter column manufacture_year drop not null;
 alter table public.vehicle_details add column vehicle_type text;
+-- Validate each existing subtype immediately so the backfill cannot leave
+-- queued constraint-trigger events blocking the following table changes.
+set constraints public.vehicle_details_match_asset immediate;
 update public.vehicle_details v set vehicle_type = c.name
 from public.assets a join public.asset_categories c on c.id=a.category_id
 where a.id=v.asset_id;
 alter table public.vehicle_details alter column vehicle_type set not null;
 alter table public.vehicle_details add constraint vehicle_details_type_length
   check (char_length(trim(vehicle_type)) between 2 and 120);
+set constraints public.vehicle_details_match_asset deferred;
 
 create sequence private.vehicle_code_seq as bigint start with 1;
 revoke all on sequence private.vehicle_code_seq from public, anon, authenticated;

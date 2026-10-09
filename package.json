@@ -35,7 +35,8 @@
     "test:inventory-domain": "tsx --test packages/domain/src/inventory-valuation.test.ts",
     "test:batch-costing": "node scripts/test-batch-costing.mjs",
     "test:warehouse-receipts": "node scripts/test-warehouse-receipts.mjs",
-    "test:erp-workflow": "node scripts/test-erp-workflow.mjs"
+    "test:erp-workflow": "node scripts/test-erp-workflow.mjs",
+    "test:simple-setup-upgrade": "node scripts/test-simple-setup-upgrade.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

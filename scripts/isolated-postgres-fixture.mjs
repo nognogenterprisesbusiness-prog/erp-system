@@ -5,7 +5,7 @@ import path from "node:path";
 
 // Requires a local PostgreSQL runtime, never accepts a remote connection URL.
 // It applies the full ERP migration chain and fictional seed into a new database.
-export async function withIsolatedPostgres(test) {
+export async function withIsolatedPostgres(test, { beforeMigration, seedAfterMigrations = true } = {}) {
   const bin = process.env.ERP_TEST_PG_BIN;
   if (!bin || !fs.existsSync(path.join(bin, process.platform === "win32" ? "psql.exe" : "psql")))
     throw new Error("Set ERP_TEST_PG_BIN to a local PostgreSQL bin directory. This test never uses hosted credentials.");
@@ -30,6 +30,7 @@ export async function withIsolatedPostgres(test) {
     await sql(bootstrap);
     const migrations = new URL("../supabase/migrations/", import.meta.url);
     for (const name of fs.readdirSync(migrations).filter((n) => n.endsWith(".sql")).sort()) {
+      if (beforeMigration) await beforeMigration({ name, sql });
       let migration = fs.readFileSync(new URL(name, migrations), "utf8");
       // pg_cron is unavailable in the portable distribution. Only its initial
       // extension/job registration is skipped; no ERP function or policy changes.
@@ -41,7 +42,7 @@ export async function withIsolatedPostgres(test) {
       if (!/^begin;/im.test(migration)) migration = `begin;\n${migration}\ncommit;`;
       try { await sql(migration); } catch (error) { throw new Error(`Migration ${name}: ${error.message}`); }
     }
-    await sql(fs.readFileSync(new URL("../supabase/seed.sql", import.meta.url), "utf8"));
+    if (seedAfterMigrations) await sql(fs.readFileSync(new URL("../supabase/seed.sql", import.meta.url), "utf8"));
     const users = { admin: "10000000-0000-0000-0000-000000000001", engineer: "10000000-0000-0000-0000-000000000003", foreman: "10000000-0000-0000-0000-000000000004", warehouse_staff: "10000000-0000-0000-0000-000000000005", finance: randomUUID() };
     await sql(`insert into auth.users(id,email,raw_user_meta_data) values('${users.finance}','finance@erp-test.local','{"full_name":"Test Finance"}');
       insert into public.user_roles(user_id,role) values('${users.finance}','finance');
