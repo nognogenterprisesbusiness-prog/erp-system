@@ -2,13 +2,14 @@ import { uuidSchema } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { getInventoryMaterials } from "@/lib/data/inventory";
 import { csvAttachment } from "@/lib/export/csv";
+import { inventoryScopeLabel, parseInventoryScope } from "@/lib/inventory/scope";
 
 export async function GET(request: Request): Promise<Response> {
   const user = await requireUser();
   const params = new URL(request.url).searchParams;
   const category = uuidSchema.safeParse(params.get("category"));
   const filters: Parameters<typeof getInventoryMaterials>[0] = {
-    query: params.get("q") ?? "", locationId: params.get("location") ?? "",
+    query: params.get("q") ?? "", locationId: params.get("location") ?? "", scope: parseInventoryScope(params.get("scope")),
     categoryId: category.success ? category.data : "",
     status: params.get("status") === "inactive" ? "inactive" : params.get("status") === "any" ? "all" : "active",
     lowStock: params.get("low") === "true", includeValues: user.canViewLaborRates, pageSize: 500,
@@ -18,7 +19,7 @@ export async function GET(request: Request): Promise<Response> {
   for (let page = 2; (page - 1) * 500 < first.count; page++) {
     materials.push(...(await getInventoryMaterials({ ...filters, page })).rows);
   }
-  const location = first.locations.find((item) => item.id === first.selectedLocationId)?.name ?? "All locations";
+  const location = first.locations.find((item) => item.id === first.selectedLocationId)?.name ?? inventoryScopeLabel(first.scope);
   return csvAttachment(`nognog-inventory-${new Date().toISOString().slice(0, 10)}.csv`, [
     "SKU", "Material", "Location", "On hand", "Reserved", "Available", "Unit", "Level", "Stock by location",
     ...(user.canViewLaborRates ? ["Stock value (PHP)"] : []),

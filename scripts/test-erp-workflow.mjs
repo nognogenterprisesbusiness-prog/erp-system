@@ -724,6 +724,40 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('',null,null,'active',false,0,500) where material_kind<>'consumable'`)), "0");
     await assert.rejects(as("foreman", `select * from public.list_inventory_materials('','${other}',null,'active',false,0,24)`), /Inventory location is not available/);
   });
+  await check("warehouse and site summaries separate balances, reservations, low-stock filters and role access", async () => {
+    const category = await value(`select category_id from public.materials where id='${material}'`);
+    const siteOnly = result(await as("admin", `select public.save_material(null,'MAT-SITE-ONLY','Site-only stock','', '${category}','${unit}','consumable',2,true)`));
+    await sql(`select private.post_valued_stock_in_core('${users.admin}','${siteOnly}','${source}',7,'${unit}',70,'SITE-ONLY-RECEIPT',current_date,null)`);
+    const siteRequest = result(await as("foreman", `select public.submit_material_request('${randomUUID()}','${project}','${site}','${warehouse}',current_date,'Move all stock to site','[{"materialId":"${siteOnly}","quantity":"7"}]')`));
+    const requestLine = await value(`select id from public.material_request_lines where request_id='${siteRequest}'`);
+    await as("engineer", `select public.decide_material_request('${randomUUID()}','${siteRequest}','{"${requestLine}":"7"}',null)`);
+    const transfer = result(await as("warehouse_staff", `select public.dispatch_approved_request_line_with_manifest('${randomUUID()}','${requestLine}',7,current_date,'Scope test delivery',null,'External truck','Test Driver','SCOPE-TRIP-1')`));
+    const item = await value(`select id from public.inventory_transfer_items where transfer_id='${transfer}'`);
+    await as("foreman", `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',7,current_date,'Checked scope test stock','accepted',null)`);
+    for (const role of ["admin", "finance", "engineer", "foreman", "warehouse_staff"]) {
+      for (const kind of ["warehouse", "project_site"]) {
+        const totals = await json(role, `select row_to_json(t) from (
+          select coalesce(sum(b.quantity_on_hand),0) as on_hand,coalesce(sum(b.reserved_quantity),0) as reserved,
+            coalesce(sum(b.available_quantity),0) as available
+          from public.inventory_balances b join public.inventory_locations l on l.id=b.inventory_location_id
+          where b.material_id='${material}' and l.location_type::text='${kind}') t`);
+        const row = await json(role, `select row_to_json(m) from public.list_inventory_materials('',null,null,'active',false,0,500,'${kind}') m where material_id='${material}'`);
+        assert.equal(Number(row.quantity_on_hand), Number(totals.on_hand), `${role}: ${kind} on hand`);
+        assert.equal(Number(row.reserved_quantity), Number(totals.reserved), `${role}: ${kind} reserved`);
+        assert.equal(Number(row.available_quantity), Number(totals.available), `${role}: ${kind} available`);
+        assert.equal(row.balance_id, null);
+      }
+    }
+    assert.equal(Number(scalar(await as("admin", `select quantity_on_hand from public.list_inventory_materials('Site-only stock',null,null,'active',false,0,24,'warehouse')`))), 0);
+    assert.equal(Number(scalar(await as("admin", `select quantity_on_hand from public.list_inventory_materials('Site-only stock',null,null,'active',false,0,24,'project_site')`))), 7);
+    assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('Site-only stock',null,null,'active',true,0,24,'warehouse')`)), "1");
+    assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('Site-only stock',null,null,'active',true,0,24,'project_site')`)), "0");
+    assert.equal(scalar(await as("warehouse_staff", `select quantity_on_hand from public.list_inventory_materials('Site-only stock',null,null,'active',false,0,24,'project_site')`)), "0");
+    await assert.rejects(as("admin", "select * from public.list_inventory_materials('',null,null,'active',false,0,24,'invalid')"), /Invalid inventory catalog filters/);
+    await assert.rejects(as("admin", "select * from public.list_inventory_materials('',null,null,'active',false,0,24,null)"), /Invalid inventory catalog filters/);
+    await assert.rejects(as("foreman", `select * from public.list_inventory_materials('','${source}',null,'active',false,0,24,'warehouse')`), /Inventory location is not available/);
+    assert.equal(await value("select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='list_inventory_materials'"), "1");
+  });
   await check("inventory catalog pagination keeps materials beyond 500 reachable", async () => {
     const category = await value(`select category_id from public.materials where id='${material}'`);
     await sql(`insert into public.materials(code,name,category_id,base_unit_id,material_kind,minimum_stock_level,is_active,created_by,updated_by)
@@ -733,6 +767,7 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
     const count = Number(scalar(await as("admin", `select max(total_count) from public.list_inventory_materials('Paged material','${source}',null,'active',false,500,24)`)));
     assert.equal(count, 505);
     assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('Paged material','${source}',null,'active',false,500,24)`)), "5");
+    assert.equal(scalar(await as("admin", `select count(*) from public.list_inventory_materials('Paged material',null,null,'active',false,500,24,'warehouse')`)), "5");
     const firstSiteRow = await json("engineer", `select row_to_json(m) from public.list_inventory_materials('','${location}',null,'active',false,0,1) m`);
     assert.ok(Number(firstSiteRow.quantity_on_hand) > 0, "stocked site materials appear before zero-stock catalog entries");
     assert.equal(scalar(await sql("select count(*) from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='site_purchases'")), "1");

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
 import { readAllPages, readByIds } from "./read-all-pages";
 import type { InventoryLocationRow, InventoryTransactionType, MaterialKind } from "@/types/database";
+import { inventoryLocationKind, resolveInventoryScope, type InventoryScope } from "@/lib/inventory/scope";
 
 export type MaterialView = { id: string; code: string; name: string; description: string | null; photo_path: string | null; category_id: string; base_unit_id: string; material_kind: MaterialKind; minimum_stock_level: number; is_active: boolean; archived_at: string | null; categoryName: string; unitName: string; unitSymbol: string };
 export type LocationView = InventoryLocationRow & { name: string; detail: string; projectId: string | null };
@@ -122,18 +123,22 @@ export async function getInventoryBalances(params: { query?: string; locationId?
   return { balances, materials: balances.map((b) => b.material), locations, selectedLocationId, count: data?.[0]?.total_count ?? 0 };
 }
 
-// Consumable totals across authorized locations, or one explicitly selected location.
+// Warehouse totals by default; site and company summaries remain location-scoped.
 // Unstocked catalog materials remain visible as zero.
-export async function getInventoryMaterials(params: { query?: string; locationId?: string; categoryId?: string; status?: "active" | "inactive" | "all"; lowStock?: boolean; page?: number; pageSize?: number; includeValues?: boolean } = {}) {
+export async function getInventoryMaterials(params: { query?: string; locationId?: string; scope?: InventoryScope; categoryId?: string; status?: "active" | "inactive" | "all"; lowStock?: boolean; page?: number; pageSize?: number; includeValues?: boolean } = {}) {
   const supabase = await createClient();
   const locations = await getLocationViews();
   const selectedLocationId = params.locationId || "";
   if (selectedLocationId && !locations.some((item) => item.id === selectedLocationId)) notFound();
+  const scope = resolveInventoryScope(params.scope, locations);
+  const locationKind = selectedLocationId ? "all" : inventoryLocationKind(scope);
+  const scopedLocationIds = locations.filter((location) => selectedLocationId
+    ? location.id === selectedLocationId : locationKind === "all" || location.location_type === locationKind).map((location) => location.id);
   const pageSize = Math.min(500, Math.max(1, params.pageSize ?? 24));
   let page = Number.isSafeInteger(params.page) && params.page! > 0 ? Math.min(params.page!, 10000) : 1;
   const args = { p_query: safeSearchTerm(params.query), p_location_id: selectedLocationId || null,
     p_category_id: params.categoryId || null, p_status: params.status ?? "active",
-    p_low: params.lowStock ?? false, p_limit: pageSize };
+    p_low: params.lowStock ?? false, p_limit: pageSize, p_location_kind: locationKind };
   const readPage = async (target: number) => {
     const { data, error } = await supabase.rpc("list_inventory_materials", { ...args, p_offset: (target - 1) * pageSize });
     if (error) throw new Error("Unable to load inventory materials.", { cause: error });
@@ -149,13 +154,13 @@ export async function getInventoryMaterials(params: { query?: string; locationId
   }
   const materialIds = rows.map((item) => item.material_id);
   const [balances, valueRows] = await Promise.all([
-    !selectedLocationId && rows.length ? readByIds(materialIds, (ids, from, to) => supabase.from("inventory_balances")
+    !selectedLocationId && rows.length && scopedLocationIds.length ? readByIds(materialIds, (ids, from, to) => supabase.from("inventory_balances")
       .select("id,material_id,inventory_location_id,quantity_on_hand,available_quantity")
-      .in("material_id", ids).gt("quantity_on_hand", 0).order("id").range(from, to), "material stock locations") : Promise.resolve([]),
-    params.includeValues && rows.length ? readByIds(materialIds, (ids, from, to) => {
+      .in("material_id", ids).in("inventory_location_id", scopedLocationIds).gt("quantity_on_hand", 0).order("id").range(from, to), "material stock locations") : Promise.resolve([]),
+    params.includeValues && rows.length && scopedLocationIds.length ? readByIds(materialIds, (ids, from, to) => {
       let query = supabase.from("inventory_valuations").select("id,material_id,total_value,quantity_on_hand")
         .in("material_id", ids).order("id");
-      if (selectedLocationId) query = query.eq("inventory_location_id", selectedLocationId);
+      query = query.in("inventory_location_id", scopedLocationIds);
       return query.range(from, to);
     }, "inventory material values") : Promise.resolve([]),
   ]);
@@ -180,7 +185,7 @@ export async function getInventoryMaterials(params: { query?: string; locationId
   return { rows: rows.map((item) => ({ ...item,
     stockValue: Number(item.quantity_on_hand) === 0 ? 0 : valueQuantities.get(item.material_id) === Math.round(Number(item.quantity_on_hand) * 10000) ? values.get(item.material_id) ?? null : null,
     stockLocations: (stocks.get(item.material_id) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
-  })), locations, selectedLocationId, count, page };
+  })), locations, selectedLocationId, scope, count, page };
 }
 
 // includeCosts (Admin/Finance) adds each movement's cost through a guarded RPC;
