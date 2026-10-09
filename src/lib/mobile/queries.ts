@@ -386,9 +386,10 @@ export async function readMobileResource(
     }
     case "inventory": {
       const location = await siteLocation(c, q);
-      const r = await c.rpc("list_inventory_balances", {
+      const r = await c.rpc("list_inventory_materials", {
         p_location_id: location,
         p_query: q.search,
+        p_status: "active",
         p_offset: offset,
         p_limit: size,
       });
@@ -397,31 +398,27 @@ export async function readMobileResource(
       const m = rows.length
         ? await c
             .from("materials")
-            .select("id,name,code,base_unit_id,photo_path")
+            .select("id,base_unit_id")
             .in(
               "id",
               rows.map((x) => x.material_id),
             )
         : { data: [], error: null };
       if (m.error) databaseError(m.error);
-      const refs = await materialReferences(
-        c,
-        [],
-        (m.data ?? []).map((x) => x.base_unit_id),
-      );
+      const units = new Map((m.data ?? []).map((material) => [material.id, material.base_unit_id]));
       return page(
         rows.map((x) => {
-          const material = m.data?.find((y) => y.id === x.material_id);
-          if (!material)
+          const unitId = units.get(x.material_id);
+          if (!unitId)
             throw new MobileError(503, "Material details could not be loaded.");
           return {
-            id: x.id,
+            id: x.balance_id ?? x.material_id,
             material_id: x.material_id,
-            name: material.name,
-            code: material.code,
-            unit_id: material.base_unit_id,
-            unit: refs.units.get(material.base_unit_id) ?? "",
-            photo_path: material.photo_path,
+            name: x.name,
+            code: x.code,
+            unit_id: unitId,
+            unit: x.unit_symbol,
+            photo_path: x.photo_path,
             on_hand: x.quantity_on_hand,
             reserved: x.reserved_quantity,
             available: x.available_quantity,

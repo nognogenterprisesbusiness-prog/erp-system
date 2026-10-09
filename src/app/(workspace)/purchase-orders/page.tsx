@@ -1,5 +1,6 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { Suspense } from "react";
+import { notFound } from "next/navigation";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { CheckmarkCircle02Icon, Money03Icon, PlusSignIcon, ShoppingCart01Icon, Store02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -13,7 +14,7 @@ import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { requireProcurementViewer } from "@/lib/auth";
 import { getPurchaseLines, getPurchaseOrderChoices, getPurchaseSummary } from "@/lib/data/purchase-orders";
 import { getPendingPurchaseApprovals } from "@/lib/data/purchase-approvals";
-import { getPurchaseSourceRequest, getSupplierQuotation } from "@/lib/data/procurement-stages";
+import { getPurchaseSourceReport, getPurchaseSourceRequest, getSupplierQuotation } from "@/lib/data/procurement-stages";
 import { MetricCard } from "@/components/ui/metric-card";
 import { IssuePurchaseOrderForm } from "@/components/purchase-orders/purchase-order-forms";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
@@ -38,17 +39,20 @@ export default async function PurchaseOrdersPage({ searchParams }: { searchParam
   const choices = user.canManage && params.create === "1" ? await getPurchaseOrderChoices() : null;
   const quoteId = uuidSchema.safeParse(params.quotation);
   const requestId = uuidSchema.safeParse(params.request);
-  const [selectedQuote, selectedRequest] = choices ? await Promise.all([
+  const shortageId = uuidSchema.safeParse(params.shortage);
+  if (requestId.success && shortageId.success) notFound();
+  const [selectedQuote, selectedRequest, selectedReport] = choices ? await Promise.all([
     quoteId.success ? getSupplierQuotation(quoteId.data) : null,
     requestId.success ? getPurchaseSourceRequest(requestId.data) : null,
-  ]) : [null, null];
+    shortageId.success ? getPurchaseSourceReport(shortageId.data) : null,
+  ]) : [null, null, null];
   const material = uuidSchema.safeParse(params.material);
   const warehouse = uuidSchema.safeParse(params.warehouse);
   const quantity = typeof params.quantity === "string" && /^\d+(\.\d{1,4})?$/.test(params.quantity) && Number(params.quantity) > 0 ? params.quantity : undefined;
   const pageHref = (target: number) => `/purchase-orders?${new URLSearchParams({ ...(query ? { q: query } : {}), page: String(target) })}`;
   return <>
     <PageHeader eyebrow="Purchasing & suppliers" title="Purchasing by Supplier" description="Every purchased item, with its supplier, delivery and payment history." action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href="/purchase-orders/quotations">Compare quotations</Link></Button>{user.canManage && <Button asChild><Link href="/purchase-orders?create=1"><HugeiconsIcon icon={PlusSignIcon} size={17} />Add supplier items</Link></Button>}</div>} />
-    {choices && <RecordCreateDialog title="Add purchase" initialOpen hideTrigger closeHref={pageHref(page)}>{choices.suppliers.length && choices.warehouses.length ? <IssuePurchaseOrderForm choices={choices} idempotencyKey={randomUUID()} today={todayInManila()} initialMaterialId={material.success ? material.data : undefined} initialWarehouseId={warehouse.success && choices.warehouses.some((item) => item.id === warehouse.data) ? warehouse.data : undefined} initialQuantity={quantity} quotation={selectedQuote ? { id: selectedQuote.quote.id, reference: selectedQuote.quote.reference, supplierId: selectedQuote.quote.supplier_id, lines: selectedQuote.lines.map((line) => ({ materialId: line.material_id, quantity: String(line.quantity), unitPrice: Number(line.unit_price).toFixed(2) })) } : undefined} sourceRequest={selectedRequest ? { id: selectedRequest.request.id, number: selectedRequest.request.request_number, warehouseId: selectedRequest.request.source_warehouse_id, lines: selectedRequest.lines.map((line) => ({ materialId: line.material_id, quantity: String(line.requested_quantity) })) } : undefined} /> : <EmptyState title="Supplier or warehouse missing" description="Add an active supplier and warehouse first." />}</RecordCreateDialog>}
+    {choices && <RecordCreateDialog title="Add purchase" initialOpen hideTrigger closeHref={pageHref(page)}>{choices.suppliers.length && choices.warehouses.length ? <IssuePurchaseOrderForm choices={choices} idempotencyKey={randomUUID()} today={todayInManila()} initialMaterialId={material.success ? material.data : undefined} initialWarehouseId={warehouse.success && choices.warehouses.some((item) => item.id === warehouse.data) ? warehouse.data : undefined} initialQuantity={quantity} quotation={selectedQuote ? { id: selectedQuote.quote.id, reference: selectedQuote.quote.reference, supplierId: selectedQuote.quote.supplier_id, lines: selectedQuote.lines.map((line) => ({ materialId: line.material_id, quantity: String(line.quantity), unitPrice: Number(line.unit_price).toFixed(2) })) } : undefined} sourceRequest={selectedRequest ? { id: selectedRequest.request.id, number: selectedRequest.request.request_number, warehouseId: selectedRequest.request.source_warehouse_id, lines: selectedRequest.lines.map((line) => ({ materialId: line.material_id, quantity: String(line.requested_quantity) })) } : undefined} sourceReport={selectedReport ? { id: selectedReport.id, materialName: selectedReport.material_name, warehouseId: selectedReport.source_warehouse_id, quantity: String(selectedReport.requested_quantity), materialId: selectedReport.linkedMaterialId } : undefined} /> : <EmptyState title="Supplier or warehouse missing" description="Add an active supplier and warehouse first." />}</RecordCreateDialog>}
     <Suspense fallback={<div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map((n) => <div key={n} className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white" />)}</div>}><PurchaseSummary summaryPromise={summaryPromise} /></Suspense>
     <Suspense fallback={null}><PendingPurchaseApprovals resultPromise={approvalsPromise} canManage={user.canManage} query={query} page={page} /></Suspense>
     <ListFilterBar><SearchField key={query} name="q" label="Search purchases" defaultValue={query} placeholder="Search item, supplier, purchase no. or location" /></ListFilterBar>

@@ -4,6 +4,8 @@
 
 > **Project blueprint, feature checklist, acceptance criteria, and development tracker** for the Construction ERP. The web ERP now has an approved companion Android/iOS client for Foremen and Engineers. See [mobile scope, setup and verification](docs/mobile-app.md).
 
+**Current shortage workflow (2026-10-09):** The out-of-stock form and history are under Requests; reports can link to supplier purchases, inspected warehouse receipts, Engineer-reviewed site requests, and site delivery. Supplier price comparison remains under Suppliers. See [workflow and rollout requirements](docs/shortage-sourcing-2026-10-09.md). This change passes isolated PostgreSQL workflow checks but requires the new migration and deployed-account acceptance before production use. Older progress notes below are historical.
+
 **Approved mobile implementation (2026-09-28):** The companion Expo SDK 57 app is implemented in `../nognog-mobile`, with four tabs, four Home actions and connected site workflows. Bearer endpoints and shared operational contracts are added here. Static checks and native bundles pass; Docker-backed migration/workflow and device acceptance remain pending. Earlier “native deferred” notes below are historical.
 
 **Latest package-by-package recheck (2026-09-27):** See [the complete web feature audit](docs/package-3-web-audit-2026-09-27.md) for every quoted web feature, meeting-note coverage, source evidence, remaining defects and acceptance gates. **Not operationally accepted.** Broad feature checkboxes remain unchecked: passing static/unit checks does not verify database permissions, stock concurrency, uploads, realtime delivery or financial reconciliation. The older audit and dated progress entries below are historical; the latest audit takes precedence.

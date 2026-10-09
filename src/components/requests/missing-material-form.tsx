@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { submitMissingMaterialAction, resolveMissingMaterialAction, type MissingMaterialState } from "@/app/(workspace)/requests/missing/actions";
+import { submitMissingMaterialAction, dismissMissingMaterialAction, createSourcingSiteRequestAction, type MissingMaterialState } from "@/app/(workspace)/requests/missing/actions";
 import { PagedReferencePicker } from "@/components/ui/paged-reference-picker";
 import { Button } from "@/components/ui/button";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -46,18 +46,31 @@ export function MissingMaterialForm({ choices }: { choices: Choices }) {
   </form>;
 }
 
-export function MissingMaterialResolutionForm({ id, materials }: { id: string; materials: Choices["materials"] }) {
-  const [state, action, pending] = useActionState(resolveMissingMaterialAction, initial);
-  const [resolution, setResolution] = useState<"resolved" | "dismissed">("resolved");
+export function CreateSourcingSiteRequestForm({ id, materials, remaining }: { id: string; materials: Choices["materials"]; remaining: number }) {
+  const [state, action, pending] = useActionState(createSourcingSiteRequestAction, initial);
+  const [key] = useState(() => crypto.randomUUID());
+  const keyInput = useRef<HTMLInputElement>(null);
   const [materialId, setMaterialId] = useState("");
+  useEffect(() => { if (state.ok && keyInput.current) keyInput.current.value = crypto.randomUUID(); }, [state]);
   return <form action={action} className="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">
     <input type="hidden" name="id" value={id} />
-    <input type="hidden" name="action" value={resolution} />
-    <input type="hidden" name="materialId" value={resolution === "resolved" ? materialId : ""} />
-    <FormField label="Decision" htmlFor={`resolution-${id}`}><SelectPicker label="Decision" value={resolution} onValueChange={(value) => setResolution(value as "resolved" | "dismissed")} options={[{ value: "resolved", label: "Material stocked in warehouse" }, { value: "dismissed", label: "Dismiss with reason" }]} /></FormField>
-    {resolution === "resolved" && <FormField label="Catalog material" htmlFor={`catalog-${id}`}><PagedReferencePicker kind="material" label="Catalog material" value={materialId} onValueChange={setMaterialId} initialOptions={materials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} /></FormField>}
-    <FormField label="Resolution note" htmlFor={`note-${id}`} className="sm:col-span-2"><input id={`note-${id}`} name="note" className={fieldControlClass} maxLength={500} required /></FormField>
-    <div className="sm:col-span-2 flex justify-end"><Button type="submit" disabled={pending || (resolution === "resolved" && !materialId)}>{pending ? "Saving…" : "Close report"}</Button></div>
+    <input ref={keyInput} type="hidden" name="key" defaultValue={key} />
+    <input type="hidden" name="materialId" value={materialId} />
+    <FormField label="Catalog material" htmlFor={`catalog-${id}`}><PagedReferencePicker kind="material" label="Catalog material" value={materialId} onValueChange={setMaterialId} initialOptions={materials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} /></FormField>
+    <FormField label={`Quantity for site (up to ${remaining})`} htmlFor={`quantity-${id}`}><input id={`quantity-${id}`} name="quantity" type="number" min="0.0001" max={remaining} step="0.0001" defaultValue={remaining} className={fieldControlClass} required /></FormField>
+    <FormField label="Site request note" htmlFor={`note-${id}`} className="sm:col-span-2"><input id={`note-${id}`} name="note" className={fieldControlClass} maxLength={500} minLength={3} required /></FormField>
+    <p className="text-xs text-slate-500 sm:col-span-2">Receive stock in the source warehouse first. The Engineer must approve this request before delivery to the site.</p>
+    <div className="sm:col-span-2 flex justify-end"><Button type="submit" disabled={pending || !materialId || remaining <= 0}>{pending ? "Saving…" : "Create site request"}</Button></div>
     {state.message && <p role={state.ok ? "status" : "alert"} className={`sm:col-span-2 text-sm ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}
+  </form>;
+}
+
+export function DismissMissingMaterialForm({ id }: { id: string }) {
+  const [state, action, pending] = useActionState(dismissMissingMaterialAction, initial);
+  return <form action={action} className="mt-3 flex flex-wrap items-end gap-3">
+    <input type="hidden" name="id" value={id} />
+    <FormField label="Dismissal reason" htmlFor={`dismiss-${id}`}><input id={`dismiss-${id}`} name="note" className={fieldControlClass} minLength={3} maxLength={500} required /></FormField>
+    <Button type="submit" variant="outline" disabled={pending}>{pending ? "Dismissing…" : "Dismiss report"}</Button>
+    {state.message && <p role={state.ok ? "status" : "alert"} className={`w-full text-sm ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}
   </form>;
 }

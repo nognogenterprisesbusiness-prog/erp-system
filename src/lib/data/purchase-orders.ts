@@ -42,7 +42,7 @@ export async function getPurchaseOrder(id: string) {
     readAllPages((from, to) => supabase.from("purchase_order_lines").select("*").eq("purchase_order_id", id).order("material_code").order("id").range(from, to), "purchase order lines"),
     readAllPages((from, to) => supabase.from("purchase_order_receipts").select("id,purchase_order_id,purchase_order_line_id,inventory_transaction_id,inspection_id,quantity,goods_total_cost,expected_total_cost,cost_variance_reason,delivery_reference,received_on,received_by,created_at").eq("purchase_order_id", id).order("created_at", { ascending: false }).order("id").range(from, to), "purchase receipts"),
     supabase.from("purchase_approval_requests").select("id,decided_at").eq("purchase_order_id", id).maybeSingle(),
-    supabase.from("purchase_procurement_context").select("material_request_id,supplier_quotation_id")
+    supabase.from("purchase_procurement_context").select("material_request_id,supplier_quotation_id,material_sourcing_request_id,sourcing_material_id")
       .eq("idempotency_key", order.idempotency_key).maybeSingle(),
   ]);
   if (approvalResult.error) throw new Error("Unable to load purchase approval history.", { cause: approvalResult.error });

@@ -19,6 +19,9 @@ function purchaseError(error: { code?: string; message: string }) {
   if (error.message.includes("Owner approval is required")) return "Purchases above ₱50,000 must be approved by Admin before an order is issued.";
   if (error.message.includes("Accepted delivery inspection")) return "Inspect and accept the delivered quantity before adding it to inventory.";
   if (error.message.includes("selected quotation")) return "The purchase items must match the selected supplier quotation.";
+  if (error.message.includes("chosen shortage material") || error.message.includes("already sourced as a different material")) return "Choose the catalog material already linked to this out-of-stock report.";
+  if (error.message.includes("Out-of-stock report is unavailable")) return "This out-of-stock report is closed or belongs to another warehouse. Refresh the report.";
+  if (error.message.includes("different shortage sourcing")) return "This purchase was already submitted for another out-of-stock material. Refresh purchases.";
   if (error.message.includes("requires Engineer approval")) return "The linked material request must be approved by its Engineer before purchasing.";
   if (error.message.includes("linked request")) return "Choose only materials from the linked project request.";
   if (error.message.includes("unit price")) return "Enter a price greater than zero for every item.";
@@ -45,14 +48,23 @@ export async function issuePurchaseOrderAction(_: PurchaseActionState, form: For
   const supabase = await createClient();
   const materialRequestId = value(form, "materialRequestId");
   const supplierQuotationId = value(form, "supplierQuotationId");
+  const sourceReportId = value(form, "sourceReportId");
+  const sourceMaterialId = value(form, "sourceMaterialId");
   if ((materialRequestId && !uuidSchema.safeParse(materialRequestId).success) ||
-    (supplierQuotationId && !uuidSchema.safeParse(supplierQuotationId).success)) return fail("The linked request or quotation is invalid.");
-  const { data, error } = await supabase.rpc("submit_procurement_purchase", {
+    (supplierQuotationId && !uuidSchema.safeParse(supplierQuotationId).success) ||
+    (sourceReportId && !uuidSchema.safeParse(sourceReportId).success) ||
+    (sourceMaterialId && !uuidSchema.safeParse(sourceMaterialId).success) ||
+    Boolean(sourceReportId) !== Boolean(sourceMaterialId) ||
+    (sourceReportId && materialRequestId)) return fail("The linked report, request or quotation is invalid.");
+  const purchaseArgs = {
     p_idempotency_key: input.idempotencyKey, p_supplier_id: input.supplierId,
     p_warehouse_id: input.warehouseId, p_ordered_on: input.orderedOn,
     p_expected_on: input.expectedOn || null, p_purpose: input.purpose || null, p_lines: input.lines,
-    p_material_request_id: materialRequestId || null, p_supplier_quotation_id: supplierQuotationId || null,
-  });
+    p_supplier_quotation_id: supplierQuotationId || null,
+  };
+  const { data, error } = sourceReportId
+    ? await supabase.rpc("submit_sourcing_purchase", { ...purchaseArgs, p_report_id: sourceReportId, p_material_id: sourceMaterialId })
+    : await supabase.rpc("submit_procurement_purchase", { ...purchaseArgs, p_material_request_id: materialRequestId || null });
   if (error) return fail(purchaseError(error));
   if (!data || !uuidSchema.safeParse(data.id).success) return fail("The purchase result could not be verified. Refresh purchases before retrying.");
   revalidatePath("/purchase-orders");

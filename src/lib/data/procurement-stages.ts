@@ -43,6 +43,27 @@ export async function getPurchaseSourceRequest(id: string) {
   return { request, lines };
 }
 
+export async function getPurchaseSourceReport(id: string) {
+  if (!uuidSchema.safeParse(id).success) notFound();
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("material_sourcing_requests")
+    .select("id,material_name,requested_quantity,source_warehouse_id,status")
+    .eq("id", id).maybeSingle();
+  if (error) throw new Error("Unable to load the out-of-stock report.", { cause: error });
+  if (!data || data.status !== "submitted") notFound();
+  const [contexts, links] = await Promise.all([
+    supabase.from("purchase_procurement_context").select("sourcing_material_id").eq("material_sourcing_request_id", id),
+    supabase.from("material_sourcing_request_links").select("material_id").eq("material_sourcing_request_id", id),
+  ]);
+  if (contexts.error || links.error) throw new Error("Unable to verify the report's catalog material.");
+  const linkedMaterials = [...new Set([
+    ...(contexts.data ?? []).map((item) => item.sourcing_material_id),
+    ...(links.data ?? []).map((item) => item.material_id),
+  ].filter((value): value is string => Boolean(value)))];
+  if (linkedMaterials.length > 1) throw new Error("The report has conflicting material links.");
+  return { ...data, linkedMaterialId: linkedMaterials[0] ?? null };
+}
+
 export async function getOpenPurchaseInspections(lineIds: string[]) {
   if (!lineIds.length) return [];
   const supabase = await createClient();

@@ -14,22 +14,29 @@ type Choices = Awaited<ReturnType<typeof getPurchaseOrderChoices>>;
 type Line = PurchaseLineInput & { priceEdited?: boolean };
 export type LinkedQuotation = { id: string; reference: string; supplierId: string; lines: { materialId: string; quantity: string; unitPrice: string }[] };
 export type LinkedRequest = { id: string; number: string; warehouseId: string; lines: { materialId: string; quantity: string }[] };
+export type LinkedShortage = { id: string; materialName: string; warehouseId: string; quantity: string; materialId: string | null };
 export type AcceptedInspection = { id: string; delivery_reference: string; inspected_on: string; accepted_quantity: number; delivered_quantity: number; quality_note: string | null };
 const initialState: PurchaseActionState = { message: "" };
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 
 // Purchase like the client's sheet: supplier, warehouse, date, then item,
 // quantity and price per line. The price starts at the supplier's latest price.
-export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initialMaterialId, initialWarehouseId, initialQuantity, quotation, sourceRequest }: { choices: Choices; idempotencyKey: string; today: string; initialMaterialId?: string; initialWarehouseId?: string; initialQuantity?: string; quotation?: LinkedQuotation; sourceRequest?: LinkedRequest }) {
+export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initialMaterialId, initialWarehouseId, initialQuantity, quotation, sourceRequest, sourceReport }: { choices: Choices; idempotencyKey: string; today: string; initialMaterialId?: string; initialWarehouseId?: string; initialQuantity?: string; quotation?: LinkedQuotation; sourceRequest?: LinkedRequest; sourceReport?: LinkedShortage }) {
   const [state, action, pending] = useActionState(issuePurchaseOrderAction, initialState);
   const [supplierId, setSupplierId] = useState(quotation?.supplierId ?? choices.suppliers[0]?.id ?? "");
-  const [warehouseId, setWarehouseId] = useState(sourceRequest?.warehouseId ?? initialWarehouseId ?? choices.warehouses[0]?.id ?? "");
+  const [warehouseId, setWarehouseId] = useState(sourceRequest?.warehouseId ?? sourceReport?.warehouseId ?? initialWarehouseId ?? choices.warehouses[0]?.id ?? "");
   const latestPrice = (supplier: string, materialId: string) => {
     const price = choices.latestPrices[`${supplier}:${materialId}`];
     return price === undefined ? "" : price.toFixed(2);
   };
-  const initialLines = quotation?.lines ?? sourceRequest?.lines.map((line) => ({ ...line, unitPrice: latestPrice(supplierId, line.materialId) })) ?? [{ materialId: initialMaterialId ?? "", quantity: initialQuantity ?? "", unitPrice: initialMaterialId ? latestPrice(supplierId, initialMaterialId) : "" }];
+  const firstMaterialId = sourceReport?.materialId ?? initialMaterialId ?? "";
+  const initialLines = quotation?.lines ?? sourceRequest?.lines.map((line) => ({ ...line, unitPrice: latestPrice(supplierId, line.materialId) })) ?? [{ materialId: firstMaterialId, quantity: initialQuantity ?? "", unitPrice: firstMaterialId ? latestPrice(supplierId, firstMaterialId) : "" }];
   const [lines, setLines] = useState<Line[]>(initialLines.map((line, key) => ({ ...line, key })));
+  const [selectedShortageMaterial, setSelectedShortageMaterial] = useState(firstMaterialId);
+  const shortageMaterialIds = [...new Set(lines.map((line) => line.materialId).filter(Boolean))];
+  const shortageMaterialId = sourceReport?.materialId
+    ? shortageMaterialIds.includes(sourceReport.materialId) ? sourceReport.materialId : ""
+    : shortageMaterialIds.includes(selectedShortageMaterial) ? selectedShortageMaterial : shortageMaterialIds.length === 1 ? shortageMaterialIds[0] : "";
   const [nextKey, setNextKey] = useState(initialLines.length);
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   const updateLine = (key: number, patch: Partial<Line>) => setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
@@ -41,18 +48,21 @@ export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initial
   return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
     <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
     <input type="hidden" name="materialRequestId" value={sourceRequest?.id ?? ""} /><input type="hidden" name="supplierQuotationId" value={quotation?.id ?? ""} />
+    <input type="hidden" name="sourceReportId" value={sourceReport?.id ?? ""} /><input type="hidden" name="sourceMaterialId" value={sourceReport ? shortageMaterialId : ""} />
     <input type="hidden" name="supplierId" value={supplierId} /><input type="hidden" name="warehouseId" value={warehouseId} />
     <input type="hidden" name="lines" value={JSON.stringify(lines.map(({ materialId, quantity, unitPrice }) => ({ materialId, quantity, unitPrice })))} />
     <div className="grid gap-5 md:grid-cols-3">
       <FormField label="Supplier" htmlFor="poSupplier" error={error("supplierId")}><SelectPicker id="poSupplier" className="h-11" label="Supplier" value={supplierId} disabled={Boolean(quotation)} onValueChange={changeSupplier} options={choices.suppliers.map((item) => ({ value: item.id, label: item.supplier_name }))} /></FormField>
-      <FormField label="Deliver to warehouse" htmlFor="poWarehouse" error={error("warehouseId")}><SelectPicker id="poWarehouse" className="h-11" label="Deliver to warehouse" value={warehouseId} disabled={Boolean(sourceRequest)} onValueChange={setWarehouseId} options={choices.warehouses.map((item) => ({ value: item.id, label: item.name }))} /></FormField>
+      <FormField label="Deliver to warehouse" htmlFor="poWarehouse" error={error("warehouseId")}><SelectPicker id="poWarehouse" className="h-11" label="Deliver to warehouse" value={warehouseId} disabled={Boolean(sourceRequest || sourceReport)} onValueChange={setWarehouseId} options={choices.warehouses.map((item) => ({ value: item.id, label: item.name }))} /></FormField>
       <FormField label="Purchase date" htmlFor="orderedOn" error={error("orderedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="orderedOn" name="orderedOn" label="Purchase date" defaultValue={today} allowClear={false} required /></FormField>
     </div>
     {(quotation || sourceRequest) && <p className="mt-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-900">{sourceRequest ? `Linked to material request ${sourceRequest.number}. ` : ""}{quotation ? `Using supplier quotation ${quotation.reference}; its items, quantities and prices are fixed.` : ""}</p>}
+    {sourceReport && <p className="mt-4 rounded-lg bg-sky-50 px-4 py-3 text-sm text-sky-900">For out-of-stock report: {sourceReport.materialName} · {sourceReport.quantity} needed. Receive into this warehouse, then create a site request for Engineer approval.</p>}
     <div className="mt-7"><PurchaseLineItems lines={lines} materials={sourceRequest ? choices.materials.filter((item) => sourceRequest.lines.some((line) => line.materialId === item.id)) : choices.materials} maxLines={50} pending={pending} locked={Boolean(quotation)} idPrefix="po" onAdd={() => { setLines((current) => [...current, { key: nextKey, materialId: "", quantity: "", unitPrice: "" }]); setNextKey((value) => value + 1); }} onRemove={(key) => setLines((current) => current.filter((line) => line.key !== key))} onUpdate={(key, patch) => {
       if (patch.materialId !== undefined) updateLine(key, { ...patch, unitPrice: latestPrice(supplierId, patch.materialId), priceEdited: false });
       else updateLine(key, { ...patch, ...(patch.unitPrice !== undefined ? { priceEdited: true } : {}) });
     }} /></div>
+    {sourceReport && <div className="mt-4"><FormField label="Material that fulfills this report" htmlFor="sourceMaterialId"><SelectPicker id="sourceMaterialId" label="Material that fulfills this report" value={shortageMaterialId} onValueChange={setSelectedShortageMaterial} disabled={Boolean(sourceReport.materialId)} options={choices.materials.filter((item) => shortageMaterialIds.includes(item.id) && (!sourceReport.materialId || item.id === sourceReport.materialId)).map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} /></FormField></div>}
     <details className="mt-4 rounded-lg border border-slate-200 p-3"><summary className="cursor-pointer text-sm font-medium text-slate-700">Expected delivery and notes (optional)</summary><div className="mt-3 grid gap-4 md:grid-cols-2">
       <FormField label="Expected delivery" htmlFor="expectedOn" error={error("expectedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="expectedOn" name="expectedOn" label="Expected delivery" /></FormField>
       <FormField label="Notes" htmlFor="purpose" error={error("purpose")}><input id="purpose" name="purpose" maxLength={500} className={fieldControlClass} /></FormField>
@@ -60,7 +70,7 @@ export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initial
     {error("lines") && <p role="alert" className="mt-2 text-xs text-red-700">{error("lines")}</p>}
     {state.message && <p role="alert" className="mt-5 text-sm text-red-700">{state.message}</p>}
     <p className="mt-4 text-sm text-slate-600">Purchases up to ₱50,000 issue immediately. A larger purchase waits for Admin owner approval before the order and supplier price are posted.</p>
-    <RecordFormControls busy={pending} disabled={!supplierId || !warehouseId || lines.some((line) => !line.materialId || !isValidPurchaseQuantity(line.quantity) || !isValidPurchaseUnitPrice(line.unitPrice))} label="Submit purchase" />
+    <RecordFormControls busy={pending} disabled={!supplierId || !warehouseId || (Boolean(sourceReport) && !shortageMaterialId) || lines.some((line) => !line.materialId || !isValidPurchaseQuantity(line.quantity) || !isValidPurchaseUnitPrice(line.unitPrice))} label="Submit purchase" />
   </form>;
 }
 
