@@ -53,7 +53,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   if (data.selectedLocationId) exportParams.set("location", data.selectedLocationId);
   if (lowStock) exportParams.set("low", "true");
   exportParams.set("status", status === "all" ? "any" : status);
-  const pageFilters = { q: query, location: data.selectedLocationId, scope: data.scope, low: String(lowStock),
+  const pageFilters = { ...(params.type === "sku" ? { type: "sku" } : {}), q: query, location: data.selectedLocationId, scope: data.scope, low: String(lowStock),
     status: status === "all" ? "any" : status };
   const selectedLocationName = data.locations.find((item) => item.id === data.selectedLocationId)?.name;
   const locationName = selectedLocationName ?? inventoryScopeLabel(data.scope);
@@ -70,7 +70,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         { label: "Transaction history", href: "/inventory/transactions" },
       ]} />
     </div>} />
-    <InventoryTypeTabs active="materials" />
+    <InventoryTypeTabs active={params.type === "sku" ? "sku" : "materials"} />
     {movement && movementOptions && <RecordCreateDialog title={movement === "stock-in" ? "Stock in" : "Stock out"} initialOpen hideTrigger closeHref={`/inventory?${exportParams}`}><p className="mb-4 text-sm text-slate-500">{movement === "stock-in" ? "Supplier deliveries should be received through Purchases. This records other receipts with a verified cost." : "Project deliveries use approved requests. This records admin-authorized non-project stock removal."}</p><InventoryMovementForm mode={movement} {...movementOptions} initialMaterialId={material.success ? material.data : ""} />{movement === "stock-in" && <details className="mt-4 text-sm text-slate-500"><summary className="cursor-pointer">Existing stock setup</summary><Link href="/inventory/opening-values" className="mt-2 block font-medium text-cyan-700">Verify starting values without receiving stock again</Link></details>}</RecordCreateDialog>}
     {usageOptions && <RecordCreateDialog title="Record material use" initialOpen hideTrigger closeHref={projectId ? `/projects/${projectId}?tab=materials` : `/inventory?${exportParams}`}>{usageOptions.sites.length ? <SiteConsumptionForm {...usageOptions} initialMaterialId={material.success ? material.data : ""} initialProjectId={projectId} /> : <EmptyState title="No assigned sites available" description="Choose an active assigned project with an inventory site." />}</RecordCreateDialog>}
     <ListFilterBar viewKey="inventory" viewTitle="Inventory">
@@ -83,7 +83,10 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
         <span className="inline-flex h-9 items-center rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 peer-checked:border-[#07152d] peer-checked:bg-[#07152d] peer-checked:text-white peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-600 peer-focus-visible:ring-offset-2">Low stock</span>
       </label>
     </ListFilterBar>
-    <RecordListView storageKey="inventory" title="Inventory" columns={["Material", "Type", "Stock location", stockColumn, "Reserved", "Available", "Minimum", "Status", ...(user.canViewLaborRates ? ["Stock value"] : [])]} rows={data.rows.map((item) => ({ id: item.material_id, cells: [
+    {params.type === "sku" ? <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white" aria-labelledby="sku-catalog-title">
+      <div className="border-b border-slate-100 px-5 py-4"><h2 id="sku-catalog-title" className="font-semibold">SKU catalog</h2><p className="mt-1 text-sm text-slate-500">Each SKU identifies one material. Stock reflects {locationName}.</p></div>
+      {!data.rows.length ? <EmptyState title="No SKUs found" description="Change the search or filters, or add a material to create its SKU." /> : <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><caption className="sr-only">Material SKUs and their inventory details</caption><thead className="bg-slate-50 text-xs font-medium text-slate-500"><tr><th scope="col" className="px-5 py-3">SKU</th><th scope="col" className="px-4 py-3">Material</th><th scope="col" className="px-4 py-3">Unit</th><th scope="col" className="px-4 py-3">Location</th><th scope="col" className="px-4 py-3 text-right">{stockColumn}</th><th scope="col" className="px-4 py-3 text-right">Available</th><th scope="col" className="px-5 py-3">Status</th></tr></thead><tbody className="divide-y divide-slate-100">{data.rows.map((item) => <tr key={item.material_id} className="hover:bg-slate-50/60"><td className="px-5 py-4"><Link href={`/materials/${item.material_id}`} className="font-semibold text-cyan-800 hover:text-cyan-700">{item.code}</Link></td><td className="px-4 py-4 font-medium">{item.name}</td><td className="px-4 py-4">{item.unit_symbol}</td><td className="px-4 py-4">{locationName}</td><td className="px-4 py-4 text-right tabular-nums">{Number(item.quantity_on_hand).toLocaleString("en-PH", { maximumFractionDigits: 4 })} {item.unit_symbol}</td><td className="px-4 py-4 text-right tabular-nums">{Number(item.available_quantity).toLocaleString("en-PH", { maximumFractionDigits: 4 })} {item.unit_symbol}</td><td className="px-5 py-4"><Badge variant={item.is_active ? "active" : "neutral"}>{item.is_active ? "Active" : "Inactive"}</Badge></td></tr>)}</tbody></table></div>}
+    </section> : <RecordListView storageKey="inventory" title="Inventory" columns={["Material", "Type", "Stock location", stockColumn, "Reserved", "Available", "Minimum", "Status", ...(user.canViewLaborRates ? ["Stock value"] : [])]} rows={data.rows.map((item) => ({ id: item.material_id, cells: [
       <div key="record" className="flex min-w-56 items-center gap-3"><RecordThumbnail icon={PackageIcon} name={item.name} photo={item.photo_path ? recordPhotoUrl("materials", item.material_id) : null} /><Link key="material" href={`/materials/${item.material_id}`} className="font-semibold hover:text-cyan-700">{item.code} · {item.name}</Link></div>,
       item.material_kind === "consumable" ? "Consumable" : "Reusable",
       locationName,
@@ -92,7 +95,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       ...(user.canViewLaborRates ? [item.stockValue == null ? "Not valued" : Number(item.stockValue).toLocaleString("en-PH", { style: "currency", currency: "PHP" })] : []),
     ] }))}>
     {data.rows.length === 0 ? <section className="mt-5 rounded-xl border border-slate-200 bg-white"><EmptyState title="No materials found" description="Change the search or filters, or add a material." /></section> : <section className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3" aria-label="Materials and stock balances">{data.rows.map((item) => <InventoryBalanceCard key={item.material_id} name={item.name} sku={item.code} photo={item.photo_path ? recordPhotoUrl("materials", item.material_id) : undefined} unit={item.unit_symbol} active={item.is_active} location={locationName} stockLocations={!data.selectedLocationId ? item.stockLocations : undefined} onHand={item.quantity_on_hand} reserved={item.reserved_quantity} available={item.available_quantity} minimum={item.minimum_stock_level} href={`/materials/${item.material_id}`} />)}</section>}
-    </RecordListView>
+    </RecordListView>}
     <HistoryPagination path="/inventory" page={data.page} count={data.count} pageSize={24} filters={pageFilters} />
   </>;
 }
