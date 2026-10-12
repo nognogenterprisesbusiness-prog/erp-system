@@ -20,7 +20,14 @@ export async function executeSiteCommand(
   switch (command.action) {
     case "report-missing-material": {
       const i = command.input;
-      const r = await client.rpc("submit_material_sourcing_request", {
+      const r = !i.warehouseId || !i.neededOn ? await client.rpc("submit_mobile_material_shortage", {
+        p_key: i.key, p_project_id: i.projectId, p_site_id: i.siteId, p_material_id: i.materialId ?? null,
+        p_name: i.name, p_unit: i.unit, p_quantity: Number(i.quantity), p_reason: i.reason,
+      }) : i.materialId ? await client.rpc("submit_catalog_shortage", {
+        p_key: i.key, p_project_id: i.projectId, p_site_id: i.siteId,
+        p_warehouse_id: i.warehouseId, p_material_id: i.materialId,
+        p_quantity: Number(i.quantity), p_needed_on: i.neededOn, p_reason: i.reason,
+      }) : await client.rpc("submit_material_sourcing_request", {
         p_key: i.key, p_project_id: i.projectId, p_site_id: i.siteId,
         p_warehouse_id: i.warehouseId, p_material_name: i.name,
         p_unit_name: i.unit, p_quantity: Number(i.quantity),
@@ -31,7 +38,9 @@ export async function executeSiteCommand(
     }
     case "request-materials": {
       const i = command.input;
-      const r = await client.rpc("submit_material_request", {
+      const r = !i.warehouseId || !i.requiredDate ? await client.rpc("submit_mobile_material_request", {
+        p_key: i.idempotencyKey, p_project_id: i.projectId, p_site_id: i.siteId, p_purpose: i.purpose, p_lines: i.lines,
+      }) : await client.rpc("submit_material_request", {
         p_idempotency_key: i.idempotencyKey,
         p_project_id: i.projectId,
         p_project_site_id: i.siteId,

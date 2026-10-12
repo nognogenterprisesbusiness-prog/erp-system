@@ -6,6 +6,7 @@ import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import { PagedReferencePicker } from "@/components/ui/paged-reference-picker";
 import type { ReferenceChoice } from "@/app/(workspace)/references/actions";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
+import { SelectPicker } from "@/components/ui/select-picker";
 import { todayInManila } from "@/lib/date";
 
 type Option = { id: string; code: string; name: string; base_unit_id: string };
@@ -21,6 +22,10 @@ export function SiteConsumptionForm({ projects, materials, units, sites, balance
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [projectId, setProjectId] = useState(() => projects.some((project) => project.id === initialProjectId) ? initialProjectId : "");
   const [siteId, setSiteId] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [reference, setReference] = useState("");
+  const [date, setDate] = useState(todayInManila);
+  const [remarks, setRemarks] = useState("");
   const [picked, setPicked] = useState<ReferenceChoice>();
   const [materialId, setMaterialId] = useState("");
   const projectSites = sites.filter((site) => site.projectId === projectId);
@@ -37,29 +42,25 @@ export function SiteConsumptionForm({ projects, materials, units, sites, balance
     <input type="hidden" name="unitId" value={unit?.id ?? ""} />
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="Project" htmlFor="projectId" error={error("projectId")}>
-        <select id="projectId" name="projectId" value={projectId} onChange={(event) => { setProjectId(event.target.value); setSiteId(""); setMaterialId(""); setPicked(undefined); }} className={fieldControlClass} required>
-          <option value="" disabled>Select project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}
-        </select>
+        <SelectPicker id="projectId" name="projectId" label="Project" value={projectId} onValueChange={(next) => { setProjectId(next); setSiteId(""); setMaterialId(""); setPicked(undefined); }} options={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))} required disabled={pending} />
       </FormField>
       <FormField label="Project site" htmlFor="siteLocationId" error={error("siteLocationId")}>
-        <select id="siteLocationId" name="siteLocationId" value={siteId} onChange={(event) => { const nextSite = event.target.value; setSiteId(nextSite); setPicked(undefined); setMaterialId(balances.some((balance) => balance.inventory_location_id === nextSite && balance.material_id === initialMaterialId && balance.available_quantity > 0) ? initialMaterialId : ""); }} className={fieldControlClass} required>
-          <option value="" disabled>Select site</option>{projectSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
-        </select>
+        <SelectPicker id="siteLocationId" name="siteLocationId" label="Project site" value={siteId} onValueChange={(nextSite) => { setSiteId(nextSite); setPicked(undefined); setMaterialId(balances.some((balance) => balance.inventory_location_id === nextSite && balance.material_id === initialMaterialId && balance.available_quantity > 0) ? initialMaterialId : ""); }} options={projectSites.map((site) => ({ value: site.id, label: site.name }))} required disabled={pending} />
       </FormField>
       <FormField label="Material" htmlFor="materialId" error={error("materialId")}>
         <input type="hidden" name="materialId" value={materialId} /><PagedReferencePicker key={siteId} kind="site_material" projectId={siteId} label="Site material" value={materialId} onValueChange={setMaterialId} onPick={setPicked} initialOptions={options.map((m) => ({ value: m.id, label: `${m.code} · ${m.name}`, unitId: m.base_unit_id, availableQuantity: siteBalances.find((b) => b.material_id === m.id)?.available_quantity }))} />
       </FormField>
       <FormField label={unit ? "Quantity (" + unit.symbol + ", " + available + " available)" : "Quantity"} htmlFor="quantity" error={error("quantity")}>
-        <input id="quantity" name="quantity" type="number" min="0.0001" max={available || undefined} step="0.0001" inputMode="decimal" className={fieldControlClass} required />
+        <input id="quantity" name="quantity" value={quantity} onChange={(event) => setQuantity(event.target.value)} disabled={pending} type="number" min="0.0001" max={available || undefined} step="0.0001" inputMode="decimal" className={fieldControlClass} required />
       </FormField>
       <FormField label="Daily report / usage reference" htmlFor="referenceNumber" error={error("referenceNumber")}>
-        <input id="referenceNumber" name="referenceNumber" minLength={2} maxLength={120} className={fieldControlClass} required />
+        <input id="referenceNumber" name="referenceNumber" value={reference} onChange={(event) => setReference(event.target.value)} disabled={pending} minLength={2} maxLength={120} className={fieldControlClass} required />
       </FormField>
       <FormField label="Date used" htmlFor="transactionDate" error={error("transactionDate")}>
-        <input id="transactionDate" name="transactionDate" type="date" defaultValue={todayInManila()} className={fieldControlClass} required />
+        <input id="transactionDate" name="transactionDate" type="date" value={date} onChange={(event) => setDate(event.target.value)} disabled={pending} className={fieldControlClass} required />
       </FormField>
       <FormField label="Usage note" htmlFor="remarks" className="md:col-span-2" error={error("remarks")}>
-        <textarea id="remarks" name="remarks" rows={3} className={fieldControlClass + " h-auto py-3"} />
+        <textarea id="remarks" name="remarks" value={remarks} onChange={(event) => setRemarks(event.target.value)} disabled={pending} rows={3} className={fieldControlClass + " h-auto py-3"} />
       </FormField>
     </div>
     {!state.ok && state.message && <p role="alert" className="mt-5 text-sm text-red-600">{state.message}</p>}

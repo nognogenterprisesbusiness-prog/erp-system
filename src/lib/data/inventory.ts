@@ -248,24 +248,6 @@ export async function getInventoryTransfers(page = 1) {
   return { count: count ?? 0, rows: (transfers ?? []).map((transfer) => { const item = itemMap.get(transfer.id); return { ...transfer, item, requestBound: item ? linkMap.has(item.id) : false, material: item ? { ...materialMap.get(item.material_id), unitSymbol: unitMap.get(item.unit_of_measure_id) ?? "" } : undefined, source: locationMap.get(transfer.source_location_id), destination: locationMap.get(transfer.destination_location_id) }; }) };
 }
 
-export async function getUnvaluedOpeningStock() {
-  const supabase = await createClient();
-  const [valuations, materials, locations] = await Promise.all([
-    readAllPages((from, to) => supabase.from("inventory_valuations").select("material_id,inventory_location_id,quantity_on_hand").is("total_value", null).gt("quantity_on_hand", 0).order("material_id").order("inventory_location_id").range(from, to), "unvalued opening stock"),
-    getMaterials({ status: "all", includeArchived: true }), getLocationViews(),
-  ]);
-  const materialMap = new Map(materials.map((item) => [item.id, item]));
-  const locationMap = new Map(locations.map((item) => [item.id, item]));
-  return valuations.map((item) => ({ ...item, material: materialMap.get(item.material_id), location: locationMap.get(item.inventory_location_id) }));
-}
-
-export async function getUnvaluedLegacyTransitQueue() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_unvalued_legacy_transit_queue");
-  if (error) throw new Error("Unable to load legacy in-transit reconciliation queue.");
-  return data ?? [];
-}
-
 export async function getSiteConsumptionOptions() {
   const supabase = await createClient();
   const [options, projects] = await Promise.all([

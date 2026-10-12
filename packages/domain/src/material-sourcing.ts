@@ -6,6 +6,7 @@ export const materialSourcingSchema = z.object({
   projectId: uuidSchema,
   siteId: uuidSchema,
   warehouseId: uuidSchema,
+  materialId: uuidSchema.optional(),
   name: z.string().trim().min(2).max(160),
   unit: z.string().trim().min(1).max(40),
   quantity: z.string().trim().regex(/^\d+(?:\.\d{1,4})?$/).refine((value) => Number(value) > 0 && Number(value) <= 1_000_000_000),

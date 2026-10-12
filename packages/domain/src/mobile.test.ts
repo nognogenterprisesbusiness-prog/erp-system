@@ -92,6 +92,8 @@ test("missing material reports accept a scoped request and reject malformed quan
     reason: "Not available in the source warehouse",
   };
   assert.equal(mobileCommandSchema.safeParse({ action: "report-missing-material", input }).success, true);
+  assert.equal(mobileCommandSchema.safeParse({ action: "report-missing-material", input: { ...input, materialId: randomUUID() } }).success, true);
+  assert.equal(mobileCommandSchema.safeParse({ action: "report-missing-material", input: { ...input, materialId: "cement" } }).success, false);
   for (const quantity of ["0", "-1", "1.12345", "1000000001"])
     assert.equal(mobileCommandSchema.safeParse({ action: "report-missing-material", input: { ...input, quantity } }).success, false);
 });
@@ -129,4 +131,45 @@ test("material history marks reversals without exposing costs", () => {
   assert.equal(result.items[0].reversed, true);
   assert.equal("cost_total" in result.items[0], false);
   assert.equal(mobileResponseSchemas["inventory-history"].safeParse({ items: [{ ...record, reversed: undefined }], count: 1, page: 1, pageSize: 20 }).success, false);
+});
+
+test("request catalog retains zero-stock identities and quantity-only warehouse choices", () => {
+  const material = {
+    id: randomUUID(), code: "CEM-001", name: "Cement", unit_id: randomUUID(), unit: "bag",
+    photo_path: null, available_quantity: 0,
+    warehouses: [{ id: randomUUID(), name: "Main warehouse", available_quantity: 0, unit_price: 500 }],
+    cost_total: 0,
+  };
+  const result = mobileResponseSchemas["request-catalog"].parse({ items: [material], count: 1, page: 1, pageSize: 20 });
+  assert.equal(result.items[0].code, "CEM-001");
+  assert.equal(result.items[0].name, "Cement");
+  assert.equal(result.items[0].available_quantity, 0);
+  assert.equal("cost_total" in result.items[0], false);
+  assert.equal("unit_price" in result.items[0].warehouses[0], false);
+});
+
+test("history provenance supports mixed suppliers and strips prices from every source", () => {
+  const record = {
+    id: randomUUID(), transaction_type: "MATERIAL_CONSUMPTION", transaction_date: "2026-10-12",
+    name: "Cement", quantity: 3, unit: "bag", remarks: null, reversed: false, direction: "Out",
+    reference: "USE-001", location_name: null, request_id: null, site_purchase_id: null,
+    sources: [
+      { name: "City Hardware", reference: "PO-001", quantity: 2, cost_total: 200 },
+      { name: "Other Hardware", reference: "SP-001", quantity: 1, unit_price: 120 },
+    ],
+  };
+  const result = mobileResponseSchemas["inventory-history"].parse({ items: [record], count: 1, page: 1, pageSize: 20 });
+  assert.deepEqual(result.items[0].sources, [
+    { name: "City Hardware", reference: "PO-001", quantity: 2 },
+    { name: "Other Hardware", reference: "SP-001", quantity: 1 },
+  ]);
+});
+
+test("mobile requests allow server dates and later warehouse assignment while rejecting duplicate lines or incomplete legacy fields", () => {
+  const input = { idempotencyKey: randomUUID(), projectId: randomUUID(), siteId: randomUUID(), purpose: "Footing work", lines: [{ materialId: randomUUID(), quantity: "3" }] };
+  const parse = (data: unknown) => mobileCommandSchema.safeParse({ action: "request-materials", input: data });
+  assert.equal(parse(input).success, true);
+  assert.equal(parse({ ...input, lines: [...input.lines, ...input.lines] }).success, false);
+  assert.equal(parse({ ...input, warehouseId: randomUUID() }).success, false);
+  assert.equal(parse({ ...input, warehouseId: randomUUID(), requiredDate: "2026-10-12" }).success, true);
 });

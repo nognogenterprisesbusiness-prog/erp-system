@@ -1,10 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { legacyTransitValueInputSchema, openingValueInputSchema, reversalInputSchema, siteConsumptionInputSchema, stockInInputSchema, stockOutInputSchema, transferInputSchema, transferReceiptInputSchema, transferVarianceInputSchema } from "@nognog/domain";
+import { reversalInputSchema, siteConsumptionInputSchema, stockInInputSchema, stockOutInputSchema, transferInputSchema, transferReceiptInputSchema, transferVarianceInputSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { todayInManila } from "@/lib/date";
 import { executeSiteCommand } from "@/lib/mobile/commands";
 
 export type InventoryActionState = ActionResult<{ id: string }>;
@@ -20,7 +21,7 @@ function friendlyInventoryError(error: { code?: string; message: string }) {
   if (error.message.includes("approved request or administrator exception")) return "Site deliveries require an approved request. An administrator can post a documented exception.";
   if (error.message.includes("administrator exception reason")) return "Enter an administrator exception reason for direct site dispatch.";
   if (error.message.includes("request-bound movements")) return "Request-bound movements need a dedicated correction workflow.";
-  if (error.message.includes("verified value") || error.message.includes("verified opening value")) return "An administrator must verify this stock's opening value before it can move.";
+  if (error.message.includes("verified value") || error.message.includes("verified opening value")) return "Stock cost requires documented reconciliation. Ask an administrator to investigate.";
   if (error.message.includes("insufficient site stock")) return "There is not enough available stock at this project site.";
   if (error.message.includes("quantity and valuation do not reconcile")) return "Stock and valuation do not reconcile. Ask an administrator to investigate.";
   if (error.message.includes("reverse downstream") || error.message.includes("original receipt batch has been used")) return "Restore used or reserved receipt stock by correcting downstream postings first.";
@@ -31,57 +32,24 @@ function friendlyInventoryError(error: { code?: string; message: string }) {
 async function requireOperator() { const user = await requireUser(); if (!user.canOperateInventory) throw new Error("Not authorized"); return user; }
 const basePayload = (form: FormData) => ({ idempotencyKey: value(form, "idempotencyKey"), materialId: value(form, "materialId"), quantity: value(form, "quantity"), unitId: value(form, "unitId"), referenceNumber: value(form, "referenceNumber"), transactionDate: value(form, "transactionDate"), remarks: value(form, "remarks") });
 
+const webPayload = (form: FormData) => ({ ...basePayload(form), referenceNumber: "Automatic", transactionDate: todayInManila() });
+async function postWebMovement(mode: "stock-in" | "stock-out" | "transfer" | "return", input: { idempotencyKey: string; referenceNumber: string; transactionDate: string; materialId: string; quantity: string; unitId: string; remarks?: string | null; sourceLocationId?: string; destinationLocationId?: string; totalCost?: string }) {
+  const supabase = await createClient();
+  const prepared = await supabase.rpc("prepare_web_inventory_movement", { p_key: input.idempotencyKey, p_mode: mode });
+  if (prepared.error) return { data: null, error: prepared.error };
+  const details = { materialId: input.materialId, quantity: input.quantity, unitId: input.unitId, remarks: input.remarks ?? "", ...(input.sourceLocationId ? { sourceLocationId: input.sourceLocationId } : {}), ...(input.destinationLocationId ? { destinationLocationId: input.destinationLocationId } : {}), ...(input.totalCost ? { totalCost: input.totalCost } : {}) };
+  return supabase.rpc("post_web_inventory_movement", { p_key: input.idempotencyKey, p_mode: mode, p_input: details });
+}
+
 export async function stockInAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
   const user = await requireUser();
   if (!user.canManage) return failure("Only an administrator can record a non-purchase stock receipt.");
-  const parsed = stockInInputSchema.safeParse({ ...basePayload(form), destinationLocationId: value(form, "destinationLocationId"), totalCost: value(form, "totalCost") });
+  const parsed = stockInInputSchema.safeParse({ ...webPayload(form), destinationLocationId: value(form, "destinationLocationId"), totalCost: value(form, "totalCost") });
   if (!parsed.success) return failure("Review the stock-in details.", parsed.error.flatten().fieldErrors);
-  const input = parsed.data; const supabase = await createClient();
-  const { data, error } = await supabase.rpc("post_valued_stock_in", { p_idempotency_key: input.idempotencyKey, p_material_id: input.materialId, p_destination_location_id: input.destinationLocationId, p_quantity: input.quantity, p_unit_id: input.unitId, p_total_cost: input.totalCost, p_reference_document: input.referenceNumber, p_transaction_date: input.transactionDate, p_remarks: input.remarks || null });
+  const input = parsed.data;
+  const { data, error } = await postWebMovement("stock-in", input);
   if (error) return failure(friendlyInventoryError(error));
   revalidatePath("/inventory"); revalidatePath("/inventory/transactions"); redirect(`/inventory/transactions?posted=${data}`);
-}
-
-export async function verifyOpeningValueAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
-  const user = await requireUser();
-  if (!user.canManage) return failure("Only an administrator can verify opening stock values.");
-  const parsed = openingValueInputSchema.safeParse({
-    idempotencyKey: value(form, "idempotencyKey"), materialId: value(form, "materialId"),
-    locationId: value(form, "locationId"), quantity: value(form, "quantity"),
-    totalValue: value(form, "totalValue"), reason: value(form, "reason"),
-  });
-  if (!parsed.success) return failure("Review the verified quantity and total value.", parsed.error.flatten().fieldErrors);
-  const input = parsed.data;
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("verify_opening_stock_value", {
-    p_idempotency_key: input.idempotencyKey, p_material_id: input.materialId,
-    p_location_id: input.locationId, p_quantity: input.quantity,
-    p_total_value: input.totalValue, p_reason: input.reason,
-  });
-  if (error) return failure(friendlyInventoryError(error));
-  revalidatePath("/inventory"); revalidatePath("/inventory/opening-values");
-  redirect(`/inventory/opening-values?verified=${data}`);
-}
-
-export async function verifyLegacyTransitValueAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
-  const user = await requireUser();
-  if (!user.canManage) return failure("Only an administrator can verify historical in-transit values.");
-  const parsed = legacyTransitValueInputSchema.safeParse({
-    idempotencyKey: value(form, "idempotencyKey"), transferItemId: value(form, "transferItemId"),
-    dispatchedTotalCost: value(form, "dispatchedTotalCost"), receivedTotalCost: value(form, "receivedTotalCost"),
-    supportingReference: value(form, "supportingReference"), reason: value(form, "reason"),
-  });
-  if (!parsed.success) return failure("Review the historical transit values.", parsed.error.flatten().fieldErrors);
-  const input = parsed.data;
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("verify_legacy_transit_value", {
-    p_idempotency_key: input.idempotencyKey, p_transfer_item_id: input.transferItemId,
-    p_dispatched_total_cost: input.dispatchedTotalCost, p_received_total_cost: input.receivedTotalCost,
-    p_supporting_reference: input.supportingReference, p_reason: input.reason,
-  });
-  if (error) return failure(friendlyInventoryError(error));
-  revalidatePath("/inventory/opening-values"); revalidatePath("/inventory/transfers");
-  redirect(`/inventory/opening-values?transit=${data}`);
 }
 
 export async function consumeSiteMaterialAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
@@ -121,20 +89,20 @@ export async function approveTransferVarianceAction(_: InventoryActionState, for
 
 export async function stockOutAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
   const user = await requireUser(); if (!user.canManage) return failure("Only an administrator can approve a direct stock-out exception.");
-  const parsed = stockOutInputSchema.safeParse({ ...basePayload(form), sourceLocationId: value(form, "sourceLocationId") });
+  const parsed = stockOutInputSchema.safeParse({ ...webPayload(form), sourceLocationId: value(form, "sourceLocationId") });
   if (!parsed.success) return failure("Review the stock-out details.", parsed.error.flatten().fieldErrors);
-  const input = parsed.data; const supabase = await createClient();
-  const { data, error } = await supabase.rpc("post_stock_out", { p_idempotency_key: input.idempotencyKey, p_material_id: input.materialId, p_source_location_id: input.sourceLocationId, p_quantity: input.quantity, p_unit_id: input.unitId, p_reference_document: input.referenceNumber, p_transaction_date: input.transactionDate, p_project_id: null, p_remarks: input.remarks || null });
+  const input = parsed.data;
+  const { data, error } = await postWebMovement("stock-out", input);
   if (error) return failure(friendlyInventoryError(error));
   revalidatePath("/inventory"); revalidatePath("/inventory/transactions"); redirect(`/inventory/transactions?posted=${data}`);
 }
 
 export async function dispatchTransferAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
   try { await requireOperator(); } catch { return failure("You do not have permission to dispatch stock."); }
-  const parsed = transferInputSchema.safeParse({ ...basePayload(form), sourceLocationId: value(form, "sourceLocationId"), destinationLocationId: value(form, "destinationLocationId") });
+  const parsed = transferInputSchema.safeParse({ ...webPayload(form), sourceLocationId: value(form, "sourceLocationId"), destinationLocationId: value(form, "destinationLocationId") });
   if (!parsed.success) return failure("Review the transfer details.", parsed.error.flatten().fieldErrors);
-  const input = parsed.data; const supabase = await createClient();
-  const { data, error } = await supabase.rpc("dispatch_inventory_transfer", { p_idempotency_key: input.idempotencyKey, p_material_id: input.materialId, p_source_location_id: input.sourceLocationId, p_destination_location_id: input.destinationLocationId, p_quantity: input.quantity, p_unit_id: input.unitId, p_external_reference: input.referenceNumber, p_transaction_date: input.transactionDate, p_remarks: input.remarks || null });
+  const input = parsed.data;
+  const { data, error } = await postWebMovement("transfer", input);
   if (error) return failure(friendlyInventoryError(error));
   revalidatePath("/inventory"); revalidatePath("/inventory/transfers"); revalidatePath("/inventory/transactions"); redirect(`/inventory/transfers?posted=${data}`);
 }
@@ -142,7 +110,7 @@ export async function dispatchTransferAction(_: InventoryActionState, form: Form
 export async function returnSiteStockAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
   const user = await requireUser();
   if (!user.canManage) return failure("Only an administrator can authorize unused site stock returns.");
-  const parsed = transferInputSchema.safeParse({ ...basePayload(form), sourceLocationId: value(form, "sourceLocationId"), destinationLocationId: value(form, "destinationLocationId") });
+  const parsed = transferInputSchema.safeParse({ ...webPayload(form), sourceLocationId: value(form, "sourceLocationId"), destinationLocationId: value(form, "destinationLocationId") });
   if (!parsed.success) return failure("Review the site return details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   if (!input.remarks || input.remarks.trim().length < 3) return failure("Enter a return reason of at least three characters.", { remarks: ["Return reason is required."] });
@@ -152,12 +120,7 @@ export async function returnSiteStockAction(_: InventoryActionState, form: FormD
   if (locationError || locations?.find((item) => item.id === input.sourceLocationId)?.location_type !== "project_site"
     || locations?.find((item) => item.id === input.destinationLocationId)?.location_type !== "warehouse")
     return failure("Choose a project site and a receiving warehouse.");
-  const { data, error } = await supabase.rpc("dispatch_inventory_transfer", {
-    p_idempotency_key: input.idempotencyKey, p_material_id: input.materialId,
-    p_source_location_id: input.sourceLocationId, p_destination_location_id: input.destinationLocationId,
-    p_quantity: input.quantity, p_unit_id: input.unitId, p_external_reference: input.referenceNumber,
-    p_transaction_date: input.transactionDate, p_remarks: input.remarks,
-  });
+  const { data, error } = await postWebMovement("return", input);
   if (error) return failure(friendlyInventoryError(error));
   revalidatePath("/inventory"); revalidatePath("/inventory/transfers"); revalidatePath("/inventory/transactions");
   redirect(`/inventory/transfers?posted=${data}`);

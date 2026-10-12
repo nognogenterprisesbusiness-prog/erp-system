@@ -79,6 +79,7 @@ const request = z.object({
   status: z.string(),
   requested_by: uuidSchema,
   source_warehouse_name: z.string(),
+  source_warehouse_id: uuidSchema.nullable().optional(),
   requested_at: z.string(),
   decision_reason: text,
 });
@@ -181,6 +182,11 @@ export const mobileResponseSchemas = {
       available_quantity: number,
     }),
   ),
+  "request-catalog": page(z.object({
+    id: uuidSchema, code: z.string(), name: z.string(), unit_id: uuidSchema,
+    unit: z.string(), photo_path: text, available_quantity: number,
+    warehouses: z.array(z.object({ id: uuidSchema, name: z.string(), available_quantity: number })),
+  })),
   inventory: page(
     z.object({
       id: uuidSchema,
@@ -205,6 +211,12 @@ export const mobileResponseSchemas = {
       unit: z.string(),
       remarks: text,
       reversed: z.boolean(),
+      direction: z.enum(["In", "Out"]).optional(),
+      reference: z.string().optional(),
+      location_name: text.optional(),
+      sources: z.array(z.object({ name: z.string(), reference: text, quantity: number })).optional(),
+      request_id: uuidSchema.nullable().optional(),
+      site_purchase_id: uuidSchema.nullable().optional(),
     }),
   ),
   equipment: page(
@@ -359,8 +371,8 @@ export const idempotentEquipmentRequestSchema = z.object({
 const command = <A extends string, T extends z.ZodType>(action: A, input: T) =>
   z.object({ action: z.literal(action), input });
 export const mobileCommandSchema = z.discriminatedUnion("action", [
-  command("request-materials", submitMaterialRequestSchema),
-  command("report-missing-material", materialSourcingSchema),
+  command("request-materials", z.object({ ...submitMaterialRequestSchema.shape, warehouseId: uuidSchema.optional(), requiredDate: z.iso.date().optional() }).refine((i) => new Set(i.lines.map((l) => l.materialId)).size === i.lines.length, { path: ["lines"], message: "Each material may appear only once." }).refine((i) => Boolean(i.warehouseId) === Boolean(i.requiredDate), { message: "Provide both warehouse and date, or let Admin assign them." })),
+  command("report-missing-material", materialSourcingSchema.extend({ warehouseId: uuidSchema.optional(), neededOn: z.iso.date().optional() }).refine((i) => Boolean(i.warehouseId) === Boolean(i.neededOn), { message: "Provide both warehouse and date, or let Admin assign them." })),
   command("decide-materials", decideMaterialRequestSchema),
   command("receive-materials", receiveRequestWithInspectionSchema),
   command("cancel-materials", cancelMaterialRequestSchema),

@@ -16,8 +16,8 @@ export type WarehouseStatus = "active" | "inactive";
 export type MaterialKind = "consumable" | "reusable";
 export type InventoryTransactionType = "OPENING_BALANCE" | "STOCK_IN" | "STOCK_OUT" | "WAREHOUSE_TRANSFER" | "SITE_TRANSFER" | "MATERIAL_CONSUMPTION" | "MATERIAL_RETURN" | "INVENTORY_ADJUSTMENT" | "REVERSAL";
 export type MaterialRequestStatus = "submitted" | "approved" | "partially_approved" | "rejected" | "cancelled";
-export type MaterialRequestRow = { id: string; request_number: string; submission_key: string; submission_hash: string; project_id: string; project_site_id: string; source_warehouse_id: string; source_warehouse_name: string; required_date: string; purpose: string; status: MaterialRequestStatus; requested_by: string; requested_at: string; decided_by: string | null; decided_at: string | null; decision_reason: string | null };
-export type MaterialSourcingRequestRow = { id: string; idempotency_key: string; payload_hash: string; project_id: string; project_site_id: string; source_warehouse_id: string; project_name: string; site_name: string; warehouse_name: string; material_name: string; unit_name: string; requested_quantity: number; needed_on: string; reason: string; status: "submitted" | "resolved" | "dismissed"; catalog_material_id: string | null; resolution_note: string | null; requested_by: string; resolved_by: string | null; resolved_at: string | null; created_at: string };
+export type MaterialRequestRow = { id: string; request_number: string; submission_key: string; submission_hash: string; project_id: string; project_site_id: string; source_warehouse_id: string | null; source_warehouse_name: string; required_date: string; purpose: string; status: MaterialRequestStatus; requested_by: string; requested_at: string; decided_by: string | null; decided_at: string | null; decision_reason: string | null };
+export type MaterialSourcingRequestRow = { id: string; idempotency_key: string; payload_hash: string; project_id: string; project_site_id: string; source_warehouse_id: string | null; project_name: string; site_name: string; warehouse_name: string; material_name: string; unit_name: string; requested_quantity: number; needed_on: string; reason: string; status: "submitted" | "resolved" | "dismissed"; catalog_material_id: string | null; reported_material_id: string | null; resolution_note: string | null; requested_by: string; resolved_by: string | null; resolved_at: string | null; created_at: string };
 export type MaterialRequestLineRow = { id: string; request_id: string; material_id: string; unit_of_measure_id: string; requested_quantity: number; approved_quantity: number };
 export type MaterialRequestReservationRow = { id: string; request_line_id: string; material_id: string; inventory_location_id: string; original_quantity: number; remaining_quantity: number; status: "active" | "fulfilled" | "released"; reserved_by: string; reserved_at: string; released_at: string | null };
 export type MaterialRequestReservationEventRow = { id: string; reservation_id: string; event_type: "reserved" | "dispatched" | "released"; quantity: number; actor_id: string; occurred_at: string };
@@ -80,7 +80,6 @@ export type InventoryTransferItemRow = { id: string; transfer_id: string; materi
 export type InventoryTransferVarianceRow = { id: string; transfer_item_id: string; quantity: number; cost_total: number; reason: string; approved_by: string; approved_at: string };
 export type InventoryTransactionRow = { id: string; material_id: string; quantity: number; unit_of_measure_id: string; source_location_id: string | null; destination_location_id: string | null; transaction_type: InventoryTransactionType; transfer_id: string | null; transfer_item_id: string | null; transfer_phase: "dispatch" | "receipt" | null; reference_document: string; project_id: string | null; responsible_user_id: string; transaction_date: string; remarks: string | null; reversal_of: string | null; cost_total: number | null; cost_unit: number | null; created_at: string };
 export type InventoryValuationRow = { id: string; material_id: string; inventory_location_id: string; quantity_on_hand: number; total_value: number | null; updated_at: string };
-export type InventoryOpeningValueRow = { id: string; material_id: string; inventory_location_id: string; verified_quantity: number; verified_total_value: number; reason: string; verified_by: string; verified_at: string };
 export type AssetLocationRow = { id: string; location_kind: AssetLocationKind; inventory_location_id: string | null; name: string | null; address: string | null; created_by: string | null; updated_by: string | null; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
 export type AssetRow = { photo_path: string | null; id: string; asset_kind: AssetKind; code: string; name: string; description: string | null; category_id: string | null; brand: string | null; model: string | null; acquisition_date: string | null; ownership_type: AssetOwnershipType; status: AssetStatus; current_location_id: string; condition_notes: string | null; created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
 export type EquipmentDetailRow = { asset_id: string; equipment_type: string; serial_number: string; acquisition_cost: number; sku: string | null };
@@ -133,12 +132,11 @@ export type ProjectMaterialPlanRow = { id: string; project_id: string; project_s
 export type ProjectMaterialPlanView = { id: string; project_site_id: string; site_name: string; warehouse_id: string; warehouse_name: string; material_id: string; material_code: string; material_name: string; unit_symbol: string; planned_quantity: number; required_on: string; note: string; consumed_quantity: number; site_on_hand: number; warehouse_available: number; outstanding_request_quantity: number; quantity_to_request: number; procurement_shortage: number };
 export type ProjectMaterialEstimateView = { plan_line_id: string; unit_cost: number | null; price_source: "supplier" | "stock" | null; estimated_cost: number | null };
 export type WarehouseReceivableLine = { line_id: string; order_id: string; po_number: string; supplier_name: string; warehouse_id: string; warehouse_name: string; ordered_on: string; expected_on: string | null; material_code: string; material_name: string; unit_symbol: string; ordered_quantity: number; received_quantity: number; remaining_quantity: number; total_count: number };
+export type PurchaseOverviewRow = Pick<PurchaseLineRow, "source" | "purchase_id" | "purchase_number" | "purchase_date" | "supplier_id" | "supplier_name" | "supplier_contact" | "payment_term" | "location_name" | "delivery_stage" | "payment_stage" | "total_count"> & { item_count: number; item_names: string; order_total: number };
 export type PurchaseLineRow = { source: "purchase_order" | "site_purchase"; line_id: string; purchase_id: string; purchase_number: string; purchase_date: string; material_name: string; material_code: string; quantity: number; received_quantity: number; unit_symbol: string; unit_price: number; line_total: number; supplier_id: string; supplier_name: string; supplier_contact: string | null; payment_term: string | null; location_name: string | null; delivery_stage: "waiting_approval" | "ordered" | "partly_received" | "received" | "rejected" | "cancelled"; payment_stage: "unpaid" | "partly_paid" | "paid" | "to_reimburse" | "none"; total_count: number };
 export type MaterialCostBatchRow = { location_id: string; location_name: string; location_type: "warehouse" | "project_site"; batch_number: number; batch_date: string; unit_cost: number; remaining_quantity: number; remaining_value: number; use_order: number; supplier_name: string | null };
 export type ProjectProgressRow = { id: string; project_id: string; project_site_id: string; daily_report_id: string; progress_date: string; completion_percent: number; summary: string; recorded_by: string; recorded_at: string };
 export type InventoryStockCountRow = { id: string; idempotency_key: string; material_id: string; inventory_location_id: string; expected_quantity: number; expected_reserved: number; expected_value: number; counted_quantity: number; reason_type: "physical_count" | "damaged" | "missing"; reason: string; status: "pending" | "approved" | "rejected"; counted_by: string; counted_at: string; decided_by: string | null; decided_at: string | null; decision_note: string | null; transaction_id: string | null };
-export type LegacyTransitValueRow = { id: string; transfer_item_id: string; verified_dispatched_total_cost: number; verified_received_total_cost: number; supporting_reference: string; reason: string; verified_by: string; verified_at: string; idempotency_key: string; command_payload: Json };
-export type LegacyTransitQueueRow = { transfer_item_id: string; transfer_number: string; material_code: string; material_name: string; source_name: string; destination_name: string; dispatched_quantity: number; received_quantity: number; remaining_quantity: number };
 export type DailyReportRow = { id: string; report_number: string; project_id: string; project_site_id: string; report_date: string; prepared_by: string; status: DailyReportStatus; weather_conditions: string | null; work_description: string; accomplishments: string; issues_encountered: string | null; site_observations: string | null; general_remarks: string | null; photo_path: string | null; revision: number; created_at: string; updated_at: string; submitted_at: string | null; approved_at: string | null; approved_by: string | null };
 export type DailyReportEventRow = { id: string; report_id: string; revision: number; event_type: DailyReportEventType; actor_id: string; report_snapshot: Json; occurred_at: string };
 
@@ -171,7 +169,6 @@ export type Database = {
       inventory_transfer_variances: Table<InventoryTransferVarianceRow, never>;
       inventory_transactions: Table<InventoryTransactionRow, never>;
       inventory_valuations: Table<InventoryValuationRow, never>;
-      inventory_opening_values: Table<InventoryOpeningValueRow, never>;
       valuation_command_receipts: Table<{ idempotency_key: string; actor_id: string; command_name: string; payload_hash: string; result_id: string; created_at: string }, never>;
       inventory_command_receipts: Table<{ idempotency_key: string; actor_id: string; command_name: string; result_id: string; created_at: string }, never>;
       material_requests: Table<MaterialRequestRow, never>;
@@ -228,7 +225,6 @@ export type Database = {
       project_budget_changes: Table<ProjectBudgetChangeRow, never>;
       project_material_plan_lines: Table<ProjectMaterialPlanRow, never>;
       project_progress_entries: Table<ProjectProgressRow, never>;
-      inventory_legacy_transit_values: Table<LegacyTransitValueRow, never>;
       daily_reports: Table<DailyReportRow, never>;
       daily_report_events: Table<DailyReportEventRow, never>;
       qr_codes: Table<QrCodeRow, never>;
@@ -241,6 +237,13 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      submit_catalog_shortage: { Args: { p_key: string; p_project_id: string; p_site_id: string; p_warehouse_id: string; p_material_id: string; p_quantity: number; p_needed_on: string; p_reason: string }; Returns: string };
+      prepare_web_inventory_movement: { Args: { p_key: string; p_mode: string }; Returns: { reference_document: string; transaction_date: string }[] };
+      post_web_inventory_movement: { Args: { p_key: string; p_mode: string; p_input: Json }; Returns: string };
+      list_mobile_request_catalog: { Args: { p_project_id: string; p_site_id: string; p_warehouse_id?: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; code: string; name: string; unit_id: string; unit: string; photo_path: string | null; available_quantity: number; warehouses: Json; total_count: number }[] };
+      list_mobile_site_stock: { Args: { p_project_id: string; p_site_id: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; material_id: string; name: string; code: string; unit_id: string; unit: string; photo_path: string | null; on_hand: number; reserved: number; available: number; total_count: number }[] };
+      get_mobile_stock_provenance: { Args: { p_project_id: string; p_site_id: string; p_ids: string[] }; Returns: { id: string; direction: string; reference: string; location_name: string | null; sources: Json; request_id: string | null; site_purchase_id: string | null }[] };
+
       get_project_review_sites: { Args: { p_project_id: string }; Returns: string[] };
       get_project_site_capabilities: { Args: { p_project_id: string; p_site_id: string }; Returns: { can_read: boolean; can_review: boolean; can_record: boolean }[] };
       get_mobile_projects: { Args: { p_search?: string; p_id?: string | null; p_offset?: number; p_limit?: number }; Returns: { record: Json; total_count: number }[] };
@@ -280,7 +283,6 @@ export type Database = {
       archive_material: { Args: { p_id: string }; Returns: undefined };
       post_stock_in: { Args: { p_idempotency_key: string; p_material_id: string; p_destination_location_id: string; p_quantity: number | string; p_unit_id: string; p_reference_document: string; p_transaction_date: string; p_remarks?: string | null }; Returns: string };
       post_valued_stock_in: { Args: { p_idempotency_key: string; p_material_id: string; p_destination_location_id: string; p_quantity: number | string; p_unit_id: string; p_total_cost: number | string; p_reference_document: string; p_transaction_date: string; p_remarks?: string | null }; Returns: string };
-      verify_opening_stock_value: { Args: { p_idempotency_key: string; p_material_id: string; p_location_id: string; p_quantity: number | string; p_total_value: number | string; p_reason: string }; Returns: string };
       consume_site_material: { Args: { p_idempotency_key: string; p_material_id: string; p_site_location_id: string; p_project_id: string; p_quantity: number | string; p_unit_id: string; p_reference_document: string; p_transaction_date: string; p_remarks?: string | null }; Returns: string };
       get_project_material_cost: { Args: { p_project_id: string }; Returns: { material_id: string; material_code: string; material_name: string; quantity: number; unit_symbol: string; cost_total: number }[] };
       approve_transfer_variance: { Args: { p_idempotency_key: string; p_transfer_item_id: string; p_quantity: number | string; p_reason: string }; Returns: string };
@@ -288,7 +290,11 @@ export type Database = {
       dispatch_inventory_transfer: { Args: { p_idempotency_key: string; p_material_id: string; p_source_location_id: string; p_destination_location_id: string; p_quantity: number | string; p_unit_id: string; p_external_reference: string; p_transaction_date: string; p_remarks?: string | null }; Returns: string };
       receive_inventory_transfer: { Args: { p_idempotency_key: string; p_transfer_item_id: string; p_quantity: number | string; p_transaction_date: string; p_remarks?: string | null }; Returns: string };
       reverse_inventory_transaction: { Args: { p_idempotency_key: string; p_transaction_id: string; p_reason: string }; Returns: string };
-      submit_material_request: { Args: { p_idempotency_key: string; p_project_id: string; p_project_site_id: string; p_source_warehouse_id: string; p_required_date: string; p_purpose: string; p_lines: Json }; Returns: string };
+      submit_mobile_material_request: { Args: { p_key: string; p_project_id: string; p_site_id: string; p_purpose: string; p_lines: Json }; Returns: string };
+      submit_mobile_material_shortage: { Args: { p_key: string; p_project_id: string; p_site_id: string; p_material_id: string | null; p_name: string; p_unit: string; p_quantity: number; p_reason: string }; Returns: string };
+      get_request_warehouse_choices: { Args: { p_id: string; p_kind: "request" | "shortage" }; Returns: { id: string; name: string; code: string }[] };
+      assign_request_warehouse: { Args: { p_key: string; p_id: string; p_kind: "request" | "shortage"; p_warehouse_id: string }; Returns: string };
+      submit_material_request: { Args: { p_idempotency_key: string; p_project_id: string; p_project_site_id: string; p_source_warehouse_id: string | null; p_required_date: string; p_purpose: string; p_lines: Json }; Returns: string };
       decide_material_request: { Args: { p_idempotency_key: string; p_request_id: string; p_decisions: Json; p_reason?: string | null }; Returns: string };
       cancel_material_request: { Args: { p_idempotency_key: string; p_request_id: string; p_reason: string }; Returns: string };
       get_requestable_warehouses: { Args: Record<string, never>; Returns: { project_id: string; warehouse_id: string; code: string; name: string }[] };
@@ -355,6 +361,7 @@ export type Database = {
       get_project_material_plan: { Args: { p_project_id: string }; Returns: ProjectMaterialPlanView[] };
       get_project_material_estimate: { Args: { p_project_id: string }; Returns: ProjectMaterialEstimateView[] };
       get_material_cost_batches: { Args: { p_material_id: string }; Returns: MaterialCostBatchRow[] };
+      get_purchases: { Args: { p_search?: string; p_offset?: number; p_limit?: number }; Returns: PurchaseOverviewRow[] };
       get_purchase_lines: { Args: { p_search?: string; p_offset?: number; p_limit?: number }; Returns: PurchaseLineRow[] };
       get_purchase_summary: { Args: Record<string, never>; Returns: { item_count: number; total_value: number; supplier_count: number; received_count: number; unpaid_value: number }[] };
       get_site_purchase_suppliers: { Args: Record<string, never>; Returns: { id: string; supplier_name: string }[] };
@@ -371,8 +378,6 @@ export type Database = {
       record_project_progress: { Args: { p_report_id: string; p_percent: number | string; p_summary: string }; Returns: string };
       record_inventory_stock_count: { Args: { p_key: string; p_material_id: string; p_location_id: string; p_counted: number | string; p_reason_type: "physical_count" | "damaged" | "missing"; p_reason: string }; Returns: string };
       decide_inventory_stock_count: { Args: { p_count_id: string; p_approve: boolean; p_note: string }; Returns: string };
-      get_unvalued_legacy_transit_queue: { Args: Record<string, never>; Returns: LegacyTransitQueueRow[] };
-      verify_legacy_transit_value: { Args: { p_idempotency_key: string; p_transfer_item_id: string; p_dispatched_total_cost: number | string; p_received_total_cost: number | string; p_supporting_reference: string; p_reason: string }; Returns: string };
         save_daily_report: { Args: { p_id: string; p_project_id: string; p_project_site_id: string; p_report_date: string; p_weather_conditions: string; p_work_description: string; p_accomplishments: string; p_issues_encountered: string; p_site_observations: string; p_general_remarks: string; p_submit: boolean }; Returns: string };
         attach_daily_report_photo: { Args: { p_report_id: string }; Returns: undefined };
         review_daily_report: { Args: { p_report_id: string; p_action: "approve" | "return"; p_note: string }; Returns: string };

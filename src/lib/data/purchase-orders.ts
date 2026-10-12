@@ -8,11 +8,11 @@ import { getOpenPurchaseInspections } from "@/lib/data/procurement-stages";
 
 const PAGE_SIZE = 20;
 
-// Every purchased item (purchase orders and site purchases), newest first.
-export async function getPurchaseLines({ page = 1, query = "" }: { page?: number; query?: string } = {}) {
+// Complete purchases, newest first.
+export async function getPurchases({ page = 1, query = "" }: { page?: number; query?: string } = {}) {
   const supabase = await createClient();
   const currentPage = Math.max(1, Math.min(10000, Number.isSafeInteger(page) ? page : 1));
-  const { data, error } = await supabase.rpc("get_purchase_lines", { p_search: safeSearchTerm(query), p_offset: (currentPage - 1) * PAGE_SIZE, p_limit: PAGE_SIZE });
+  const { data, error } = await supabase.rpc("get_purchases", { p_search: safeSearchTerm(query), p_offset: (currentPage - 1) * PAGE_SIZE, p_limit: PAGE_SIZE });
   if (error) throw new Error("Unable to load purchases.", { cause: error });
   const rows = data ?? [];
   const orderIds = [...new Set(rows.filter((row) => row.source === "purchase_order").map((row) => row.purchase_id))];

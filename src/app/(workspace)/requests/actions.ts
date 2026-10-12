@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cancelMaterialRequestSchema, decideMaterialRequestSchema, dispatchRequestWithManifestSchema, receiveRequestWithInspectionSchema, submitMaterialRequestSchema } from "@nognog/domain";
@@ -143,4 +144,16 @@ export async function receiveRequestTransferAction(_: RequestActionState, form: 
   if (error) return failure(fulfillmentError(error));
   revalidatePath("/requests"); revalidatePath(`/requests/${input.requestId}`); revalidatePath("/inventory/transfers"); revalidatePath("/inventory");
   return { ok: true, data: { id: input.requestId } };
+}
+
+export async function assignRequestWarehouseAction(_: { ok: boolean; message: string }, form: FormData): Promise<{ ok: boolean; message: string }> {
+  const user = await requireUser();
+  if (!user.canManage && !user.roles.includes("warehouse_staff")) return { ok: false, message: "Admin or assigned Warehouse Staff must choose the warehouse." };
+  const parsed = z.object({ key: z.uuid(), id: z.uuid(), kind: z.enum(["request", "shortage"]), warehouseId: z.uuid() }).safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { ok: false, message: "Choose a source warehouse." };
+  const i = parsed.data;
+  const { error } = await (await createClient()).rpc("assign_request_warehouse", { p_key: i.key, p_id: i.id, p_kind: i.kind, p_warehouse_id: i.warehouseId });
+  if (error) return { ok: false, message: error.code === "42501" ? "This warehouse is unavailable for your account or project." : "The warehouse could not be changed. Check whether approval or sourcing has already started." };
+  revalidatePath("/requests"); revalidatePath(`/requests/${i.id}`);
+  return { ok: true, message: "Source warehouse saved." };
 }

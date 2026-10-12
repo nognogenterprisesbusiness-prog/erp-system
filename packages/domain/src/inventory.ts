@@ -28,15 +28,6 @@ const movementFields = {
 };
 
 export const stockInInputSchema = z.object({ ...movementFields, destinationLocationId: uuidSchema, totalCost: moneyInputSchema, remarks: z.string().trim().min(3).max(2000) });
-export const openingValueInputSchema = z.object({ idempotencyKey: uuidSchema, materialId: uuidSchema, locationId: uuidSchema, quantity: quantitySchema, totalValue: moneyInputSchema, reason: z.string().trim().min(3).max(500) });
-export const legacyTransitValueInputSchema = z.object({
-  idempotencyKey: uuidSchema, transferItemId: uuidSchema,
-  dispatchedTotalCost: moneyInputSchema,
-  receivedTotalCost: z.string().trim().regex(/^\d{1,22}(\.\d{1,2})?$/, "Enter a non-negative amount with up to two decimals"),
-  supportingReference: z.string().trim().min(3).max(120),
-  reason: z.string().trim().min(3).max(500),
-}).refine((value) => Number(value.receivedTotalCost) < Number(value.dispatchedTotalCost),
-  { path: ["receivedTotalCost"], message: "Historical received value must be below dispatched value while stock remains in transit" });
 export const siteConsumptionInputSchema = z.object({ ...movementFields, siteLocationId: uuidSchema, projectId: uuidSchema });
 export const stockOutInputSchema = z.object({ ...movementFields, sourceLocationId: uuidSchema, remarks: z.string().trim().min(3).max(2000) });
 export const transferInputSchema = z.object({ ...movementFields, sourceLocationId: uuidSchema, destinationLocationId: uuidSchema }).refine((value) => value.sourceLocationId !== value.destinationLocationId, { path: ["destinationLocationId"], message: "Destination must differ from source" });

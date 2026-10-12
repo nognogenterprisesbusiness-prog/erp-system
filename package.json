@@ -36,6 +36,8 @@
     "test:batch-costing": "node scripts/test-batch-costing.mjs",
     "test:warehouse-receipts": "node scripts/test-warehouse-receipts.mjs",
     "test:erp-workflow": "node scripts/test-erp-workflow.mjs",
+    "test:request-assignment": "node scripts/test-request-warehouse-assignment.mjs",
+    "test:stock-simplification": "node scripts/test-mobile-stock-simplification.mjs",
     "test:simple-setup-upgrade": "node scripts/test-simple-setup-upgrade.mjs",
     "test:project-costs": "node scripts/test-project-costs.mjs"
   },

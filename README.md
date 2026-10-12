@@ -786,6 +786,10 @@ Purchases now follow supplier → materials and dated prices → delivery, retai
 
 Production build, TypeScript, lint, auth/inventory/procurement tests and isolated navigation/redirect checks pass. Browser checks covered the actual purchase dialog and dated price selection, without database writes. No migrations or deployment were performed; database-backed UAT remains required. See [verification details](docs/connected-ui-parity-2026-09-26.md).
 
+### Inventory simplification — 2026-10-12
+
+Mobile requests now browse the active catalog across linked warehouses, including zero-stock identities for sourcing. Site Inventory excludes unavailable stock before pagination; Stock Movements adds quantity-only In/Out provenance. Web movement selectors use the shared custom controls and preserve selected units; generated references and Philippine dates survive retries. The guarded retirement migration removes opening setup while preserving stock, costing and history. Apply the three ordered migrations before distributing the matching mobile build. See [release and verification details](docs/inventory-simplification-2026-10-12.md).
+
 ## 19. Commercial and change control checklist
 
 ### Seeded-record access correction — 2026-09-26

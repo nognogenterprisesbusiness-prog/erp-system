@@ -147,6 +147,7 @@ export function databaseError(error: {
   code?: string;
   message: string;
 }): never {
+  if (error.message.includes("Choose a source warehouse before approval")) throw new MobileError(422, "Wait for Admin or Warehouse Staff to choose the source warehouse before approval.");
   if (error.code === "PGRST202")
     throw new MobileError(
       503,

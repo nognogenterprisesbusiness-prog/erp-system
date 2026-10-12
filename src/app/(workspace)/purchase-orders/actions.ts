@@ -26,7 +26,7 @@ function purchaseError(error: { code?: string; message: string }) {
   if (error.message.includes("linked request")) return "Choose only materials from the linked project request.";
   if (error.message.includes("unit price")) return "Enter a price greater than zero for every item.";
   if (error.message.includes("each material once")) return "Choose each item once.";
-  if (error.message.includes("opening value") || error.message.includes("valuation")) return "Verify the warehouse opening quantity and value before receiving this material.";
+  if (error.message.includes("opening value") || error.message.includes("valuation")) return "Warehouse stock costs need documented reconciliation. Ask an administrator to investigate.";
   if (error.message.includes("exceeds ordered quantity")) return "The receipt exceeds the unreceived order quantity or predates the order.";
   if (error.message.includes("difference from the PO")) return "Enter a reason for the difference from the PO price.";
   if (error.message.includes("delivery_line_unique")) return "This delivery reference is already recorded for the line.";

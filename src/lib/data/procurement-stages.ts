@@ -37,10 +37,10 @@ export async function getPurchaseSourceRequest(id: string) {
   const { data: request, error } = await supabase.from("material_requests")
     .select("id,request_number,source_warehouse_id,status").eq("id", id).maybeSingle();
   if (error) throw new Error("Unable to load the linked material request.", { cause: error });
-  if (!request || (request.status !== "approved" && request.status !== "partially_approved")) notFound();
+  if (!request || !request.source_warehouse_id || (request.status !== "approved" && request.status !== "partially_approved")) notFound();
   const lines = await readAllPages((from, to) => supabase.from("material_request_lines")
     .select("material_id,requested_quantity").eq("request_id", id).order("material_id").range(from, to), "request materials");
-  return { request, lines };
+  return { request: { ...request, source_warehouse_id: request.source_warehouse_id }, lines };
 }
 
 export async function getPurchaseSourceReport(id: string) {
@@ -50,7 +50,7 @@ export async function getPurchaseSourceReport(id: string) {
     .select("id,material_name,requested_quantity,source_warehouse_id,status")
     .eq("id", id).maybeSingle();
   if (error) throw new Error("Unable to load the out-of-stock report.", { cause: error });
-  if (!data || data.status !== "submitted") notFound();
+  if (!data || !data.source_warehouse_id || data.status !== "submitted") notFound();
   const [contexts, links] = await Promise.all([
     supabase.from("purchase_procurement_context").select("sourcing_material_id").eq("material_sourcing_request_id", id),
     supabase.from("material_sourcing_request_links").select("material_id").eq("material_sourcing_request_id", id),
@@ -61,7 +61,7 @@ export async function getPurchaseSourceReport(id: string) {
     ...(links.data ?? []).map((item) => item.material_id),
   ].filter((value): value is string => Boolean(value)))];
   if (linkedMaterials.length > 1) throw new Error("The report has conflicting material links.");
-  return { ...data, linkedMaterialId: linkedMaterials[0] ?? null };
+  return { ...data, source_warehouse_id: data.source_warehouse_id, linkedMaterialId: linkedMaterials[0] ?? null };
 }
 
 export async function getOpenPurchaseInspections(lineIds: string[]) {

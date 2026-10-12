@@ -9,7 +9,7 @@ import { requireMobileSite } from "./authorization";
 
 const size = 20;
 const requestFields =
-  "id,request_number,project_id,project_site_id,required_date,purpose,status,requested_by,source_warehouse_name,requested_at,decision_reason";
+  "id,request_number,project_id,project_site_id,required_date,purpose,status,requested_by,source_warehouse_name,source_warehouse_id,requested_at,decision_reason";
 const reportFields =
   "id,report_number,project_id,project_site_id,report_date,prepared_by,status,work_description,accomplishments,weather_conditions,issues_encountered,site_observations,general_remarks,photo_path";
 type Client = SupabaseClient<Database>;
@@ -88,10 +88,13 @@ export async function readMobileResource(
   const search = safeSearchTerm(q.search);
   switch (resource) {
     case "site-purchases": {
-      const r = await c.from("site_purchases")
+      let purchases = c.from("site_purchases")
         .select("id,purchase_number,supplier_name,receipt_number,receipt_date,status,paid_with,rejection_reason,reimbursed_on", { count: "exact" })
         .eq("project_id", required(q.projectId)).eq("project_site_id", required(q.siteId))
-        .order("created_at", { ascending: false }).order("id").range(offset, offset + size - 1);
+        .order("created_at", { ascending: false }).order("id");
+      if (q.id) purchases = purchases.eq("id", q.id);
+      if (search) purchases = purchases.or(`purchase_number.ilike.%${search}%,receipt_number.ilike.%${search}%,supplier_name.ilike.%${search}%`);
+      const r = await purchases.range(offset, offset + size - 1);
       if (r.error) databaseError(r.error);
       const rows = r.data ?? [];
       const lines = await readByIds(rows.map((x) => x.id), (ids, from, to) => c.from("site_purchase_lines").select("id,site_purchase_id,quantity,unit_price").in("site_purchase_id", ids).order("id").range(from, to), "site purchase lines");
@@ -384,49 +387,22 @@ export async function readMobileResource(
         q,
       );
     }
-    case "inventory": {
-      const location = await siteLocation(c, q);
-      const r = await c.rpc("list_inventory_materials", {
-        p_location_id: location,
-        p_query: q.search,
-        p_status: "active",
-        p_offset: offset,
-        p_limit: size,
+    case "request-catalog": {
+      const r = await c.rpc("list_mobile_request_catalog", {
+        p_project_id: required(q.projectId), p_site_id: required(q.siteId),
+        ...(q.warehouseId ? { p_warehouse_id: q.warehouseId } : {}),
+        p_search: q.search, p_offset: offset, p_limit: size,
       });
       if (r.error) databaseError(r.error);
-      const rows = r.data ?? [];
-      const m = rows.length
-        ? await c
-            .from("materials")
-            .select("id,base_unit_id")
-            .in(
-              "id",
-              rows.map((x) => x.material_id),
-            )
-        : { data: [], error: null };
-      if (m.error) databaseError(m.error);
-      const units = new Map((m.data ?? []).map((material) => [material.id, material.base_unit_id]));
-      return page(
-        rows.map((x) => {
-          const unitId = units.get(x.material_id);
-          if (!unitId)
-            throw new MobileError(503, "Material details could not be loaded.");
-          return {
-            id: x.balance_id ?? x.material_id,
-            material_id: x.material_id,
-            name: x.name,
-            code: x.code,
-            unit_id: unitId,
-            unit: x.unit_symbol,
-            photo_path: x.photo_path,
-            on_hand: x.quantity_on_hand,
-            reserved: x.reserved_quantity,
-            available: x.available_quantity,
-          };
-        }),
-        rows[0]?.total_count ?? 0,
-        q,
-      );
+      return mobileResponseSchemas["request-catalog"].parse(page(r.data ?? [], r.data?.[0]?.total_count ?? 0, q));
+    }
+    case "inventory": {
+      const r = await c.rpc("list_mobile_site_stock", {
+        p_project_id: required(q.projectId), p_site_id: required(q.siteId),
+        p_search: q.search, p_offset: offset, p_limit: size,
+      });
+      if (r.error) databaseError(r.error);
+      return page(r.data ?? [], r.data?.[0]?.total_count ?? 0, q);
     }
     case "inventory-history": {
       const location = await siteLocation(c, q);
@@ -450,6 +426,11 @@ export async function readMobileResource(
         ? await c.from("inventory_transactions").select("reversal_of").in("reversal_of", rows.map((x) => x.id))
         : { data: [], error: null };
       if (reversals.error) databaseError(reversals.error);
+      const provenance = await c.rpc("get_mobile_stock_provenance", {
+        p_project_id: required(q.projectId), p_site_id: required(q.siteId), p_ids: rows.map((x) => x.id),
+      });
+      if (provenance.error) databaseError(provenance.error);
+      const sources = new Map((provenance.data ?? []).map((item) => [item.id, item]));
       const reversed = new Set((reversals.data ?? []).map((x) => x.reversal_of));
       const refs = await materialReferences(
         c,
@@ -459,6 +440,7 @@ export async function readMobileResource(
       return page(
         rows.map((x) => ({
           ...x,
+          ...sources.get(x.id),
           name: refs.materials.get(x.material_id)?.name ?? "Material",
           unit: refs.units.get(x.unit_of_measure_id) ?? "",
           reversed: reversed.has(x.id),
