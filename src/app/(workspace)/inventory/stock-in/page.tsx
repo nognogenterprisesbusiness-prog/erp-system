@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 
 export default async function InventoryFormRedirect({ searchParams }: { searchParams: Promise<{ material?: string; project?: string }> }) {
   const user = await requireUser();
-  if (!(user.canManage)) redirect("/inventory");
+  if (!user.canOperateInventory) redirect("/inventory");
   const query = await searchParams;
   const params = new URLSearchParams({ action: "stock-in" });
   const material = uuidSchema.safeParse(query.material);

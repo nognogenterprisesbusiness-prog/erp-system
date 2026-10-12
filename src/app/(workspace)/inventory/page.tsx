@@ -42,7 +42,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     getInventoryMaterials({ query, locationId, scope: parseInventoryScope(params.scope), status, lowStock, page, includeValues: user.canViewLaborRates }),
     getMaterialReferences(),
   ]);
-  const movement = user.canManage && (params.action === "stock-in" || params.action === "stock-out") ? params.action : undefined;
+  const movement = (user.canManage || (user.canOperateInventory && params.action === "stock-in")) && (params.action === "stock-in" || params.action === "stock-out") ? params.action : undefined;
   const movementOptions = movement ? await getInventoryOptions() : null;
   const usageOptions = params.action === "use" && (user.canManage || user.roles.some((role) => ["engineer", "foreman"].includes(role))) ? await getSiteConsumptionOptions() : null;
   const material = uuidSchema.safeParse(params.material);
@@ -65,7 +65,8 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       <Button variant="outline" asChild><a href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export stocked items</a></Button>
       {user.canManage && <RecordCreateDialog title="Add material" initialOpen={params.create === "1"} closeHref={`/inventory?${new URLSearchParams(pageFilters)}`}><MaterialForm {...references} /></RecordCreateDialog>}
       <RecordActionMenu name="Inventory" triggerLabel="Inventory actions" actions={[
-        ...(user.canManage ? [{ label: "Stock in", href: `/inventory?${exportParams}&action=stock-in` }, { label: "Stock out", href: `/inventory?${exportParams}&action=stock-out` }] : []),
+        ...(user.canOperateInventory ? [{ label: "Stock in", href: `/inventory?${exportParams}&action=stock-in` }] : []),
+        ...(user.canManage ? [{ label: "Stock out", href: `/inventory?${exportParams}&action=stock-out` }] : []),
         { label: "Transfer", href: "/inventory/transfers" },
         { label: "Transaction history", href: "/inventory/transactions" },
       ]} />

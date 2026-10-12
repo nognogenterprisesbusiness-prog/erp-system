@@ -128,6 +128,18 @@ export async function executeSiteCommand(
       );
       return { id, message: "Equipment request submitted." };
     }
+    case "receive-site-transfer": {
+      const i = command.input;
+      const r = await client.rpc("receive_mobile_site_transfer", { p_key: i.idempotencyKey, p_project_id: i.projectId, p_site_id: i.siteId, p_transfer_item_id: i.transferItemId, p_quantity: i.quantity, p_quality_note: i.qualityNote || null });
+      if (r.error) databaseError(r.error);
+      return { id: r.data!, message: "Received quantity added to this site's stock. Undelivered quantities remain outstanding." };
+    }
+    case "submit-receipt-expense": {
+      const i = command.input;
+      const r = await client.rpc("submit_site_receipt_expense", { p_idempotency_key: i.idempotencyKey, p_project_id: i.projectId, p_site_id: i.siteId, p_amount: i.amount, p_paid_with: i.paidWith, p_notes: i.notes || null });
+      if (r.error) databaseError(r.error);
+      return { id: r.data!, message: Number(i.amount) > 50000 ? "Receipt expense submitted for Admin approval." : "Receipt expense recorded for this project. No material stock was added." };
+    }
     case "submit-vehicle-fuel": {
       const i = command.input;
       const r = await client.rpc("submit_vehicle_fuel_receipt", {

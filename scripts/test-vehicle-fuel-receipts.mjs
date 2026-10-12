@@ -55,7 +55,7 @@ await withIsolatedPostgres(async ({ sql, as, users, result, scalar }) => {
   await assert.rejects(as('engineer',invalid.call.replace(',100,',',0,')),/Invalid diesel/);
   const noPhoto=await make(100); await sql(`delete from storage.objects where name='${users.engineer}/${noPhoto.key}/receipt.webp'`);
   await assert.rejects(as('engineer',noPhoto.call),/receipt photo/);
-  await assert.rejects(as('engineer',`select private.post_vehicle_fuel_expense('${highId}','${users.engineer}')`),/permission denied/);
+  await assert.rejects(as('engineer',`select private.post_site_receipt_expense('${highId}','${users.engineer}')`),/permission denied/);
   console.log('PASS: denied roles, cross-site vehicles, missing photos, invalid totals and private posting bypass');
   await as('admin',`select public.reverse_project_cost_entry('${randomUUID()}','expense','${expense}','Incorrect fuel receipt')`);
   assert.equal(await value(`select count(*) from public.project_expense_reversals where expense_id='${expense}'`),'1');

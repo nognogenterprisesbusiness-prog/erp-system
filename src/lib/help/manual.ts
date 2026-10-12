@@ -30,7 +30,7 @@ export const roleResponsibilities: Record<AppRole, { summary: string; tasks: str
   engineer: {
     summary: "Review assigned site work and arrange materials.",
     tasks: ["Check assigned sites, stock, material plans and project documents.", "Request materials, equipment or vehicles and report unavailable materials.", "Independently review material requests and daily reports; inspect site deliveries and record actual material use.", "Submit hardware-store purchases with receipt photos for Admin or Finance approval."],
-    boundary: "An Engineer cannot approve their own material request or inventory purchase. Diesel receipts up to ₱50,000 post automatically; higher diesel receipts wait for Admin approval. Admin maintains the material catalog and supplier purchase orders.",
+    boundary: "An Engineer cannot approve their own material request or inventory purchase. Receipt expenses and diesel receipts up to ₱50,000 post automatically; higher amounts wait for Admin approval. Admin maintains the material catalog and supplier purchase orders.",
   },
   foreman: {
     summary: "Record what happens at the assigned site each day.",
@@ -39,7 +39,7 @@ export const roleResponsibilities: Record<AppRole, { summary: string; tasks: str
   },
   warehouse_staff: {
     summary: "Receive and release stock for assigned warehouses.",
-    tasks: ["Check warehouse balances, reservations and stock history.", "Inspect supplier deliveries and receive accepted quantities.", "Release approved material requests with transport details; handle permitted transfers and check asset locations."],
+    tasks: ["Check warehouse balances, reservations and stock history.", "Inspect supplier deliveries and receive accepted quantities.", "Record verified stock-in at an assigned warehouse; release approved requests with transport details, or dispatch a reasoned delivery to a linked project site. Check asset locations."],
     boundary: "Warehouse staff cannot authorize project requests, approve owner purchases or manage financial payments. Warehouse and project assignments still limit access.",
   },
 };
@@ -90,7 +90,7 @@ export const manualGuides: readonly ManualGuide[] = [
       { title: "Read the quantities", detail: "On hand is stock physically recorded at the selected location. Warehouse stock or Site stock totals only that group of permitted locations. Reserved is approved stock awaiting release. Available is what remains after reservations. Choose a specific source warehouse before approving or dispatching; a combined total cannot supply a delivery itself. The web catalog includes zero-stock materials for sourcing. Mobile Site Inventory shows only materials with available quantity greater than zero; use Stock Movements to inspect earlier receipts or use." },
       { title: "Maintain catalog items", detail: "Admin selects Add material in Inventory and enters a unique code, clear name, unit and minimum stock level. Adding a material creates its catalog entry; it does not create stock." },
       { title: "Trace a quantity", detail: "Choose the location and open History or stock details. Mobile Stock Movements shows In/Out, quantity, date, reference and known warehouse/supplier sources. Request links open the delivery; purchase links open site purchases. Older stock with no supplier evidence is labelled Opening stock or Source unavailable. Prices remain restricted to authorized roles." },
-      { title: "Record the correct movement", detail: "Admin records authorized non-purchase stock-in/out. Assigned Warehouse staff receives supplier purchases and releases approved requests or permitted transfers. Supplier deliveries use inspection and receipt. Assigned site staff records actual use from site stock." },
+      { title: "Record the correct movement", detail: "Admin records authorized non-purchase stock-in/out. Assigned Warehouse Staff can record valued stock-in at their warehouse, receive supplier purchases, release approved requests and dispatch direct deliveries to linked project sites with a reason. Site checkers receive direct deliveries through Inventory → Receive warehouse deliveries on mobile or Transfers on web; partial receipts leave the remainder outstanding. Request-bound deliveries still require the request inspection flow. Supplier deliveries use inspection and receipt. Assigned site staff records actual use from site stock." },
     ],
     result: "You can explain both the total and where the stock is held. No extra stock is created by a payment or by adding a catalog item.",
     tips: ["Example: if Warehouse 1 holds 1,000 bags, approving 100 leaves on hand at 1,000 and available at 900. Dispatching those 100 reduces warehouse on hand to 900. Site stock increases only when receipt is recorded.", "The same catalog material can come from different suppliers. Receipt batches preserve their supplier and price history. Web stock-in/out, transfers and returns generate a system reference and today’s Philippine date on save; retries reuse both. Actual supplier receipt numbers, receipt dates and delivery references stay separate. The retired opening-values screen is no longer part of setup."],
@@ -159,17 +159,18 @@ export const manualGuides: readonly ManualGuide[] = [
     tips: ["Saving inspection alone does not finish stock receipt; check that accepted stock was posted.", "Reusing a delivery reference for a different posting is not a way to correct an earlier receipt."],
   },
   {
-    id: "site-purchases", title: "Engineer: site purchases and diesel receipts", description: "Record bought materials or a vehicle diesel receipt against the selected project/site.", href: "/site-purchases", roles: ["admin", "finance", "engineer"],
-    before: "The Engineer needs an assigned active site, existing catalog materials and a readable photo of the actual receipt.",
+    id: "site-purchases", title: "Engineer: site purchases and receipt expenses", description: "Record inventory materials, receipt expenses or diesel against the selected project/site.", href: "/site-purchases", roles: ["admin", "finance", "engineer"],
+    before: "The Engineer needs an assigned active site and a readable receipt photo. Inventory material purchases also require existing catalog materials.",
     steps: [
-      { title: "Choose the site and hardware store", detail: "In Site purchases on web, or Buy at Hardware Store on mobile, select the assigned project/site and store. Use the permitted new-store fields if the supplier is not listed." },
+      { title: "Choose the purchase type", detail: "Select the assigned project/site. Choose Receipt expense for a total amount and receipt photo without adding stock, or Inventory materials for itemized quantities that add site stock after review. Inventory materials also require the hardware store; use the permitted new-store fields if needed. Mobile also offers Diesel for a vehicle at the site." },
+      { title: "Record a receipt expense", detail: "Enter the total, choose Company cash or Own money, and attach the receipt photo. No material or supplier entry is required. The system generates today’s Philippine date and a reference. Up to ₱50,000 posts one project expense automatically; above ₱50,000 waits for Admin approval. This choice never adds inventory." },
       { title: "Record diesel instead", detail: "On mobile choose Diesel, select a vehicle currently at the selected site, enter the total and attach the receipt. The system generates today’s Philippine posting date and a reference. Up to ₱50,000 posts one project expense; higher amounts require Admin approval. Tap a diesel receipt for that vehicle’s history at this site. Admin/Finance can also view diesel history on the vehicle detail page." },
-      { title: "Enter the receipt", detail: "Enter receipt number and date, then materials, quantities and unit prices. Check each line and the receipt total. The date must not be in the future under Philippine business time." },
+      { title: "Enter an inventory receipt", detail: "For Inventory materials, enter receipt number and date, then materials, quantities and unit prices. Check each line and the receipt total. The date must not be in the future under Philippine business time." },
       { title: "Identify who paid", detail: "Choose Company cash or Own money, add an optional note and attach the receipt photo. Submit for approval and wait for confirmation." },
-      { title: "Admin or Finance checks the purchase", detail: "The reviewer verifies the receipt, site, items and price, then approves or rejects with the required reason. Approval adds the bought quantities directly to that site's stock once." },
+      { title: "Admin or Finance checks the purchase", detail: "For Inventory materials, the reviewer verifies the receipt, site, items and price, then approves or rejects with the required reason. Approval adds the bought quantities directly to that site's stock once. Receipt expenses above ₱50,000 require Admin and post expense only." },
       { title: "Reimburse or use the stock", detail: "For Own money, Admin or Finance records reimbursement after paying the Engineer back. Site staff separately records actual material use; reimbursement does not add stock again." },
     ],
-    result: "Approved itemized materials appear in site stock at the receipt price. Diesel receipts appear as project expenses and vehicle history; they never add material stock.",
+    result: "Approved itemized materials appear in site stock at the receipt price. Receipt expenses appear in project costs without adding stock. Diesel also appears in vehicle history. Payment and reimbursement never post the cost or stock again.",
     tips: ["Itemized site material purchases follow receipt review; above ₱50,000 only Admin can approve. On mobile, choose Diesel for a vehicle at the selected site, enter the total and attach a receipt photo. Diesel up to ₱50,000 posts one project expense automatically; higher amounts wait for Admin. Diesel does not add material stock.", "If approved stock seems missing, open that specific site in Inventory and check the purchase receipt history before submitting again.", "Use a clear supported receipt photo. Mobile accepts an upload under 3 MB; the app prepares camera/gallery images before submission."],
   },
   {

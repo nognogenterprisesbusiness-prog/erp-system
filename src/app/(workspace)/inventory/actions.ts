@@ -43,7 +43,7 @@ async function postWebMovement(mode: "stock-in" | "stock-out" | "transfer" | "re
 
 export async function stockInAction(_: InventoryActionState, form: FormData): Promise<InventoryActionState> {
   const user = await requireUser();
-  if (!user.canManage) return failure("Only an administrator can record a non-purchase stock receipt.");
+  if (!user.canOperateInventory) return failure("Only Admin or assigned Warehouse Staff can record a stock receipt.");
   const parsed = stockInInputSchema.safeParse({ ...webPayload(form), destinationLocationId: value(form, "destinationLocationId"), totalCost: value(form, "totalCost") });
   if (!parsed.success) return failure("Review the stock-in details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;

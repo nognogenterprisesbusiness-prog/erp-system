@@ -101,7 +101,10 @@ export async function readMobileResource(
       const lines = await readByIds(rows.map((x) => x.id), (ids, from, to) => c.from("site_purchase_lines").select("id,site_purchase_id,quantity,unit_price").in("site_purchase_id", ids).order("id").range(from, to), "site purchase lines");
       const totals = new Map<string, number>();
       for (const line of lines) totals.set(line.site_purchase_id, (totals.get(line.site_purchase_id) ?? 0) + Math.round(Number(line.quantity) * Number(line.unit_price) * 100) / 100);
-      return page(rows.map((x) => ({ ...x, total: x.receipt_amount === null ? totals.get(x.id) ?? 0 : Number(x.receipt_amount) })), r.count, q);
+      const statuses = rows.length ? await c.rpc("get_site_purchase_expense_status", { p_purchase_ids: rows.map((x) => x.id) }) : { data: [], error: null };
+      if (statuses.error) databaseError(statuses.error);
+      const reversed = new Map((statuses.data ?? []).map((x) => [x.purchase_id, x.expense_reversed]));
+      return page(rows.map((x) => ({ ...x, expense_reversed: reversed.get(x.id) ?? false, total: x.receipt_amount === null ? totals.get(x.id) ?? 0 : Number(x.receipt_amount) })), r.count, q);
     }
     case "purchase-choices": {
       const [stores, materials, units] = await Promise.all([
@@ -404,6 +407,11 @@ export async function readMobileResource(
       });
       if (r.error) databaseError(r.error);
       return mobileResponseSchemas["request-catalog"].parse(page(r.data ?? [], r.data?.[0]?.total_count ?? 0, q));
+    }
+    case "site-deliveries": {
+      const r = await c.rpc("list_mobile_site_deliveries", { p_project_id: required(q.projectId), p_site_id: required(q.siteId), p_search: q.search, p_offset: offset, p_limit: size });
+      if (r.error) databaseError(r.error);
+      return page(r.data ?? [], r.data?.[0]?.total_count ?? 0, q);
     }
     case "inventory": {
       const r = await c.rpc("list_mobile_site_stock", {

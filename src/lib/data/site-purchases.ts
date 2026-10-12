@@ -52,10 +52,13 @@ export async function getSitePurchase(id: string) {
     .select("id").eq("project_site_id", purchase.project_site_id).maybeSingle();
   if (stockLocationError) throw new Error("Unable to load the purchase stock location.", { cause: stockLocationError });
   const names = await describe([purchase]);
+  const expenseStatus = await supabase.rpc("get_site_purchase_expense_status", { p_purchase_ids: [purchase.id] });
+  if (expenseStatus.error) throw new Error("Unable to load receipt expense status.", { cause: expenseStatus.error });
   const deciderIds = [purchase.decided_by, purchase.reimbursed_by].filter((value): value is string => Boolean(value));
   const { data: deciders } = deciderIds.length ? await supabase.from("profiles").select("id,full_name").in("id", deciderIds) : { data: [] };
   const deciderNames = new Map((deciders ?? []).map((person) => [person.id, person.full_name]));
   return {
+    expenseReversed: expenseStatus.data?.[0]?.expense_reversed ?? false,
     purchase, lines: lines.map((line) => ({ ...line, total: lineTotal(line.quantity, line.unit_price) })),
     total: purchase.receipt_amount === null ? names.totals.get(purchase.id) ?? 0 : Number(purchase.receipt_amount), project: names.projectMap.get(purchase.project_id) ?? null,
     siteName: names.siteMap.get(purchase.project_site_id) ?? "", stockLocationId: stockLocation?.id ?? null,

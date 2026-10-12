@@ -39,7 +39,7 @@ export default async function SitePurchasesPage({ searchParams }: { searchParams
         <tbody className="divide-y divide-slate-100">{result.rows.map((row) => <tr key={row.id} className="hover:bg-slate-50/70">
           <td className="px-5 py-4"><Link href={`/site-purchases/${row.id}`} className="font-semibold text-slate-900 hover:text-cyan-700">{row.purchase_number}</Link><p className="text-xs text-slate-500">{row.receipt_date}</p></td>
           <td className="px-4 py-4">{row.project?.name ?? "—"}<p className="text-xs text-slate-500">{row.siteName}</p></td>
-          <td className="px-4 py-4">{row.supplier_name}{row.purchase_kind === "fuel" && <p className="text-xs text-slate-500">Diesel expense · no material stock</p>}<p className="text-xs text-slate-500">Receipt {row.receipt_number}</p></td>
+          <td className="px-4 py-4">{row.supplier_name}{row.purchase_kind !== "inventory" && <p className="text-xs text-slate-500">{row.purchase_kind === "fuel" ? "Diesel expense" : "Receipt expense"} · no material stock</p>}<p className="text-xs text-slate-500">Receipt {row.receipt_number}</p></td>
           <td className="px-4 py-4 text-right font-medium tabular-nums">{peso.format(row.total)}</td>
           <td className="px-4 py-4 text-xs">{row.paid_with === "own_money" ? <span className={`rounded-full px-2 py-0.5 font-semibold ${row.reimbursed_on ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{row.reimbursed_on ? "Own money · reimbursed" : "Own money · to reimburse"}</span> : "Company cash"}</td>
           <td className="px-5 py-4 text-slate-600">{row.submittedByName}</td>

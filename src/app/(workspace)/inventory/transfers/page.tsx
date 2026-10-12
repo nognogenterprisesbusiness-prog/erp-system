@@ -21,12 +21,13 @@ export default async function TransfersPage({ searchParams }: { searchParams: Pr
   const page = pageNumber(params.page);
   const [user, transferData] = await Promise.all([requireUser(), getInventoryTransfers(page)]);
   const transfers = transferData.rows;
+  const canReceive = user.canOperateInventory || user.roles.some((role) => role === "engineer" || role === "foreman");
   const options = (params.new || params.siteReturn) && (user.canManage || user.canOperateInventory) ? await getInventoryOptions() : null;
   const parsedMaterial = uuidSchema.safeParse(params.material);
   const actionHref = (key: "receive" | "variance", id: string) => `/inventory/transfers?${new URLSearchParams({ page: String(page), [key]: id })}`;
   const pageHref = `/inventory/transfers?page=${page}`;
-  const receiving = user.canOperateInventory && params.receive ? transfers.find((item) => item.item?.id === params.receive && !item.requestBound && item.status !== "received" && item.status !== "cancelled") : undefined;
-  const variance = !receiving && user.canManage && params.variance ? transfers.find((item) => item.item?.id === params.variance && !item.requestBound && item.status !== "received" && item.status !== "cancelled") : undefined;
+  const receiving = canReceive && params.receive ? transfers.find((item) => item.item?.id === params.receive && !item.requestBound && item.canReceive && item.status !== "received" && item.status !== "cancelled") : undefined;
+  const variance = !receiving && user.canManage && params.variance ? transfers.find((item) => item.item?.id === params.variance && !item.requestBound && item.canReceive && item.status !== "received" && item.status !== "cancelled") : undefined;
 
   return <>
     <PageHeader eyebrow="Inventory movement" title="Transfers" description="Stock leaves the source when it is sent and arrives when the destination receives it." action={<div className="flex flex-wrap gap-2">
@@ -53,7 +54,7 @@ export default async function TransfersPage({ searchParams }: { searchParams: Pr
           <td className="px-4 py-4 text-right font-semibold tabular-nums">{inTransit} {item.material?.unitSymbol}</td>
           <td className="px-4 py-4"><Badge variant={item.status === "received" ? "active" : item.status === "cancelled" ? "neutral" : "review"}>{item.item?.variance_quantity ? item.status === "received" ? "Reconciled with variance" : "Partial · variance" : item.status.replace("_", " ")}</Badge></td>
           <td className="px-5 py-4 text-right"><div className="flex justify-end gap-2">
-            {item.requestBound ? <span className="text-xs text-slate-500">Material request</span> : user.canOperateInventory && inTransit > 0 && item.item && item.status !== "cancelled" ? <Button variant="ghost" size="sm" asChild><Link href={actionHref("receive", item.item.id)}>Receive</Link></Button> : null}
+            {item.requestBound ? <span className="text-xs text-slate-500">Material request</span> : canReceive && item.canReceive && inTransit > 0 && item.item && item.status !== "cancelled" ? <Button variant="ghost" size="sm" asChild><Link href={actionHref("receive", item.item.id)}>Receive</Link></Button> : null}
             {user.canManage && !item.requestBound && inTransit > 0 && item.item && <Button variant="ghost" size="sm" asChild><Link href={actionHref("variance", item.item.id)}>Variance</Link></Button>}
           </div></td>
         </tr>;

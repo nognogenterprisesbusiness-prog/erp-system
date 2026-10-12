@@ -99,6 +99,7 @@ export const vehicleFuelReceiptSchema = z.object({
   amount: moneyInputSchema, paidWith: z.enum(sitePurchasePaidWith),
   notes: z.string().trim().max(500).optional(),
 });
+export const siteReceiptExpenseSchema = vehicleFuelReceiptSchema.omit({ vehicleId: true });
 export const rejectSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reason: z.string().trim().min(3, "Enter a reason").max(500) });
 export const reimburseSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reimbursedOn: z.iso.date(), reference: z.string().trim().min(2, "Enter the reference").max(120) });
 

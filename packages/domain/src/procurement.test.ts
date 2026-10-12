@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, submitSitePurchaseSchema } from "./procurement";
+import { issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, submitSitePurchaseSchema, siteReceiptExpenseSchema } from "./procurement";
 
 const id = "01234567-89ab-4cde-8123-456789abcdef";
 const other = "11234567-89ab-4cde-8123-456789abcdef";
@@ -36,4 +36,12 @@ test("site purchase: existing store, or a new store with name, address and conta
   assert.equal(submitSitePurchaseSchema.safeParse({ ...value, supplierId: "", newSupplierName: "Ace Hardware", newSupplierAddress: "Mandaue City", newSupplierContact: "09170001111" }).success, true);
   assert.equal(submitSitePurchaseSchema.safeParse({ ...value, receiptNumber: "" }).success, false);
   assert.equal(submitSitePurchaseSchema.safeParse({ ...value, lines: [value.lines[0], value.lines[0]] }).success, false);
+});
+
+test("receipt-only expenses require scoped identity and positive cent-precise amounts without inventory lines", () => {
+  const receipt = { idempotencyKey: id, projectId: id, siteId: other, amount: "1500.00", paidWith: "own_money", notes: "Receipt supplies" };
+  assert.equal(siteReceiptExpenseSchema.safeParse(receipt).success, true);
+  for (const amount of ["0", "-1", "1500.001", "NaN"]) assert.equal(siteReceiptExpenseSchema.safeParse({ ...receipt, amount }).success, false);
+  assert.equal(siteReceiptExpenseSchema.safeParse({ ...receipt, siteId: "" }).success, false);
+  assert.equal(siteReceiptExpenseSchema.safeParse({ ...receipt, paidWith: "supplier_credit" }).success, false);
 });

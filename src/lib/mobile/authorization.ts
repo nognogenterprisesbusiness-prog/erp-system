@@ -34,6 +34,7 @@ export async function authorizeMobileCommand(
   command: MobileCommand,
 ) {
   switch (command.action) {
+    case "receive-site-transfer":
     case "request-materials":
     case "report-missing-material":
     case "record-attendance":
@@ -43,6 +44,7 @@ export async function authorizeMobileCommand(
         command.input.siteId,
         command.action === "record-attendance" ? "foreman" : undefined,
       );
+    case "submit-receipt-expense":
     case "submit-vehicle-fuel":
     case "submit-site-purchase":
       return requireMobileSite(client, command.input.projectId, command.input.siteId, "engineer");

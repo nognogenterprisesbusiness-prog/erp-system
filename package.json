@@ -41,7 +41,8 @@
     "test:simple-setup-upgrade": "node scripts/test-simple-setup-upgrade.mjs",
     "test:simple-mobile-requests": "node scripts/test-simple-mobile-requests.mjs",
     "test:vehicle-fuel": "node scripts/test-vehicle-fuel-receipts.mjs",
-    "test:project-costs": "node scripts/test-project-costs.mjs"
+    "test:project-costs": "node scripts/test-project-costs.mjs",
+    "test:receipt-stock-entry": "node scripts/test-receipt-expense-warehouse-entry.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

@@ -1,6 +1,6 @@
 "use server";
 
-import { reimburseSitePurchaseSchema, rejectSitePurchaseSchema, submitSitePurchaseSchema, uuidSchema } from "@nognog/domain";
+import { reimburseSitePurchaseSchema, rejectSitePurchaseSchema, submitSitePurchaseSchema, siteReceiptExpenseSchema, uuidSchema } from "@nognog/domain";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireFinanceViewer, requireUser } from "@/lib/auth";
@@ -34,12 +34,30 @@ function revalidateSitePurchases(id?: string) {
   revalidatePath("/site-purchases");
   if (id) revalidatePath(`/site-purchases/${id}`);
   revalidatePath("/inventory");
+  revalidatePath("/projects/[id]/costs", "page");
+  revalidatePath("/dashboard");
 }
 
 // Engineer (or Admin) records a hardware store purchase with its receipt photo.
 export async function submitSitePurchaseAction(_: SitePurchaseActionState, form: FormData): Promise<SitePurchaseActionState> {
   const user = await requireUser();
   if (!user.canManage && !user.roles.includes("engineer")) return fail("Only an Engineer can record a site purchase.");
+  const purchaseKind = value(form, "purchaseKind") || "inventory";
+  if (purchaseKind !== "inventory" && purchaseKind !== "expense") return fail("Choose receipt expense or inventory materials.");
+  if (purchaseKind === "expense") {
+    const parsed = siteReceiptExpenseSchema.safeParse({ idempotencyKey: value(form, "idempotencyKey"), projectId: value(form, "projectId"), siteId: value(form, "siteId"), amount: value(form, "amount"), paidWith: value(form, "paidWith"), notes: value(form, "notes") });
+    if (!parsed.success) return fail("Review the receipt expense.", parsed.error.flatten().fieldErrors);
+    let photo: Buffer | undefined;
+    try { photo = await prepareRecordPhoto(form.get("photo")); } catch (cause) { return fail(cause instanceof Error ? cause.message : "The receipt photo could not be processed."); }
+    if (!photo) return fail("Add a photo of the receipt.", { photo: ["Add a photo of the receipt."] });
+    const input = parsed.data;
+    const supabase = await createClient();
+    try { await storeSitePurchaseReceipt(supabase, user.userId, input.idempotencyKey, photo); } catch (cause) { return fail(cause instanceof Error ? cause.message : "The receipt photo could not be uploaded."); }
+    const { data, error } = await supabase.rpc("submit_site_receipt_expense", { p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId, p_site_id: input.siteId, p_amount: input.amount, p_paid_with: input.paidWith, p_notes: input.notes || null });
+    if (error) return fail(sitePurchaseError(error));
+    revalidateSitePurchases(data); revalidatePath(`/projects/${input.projectId}/costs`);
+    redirect(`/site-purchases/${data}?posted=${Number(input.amount) <= 50000 ? "approved" : "submitted"}`);
+  }
   let lines: unknown;
   try { lines = JSON.parse(value(form, "lines")); } catch { return fail("Add at least one item."); }
   const parsed = submitSitePurchaseSchema.safeParse({

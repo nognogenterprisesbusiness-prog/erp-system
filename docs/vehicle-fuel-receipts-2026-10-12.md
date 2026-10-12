@@ -21,6 +21,4 @@ Apply `20261012150000_vehicle_fuel_receipts.sql` after the earlier pending Octob
 
 ## Remaining product decision
 
-Ordinary small site purchases cannot yet be reclassified automatically as receipt-only expenses. The user selected an automatic amount cutoff but has not supplied its value or confirmed that all ordinary site purchases should become expenses. PHP 50,000 is the owner-approval limit; using it as the stock-versus-expense cutoff without confirmation could remove legitimate material quantities from inventory. Existing itemized material behavior is therefore preserved. Diesel classification is unambiguous and implemented separately.
-
-Daily Report material usage continues to read posted site consumption, limited by available site stock. The material-use form now resets with explicit project/site changes and blocks switching sites while a material entry is open or posting, preventing a stale selected material from targeting a different site.
+Superseded by the confirmed staff choice: Receipt expense or Inventory materials. See receipt-stock-entry-2026-10-12.md. PHP 50,000 remains the approval limit, not a stock classification cutoff.

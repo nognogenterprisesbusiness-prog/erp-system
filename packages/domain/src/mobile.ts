@@ -10,7 +10,7 @@ import { siteConsumptionInputSchema } from "./inventory";
 import { assetKinds, equipmentRequestInputSchema } from "./assets";
 import { equipmentUsageSchema } from "./project-costs";
 import { materialSourcingSchema } from "./material-sourcing";
-import { submitSitePurchaseSchema, vehicleFuelReceiptSchema } from "./procurement";
+import { submitSitePurchaseSchema, vehicleFuelReceiptSchema, siteReceiptExpenseSchema } from "./procurement";
 import {
   dailyReportInputSchema,
   dailyReportReviewSchema,
@@ -158,8 +158,9 @@ export const mobileResponseSchemas = {
     z.object({
       id: uuidSchema,
       purchase_number: z.string(),
-      purchase_kind: z.enum(["inventory", "fuel"]).default("inventory"),
+      purchase_kind: z.enum(["inventory", "fuel", "expense"]).default("inventory"),
       vehicle_id: uuidSchema.nullable().optional(),
+      expense_reversed: z.boolean().default(false),
       supplier_name: z.string(),
       receipt_number: z.string(),
       receipt_date: z.string(),
@@ -191,6 +192,9 @@ export const mobileResponseSchemas = {
     unit: z.string(), photo_path: text, available_quantity: number,
     warehouses: z.array(z.object({ id: uuidSchema, name: z.string(), available_quantity: number })),
   })),
+  "site-deliveries": page(z.object({ id: uuidSchema, transfer_id: uuidSchema, material_id: uuidSchema,
+    name: z.string(), code: z.string(), unit: z.string(), photo_path: text, reference: z.string(), source_name: z.string(),
+    dispatched: number, received: number, remaining: number, variance: number })),
   inventory: page(
     z.object({
       id: uuidSchema,
@@ -378,6 +382,9 @@ export const mobileCommandSchema = z.discriminatedUnion("action", [
   command("request-materials", z.object({ ...submitMaterialRequestSchema.shape, warehouseId: uuidSchema.optional(), requiredDate: z.iso.date().optional() }).refine((i) => new Set(i.lines.map((l) => l.materialId)).size === i.lines.length, { path: ["lines"], message: "Each material may appear only once." }).refine((i) => Boolean(i.warehouseId) === Boolean(i.requiredDate), { message: "Provide both warehouse and date, or let Admin assign them." })),
   command("report-missing-material", materialSourcingSchema.extend({ warehouseId: uuidSchema.optional(), neededOn: z.iso.date().optional() }).refine((i) => Boolean(i.warehouseId) === Boolean(i.neededOn), { message: "Provide both warehouse and date, or let Admin assign them." })),
   command("decide-materials", decideMaterialRequestSchema),
+  command("receive-site-transfer", z.object({ idempotencyKey: uuidSchema, projectId: uuidSchema, siteId: uuidSchema,
+    transferItemId: uuidSchema, quantity: siteConsumptionInputSchema.shape.quantity,
+    qualityNote: z.string().trim().max(500).optional() }).refine((i) => !i.qualityNote || i.qualityNote.length >= 3, { path: ["qualityNote"], message: "Enter a note of at least three characters" })),
   command("receive-materials", receiveRequestWithInspectionSchema),
   command("cancel-materials", cancelMaterialRequestSchema),
   command("consume-materials", siteConsumptionInputSchema),
@@ -399,6 +406,7 @@ export const mobileCommandSchema = z.discriminatedUnion("action", [
   ),
   command("submit-site-purchase", submitSitePurchaseSchema),
   command("submit-vehicle-fuel", vehicleFuelReceiptSchema),
+  command("submit-receipt-expense", siteReceiptExpenseSchema),
   command("read-notification", z.object({ id: uuidSchema, read: z.boolean() })),
   command("read-all-notifications", z.object({ read: z.boolean() })),
 ]);

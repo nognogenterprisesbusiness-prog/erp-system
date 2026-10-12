@@ -173,3 +173,11 @@ test("mobile requests allow server dates and later warehouse assignment while re
   assert.equal(parse({ ...input, warehouseId: randomUUID() }).success, false);
   assert.equal(parse({ ...input, warehouseId: randomUUID(), requiredDate: "2026-10-12" }).success, true);
 });
+
+test("direct site receipts validate positive quantities, inspection notes and scoped identifiers", () => {
+  const command = { action: "receive-site-transfer", input: { idempotencyKey: randomUUID(), projectId: randomUUID(), siteId: randomUUID(), transferItemId: randomUUID(), quantity: "10", qualityNote: "Accepted count" } };
+  assert.equal(mobileCommandSchema.safeParse(command).success, true);
+  for (const quantity of ["0", "-1", "1.12345"]) assert.equal(mobileCommandSchema.safeParse({ ...command, input: { ...command.input, quantity } }).success, false);
+  assert.equal(mobileCommandSchema.safeParse({ ...command, input: { ...command.input, qualityNote: "x" } }).success, false);
+  assert.equal(mobileCommandSchema.safeParse({ ...command, input: { ...command.input, siteId: "" } }).success, false);
+});

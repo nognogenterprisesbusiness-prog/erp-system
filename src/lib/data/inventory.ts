@@ -9,7 +9,7 @@ import type { InventoryLocationRow, InventoryTransactionType, MaterialKind } fro
 import { inventoryLocationKind, resolveInventoryScope, type InventoryScope } from "@/lib/inventory/scope";
 
 export type MaterialView = { id: string; code: string; name: string; description: string | null; photo_path: string | null; base_unit_id: string; material_kind: MaterialKind; minimum_stock_level: number; is_active: boolean; archived_at: string | null; unitName: string; unitSymbol: string };
-export type LocationView = InventoryLocationRow & { name: string; detail: string; projectId: string | null };
+export type LocationView = InventoryLocationRow & { name: string; detail: string; projectId: string | null; sourceLocationIds?: string[] };
 
 const getLocationViews = cache(async function getLocationViews() {
   const supabase = await createClient();
@@ -78,11 +78,11 @@ export async function getMaterialCostBatches(id: string) {
 
 export async function getInventoryOptions() {
   const supabase = await createClient();
-  const [materials, locations, references] = await Promise.all([
+  const [materials, locations, references, deliveryDestinations] = await Promise.all([
     readAllPages((from, to) => supabase.from("materials").select("id,code,name,base_unit_id,material_kind").eq("is_active", true).is("archived_at", null).eq("material_kind", "consumable").order("name").order("id").range(from, to), "active materials"),
-    getLocationViews(), getMaterialReferences(),
+    getLocationViews(), getMaterialReferences(), getWarehouseDeliveryDestinations(),
   ]);
-  return { materials, locations, units: references.units };
+  return { materials, locations: [...locations.filter((location) => !deliveryDestinations.some((destination) => destination.id === location.id)), ...deliveryDestinations], units: references.units };
 }
 
 // includeValues (Admin/Finance) adds each balance's stock value; table policies
@@ -228,24 +228,26 @@ export async function getInventoryTransfers(page = 1) {
   const { data: transfers, count, error } = await supabase.from("inventory_transfers").select("*", { count: "exact" }).order("created_at", { ascending: false }).order("id").range((page - 1) * pageSize, page * pageSize - 1);
   if (error) throw new Error("Unable to load transfers.");
   const transferIds = (transfers ?? []).map((transfer) => transfer.id);
-  const [{ data: items, error: itemError }, locations] = await Promise.all([
+  const [{ data: items, error: itemError }, locations, deliveryDestinations] = await Promise.all([
     transferIds.length ? supabase.from("inventory_transfer_items").select("id,transfer_id,material_id,unit_of_measure_id,dispatched_quantity,received_quantity,variance_quantity,created_at,updated_at").in("transfer_id", transferIds) : Promise.resolve({ data: [], error: null }),
-    getLocationViews(),
+    getLocationViews(), getWarehouseDeliveryDestinations(),
   ]);
   if (itemError) throw new Error("Unable to load transfer items.");
   const itemIds = (items ?? []).map((item) => item.id);
   const materialIds = [...new Set((items ?? []).map((item) => item.material_id))];
   const unitIds = [...new Set((items ?? []).map((item) => item.unit_of_measure_id))];
-  const [linksResult, materialsResult, unitsResult] = await Promise.all([
+  const [linksResult, materialsResult, unitsResult, receivingPermissions] = await Promise.all([
     itemIds.length ? supabase.from("material_request_dispatches").select("request_line_id,transfer_item_id").in("transfer_item_id", itemIds) : Promise.resolve({ data: [], error: null }),
     materialIds.length ? supabase.from("materials").select("id,name").in("id", materialIds) : Promise.resolve({ data: [], error: null }),
     unitIds.length ? supabase.from("units_of_measure").select("id,symbol").in("id", unitIds) : Promise.resolve({ data: [], error: null }),
+    itemIds.length ? supabase.rpc("get_transfer_receiving_permissions", { p_item_ids: itemIds }) : Promise.resolve({ data: [], error: null }),
   ]);
-  if (linksResult.error || materialsResult.error || unitsResult.error) throw new Error("Unable to resolve transfer details.");
+  if (linksResult.error || materialsResult.error || unitsResult.error || receivingPermissions.error) throw new Error("Unable to resolve transfer details.");
+  const canReceive = new Map((receivingPermissions.data ?? []).map((row) => [row.id, row.can_receive]));
   const links = linksResult.data ?? [];
   const linkMap = new Map((links ?? []).map((link) => [link.transfer_item_id, link]));
-  const itemMap = new Map((items ?? []).map((item) => [item.transfer_id, item])); const materialMap = new Map((materialsResult.data ?? []).map((item) => [item.id, item])); const unitMap = new Map((unitsResult.data ?? []).map((item) => [item.id, item.symbol])); const locationMap = new Map(locations.map((item) => [item.id, item]));
-  return { count: count ?? 0, rows: (transfers ?? []).map((transfer) => { const item = itemMap.get(transfer.id); return { ...transfer, item, requestBound: item ? linkMap.has(item.id) : false, material: item ? { ...materialMap.get(item.material_id), unitSymbol: unitMap.get(item.unit_of_measure_id) ?? "" } : undefined, source: locationMap.get(transfer.source_location_id), destination: locationMap.get(transfer.destination_location_id) }; }) };
+  const itemMap = new Map((items ?? []).map((item) => [item.transfer_id, item])); const materialMap = new Map((materialsResult.data ?? []).map((item) => [item.id, item])); const unitMap = new Map((unitsResult.data ?? []).map((item) => [item.id, item.symbol])); const locationMap = new Map([...locations, ...deliveryDestinations].map((item) => [item.id, item]));
+  return { count: count ?? 0, rows: (transfers ?? []).map((transfer) => { const item = itemMap.get(transfer.id); return { ...transfer, item, canReceive: item ? canReceive.get(item.id) === true : false, requestBound: item ? linkMap.has(item.id) : false, material: item ? { ...materialMap.get(item.material_id), unitSymbol: unitMap.get(item.unit_of_measure_id) ?? "" } : undefined, source: locationMap.get(transfer.source_location_id), destination: locationMap.get(transfer.destination_location_id) }; }) };
 }
 
 export async function getSiteConsumptionOptions() {
@@ -265,3 +267,9 @@ export async function getProjectMaterialCost(projectId: string) {
   const supabase = await createClient();
   return readAllPages((from, to) => supabase.rpc("get_project_material_cost", { p_project_id: parsed.data }).order("material_code").order("material_id").range(from, to), "verified project material costs");
 }
+
+const getWarehouseDeliveryDestinations = cache(async function getWarehouseDeliveryDestinations(): Promise<LocationView[]> {
+  const supabase = await createClient();
+  const rows = await readAllPages((from, to) => supabase.rpc("list_warehouse_site_destinations").order("id").range(from, to), "authorized site destinations");
+  return rows.map(({ project_id, source_location_ids, ...location }) => ({ ...location, projectId: project_id, sourceLocationIds: source_location_ids }));
+});

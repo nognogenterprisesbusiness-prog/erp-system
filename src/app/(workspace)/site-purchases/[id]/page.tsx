@@ -28,21 +28,23 @@ export default async function SitePurchasePage({ params, searchParams }: { param
   const canDecide = user.canViewLaborRates;
   const canApprove = canDecide && (data.total <= 50000 || user.canManage);
   const isFuel = purchase.purchase_kind === "fuel";
+  const isExpense = purchase.purchase_kind !== "inventory";
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   return <div className="max-w-5xl">
     <PageHeader eyebrow="Site purchase" title={purchase.purchase_number} description={`${data.project?.name ?? ""} · ${data.siteName}`} action={<Button variant="outline" asChild><Link href={`/site-purchases?status=${purchase.status}`}>Back to site purchases</Link></Button>} />
-    {posted && postedMessages[posted] && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{posted === "approved" && isFuel ? "Approved. Diesel expense posted to the project once; no material stock added." : postedMessages[posted]}</p>}
-    {purchase.status === "approved" && !isFuel && data.stockLocationId && <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-slate-700">
+    {posted && postedMessages[posted] && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{posted === "approved" && isExpense ? "Approved. Receipt expense posted to the project once; no material stock added." : postedMessages[posted]}</p>}
+    {purchase.status === "approved" && !isExpense && data.stockLocationId && <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-slate-700">
       <span>Stock was posted to {data.siteName}. Check this site’s balance and stock history.</span>
       <Button variant="outline" size="sm" asChild><Link href={`/inventory?location=${data.stockLocationId}`}>View site inventory</Link></Button>
       <Button variant="outline" size="sm" asChild><Link href={`/inventory/transactions?location=${data.stockLocationId}`}>View stock history</Link></Button>
     </div>}
+    {data.expenseReversed && <p role="status" className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">The project expense was reversed. The original receipt and approval remain in history; this receipt does not charge the project again.</p>}
     <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle[purchase.status]}`}>{statusLabel[purchase.status]}</span><span className="text-lg font-semibold tabular-nums">{peso.format(data.total)}</span></div>
         <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
-          <div><dt className="text-xs text-slate-500">{isFuel ? "Vehicle" : "Store"}</dt><dd className="mt-1 font-medium">{purchase.supplier_name}</dd></div>
-          <div><dt className="text-xs text-slate-500">Receipt</dt><dd className="mt-1 font-medium">{isFuel ? "System reference " : ""}{purchase.receipt_number} · {purchase.receipt_date}</dd></div>
+          <div><dt className="text-xs text-slate-500">{isFuel ? "Vehicle" : isExpense ? "Purchase type" : "Store"}</dt><dd className="mt-1 font-medium">{purchase.supplier_name}</dd></div>
+          <div><dt className="text-xs text-slate-500">Receipt</dt><dd className="mt-1 font-medium">{isExpense ? "System reference " : ""}{purchase.receipt_number} · {purchase.receipt_date}</dd></div>
           <div><dt className="text-xs text-slate-500">Bought by</dt><dd className="mt-1 font-medium">{data.submittedByName}</dd></div>
           <div><dt className="text-xs text-slate-500">Paid with</dt><dd className="mt-1 font-medium">{purchase.paid_with === "own_money" ? (purchase.reimbursed_on ? `Own money · reimbursed ${purchase.reimbursed_on} (${purchase.reimbursement_reference})` : "Own money · to reimburse") : "Company cash"}</dd></div>
           {purchase.notes && <div className="sm:col-span-2"><dt className="text-xs text-slate-500">Note</dt><dd className="mt-1">{purchase.notes}</dd></div>}
@@ -50,7 +52,7 @@ export default async function SitePurchasePage({ params, searchParams }: { param
         </dl>
         {canDecide && purchase.status === "submitted" && <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
           <RecordCreateDialog title="Reject purchase" triggerLabel="Reject" triggerVariant="outline"><RejectSitePurchaseForm purchaseId={purchase.id} /></RecordCreateDialog>
-          {canApprove && <RecordCreateDialog title="Approve purchase" triggerLabel="Approve" initialOpen={query.action === "approve"} closeHref={`/site-purchases/${id}`}><ApproveSitePurchaseForm purchaseId={purchase.id} total={data.total} isExpense={isFuel} /></RecordCreateDialog>}
+          {canApprove && <RecordCreateDialog title="Approve purchase" triggerLabel="Approve" initialOpen={query.action === "approve"} closeHref={`/site-purchases/${id}`}><ApproveSitePurchaseForm purchaseId={purchase.id} total={data.total} isExpense={isExpense} /></RecordCreateDialog>}
         </div>}
         {canDecide && purchase.status === "approved" && purchase.paid_with === "own_money" && !purchase.reimbursed_on && <div className="mt-5 flex justify-end border-t border-slate-100 pt-4"><RecordCreateDialog title="Mark reimbursed" triggerLabel="Mark reimbursed" triggerVariant="outline" initialOpen={query.action === "reimburse"} closeHref={`/site-purchases/${id}`}><ReimburseSitePurchaseForm purchaseId={purchase.id} today={today} /></RecordCreateDialog></div>}
       </div>
@@ -59,7 +61,7 @@ export default async function SitePurchasePage({ params, searchParams }: { param
         <img src={`/site-purchases/${purchase.id}/receipt`} alt={`Receipt ${purchase.receipt_number}`} className="h-full w-full object-contain" />
       </a>
     </section>
-    {isFuel ? <p className="mt-6 text-sm text-slate-600">Diesel receipt · linked to this project/site and vehicle history. {purchase.status === "approved" ? "Recorded as a project expense; no material stock added." : "No project cost is posted until approval."}</p> : <>
+    {isExpense ? <p className="mt-6 text-sm text-slate-600">{isFuel ? "Diesel receipt · linked to this project/site and vehicle history." : "Receipt expense · linked to this project/site."} {purchase.status === "approved" ? "Recorded as a project expense; no material stock added." : "No project cost is posted until approval."}</p> : <>
     <h2 className="mt-8 text-lg font-semibold text-slate-900">Items bought</h2>
     <DataTableShell footer={<div className="flex justify-end text-sm">Total <span className="ml-3 font-semibold tabular-nums">{peso.format(data.total)}</span></div>}>
       <table className="w-full min-w-[620px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Item</th><th className="px-4 py-3 text-right">Quantity</th><th className="px-4 py-3 text-right">Price</th><th className="px-5 py-3 text-right">Total</th></tr></thead>
