@@ -94,6 +94,11 @@ export const submitSitePurchaseSchema = z.object({
   { path: ["supplierId"], message: "Choose a store, or enter the new store's name, address and contact number" })
   .refine((value) => new Set(value.lines.map((line) => line.materialId)).size === value.lines.length,
     { path: ["lines"], message: "Choose each material once" });
+export const vehicleFuelReceiptSchema = z.object({
+  idempotencyKey: uuidSchema, projectId: uuidSchema, siteId: uuidSchema, vehicleId: uuidSchema,
+  amount: moneyInputSchema, paidWith: z.enum(sitePurchasePaidWith),
+  notes: z.string().trim().max(500).optional(),
+});
 export const rejectSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reason: z.string().trim().min(3, "Enter a reason").max(500) });
 export const reimburseSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reimbursedOn: z.iso.date(), reference: z.string().trim().min(2, "Enter the reference").max(120) });
 

@@ -10,7 +10,7 @@ import { siteConsumptionInputSchema } from "./inventory";
 import { assetKinds, equipmentRequestInputSchema } from "./assets";
 import { equipmentUsageSchema } from "./project-costs";
 import { materialSourcingSchema } from "./material-sourcing";
-import { submitSitePurchaseSchema } from "./procurement";
+import { submitSitePurchaseSchema, vehicleFuelReceiptSchema } from "./procurement";
 import {
   dailyReportInputSchema,
   dailyReportReviewSchema,
@@ -31,6 +31,7 @@ export const mobileQuerySchema = z.object({
   search: z.string().trim().max(100).default(""),
   projectId: uuidSchema.optional(),
   warehouseId: uuidSchema.optional(),
+  vehicleId: uuidSchema.optional(),
   siteId: uuidSchema.optional(),
   id: uuidSchema.optional(),
   date: z.iso.date().optional(),
@@ -157,6 +158,8 @@ export const mobileResponseSchemas = {
     z.object({
       id: uuidSchema,
       purchase_number: z.string(),
+      purchase_kind: z.enum(["inventory", "fuel"]).default("inventory"),
+      vehicle_id: uuidSchema.nullable().optional(),
       supplier_name: z.string(),
       receipt_number: z.string(),
       receipt_date: z.string(),
@@ -170,6 +173,7 @@ export const mobileResponseSchemas = {
   // Stores and inventory materials an Engineer can choose when buying.
   "purchase-choices": z.object({
     stores: z.array(z.object({ id: uuidSchema, name: z.string() })),
+    vehicles: z.array(z.object({ id: uuidSchema, name: z.string(), code: z.string() })).default([]),
     materials: z.array(z.object({ id: uuidSchema, name: z.string(), unit: z.string() })),
   }),
   materials: page(
@@ -394,6 +398,7 @@ export const mobileCommandSchema = z.discriminatedUnion("action", [
     }),
   ),
   command("submit-site-purchase", submitSitePurchaseSchema),
+  command("submit-vehicle-fuel", vehicleFuelReceiptSchema),
   command("read-notification", z.object({ id: uuidSchema, read: z.boolean() })),
   command("read-all-notifications", z.object({ read: z.boolean() })),
 ]);

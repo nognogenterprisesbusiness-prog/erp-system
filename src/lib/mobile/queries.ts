@@ -89,10 +89,11 @@ export async function readMobileResource(
   switch (resource) {
     case "site-purchases": {
       let purchases = c.from("site_purchases")
-        .select("id,purchase_number,supplier_name,receipt_number,receipt_date,status,paid_with,rejection_reason,reimbursed_on", { count: "exact" })
+        .select("id,purchase_number,purchase_kind,vehicle_id,receipt_amount,supplier_name,receipt_number,receipt_date,status,paid_with,rejection_reason,reimbursed_on", { count: "exact" })
         .eq("project_id", required(q.projectId)).eq("project_site_id", required(q.siteId))
         .order("created_at", { ascending: false }).order("id");
       if (q.id) purchases = purchases.eq("id", q.id);
+      if (q.vehicleId) purchases = purchases.eq("vehicle_id", q.vehicleId).eq("purchase_kind", "fuel");
       if (search) purchases = purchases.or(`purchase_number.ilike.%${search}%,receipt_number.ilike.%${search}%,supplier_name.ilike.%${search}%`);
       const r = await purchases.range(offset, offset + size - 1);
       if (r.error) databaseError(r.error);
@@ -100,7 +101,7 @@ export async function readMobileResource(
       const lines = await readByIds(rows.map((x) => x.id), (ids, from, to) => c.from("site_purchase_lines").select("id,site_purchase_id,quantity,unit_price").in("site_purchase_id", ids).order("id").range(from, to), "site purchase lines");
       const totals = new Map<string, number>();
       for (const line of lines) totals.set(line.site_purchase_id, (totals.get(line.site_purchase_id) ?? 0) + Math.round(Number(line.quantity) * Number(line.unit_price) * 100) / 100);
-      return page(rows.map((x) => ({ ...x, total: totals.get(x.id) ?? 0 })), r.count, q);
+      return page(rows.map((x) => ({ ...x, total: x.receipt_amount === null ? totals.get(x.id) ?? 0 : Number(x.receipt_amount) })), r.count, q);
     }
     case "purchase-choices": {
       const [stores, materials, units] = await Promise.all([
@@ -110,7 +111,15 @@ export async function readMobileResource(
       ]);
       if (stores.error) databaseError(stores.error);
       const symbols = new Map(units.map((unit) => [unit.id, unit.symbol]));
+      let vehicles: { id: string; code: string; name: string }[] = [];
+      if (q.projectId && q.siteId) {
+        await requireMobileSite(c, q.projectId, q.siteId, "engineer");
+        const locations = await readAllPages((from, to) => c.from("inventory_locations").select("id").eq("project_site_id", q.siteId!).order("id").range(from, to), "fuel site locations");
+        const assetLocations = await readByIds(locations.map((x) => x.id), (ids, from, to) => c.from("asset_locations").select("id").in("inventory_location_id", ids).is("archived_at", null).order("id").range(from, to), "fuel asset locations");
+        vehicles = await readByIds(assetLocations.map((x) => x.id), (ids, from, to) => c.from("assets").select("id,code,name").in("current_location_id", ids).eq("asset_kind", "vehicle").in("status", ["available", "assigned", "in_use"]).is("archived_at", null).order("id").range(from, to), "site vehicles");
+      }
       return {
+        vehicles,
         stores: (stores.data ?? []).map((store) => ({ id: store.id, name: store.supplier_name })),
         materials: materials.filter((material) => symbols.has(material.base_unit_id))
           .map((material) => ({ id: material.id, name: material.name, unit: symbols.get(material.base_unit_id)! })),

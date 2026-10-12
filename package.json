@@ -39,6 +39,7 @@
     "test:request-assignment": "node scripts/test-request-warehouse-assignment.mjs",
     "test:stock-simplification": "node scripts/test-mobile-stock-simplification.mjs",
     "test:simple-setup-upgrade": "node scripts/test-simple-setup-upgrade.mjs",
+    "test:vehicle-fuel": "node scripts/test-vehicle-fuel-receipts.mjs",
     "test:project-costs": "node scripts/test-project-costs.mjs"
   },
   "dependencies": {

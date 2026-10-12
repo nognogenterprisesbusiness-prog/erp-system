@@ -137,3 +137,20 @@ export async function getEquipmentUsage(assetId: string, page = 1) {
 }
 
 export type AssetLocationKindValue = AssetLocationKind;
+
+export async function getVehicleFuelReceipts(assetId: string, page = 1) {
+  const supabase = await createClient();
+  const { data, count, error } = await supabase.from("site_purchases")
+    .select("id,purchase_number,project_id,project_site_id,receipt_date,receipt_amount,status,project_expense_id")
+    .eq("vehicle_id", assetId).eq("purchase_kind", "fuel")
+    .order("receipt_date", { ascending: false }).order("id").range((page - 1) * 20, page * 20 - 1);
+  if (error) throw new Error("Unable to load vehicle diesel receipts.");
+  const rows = data ?? [];
+  const [projects, reversals] = await Promise.all([
+    readByIds(rows.map((x) => x.project_id), (ids, from, to) => supabase.from("projects").select("id,name").in("id", ids).order("id").range(from, to), "diesel projects"),
+    readByIds(rows.flatMap((x) => x.project_expense_id ? [x.project_expense_id] : []), (ids, from, to) => supabase.from("project_expense_reversals").select("id,expense_id,reason").in("expense_id", ids).order("id").range(from, to), "diesel corrections"),
+  ]);
+  const names = new Map(projects.map((x) => [x.id, x.name]));
+  const reversed = new Map(reversals.map((x) => [x.expense_id, x.reason]));
+  return { page, count: count ?? 0, rows: rows.map((x) => ({ ...x, projectName: names.get(x.project_id) ?? "Project", reversal: x.project_expense_id ? reversed.get(x.project_expense_id) : undefined })) };
+}

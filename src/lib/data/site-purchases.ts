@@ -30,13 +30,13 @@ export async function getSitePurchases({ status, page = 1 }: { status: SitePurch
   const currentPage = Math.max(1, Math.min(10000, Number.isSafeInteger(page) ? page : 1));
   const from = (currentPage - 1) * PAGE_SIZE;
   const { data, count, error } = await supabase.from("site_purchases")
-    .select("id,purchase_number,project_id,project_site_id,supplier_name,receipt_number,receipt_date,paid_with,status,submitted_by,reimbursed_on,created_at", { count: "exact" })
+    .select("id,purchase_number,project_id,project_site_id,purchase_kind,receipt_amount,supplier_name,receipt_number,receipt_date,paid_with,status,submitted_by,reimbursed_on,created_at", { count: "exact" })
     .eq("status", status).order("created_at", { ascending: false }).order("id").range(from, from + PAGE_SIZE - 1);
   if (error) throw new Error("Unable to load site purchases.", { cause: error });
   const rows = data ?? [];
   const names = await describe(rows);
   return {
-    rows: rows.map((row) => ({ ...row, total: names.totals.get(row.id) ?? 0, project: names.projectMap.get(row.project_id) ?? null, siteName: names.siteMap.get(row.project_site_id) ?? "", submittedByName: names.peopleMap.get(row.submitted_by) ?? "" })),
+    rows: rows.map((row) => ({ ...row, total: row.receipt_amount === null ? names.totals.get(row.id) ?? 0 : Number(row.receipt_amount), project: names.projectMap.get(row.project_id) ?? null, siteName: names.siteMap.get(row.project_site_id) ?? "", submittedByName: names.peopleMap.get(row.submitted_by) ?? "" })),
     count: count ?? 0, page: currentPage, pageCount: Math.max(1, Math.ceil((count ?? 0) / PAGE_SIZE)),
   };
 }
@@ -57,7 +57,7 @@ export async function getSitePurchase(id: string) {
   const deciderNames = new Map((deciders ?? []).map((person) => [person.id, person.full_name]));
   return {
     purchase, lines: lines.map((line) => ({ ...line, total: lineTotal(line.quantity, line.unit_price) })),
-    total: names.totals.get(purchase.id) ?? 0, project: names.projectMap.get(purchase.project_id) ?? null,
+    total: purchase.receipt_amount === null ? names.totals.get(purchase.id) ?? 0 : Number(purchase.receipt_amount), project: names.projectMap.get(purchase.project_id) ?? null,
     siteName: names.siteMap.get(purchase.project_site_id) ?? "", stockLocationId: stockLocation?.id ?? null,
     submittedByName: names.peopleMap.get(purchase.submitted_by) ?? "",
     decidedByName: purchase.decided_by ? deciderNames.get(purchase.decided_by) ?? "" : "",

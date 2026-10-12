@@ -58,11 +58,11 @@ export function SitePurchaseForm({ choices, idempotencyKey, today }: { choices: 
   </form>;
 }
 
-export function ApproveSitePurchaseForm({ purchaseId, total }: { purchaseId: string; total: number }) {
+export function ApproveSitePurchaseForm({ purchaseId, total, isExpense = false }: { purchaseId: string; total: number; isExpense?: boolean }) {
   const [state, action, pending] = useActionState(approveSitePurchaseAction, initialState);
   return <form action={action} className="space-y-3">
     <input type="hidden" name="purchaseId" value={purchaseId} />
-    <p className="text-sm text-slate-600">Approving adds the items to the site&apos;s stock at the receipt prices ({peso.format(total)}) and saves them as the store&apos;s latest prices.</p>
+    <p className="text-sm text-slate-600">{isExpense ? `Approving posts ${peso.format(total)} once as a project diesel expense. It does not add material stock.` : `Approving adds the items to the site’s stock at the receipt prices (${peso.format(total)}) and saves them as the store’s latest prices.`}</p>
     {state.message && <p role="alert" className="text-sm text-red-700">{state.message}</p>}
     <RecordFormControls busy={pending} label="Approve purchase" />
   </form>;

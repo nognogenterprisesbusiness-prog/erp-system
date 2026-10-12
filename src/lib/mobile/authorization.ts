@@ -43,6 +43,7 @@ export async function authorizeMobileCommand(
         command.input.siteId,
         command.action === "record-attendance" ? "foreman" : undefined,
       );
+    case "submit-vehicle-fuel":
     case "submit-site-purchase":
       return requireMobileSite(client, command.input.projectId, command.input.siteId, "engineer");
     case "request-equipment":

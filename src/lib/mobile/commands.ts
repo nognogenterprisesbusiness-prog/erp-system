@@ -128,6 +128,15 @@ export async function executeSiteCommand(
       );
       return { id, message: "Equipment request submitted." };
     }
+    case "submit-vehicle-fuel": {
+      const i = command.input;
+      const r = await client.rpc("submit_vehicle_fuel_receipt", {
+        p_idempotency_key: i.idempotencyKey, p_project_id: i.projectId, p_site_id: i.siteId,
+        p_vehicle_id: i.vehicleId, p_amount: i.amount, p_paid_with: i.paidWith, p_notes: i.notes || null,
+      });
+      if (r.error) databaseError(r.error);
+      return { id: r.data!, message: Number(i.amount) > 50000 ? "Diesel receipt submitted for Admin approval." : "Diesel expense recorded for this project. No material stock was added." };
+    }
     case "submit-site-purchase": {
       const i = command.input;
       const newStore = !i.supplierId;

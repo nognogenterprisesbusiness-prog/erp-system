@@ -148,6 +148,8 @@ export function databaseError(error: {
   message: string;
 }): never {
   if (error.message.includes("Choose a source warehouse before approval")) throw new MobileError(422, "Wait for Admin or Warehouse Staff to choose the source warehouse before approval.");
+  if (error.message.includes("currently at this site")) throw new MobileError(422, "This vehicle is no longer at the selected site. Refresh and choose an available vehicle.");
+  if (error.message.includes("Invalid diesel receipt")) throw new MobileError(422, "Enter a positive receipt total with up to two decimal places.");
   if (error.code === "PGRST202")
     throw new MobileError(
       503,

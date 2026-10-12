@@ -24,13 +24,13 @@ export const roleResponsibilities: Record<AppRole, { summary: string; tasks: str
   },
   finance: {
     summary: "Check receipts, payments and project costs.",
-    tasks: ["Review supplier purchases and price history; record supplier payments.", "Approve or reject Engineer site purchases and record reimbursements.", "Manage client billing and collections; review attendance costs and financial reports."],
+    tasks: ["Review supplier purchases and price history; record supplier payments.", "Review Engineer site purchases and record reimbursements. Purchases above ₱50,000 require Admin approval.", "Manage client billing and collections; review attendance costs and financial reports."],
     boundary: "Finance does not approve the owner gate above ₱50,000, dispatch stock, record site use or approve material requests. Admin handles supported payment reversals.",
   },
   engineer: {
     summary: "Review assigned site work and arrange materials.",
     tasks: ["Check assigned sites, stock, material plans and project documents.", "Request materials, equipment or vehicles and report unavailable materials.", "Independently review material requests and daily reports; inspect site deliveries and record actual material use.", "Submit hardware-store purchases with receipt photos for Admin or Finance approval."],
-    boundary: "An Engineer cannot approve their own material request or approve their own site purchase. Admin maintains the material catalog and supplier purchase orders.",
+    boundary: "An Engineer cannot approve their own material request or inventory purchase. Diesel receipts up to ₱50,000 post automatically; higher diesel receipts wait for Admin approval. Admin maintains the material catalog and supplier purchase orders.",
   },
   foreman: {
     summary: "Record what happens at the assigned site each day.",
@@ -159,17 +159,18 @@ export const manualGuides: readonly ManualGuide[] = [
     tips: ["Saving inspection alone does not finish stock receipt; check that accepted stock was posted.", "Reusing a delivery reference for a different posting is not a way to correct an earlier receipt."],
   },
   {
-    id: "site-purchases", title: "Engineer: buy at a hardware store", description: "Submit a receipt for approval and add bought materials to site stock.", href: "/site-purchases", roles: ["admin", "finance", "engineer"],
+    id: "site-purchases", title: "Engineer: site purchases and diesel receipts", description: "Record bought materials or a vehicle diesel receipt against the selected project/site.", href: "/site-purchases", roles: ["admin", "finance", "engineer"],
     before: "The Engineer needs an assigned active site, existing catalog materials and a readable photo of the actual receipt.",
     steps: [
       { title: "Choose the site and hardware store", detail: "In Site purchases on web, or Buy at Hardware Store on mobile, select the assigned project/site and store. Use the permitted new-store fields if the supplier is not listed." },
+      { title: "Record diesel instead", detail: "On mobile choose Diesel, select a vehicle currently at the selected site, enter the total and attach the receipt. The system generates today’s Philippine posting date and a reference. Up to ₱50,000 posts one project expense; higher amounts require Admin approval. Tap a diesel receipt for that vehicle’s history at this site. Admin/Finance can also view diesel history on the vehicle detail page." },
       { title: "Enter the receipt", detail: "Enter receipt number and date, then materials, quantities and unit prices. Check each line and the receipt total. The date must not be in the future under Philippine business time." },
       { title: "Identify who paid", detail: "Choose Company cash or Own money, add an optional note and attach the receipt photo. Submit for approval and wait for confirmation." },
       { title: "Admin or Finance checks the purchase", detail: "The reviewer verifies the receipt, site, items and price, then approves or rejects with the required reason. Approval adds the bought quantities directly to that site's stock once." },
       { title: "Reimburse or use the stock", detail: "For Own money, Admin or Finance records reimbursement after paying the Engineer back. Site staff separately records actual material use; reimbursement does not add stock again." },
     ],
-    result: "The approved purchase appears in the selected site's inventory at the receipt price. It is not a warehouse receipt.",
-    tips: ["All Engineer site purchases follow receipt review. The supplier purchase order's ₱50,000 automatic-issue rule does not bypass this approval.", "If approved stock seems missing, open that specific site in Inventory and check the purchase receipt history before submitting again.", "Use a clear supported receipt photo. Mobile accepts an upload under 3 MB; the app prepares camera/gallery images before submission."],
+    result: "Approved itemized materials appear in site stock at the receipt price. Diesel receipts appear as project expenses and vehicle history; they never add material stock.",
+    tips: ["Itemized site material purchases follow receipt review; above ₱50,000 only Admin can approve. On mobile, choose Diesel for a vehicle at the selected site, enter the total and attach a receipt photo. Diesel up to ₱50,000 posts one project expense automatically; higher amounts wait for Admin. Diesel does not add material stock.", "If approved stock seems missing, open that specific site in Inventory and check the purchase receipt history before submitting again.", "Use a clear supported receipt photo. Mobile accepts an upload under 3 MB; the app prepares camera/gallery images before submission."],
   },
   {
     id: "assets", title: "Equipment, vehicles and reusable custody", description: "Request, hand over, monitor and return assets.", href: "/inventory?type=equipment", roles: ["admin", "engineer", "foreman", "warehouse_staff"],

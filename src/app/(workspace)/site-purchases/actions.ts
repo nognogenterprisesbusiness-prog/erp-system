@@ -15,6 +15,7 @@ const fail = (message: string, fieldErrors?: Record<string, string[]>): SitePurc
 function sitePurchaseError(error: { code?: string; message: string }) {
   if (error.message.includes("site_purchases_receipt_unique")) return "This receipt from this store was already submitted.";
   if (error.message.includes("Not the Engineer")) return "You are not the Engineer of this site.";
+  if (error.message.includes("require Admin")) return "Purchases above ₱50,000 require Admin approval.";
   if (error.code === "42501") return "You do not have permission for this site purchase.";
   if (error.message.includes("receipt photo")) return "Add a photo of the receipt.";
   if (error.message.includes("future")) return "The receipt date cannot be in the future.";
