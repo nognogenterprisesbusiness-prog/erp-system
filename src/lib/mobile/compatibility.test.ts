@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mobileCompatibilitySchema, mobileUpdateRequiredSchema } from "@nognog/domain";
-import { inspectMobileBuild, inspectMobileProtocol, mobileCompatibility } from "./compatibility";
+import { inspectMobileBuild, inspectMobileProtocol, mobileCompatibility, supportsReceiptExpenses } from "./compatibility";
 import { assertMobileCompatibility, MobileError, mobileFailure } from "./http";
 import { GET } from "@/app/api/mobile/v1/compatibility/route";
 
@@ -105,4 +105,11 @@ test("a released protocol-2 build can require older protocol-1 apps to use their
     if (previous === undefined) delete process.env.MOBILE_MIN_PROTOCOL;
     else process.env.MOBILE_MIN_PROTOCOL = previous;
   }
+});
+
+test("receipt expenses are withheld from installed clients whose enum cannot parse them", () => {
+  assert.equal(supportsReceiptExpenses("android", "15"), true);
+  assert.equal(supportsReceiptExpenses("android", "16"), true);
+  assert.equal(supportsReceiptExpenses("web", null), true);
+  for (const [platform, build] of [["android", "14"], ["android", null], [null, null], ["ios", "1"], ["android", "bad"]]) assert.equal(supportsReceiptExpenses(platform, build), false);
 });

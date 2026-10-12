@@ -83,6 +83,7 @@ export async function readMobileResource(
   resource: MobileResource,
   q: MobileQuery,
   user: { id: string; full_name: string; email: string; roles: string[] },
+  options: { receiptExpenses: boolean } = { receiptExpenses: true },
 ) {
   const offset = (q.page - 1) * size;
   const search = safeSearchTerm(q.search);
@@ -92,6 +93,7 @@ export async function readMobileResource(
         .select("id,purchase_number,purchase_kind,vehicle_id,receipt_amount,supplier_name,receipt_number,receipt_date,status,paid_with,rejection_reason,reimbursed_on", { count: "exact" })
         .eq("project_id", required(q.projectId)).eq("project_site_id", required(q.siteId))
         .order("created_at", { ascending: false }).order("id");
+      if (!options.receiptExpenses) purchases = purchases.neq("purchase_kind", "expense");
       if (q.id) purchases = purchases.eq("id", q.id);
       if (q.vehicleId) purchases = purchases.eq("vehicle_id", q.vehicleId).eq("purchase_kind", "fuel");
       if (search) purchases = purchases.or(`purchase_number.ilike.%${search}%,receipt_number.ilike.%${search}%,supplier_name.ilike.%${search}%`);

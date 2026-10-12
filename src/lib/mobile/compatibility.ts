@@ -26,3 +26,8 @@ export function inspectMobileBuild(platformHeader: string | null, buildHeader: s
   if (buildHeader !== null && !/^[1-9]\d{0,9}$/.test(buildHeader)) return "invalid";
   return mobileBuildStatus(platformHeader, buildHeader === null ? null : Number(buildHeader), policy);
 }
+
+/** Receipt-expense rows were first bundled in Android build 15. */
+export function supportsReceiptExpenses(platform: string | null, build: string | null) {
+  return platform === "web" || (platform === "android" && build !== null && /^[1-9]\d{0,9}$/.test(build) && Number(build) >= 15);
+}

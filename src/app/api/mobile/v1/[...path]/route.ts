@@ -13,6 +13,7 @@ import {
   mobileFailure,
   databaseError,
 } from "@/lib/mobile/http";
+import { supportsReceiptExpenses } from "@/lib/mobile/compatibility";
 import { readMobileResource } from "@/lib/mobile/queries";
 import { executeSiteCommand } from "@/lib/mobile/commands";
 import { authorizeMobileCommand } from "@/lib/mobile/authorization";
@@ -61,7 +62,7 @@ export async function GET(request: Request, context: Context) {
       );
     return success(
       mobileResponseSchemas[resource].parse(
-        await readMobileResource(client, resource, query.data, user),
+        await readMobileResource(client, resource, query.data, user, { receiptExpenses: supportsReceiptExpenses(request.headers.get("X-Nognog-Mobile-Platform"), request.headers.get("X-Nognog-Mobile-Build")) }),
       ),
     );
   } catch (error) {
