@@ -30,7 +30,7 @@ function HandoverRow({ item, isVehicle, photoPath, projectName, siteName, canMan
   canManage: boolean;
   today: string;
 }) {
-  const overdue = item.status === "checked_out" && item.expected_return_on < today;
+  const overdue = item.status === "checked_out" && !!item.expected_return_on && item.expected_return_on < today;
   return <tr className="align-top">
     <td className="px-5 py-4">
       <div className="flex items-start gap-3">
@@ -44,7 +44,7 @@ function HandoverRow({ item, isVehicle, photoPath, projectName, siteName, canMan
       </div>
     </td>
     <td className="px-4 py-4 text-slate-600">{projectName}<span className="block text-xs text-slate-500">{siteName}</span></td>
-    <td className="px-4 py-4 text-slate-600">{item.needed_on}<span className={overdue ? "block text-xs font-semibold text-red-700" : "block text-xs text-slate-500"}>Return {item.expected_return_on}{overdue ? " · overdue" : ""}</span></td>
+    <td className="px-4 py-4 text-slate-600">{item.needed_on}<span className={overdue ? "block text-xs font-semibold text-red-700" : "block text-xs text-slate-500"}>{item.expected_return_on ? `Return ${item.expected_return_on}` : "No return deadline"}{overdue ? " · overdue" : ""}</span></td>
     <td className="max-w-[230px] px-4 py-4 text-slate-600">{item.purpose}{item.decision_note && <span className="block text-xs text-slate-500">Decision: {item.decision_note}</span>}{item.return_note && <span className="block text-xs text-slate-500">Return: {item.return_note}</span>}</td>
     <td className="px-4 py-4"><span className={overdue ? "rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-700"}>{overdue ? "Overdue" : item.status.replaceAll("_", " ")}</span></td>
     {canManage && <td className="px-5 py-4 text-right"><EquipmentRequestActions id={item.id} status={item.status} /></td>}

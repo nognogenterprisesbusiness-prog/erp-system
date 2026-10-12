@@ -12,6 +12,7 @@ export function mobileCompatibility(): MobileCompatibility {
   };
   return { minimumProtocol: configuredProtocol(process.env.MOBILE_MIN_PROTOCOL), currentProtocol: mobileProtocolVersion,
     updateUrls: { android: safeUrl(process.env.MOBILE_ANDROID_UPDATE_URL), ios: safeUrl(process.env.MOBILE_IOS_UPDATE_URL) },
+    latestBuilds: { android: configuredBuild(process.env.MOBILE_ANDROID_LATEST_BUILD) ?? configuredBuild(process.env.MOBILE_ANDROID_MIN_BUILD), ios: configuredBuild(process.env.MOBILE_IOS_LATEST_BUILD) ?? configuredBuild(process.env.MOBILE_IOS_MIN_BUILD) },
     minimumBuilds: { android: configuredBuild(process.env.MOBILE_ANDROID_MIN_BUILD), ios: configuredBuild(process.env.MOBILE_IOS_MIN_BUILD) } };
 }
 

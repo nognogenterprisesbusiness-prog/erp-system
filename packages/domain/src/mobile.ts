@@ -370,7 +370,7 @@ export const attendanceBatchSchema = z
   );
 export const idempotentEquipmentRequestSchema = z.object({
   idempotencyKey: uuidSchema,
-  request: equipmentRequestInputSchema,
+  request: z.object({ ...equipmentRequestInputSchema.shape, neededOn: z.iso.date().optional(), expectedReturnOn: z.iso.date().optional() }).refine((i) => Boolean(i.neededOn) === Boolean(i.expectedReturnOn), { message: "Provide both dates or omit both." }).refine((i) => !i.neededOn || !i.expectedReturnOn || i.expectedReturnOn >= i.neededOn, { path: ["expectedReturnOn"], message: "Return date must be on or after the needed date" }),
 });
 const command = <A extends string, T extends z.ZodType>(action: A, input: T) =>
   z.object({ action: z.literal(action), input });

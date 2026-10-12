@@ -397,7 +397,7 @@ export async function readMobileResource(
       );
     }
     case "request-catalog": {
-      const r = await c.rpc("list_mobile_request_catalog", {
+      const r = q.id ? await c.rpc("get_mobile_request_catalog_material", { p_project_id: required(q.projectId), p_site_id: required(q.siteId), p_material_id: q.id }) : await c.rpc("list_mobile_request_catalog", {
         p_project_id: required(q.projectId), p_site_id: required(q.siteId),
         ...(q.warehouseId ? { p_warehouse_id: q.warehouseId } : {}),
         p_search: q.search, p_offset: offset, p_limit: size,
@@ -518,7 +518,7 @@ export async function readMobileResource(
       if (r.error) databaseError(r.error);
       const photos = await assetPhotos(c, (r.data ?? []).map((x) => x.asset_id));
       return page(
-        (r.data ?? []).map((x) => ({ ...x, photo_path: photos.get(x.asset_id) ?? null })),
+        (r.data ?? []).map((x) => ({ ...x, expected_return_on: x.expected_return_on ?? "", photo_path: photos.get(x.asset_id) ?? null })),
         r.count,
         q,
       );

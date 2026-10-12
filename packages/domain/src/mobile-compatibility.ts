@@ -14,6 +14,7 @@ export const mobileCompatibilitySchema = z.object({
   minimumProtocol: protocol,
   currentProtocol: protocol,
   updateUrls: z.object({ android: mobileUpdateUrlSchema.nullable(), ios: mobileUpdateUrlSchema.nullable() }),
+  latestBuilds: z.object({ android: z.number().int().min(1).nullable(), ios: z.number().int().min(1).nullable() }).optional(),
   minimumBuilds: z.object({ android: z.number().int().min(1).nullable(), ios: z.number().int().min(1).nullable() }).optional(),
 }).refine((value) => value.minimumProtocol <= value.currentProtocol, "The minimum protocol cannot exceed the current protocol");
 export type MobileCompatibility = z.infer<typeof mobileCompatibilitySchema>;
@@ -35,4 +36,10 @@ export function mobileBuildStatus(platform: MobilePlatform | null, build: number
   if (platform === null) return "compatible";
   if (minimum == null) return "compatible";
   return build !== null && Number.isSafeInteger(build) && build >= minimum ? "compatible" : "update_required";
+}
+
+export function mobileUpdateAvailable(platform: MobilePlatform, build: number | null, policy: Pick<MobileCompatibility, "latestBuilds" | "updateUrls">) {
+  if ((platform !== "android" && platform !== "ios") || build === null) return false;
+  const latest = policy.latestBuilds?.[platform];
+  return latest != null && latest > build && !!policy.updateUrls[platform];
 }

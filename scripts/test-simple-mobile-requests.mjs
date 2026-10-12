@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { withIsolatedPostgres } from './isolated-postgres-fixture.mjs';
+
+await withIsolatedPostgres(async({sql,as,result,scalar})=>{
+ const project='20000000-0000-0000-0000-000000000001',site='40000000-0000-0000-0000-000000000001';
+ const value=async(q)=>scalar(await sql(q));
+ const asset=await value("select id from public.assets where code='EQ-EXC-001'");
+ const key=randomUUID();
+ const submit=`select public.submit_mobile_equipment_request('${key}','${asset}','${project}','${site}','Excavation work')`;
+ const ids=await Promise.all([as('foreman',submit),as('foreman',submit)]),id=result(ids[0]);
+ assert.equal(result(ids[1]),id);
+ assert.equal(await value(`select needed_on=(now() at time zone 'Asia/Manila')::date and expected_return_on is null from public.equipment_requests where id='${id}'`),'t');
+ await assert.rejects(as('foreman',submit.replace('Excavation work','Changed work')),/Idempotency/);
+ for(const role of ['admin','finance','warehouse_staff']) await assert.rejects(as(role,submit.replace(key,randomUUID())),/Not authorized/);
+ await assert.rejects(as('engineer',submit.replace(key,randomUUID()).replace(site,randomUUID())),/Not authorized/);
+ await sql(`update public.equipment_requests set needed_on=needed_on-1,submission_payload=jsonb_set(submission_payload,'{needed}',to_jsonb(needed_on-1)) where id='${id}'`);
+ assert.equal(result(await as('foreman',submit)),id);
+ await as('admin',`select public.decide_equipment_request('${id}',true,null)`);
+ assert.equal(await value(`select expected_return_on is null and status='approved' from public.equipment_requests where id='${id}'`),'t');
+ console.log('PASS: automatic equipment date, no false return deadline, concurrent retry, midnight retry, denied roles and approval');
+ const material='60000000-0000-0000-0000-000000000001';
+ await sql(`update public.inventory_balances set quantity_on_hand=0,reserved_quantity=0 where material_id='${material}'`);
+ const request=result(await as('foreman',`select public.submit_mobile_material_request('${randomUUID()}','${project}','${site}','More cement needed','[{"materialId":"${material}","quantity":"10"}]')`));
+ assert.equal(await value(`select source_warehouse_id is null and status='submitted' from public.material_requests where id='${request}'`),'t');
+ assert.equal(await value(`select count(*) from public.material_sourcing_requests`),'0');
+ assert.equal(await value(`select count(*) from public.material_request_reservations where request_line_id in (select id from public.material_request_lines where request_id='${request}')`),'0');
+ assert.equal(scalar(await as('foreman',`select id from public.get_mobile_request_catalog_material('${project}','${site}','${material}')`)),material);
+ await assert.rejects(as('foreman',`select * from public.get_mobile_request_catalog_material('${project}','${randomUUID()}','${material}')`),/Not authorized/);
+ await assert.rejects(as('foreman',`select * from private.mobile_request_catalog('${project}','${site}',null,'',0,1,'${material}')`),/permission denied/);
+ assert.equal(scalar(await as('foreman',`select count(*) from public.get_mobile_request_catalog_material('${project}','${site}','${randomUUID()}')`)),'0');
+ console.log('PASS: zero-stock catalog material uses normal request, creates no shortage report or reservation; exact prefill stays site-scoped');
+});

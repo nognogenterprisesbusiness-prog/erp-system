@@ -1,0 +1,12 @@
+# Simplified mobile requests and release notices
+
+- Material requests use the active catalog, including zero-stock materials. Tapping a material opens its quantity form. The mobile sourcing report form/button is removed; historical sourcing reports and installed-client commands remain compatible. Delivery shortages use actual accepted quantities and inspection notes, leaving the remainder outstanding.
+- Empty site stock offers Request materials. Tapping an existing stock row opens a request with that exact catalog identity/unit selected. The lookup uses project/site authorization and the same linked-warehouse availability calculation as the catalog list.
+- Remove the staff-facing source-assignment explanations and the extra Home guide paragraph. Authorized source assignment and stock reservation safeguards still run on the web/database.
+- Equipment/vehicle requests ask only for the selected asset and purpose. The server sets the Philippine date and leaves expected return unset. It does not create a same-day deadline. Dated requests from installed clients and the existing web form remain supported. Web overdue handling excludes entries without a deadline.
+- Use bundled material/equipment images when a record has no photo or its photo fails. No placeholder inventory records are created.
+- Mobile checks release metadata on launch, foreground and reconnect. `MOBILE_ANDROID_LATEST_BUILD` / `MOBILE_IOS_LATEST_BUILD` offer a dismissible newer-version notice with an Update now action. Minimum-build settings retain the mandatory update gate. Latest build falls back to the configured minimum if absent. Missing URLs, current/newer installed versions, invalid metadata and network failures do not invent a new update requirement.
+
+Apply `20261012160000_simple_mobile_equipment_requests.sql` and `20261012170000_mobile_material_request_prefill.sql` after the earlier pending migrations, then deploy the matching API. Publish a build to staff before advertising it as latest or increasing the mandatory minimum. Web remains committed on main without being pushed, per the user's instruction.
+
+Verification: web/mobile TypeScript and lint; 110 web/domain tests, 24 mobile tests; isolated PostgreSQL automatic-date/null-deadline/concurrent-retry/midnight/denied-role/zero-stock/exact-prefill cases; web production build and Android/iOS exports. Native device interaction and hosted rollout remain acceptance checks, not established by compilation.
