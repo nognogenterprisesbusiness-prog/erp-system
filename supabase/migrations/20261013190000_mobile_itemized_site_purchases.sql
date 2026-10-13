@@ -1,8 +1,8 @@
 begin;
-alter table public.site_purchases add column receipt_number_generated boolean not null default false;
+alter table public.site_purchases add column if not exists receipt_number_generated boolean not null default false;
 
 -- Reuse the audited inventory-receipt flow. No stock or cost posts at submission.
-create function public.submit_mobile_site_purchase(
+create or replace function public.submit_mobile_site_purchase(
  p_key uuid,p_project_id uuid,p_site_id uuid,p_supplier_id uuid,p_lines jsonb
 ) returns uuid language plpgsql security definer set search_path='' as $$
 declare v_actor uuid:=auth.uid(); v_existing public.site_purchases;

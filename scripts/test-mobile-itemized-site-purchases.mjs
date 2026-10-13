@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { withIsolatedPostgres } from "./isolated-postgres-fixture.mjs";
 
 await withIsolatedPostgres(async ({sql,as,result,scalar,users}) => {
+ const migration=readFileSync(new URL('../supabase/migrations/20261013190000_mobile_itemized_site_purchases.sql',import.meta.url),'utf8');
+ await sql(migration);
  const project="20000000-0000-0000-0000-000000000001",site="40000000-0000-0000-0000-000000000001",material="60000000-0000-0000-0000-000000000001";
  const value=async(q)=>scalar(await sql(q));
  const location=await value(`select id from public.inventory_locations where project_site_id='${site}'`);
@@ -18,6 +21,10 @@ await withIsolatedPostgres(async ({sql,as,result,scalar,users}) => {
  const key=randomUUID();await photo(key);
  const submitted=await Promise.all([as('engineer',submit(key)),as('engineer',submit(key))]),purchase=result(submitted[0]);
  assert.equal(result(submitted[1]),purchase);
+ const beforeRerun=await value(`select row_to_json(p)::text from public.site_purchases p where id='${purchase}'`);
+ await sql(migration);
+ assert.equal(await value(`select row_to_json(p)::text from public.site_purchases p where id='${purchase}'`),beforeRerun,'rerunning preserves the existing receipt and generated-reference flag');
+ await assert.rejects(sql(`begin; set local role anon; ${submit(randomUUID())}; commit;`),/permission denied/);
  assert.equal(await value(`select receipt_number_generated and receipt_number='MOB-${key.replaceAll('-','')}' and receipt_date=(clock_timestamp() at time zone 'Asia/Manila')::date and paid_with='company_cash' and status='submitted' from public.site_purchases where id='${purchase}'`),'t');
  assert.equal(await stock(),before);assert.equal(await cost(),costBefore);
  await assert.rejects(as('engineer',submit(key,lines(11))),/Idempotency/);
