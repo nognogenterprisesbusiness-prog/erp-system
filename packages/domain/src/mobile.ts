@@ -10,7 +10,7 @@ import { siteConsumptionInputSchema } from "./inventory";
 import { assetKinds, equipmentRequestInputSchema } from "./assets";
 import { equipmentUsageSchema } from "./project-costs";
 import { materialSourcingSchema } from "./material-sourcing";
-import { submitSitePurchaseSchema, vehicleFuelReceiptSchema, siteReceiptExpenseSchema } from "./procurement";
+import { submitSitePurchaseSchema, mobileSitePurchaseSchema, vehicleFuelReceiptSchema, siteReceiptExpenseSchema } from "./procurement";
 import {
   dailyReportInputSchema,
   dailyReportReviewSchema,
@@ -169,6 +169,7 @@ export const mobileResponseSchemas = {
       total: number,
       rejection_reason: text,
       reimbursed_on: text,
+      items: z.array(z.object({ name: z.string(), quantity: number, unit: z.string() })).optional(),
     }),
   ),
   // Stores and inventory materials an Engineer can choose when buying.
@@ -411,6 +412,7 @@ export const mobileCommandSchema = z.discriminatedUnion("action", [
     }),
   ),
   command("submit-site-purchase", submitSitePurchaseSchema),
+  command("submit-mobile-site-purchase", mobileSitePurchaseSchema),
   command("submit-vehicle-fuel", vehicleFuelReceiptSchema),
   command("submit-receipt-expense", siteReceiptExpenseSchema),
   command("read-notification", z.object({ id: uuidSchema, read: z.boolean() })),

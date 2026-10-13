@@ -100,13 +100,15 @@ export async function readMobileResource(
       const r = await purchases.range(offset, offset + size - 1);
       if (r.error) databaseError(r.error);
       const rows = r.data ?? [];
-      const lines = await readByIds(rows.map((x) => x.id), (ids, from, to) => c.from("site_purchase_lines").select("id,site_purchase_id,quantity,unit_price").in("site_purchase_id", ids).order("id").range(from, to), "site purchase lines");
+      const lines = await readByIds(rows.map((x) => x.id), (ids, from, to) => c.from("site_purchase_lines").select("id,site_purchase_id,material_name,unit_symbol,quantity,unit_price").in("site_purchase_id", ids).order("id").range(from, to), "site purchase lines");
       const totals = new Map<string, number>();
       for (const line of lines) totals.set(line.site_purchase_id, (totals.get(line.site_purchase_id) ?? 0) + Math.round(Number(line.quantity) * Number(line.unit_price) * 100) / 100);
       const statuses = rows.length ? await c.rpc("get_site_purchase_expense_status", { p_purchase_ids: rows.map((x) => x.id) }) : { data: [], error: null };
       if (statuses.error) databaseError(statuses.error);
       const reversed = new Map((statuses.data ?? []).map((x) => [x.purchase_id, x.expense_reversed]));
-      return page(rows.map((x) => ({ ...x, expense_reversed: reversed.get(x.id) ?? false, total: x.receipt_amount === null ? totals.get(x.id) ?? 0 : Number(x.receipt_amount) })), r.count, q);
+      const items = new Map<string, { name: string; quantity: number; unit: string }[]>();
+      for (const line of lines) items.set(line.site_purchase_id, [...(items.get(line.site_purchase_id) ?? []), { name: line.material_name, quantity: Number(line.quantity), unit: line.unit_symbol }]);
+      return page(rows.map((x) => ({ ...x, items: items.get(x.id) ?? [], expense_reversed: reversed.get(x.id) ?? false, total: x.receipt_amount === null ? totals.get(x.id) ?? 0 : Number(x.receipt_amount) })), r.count, q);
     }
     case "purchase-choices": {
       const [stores, materials, units] = await Promise.all([

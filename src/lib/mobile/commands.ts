@@ -149,6 +149,12 @@ export async function executeSiteCommand(
       if (r.error) databaseError(r.error);
       return { id: r.data!, message: Number(i.amount) > 50000 ? "Diesel receipt submitted for Admin approval." : "Diesel expense recorded for this project. No material stock was added." };
     }
+    case "submit-mobile-site-purchase": {
+      const i = command.input;
+      const r = await client.rpc("submit_mobile_site_purchase", { p_key: i.idempotencyKey, p_project_id: i.projectId, p_site_id: i.siteId, p_supplier_id: i.supplierId, p_lines: i.lines });
+      if (r.error) databaseError(r.error);
+      return { id: r.data!, message: "Purchase submitted for receipt review. Stock is added to this site after approval." };
+    }
     case "submit-site-purchase": {
       const i = command.input;
       const newStore = !i.supplierId;

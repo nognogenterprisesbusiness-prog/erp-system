@@ -89,7 +89,7 @@ export async function POST(request: Request, context: Context) {
         throw new MobileError(400, "The purchase is invalid.");
       }
       const command = mobileCommandSchema.safeParse(input);
-      if (!command.success || (command.data.action !== "submit-site-purchase" && command.data.action !== "submit-vehicle-fuel" && command.data.action !== "submit-receipt-expense"))
+      if (!command.success || (command.data.action !== "submit-site-purchase" && command.data.action !== "submit-mobile-site-purchase" && command.data.action !== "submit-vehicle-fuel" && command.data.action !== "submit-receipt-expense"))
         throw new MobileError(422, "Review the store, receipt and items.");
       await authorizeMobileCommand(client, command.data);
       let receipt: Buffer | undefined;

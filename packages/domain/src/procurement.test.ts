@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, submitSitePurchaseSchema, siteReceiptExpenseSchema } from "./procurement";
+import { issuePurchaseOrderSchema, receivePurchaseOrderLineSchema, recordSupplierPaymentSchema, submitSitePurchaseSchema, siteReceiptExpenseSchema, mobileSitePurchaseSchema } from "./procurement";
 
 const id = "01234567-89ab-4cde-8123-456789abcdef";
 const other = "11234567-89ab-4cde-8123-456789abcdef";
@@ -44,4 +44,12 @@ test("receipt-only expenses require scoped identity and positive cent-precise am
   for (const amount of ["0", "-1", "1500.001", "NaN"]) assert.equal(siteReceiptExpenseSchema.safeParse({ ...receipt, amount }).success, false);
   assert.equal(siteReceiptExpenseSchema.safeParse({ ...receipt, siteId: "" }).success, false);
   assert.equal(siteReceiptExpenseSchema.safeParse({ ...receipt, paidWith: "supplier_credit" }).success, false);
+});
+
+
+test("mobile itemized purchases require actual store and unique positive material lines", () => {
+ const value = { idempotencyKey: id, projectId: id, siteId: other, supplierId: id, lines: [{ materialId: id, quantity: "10", unitPrice: "250.00" }] };
+ assert.equal(mobileSitePurchaseSchema.safeParse(value).success, true);
+ for (const invalid of [{ ...value, supplierId: "" }, { ...value, siteId: "" }, { ...value, lines: [] }, { ...value, lines: [value.lines[0], value.lines[0]] }]) assert.equal(mobileSitePurchaseSchema.safeParse(invalid).success, false);
+ for (const patch of [{ quantity: "0" }, { quantity: "1.00001" }, { unitPrice: "0" }, { unitPrice: "1.001" }]) assert.equal(mobileSitePurchaseSchema.safeParse({ ...value, lines: [{ ...value.lines[0], ...patch }] }).success, false);
 });

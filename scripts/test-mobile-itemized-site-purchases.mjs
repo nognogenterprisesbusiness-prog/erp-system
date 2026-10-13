@@ -1,0 +1,62 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { withIsolatedPostgres } from "./isolated-postgres-fixture.mjs";
+
+await withIsolatedPostgres(async ({sql,as,result,scalar,users}) => {
+ const project="20000000-0000-0000-0000-000000000001",site="40000000-0000-0000-0000-000000000001",material="60000000-0000-0000-0000-000000000001";
+ const value=async(q)=>scalar(await sql(q));
+ const location=await value(`select id from public.inventory_locations where project_site_id='${site}'`);
+ const unit=await value(`select base_unit_id from public.materials where id='${material}'`);
+ await as('admin', "select public.save_supplier(null,'','Mobile Test Hardware',null,null,null,'09171234567',null,'Cebu City',null,null,null,null,'active',null)");
+ const supplier=await value("select id from public.suppliers where status='active' and archived_at is null order by id limit 1");
+ const photo=async(key)=>sql(`insert into storage.objects(bucket_id,name) values('erp-site-purchase-receipts','${users.engineer}/${key}/receipt.webp')`);
+ const lines=(quantity=10,price=250)=>JSON.stringify([{materialId:material,quantity:String(quantity),unitPrice:String(price)}]);
+ const submit=(key,payload=lines(),targetSite=site)=>`select public.submit_mobile_site_purchase('${key}','${project}','${targetSite}','${supplier}','${payload}')`;
+ const stock=async()=>Number(await value(`select coalesce(sum(quantity_on_hand),0) from public.inventory_balances where material_id='${material}' and inventory_location_id='${location}'`));
+ const cost=async()=>Number(scalar(await as('finance',`select material_cost from public.get_project_management_summary('${project}')`)));
+ const before=await stock(),costBefore=await cost();
+ const key=randomUUID();await photo(key);
+ const submitted=await Promise.all([as('engineer',submit(key)),as('engineer',submit(key))]),purchase=result(submitted[0]);
+ assert.equal(result(submitted[1]),purchase);
+ assert.equal(await value(`select receipt_number_generated and receipt_number='MOB-${key.replaceAll('-','')}' and receipt_date=(clock_timestamp() at time zone 'Asia/Manila')::date and paid_with='company_cash' and status='submitted' from public.site_purchases where id='${purchase}'`),'t');
+ assert.equal(await stock(),before);assert.equal(await cost(),costBefore);
+ await assert.rejects(as('engineer',submit(key,lines(11))),/Idempotency/);
+ for(const role of ['finance','foreman','warehouse_staff']) await assert.rejects(as(role,submit(randomUUID())),/Engineer/);
+ await assert.rejects(as('engineer',submit(randomUUID(),lines(),randomUUID())),/Engineer/);
+ await assert.rejects(as('engineer',submit(randomUUID())),/receipt photo/);
+ for(const payload of [lines(0),lines(1,0),lines(1,'250.001'),JSON.stringify([...JSON.parse(lines()),...JSON.parse(lines())])]) {
+  const invalid=randomUUID();await photo(invalid);await assert.rejects(as('engineer',submit(invalid,payload)));
+  assert.equal(await value(`select count(*) from public.site_purchases where idempotency_key='${invalid}'`),'0');
+ }
+ const inactive=randomUUID();await photo(inactive);
+ await sql(`update public.suppliers set status='inactive' where id='${supplier}'`);
+ await assert.rejects(as('engineer',submit(inactive)),/not active/);
+ await sql(`update public.suppliers set status='active' where id='${supplier}'`);
+ await sql(`update public.materials set is_active=false where id='${material}'`);
+ await assert.rejects(as('engineer',submit(inactive)),/already in inventory/);
+ await sql(`update public.materials set is_active=true where id='${material}'`);
+ // Represent an original submission made yesterday; retry must preserve its date.
+ await sql(`update public.site_purchases set receipt_date=receipt_date-1, command_payload=jsonb_set(command_payload,'{receipt_date}',to_jsonb(receipt_date-1)) where id='${purchase}'`);
+ assert.equal(result(await as('engineer',submit(key))),purchase);
+ assert.equal(await value(`select receipt_date=((clock_timestamp() at time zone 'Asia/Manila')::date-1) from public.site_purchases where id='${purchase}'`),'t');
+ await assert.rejects(as('engineer',`select public.approve_site_purchase('${purchase}')`),/Admin or Finance/);
+ await Promise.all([as('finance',`select public.approve_site_purchase('${purchase}')`),as('admin',`select public.approve_site_purchase('${purchase}')`)]);
+ assert.equal(await stock(),before+10);assert.equal(await cost(),costBefore);
+ assert.equal(await value(`select count(*) from public.site_purchase_lines where site_purchase_id='${purchase}' and inventory_transaction_id is not null`),'1');
+ const tx=await value(`select inventory_transaction_id from public.site_purchase_lines where site_purchase_id='${purchase}'`);
+ assert.equal(await value(`select cost_total from public.inventory_transactions where id='${tx}'`),'2500.00');
+ assert.equal(await value(`select sum(remaining_value) from public.inventory_cost_layers where source_transaction_id='${tx}'`),'2500.00');
+ await assert.rejects(as('finance',`select public.mark_site_purchase_reimbursed('${purchase}',current_date,'COMPANY-CASH')`),/own money/);
+ assert.equal(await stock(),before+10);
+ const useKey=randomUUID(),consume=`select public.consume_site_material('${useKey}','${material}','${location}','${project}',2,'${unit}','MOBILE-RESTORE-USE',current_date,'Actual use')`;
+ const uses=await Promise.all([as('foreman',consume),as('foreman',consume)]);assert.equal(result(uses[0]),result(uses[1]));
+ assert.equal(await stock(),before+8);assert.equal(await cost(),costBefore+500);
+ await as('admin',`select public.approve_site_purchase('${purchase}')`);assert.equal(await stock(),before+8);
+ const rejectedKey=randomUUID();await photo(rejectedKey);const rejected=result(await as('engineer',submit(rejectedKey)));
+ await as('finance',`select public.reject_site_purchase('${rejected}','Wrong items on receipt')`);assert.equal(await stock(),before+8);
+ const highKey=randomUUID();await photo(highKey);const high=result(await as('engineer',submit(highKey,lines(201))));
+ await assert.rejects(as('finance',`select public.approve_site_purchase('${high}')`),/require Admin/);
+ await Promise.all([as('admin',`select public.approve_site_purchase('${high}')`),as('admin',`select public.approve_site_purchase('${high}')`)]);
+ assert.equal(await stock(),before+209);
+ console.log('PASS: scoped itemized mobile purchases, input rejection, automatic reference/date, midnight retry, concurrent approval, owner threshold, consumption/project costs and no duplicate stock');
+});

@@ -42,7 +42,8 @@
     "test:simple-mobile-requests": "node scripts/test-simple-mobile-requests.mjs",
     "test:vehicle-fuel": "node scripts/test-vehicle-fuel-receipts.mjs",
     "test:project-costs": "node scripts/test-project-costs.mjs",
-    "test:receipt-stock-entry": "node scripts/test-receipt-expense-warehouse-entry.mjs"
+    "test:receipt-stock-entry": "node scripts/test-receipt-expense-warehouse-entry.mjs",
+    "test:mobile-itemized-purchases": "node scripts/test-mobile-itemized-site-purchases.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

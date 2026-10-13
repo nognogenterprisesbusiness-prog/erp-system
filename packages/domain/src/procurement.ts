@@ -77,6 +77,11 @@ export const voidSupplierPaymentSchema = z.object({ paymentId: uuidSchema, reaso
 // Site purchase: the Engineer buys at a hardware store and records the receipt.
 // Pick an existing store, or enter a new store's name, address and contact number.
 export const sitePurchasePaidWith = ["company_cash", "own_money"] as const;
+export const mobileSitePurchaseSchema = z.object({
+  idempotencyKey: uuidSchema, projectId: uuidSchema, siteId: uuidSchema, supplierId: uuidSchema,
+  lines: z.array(purchaseOrderLineSchema).min(1).max(30),
+}).refine((value) => new Set(value.lines.map((line) => line.materialId)).size === value.lines.length,
+  { path: ["lines"], message: "Choose each material once" });
 export const submitSitePurchaseSchema = z.object({
   idempotencyKey: uuidSchema,
   projectId: uuidSchema,

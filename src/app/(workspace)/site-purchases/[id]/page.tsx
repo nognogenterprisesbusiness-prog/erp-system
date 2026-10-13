@@ -44,7 +44,7 @@ export default async function SitePurchasePage({ params, searchParams }: { param
         <div className="flex flex-wrap items-center justify-between gap-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle[purchase.status]}`}>{statusLabel[purchase.status]}</span><span className="text-lg font-semibold tabular-nums">{peso.format(data.total)}</span></div>
         <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
           <div><dt className="text-xs text-slate-500">{isFuel ? "Vehicle" : isExpense ? "Purchase type" : "Store"}</dt><dd className="mt-1 font-medium">{purchase.supplier_name}</dd></div>
-          <div><dt className="text-xs text-slate-500">Receipt</dt><dd className="mt-1 font-medium">{isExpense ? "System reference " : ""}{purchase.receipt_number} · {purchase.receipt_date}</dd></div>
+          <div><dt className="text-xs text-slate-500">{purchase.receipt_number_generated || isExpense ? "System reference" : "Receipt"}</dt><dd className="mt-1 font-medium">{purchase.receipt_number} · {purchase.receipt_date}</dd></div>
           <div><dt className="text-xs text-slate-500">Bought by</dt><dd className="mt-1 font-medium">{data.submittedByName}</dd></div>
           <div><dt className="text-xs text-slate-500">Paid with</dt><dd className="mt-1 font-medium">{purchase.paid_with === "own_money" ? (purchase.reimbursed_on ? `Own money · reimbursed ${purchase.reimbursed_on} (${purchase.reimbursement_reference})` : "Own money · to reimburse") : "Company cash"}</dd></div>
           {purchase.notes && <div className="sm:col-span-2"><dt className="text-xs text-slate-500">Note</dt><dd className="mt-1">{purchase.notes}</dd></div>}
