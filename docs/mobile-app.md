@@ -9,9 +9,9 @@ The approved native client lives beside this repository in `../nognog-mobile`. I
 
 ## User flow
 
-Login → Home → select an accessible project/site → record site activity. Four tabs: Home, Projects, Requests, Profile. Four Home actions: Request Materials, Request Equipment, Site Inventory, Daily Report. Attendance, material consumption, assigned equipment/hours and history are reached inside a project.
+Login → Home → select an accessible project/site → record site activity. Four tabs: Home, Projects, Requests, Profile. Four Home actions: Request Materials, Request Equipment / Vehicle, Site Inventory, Daily Report. Home is the only project/site selection entry point; work screens do not repeat a project selector. Receive Deliveries is a separate Home tool, and site stock movements are labelled History. Attendance, material consumption, assigned equipment/hours and history are reached inside a project.
 
-Material requests retain source warehouse, required date, remarks and line quantities. Engineers review another requester's submission; warehouse release remains web-based. Foremen/Engineers confirm partial/full receipts. Foremen post multi-worker attendance and authorized equipment hours. Engineers view operational attendance, independently review daily reports and record progress from an approved report.
+Material requests inherit the Home-selected project/site and retain remarks and line quantities. The server sets the request date; authorized web staff assign the source warehouse before approval. Engineers review another requester's submission; warehouse release remains web-based. Foremen/Engineers confirm partial/full receipts. Foremen post multi-worker attendance and authorized equipment hours. Engineers view operational attendance, independently review daily reports and record progress from an approved report.
 
 Reports retain the server-side draft/submission/review/correction lifecycle. Opening today's report reads posted material use, attendance and equipment hours without creating a record. On Submit, the app creates an internal draft, links selected activity, uploads an optional photo through the ERP's verified private WebP pipeline, and submits for Engineer review. The mobile screen has no separate Save Draft action; a failed upload leaves an editable record for retry. Report submission does not post activity costs again.
 
@@ -82,3 +82,11 @@ For local HTTP checks, start the built web app with `npm run start -- --port 310
 - Review dependency audit before release: the SDK 57 dependency tree currently reports 14 moderate findings, rooted in URI decoding and a build-tool UUID dependency. npm's suggested SDK downgrades conflict with the approved SDK. See [URI decoding advisory](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr) and [UUID advisory](https://github.com/advisories/GHSA-w5hq-g745-h8pq); no forced dependency overrides were introduced.
 
 These checks remain unaccepted. Passing static tests and exports does not establish connected database or native-device acceptance.
+
+## Mobile receipt simplification — 2026-10-13
+
+Mobile Buy at hardware store has New purchase and History buttons. New purchase accepts only total amount and receipt photo; dates/references are generated automatically. Supplier entry, receipt number/date, payment-source selector, optional notes and purchase-type tabs are removed. New mobile receipts retain the existing company-cash default and use the existing receipt-expense command. They create one site expense, never material stock. Web retains itemized stock receipt and historical reimbursement workflows. Add diesel receipt is inside a current site's vehicle history, with the vehicle preselected.
+
+No migration is added. The site-scoped equipment endpoint now honours an optional asset ID so the diesel action validates current assignment without a large asset list. Vehicle-history SQL from the earlier release is confirmed present on the configured database. Git global and repository emails are nognog.enterprises.business@gmail.com. Web/mobile changes are committed directly on main and authorized for push.
+
+Verification: mobile typecheck/lint, 25 tests, native exports and Expo Doctor 21/21; web typecheck/lint, 113 unit tests, production build, isolated receipt-expense/stock-entry and vehicle-fuel/history tests passed. Physical-phone acceptance and store distribution remain separate from a successful build/push.

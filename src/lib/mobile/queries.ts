@@ -492,6 +492,7 @@ export async function readMobileResource(
         .order("name")
         .order("id");
       if (search) query = query.ilike("name", `%${search}%`);
+      if (q.id) query = query.eq("id", q.id);
       const r = await query.range(offset, offset + size - 1);
       if (r.error) databaseError(r.error);
       return page(r.data ?? [], r.count, q);
