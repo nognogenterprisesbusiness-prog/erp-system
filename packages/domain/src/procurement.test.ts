@@ -53,3 +53,21 @@ test("mobile itemized purchases require actual store and unique positive materia
  for (const invalid of [{ ...value, supplierId: "" }, { ...value, siteId: "" }, { ...value, lines: [] }, { ...value, lines: [value.lines[0], value.lines[0]] }]) assert.equal(mobileSitePurchaseSchema.safeParse(invalid).success, false);
  for (const patch of [{ quantity: "0" }, { quantity: "1.00001" }, { unitPrice: "0" }, { unitPrice: "1.001" }]) assert.equal(mobileSitePurchaseSchema.safeParse({ ...value, lines: [{ ...value.lines[0], ...patch }] }).success, false);
 });
+
+
+test("new mobile fuel input omits cash source while installed builds remain compatible", async () => {
+ const { mobileReceiptCommandSchema, mobileCommandSchema, mobileActionCommandSchema } = await import("./mobile");
+ const input = { idempotencyKey: id, projectId: id, siteId: other, vehicleId: id, amount: "1500.00" };
+ assert.equal(mobileReceiptCommandSchema.safeParse({ action: "submit-vehicle-fuel", input }).success, true);
+ for (const paidWith of ["company_cash", "own_money"]) {
+  assert.equal(mobileReceiptCommandSchema.safeParse({ action: "submit-vehicle-fuel", input: { ...input, paidWith } }).success, false);
+  assert.equal(mobileCommandSchema.safeParse({ action: "submit-vehicle-fuel", input: { ...input, paidWith } }).success, true);
+ }
+ const parsed = mobileCommandSchema.parse({ action: "submit-vehicle-fuel", input });
+ assert.equal(parsed.action === "submit-vehicle-fuel" && parsed.input.paidWith, "company_cash");
+ const materials = { idempotencyKey: id, projectId: id, siteId: other, supplierId: id, lines: [{ materialId: id, quantity: "10", unitPrice: "250" }] };
+ assert.equal(mobileReceiptCommandSchema.safeParse({ action: "submit-mobile-site-purchase", input: materials }).success, true);
+ assert.equal(mobileReceiptCommandSchema.safeParse({ action: "submit-mobile-site-purchase", input: { ...materials, paidWith: "own_money" } }).success, false);
+ for (const action of ["submit-site-purchase", "submit-receipt-expense", "submit-mobile-site-purchase", "submit-vehicle-fuel"]) assert.equal(mobileActionCommandSchema.safeParse({ action, input }).success, false);
+ for (const action of ["submit-site-purchase", "submit-receipt-expense"]) assert.equal(mobileReceiptCommandSchema.safeParse({ action, input }).success, false);
+});

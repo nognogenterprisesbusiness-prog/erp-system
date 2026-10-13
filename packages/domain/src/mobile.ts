@@ -385,7 +385,7 @@ export const idempotentEquipmentRequestSchema = z.object({
 });
 const command = <A extends string, T extends z.ZodType>(action: A, input: T) =>
   z.object({ action: z.literal(action), input });
-export const mobileCommandSchema = z.discriminatedUnion("action", [
+export const mobileActionCommandSchema = z.discriminatedUnion("action", [
   command("request-materials", z.object({ ...submitMaterialRequestSchema.shape, warehouseId: uuidSchema.optional(), requiredDate: z.iso.date().optional() }).refine((i) => new Set(i.lines.map((l) => l.materialId)).size === i.lines.length, { path: ["lines"], message: "Each material may appear only once." }).refine((i) => Boolean(i.warehouseId) === Boolean(i.requiredDate), { message: "Provide both warehouse and date, or let Admin assign them." })),
   command("report-missing-material", materialSourcingSchema.extend({ warehouseId: uuidSchema.optional(), neededOn: z.iso.date().optional() }).refine((i) => Boolean(i.warehouseId) === Boolean(i.neededOn), { message: "Provide both warehouse and date, or let Admin assign them." })),
   command("decide-materials", decideMaterialRequestSchema),
@@ -411,13 +411,24 @@ export const mobileCommandSchema = z.discriminatedUnion("action", [
       detach: z.boolean().default(false),
     }),
   ),
+  command("read-notification", z.object({ id: uuidSchema, read: z.boolean() })),
+  command("read-all-notifications", z.object({ read: z.boolean() })),
+]);
+export type MobileActionCommand = z.output<typeof mobileActionCommandSchema>;
+// Server compatibility retains receipt commands used by already installed builds.
+export const mobileCommandSchema = z.discriminatedUnion("action", [
+  ...mobileActionCommandSchema.options,
   command("submit-site-purchase", submitSitePurchaseSchema),
   command("submit-mobile-site-purchase", mobileSitePurchaseSchema),
   command("submit-vehicle-fuel", vehicleFuelReceiptSchema),
   command("submit-receipt-expense", siteReceiptExpenseSchema),
-  command("read-notification", z.object({ id: uuidSchema, read: z.boolean() })),
-  command("read-all-notifications", z.object({ read: z.boolean() })),
 ]);
+// Current app receipt inputs omit retired cash-source and expense-only forms.
+export const mobileReceiptCommandSchema = z.discriminatedUnion("action", [
+  command("submit-mobile-site-purchase", mobileSitePurchaseSchema.strict()),
+  command("submit-vehicle-fuel", vehicleFuelReceiptSchema.omit({ paidWith: true, notes: true }).strict()),
+]);
+export type MobileReceiptCommand = z.output<typeof mobileReceiptCommandSchema>;
 export type MobileCommand = z.output<typeof mobileCommandSchema>;
 export const mobileCommandResultSchema = z.object({
   id: z.string().optional(),

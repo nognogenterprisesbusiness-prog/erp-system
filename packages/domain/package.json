@@ -8,5 +8,9 @@
   },
   "dependencies": {
     "zod": "^4.1.11"
-  }
+  },
+  "files": [
+    "src/**/*.ts",
+    "!src/**/*.test.ts"
+  ]
 }

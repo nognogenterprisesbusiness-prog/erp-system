@@ -101,10 +101,10 @@ export const submitSitePurchaseSchema = z.object({
     { path: ["lines"], message: "Choose each material once" });
 export const vehicleFuelReceiptSchema = z.object({
   idempotencyKey: uuidSchema, projectId: uuidSchema, siteId: uuidSchema, vehicleId: uuidSchema,
-  amount: moneyInputSchema, paidWith: z.enum(sitePurchasePaidWith),
+  amount: moneyInputSchema, paidWith: z.enum(sitePurchasePaidWith).default("company_cash"),
   notes: z.string().trim().max(500).optional(),
 });
-export const siteReceiptExpenseSchema = vehicleFuelReceiptSchema.omit({ vehicleId: true });
+export const siteReceiptExpenseSchema = vehicleFuelReceiptSchema.omit({ vehicleId: true }).extend({ paidWith: z.enum(sitePurchasePaidWith) });
 export const rejectSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reason: z.string().trim().min(3, "Enter a reason").max(500) });
 export const reimburseSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reimbursedOn: z.iso.date(), reference: z.string().trim().min(2, "Enter the reference").max(120) });
 
