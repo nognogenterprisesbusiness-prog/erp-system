@@ -253,6 +253,7 @@ export type Database = {
       submit_equipment_request_once: { Args: { p_key: string; p_asset_id: string; p_project_id: string; p_site_id: string; p_needed_on: string; p_expected_return_on: string; p_purpose: string }; Returns: string };
       post_project_attendance_batch: { Args: { p_project_id: string; p_site_id: string; p_work_date: string; p_entries: Json }; Returns: string[] };
       get_mobile_site_operations: { Args: { p_kind: string; p_project_id: string; p_site_id: string; p_date?: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { record: Json; total_count: number }[] };
+      list_mobile_vehicle_history: { Args: { p_project_id: string; p_site_id: string; p_asset_id?: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { record: Json; total_count: number }[] };
       guard_mobile_api: { Args: { p_write: boolean }; Returns: boolean };
       search_site_material_choices: { Args: { p_location_id: string; p_search?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; label: string; unit_id: string; available_quantity: number; total_count: number }[] };
       search_requestable_warehouse_stock: { Args: { p_project_id: string; p_warehouse_id: string; p_search?: string; p_offset?: number; p_limit?: number; p_material_id?: string | null }; Returns: { id: string; label: string; unit_id: string; available_quantity: number; total_count: number }[] };

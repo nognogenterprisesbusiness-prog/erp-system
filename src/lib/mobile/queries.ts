@@ -468,6 +468,14 @@ export async function readMobileResource(
         q,
       );
     }
+    case "vehicle-history": {
+      const r = await c.rpc("list_mobile_vehicle_history", {
+        p_project_id: required(q.projectId), p_site_id: required(q.siteId),
+        ...(q.id ? { p_asset_id: q.id } : {}), p_search: q.search, p_offset: offset, p_limit: size,
+      });
+      if (r.error) databaseError(r.error);
+      return page((r.data ?? []).map((x) => x.record), r.data?.[0]?.total_count ?? 0, q);
+    }
     case "equipment": {
       const location = await siteLocation(c, q);
       const l = await c

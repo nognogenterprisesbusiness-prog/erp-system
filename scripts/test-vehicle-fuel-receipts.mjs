@@ -64,4 +64,42 @@ await withIsolatedPostgres(async ({ sql, as, users, result, scalar }) => {
   assert.equal(await value(`select coalesce(sum(quantity_on_hand),0) from public.inventory_balances`),stock);
   assert.equal(await value(`select count(*) from public.site_purchase_lines where site_purchase_id in ('${id}','${highId}')`),'0');
   console.log('PASS: append-only expense reversal, retry after reversal, no stock or fake material lines');
+  const history=(role='engineer',filter=vehicle,offset=0,limit=100,search='')=>as(role,
+    `select coalesce(jsonb_agg(to_jsonb(x)),'[]') from public.list_mobile_vehicle_history('${project}','${site}','${filter}','${search}',${offset},${limit}) x`)
+    .then(output=>JSON.parse(scalar(output)));
+  const rate=randomUUID(), usage=randomUUID();
+  await sql(`insert into public.asset_events(asset_id,event_type,current_status,current_location_id,summary,actor_id)
+    values('${vehicle}','registered','available','${location}','Vehicle registered at site','${users.admin}');
+    insert into public.equipment_hour_rates(id,asset_id,hourly_rate,effective_start_date,approved_by)
+    values('${rate}','${vehicle}',100,current_date,'${users.admin}');
+    begin; select set_config('request.jwt.claim.sub','${users.foreman}',true);
+    insert into public.project_equipment_usage(id,project_id,project_site_id,asset_id,asset_code,asset_name,use_date,hours_used,rate_id,hourly_rate_snapshot,cost_total,work_note,recorded_by,idempotency_key,command_payload)
+    values('${usage}','${project}','${site}','${vehicle}','TRUCK-FUEL','Fuel test truck',current_date,2,'${rate}',100,200,'Hauling materials','${users.foreman}','${randomUUID()}','{}'); commit;`);
+  const material='60000000-0000-0000-0000-000000000001';
+  const unit=await value(`select base_unit_id from public.materials where id='${material}'`);
+  const source=await value(`select id from public.inventory_locations where warehouse_id='30000000-0000-0000-0000-000000000001'`);
+  const destination=await value(`select id from public.inventory_locations where project_site_id='${site}'`);
+  await as('admin',`select public.post_web_inventory_movement('${randomUUID()}','stock-in','${JSON.stringify({materialId:material,unitId:unit,destinationLocationId:source,quantity:'5',totalCost:'500',remarks:'Vehicle history fixture stock'})}')`);
+  const transfer=result(await as('admin',`select public.post_web_inventory_movement('${randomUUID()}','transfer','${JSON.stringify({materialId:material,unitId:unit,sourceLocationId:source,destinationLocationId:destination,quantity:'3',remarks:'Documented direct site delivery'})}')`));
+  await sql(`insert into public.material_delivery_manifests(transfer_id,vehicle_asset_id,vehicle_label,driver_name,delivery_reference,payload_hash,dispatched_by)
+    values('${transfer}','${vehicle}','TRUCK-FUEL','Test driver','DELIVERY-HISTORY','fixture','${users.admin}')`);
+  const timeline=await history();
+  assert.ok(timeline.some(x=>x.record.kind==='movement'));
+  assert.ok(timeline.some(x=>x.record.kind==='usage' && x.record.hours===2));
+  assert.ok(timeline.some(x=>x.record.kind==='delivery' && x.record.note.includes('3.0000 remaining') && x.record.reference==='DELIVERY-HISTORY'));
+  assert.ok(timeline.some(x=>x.record.kind==='fuel' && x.record.purchase_id===id && x.record.status==='reversed'));
+  for(const row of timeline) for(const key of ['cost_total','hourly_rate_snapshot','receipt_amount','amount','details']) assert.equal(key in row.record,false);
+  assert.equal((await history('foreman')).length,timeline.length);
+  assert.equal((await history('engineer',vehicle,0,2))[0].total_count,timeline.length);
+  const pages=[...(await history('engineer',vehicle,0,2)),...(await history('engineer',vehicle,2,2))];
+  assert.equal(new Set(pages.map(x=>x.record.id)).size,4);
+  assert.equal((await history('engineer',vehicle,0,100,'TRUCK-FUEL')).length,timeline.length);
+  assert.equal((await history('engineer',randomUUID())).length,0);
+  await assert.rejects(as('engineer',`select * from public.list_mobile_vehicle_history('${project}','${randomUUID()}')`),/Not authorized/);
+  await assert.rejects(as('engineer',`select * from public.list_mobile_vehicle_history('${project}','${site}',null,'',-1,20)`),/Invalid/);
+  await assert.rejects(sql(`begin; set local role anon; select * from public.list_mobile_vehicle_history('${project}','${site}'); commit;`),/permission denied/);
+  const warehouseLocation=await value(`select al.id from public.asset_locations al join public.inventory_locations il on il.id=al.inventory_location_id where il.warehouse_id='30000000-0000-0000-0000-000000000001'`);
+  await sql(`update public.assets set current_location_id='${warehouseLocation}',updated_by='${users.admin}' where id='${vehicle}'`);
+  assert.ok((await history()).length>=timeline.length);
+  console.log('PASS: site vehicle timeline combines movement, hours and diesel; pagination/search, historical access and price-free permission boundaries');
 });

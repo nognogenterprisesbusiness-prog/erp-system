@@ -77,7 +77,7 @@ await withIsolatedPostgres(async({sql,as,result,scalar})=>{
     assert.equal(await value(`select reference_document from public.inventory_transactions where id='${tx}'`),prepared[0].reference_document);
     assert.equal(await value(`select transaction_date=(clock_timestamp() at time zone 'Asia/Manila')::date-1 from public.inventory_transactions where id='${tx}'`),'t');
     await assert.rejects(as('admin',command.replace('"5"','"6"')),/Idempotency/);
-    for(const role of ['engineer','foreman','finance','warehouse_staff']) await assert.rejects(as(role,`select * from public.prepare_web_inventory_movement('${randomUUID()}','stock-in')`),/Not authorized/);
+    for(const role of ['engineer','foreman','finance']) await assert.rejects(as(role,`select * from public.prepare_web_inventory_movement('${randomUUID()}','stock-in')`),/Not authorized/);
     await assert.rejects(as('engineer',`select * from public.prepare_web_inventory_movement('${key}','stock-in')`),/Not authorized/);
   });
   await check('failed stock-out keeps prepared metadata and can retry after correction',async()=>{

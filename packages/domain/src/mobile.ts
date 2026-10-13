@@ -256,6 +256,12 @@ export const mobileResponseSchemas = {
       photo_path: text.optional(),
     }),
   ),
+  "vehicle-history": page(z.object({
+    id: z.string(), asset_id: uuidSchema, name: z.string(), code: z.string(),
+    occurred_at: z.string(), kind: z.enum(["movement", "request", "usage", "fuel", "delivery"]),
+    title: z.string(), note: z.string(), status: z.string(), reference: text,
+    purchase_id: uuidSchema.nullable(), hours: number.nullable(),
+  })),
   "equipment-history": page(
     z.object({
       id: uuidSchema,
