@@ -10,6 +10,8 @@
 
 **Pending rollout:** Apply category retirement (20261010110000) if still pending, equipment-choice paging (20261010120000) and Philippine equipment dates (20261010121000). The web remains compatible before these read/calendar changes, but their fixes require migration. Mobile SDK 57 patch updates require a new signed installed build; bundle exports and source pushes do not deliver one. Live device/UAT, notifications/email, real opening balances and backup/restore acceptance remain open. No hosted data/schema was changed by the audit.
 
+**Notification simplification (2026-10-14):** Phone push delivery and mobile push settings are retired by request. The in-app inbox, unread badge and realtime refresh remain. Apply `20261014110000_retire_phone_push.sql` for backend cleanup; no Firebase setup is needed for the current app. Source warehouse selection remains an authorized Admin/Warehouse Staff action before approval. Retirement, source-assignment and all 42 ERP workflow checks passed.
+
 **Historical evidence:** Older implementation statuses, feature audits and dated progress entries below describe their original checkpoints and are not current release decisions. The current audit takes precedence. The retired demo and old category screens are not supported workflows.
 
 **Requested package:** Package 3 — Complete Construction ERP, including the Package 1 and 2 features quoted by the client. This repository supplies the web ERP; the approved limited native release is documented in [mobile scope](docs/mobile-app.md).
