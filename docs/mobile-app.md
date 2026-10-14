@@ -93,3 +93,11 @@ Verification: mobile typecheck/lint, 25 tests, native exports and Expo Doctor 21
 
 ### Current mobile purchase contracts — 2026-10-14
 The current app uses mobileActionCommandSchema for general commands and mobileReceiptCommandSchema for itemized material purchases and diesel uploads. Receipt payloads reject cash-source fields; diesel omits notes too. The server mobileCommandSchema still accepts installed builds and supplies the existing company-cash accounting default for new diesel payloads without a paidWith field. Old cash selection and receipt-only entry paths are removed from the current client rather than hidden. Historical receipts, reimbursement data and web accounting fields remain intact. Deploy this API before distributing mobile build 23. No new database migration is needed for this contract/UI cleanup. Shared domain packaging excludes tests, which remain tested in this repository.
+
+## Phone push retired — 14 October 2026
+
+Build 24 removes phone push registration/listeners, Firebase configuration, native notification dependencies and the Profile push toggle. The in-app inbox, unread badge and realtime refresh remain. Apply `20261014110000_retire_phone_push.sql` to remove the push trigger, token/pruning functions, dedicated cron job and token table. It preserves inbox/outbox history and all inventory/cost data; pg_net and the notification-outbox cron job remain. Older builds can still read the inbox but their retired push RPC calls fail harmlessly. No Firebase account or remote credentials were changed.
+
+Warehouse sourcing is unchanged: Admin or authorized Warehouse Staff assigns the source before Engineer/Admin approval reserves stock; dispatch deducts that assigned source. Only project-linked warehouses are eligible.
+
+Verification for retirement: new isolated PostgreSQL retirement/rerun regression, six source-assignment/PO grouping checks and all 42 ERP workflow checks passed. Web TypeScript, ESLint, 115 tests, production build and migration-version checks passed. No hosted migration was applied.
