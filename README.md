@@ -12,6 +12,8 @@
 
 **Notification simplification (2026-10-14):** Phone push delivery and mobile push settings are retired by request. The in-app inbox, unread badge and realtime refresh remain. Apply `20261014110000_retire_phone_push.sql` for backend cleanup; no Firebase setup is needed for the current app. Source warehouse selection remains an authorized Admin/Warehouse Staff action before approval. Retirement, source-assignment and all 42 ERP workflow checks passed.
 
+**Automatic project site (2026-10-16):** After applying `20261016100000_automatic_project_site.sql`, saving a new project creates its initial site, inventory location and QR record atomically. Site name/address come from the project; the project Engineer is carried over. In Sites, Admin selects Engineer/Foreman through the existing custom dropdowns. Existing sites and posted stock remain unchanged. Verified: new atomic-site/role/rollback/rerun checks, 42 ERP workflow checks, 115 web/domain tests, TypeScript, lint, production build and 130 unique migration versions.
+
 **Historical evidence:** Older implementation statuses, feature audits and dated progress entries below describe their original checkpoints and are not current release decisions. The current audit takes precedence. The retired demo and old category screens are not supported workflows.
 
 **Requested package:** Package 3 — Complete Construction ERP, including the Package 1 and 2 features quoted by the client. This repository supplies the web ERP; the approved limited native release is documented in [mobile scope](docs/mobile-app.md).

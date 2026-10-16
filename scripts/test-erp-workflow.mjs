@@ -40,7 +40,8 @@ await fixture(async ({ sql, as, users, result, scalar }) => {
       assert.equal(permitted.can_review, role === "engineer");
       assert.equal(permitted.can_record, role === "foreman");
       const reviewerSites = await json(role, `select to_json(public.get_project_review_sites('${project}'))`);
-      assert.deepEqual(reviewerSites, role === "engineer" ? [site] : []);
+      const initialSite = await value(`select id from public.project_sites where project_id='${project}' and name=(select name from public.projects where id='${project}')`);
+      assert.deepEqual([...reviewerSites].sort(), role === "engineer" ? [site, initialSite].sort() : []);
       const denied = await json(role, `select row_to_json(c) from public.get_project_site_capabilities('${project}','${sibling}') c`);
       assert.deepEqual(denied, { can_read: false, can_review: false, can_record: false });
       const mobile = await json(role, `select json_agg(row_to_json(p)) from public.get_mobile_projects('', '${project}',0,20) p`);

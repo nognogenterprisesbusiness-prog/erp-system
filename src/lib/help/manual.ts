@@ -72,9 +72,10 @@ export const manualGuides: readonly ManualGuide[] = [
   },
   {
     id: "projects", title: "Projects, sites and initial documents", description: "Keep project information and work history together.", href: "/projects", roles: everyone,
-    before: "Admin creates the project and site. Other staff need the relevant assignment.",
+    before: "Admin creates the project; its first site, stock location and QR record are created automatically. Other staff need the relevant assignment.",
     steps: [
       { title: "Open the project", detail: "Review Overview, Sites, Labour, Materials, Finance and Documents where your account has access. Check that you are working on the correct active site." },
+      { title: "Assign the site staff", detail: "Admin opens Sites and chooses the Engineer and Foreman, then selects Save staff. The site uses the project name and address, so there are no separate site-name or site-address inputs." },
       { title: "Prepare the material plan", detail: "Admin or an Engineer with review authority for the site opens Material plan and selects Add material plan. Record existing catalog materials, planned quantities, source warehouse and needed date. Foremen can read their site's plan. Compare the plan with warehouse availability and actual site usage before ordering more; a plan does not reserve or deduct stock." },
       { title: "Attach initial documents", detail: "Admin uploads project files on the Documents page and chooses the project and document category. Assigned site staff can view or download permitted files from the project Documents tab." },
       { title: "Monitor actual progress and expenses", detail: "Use dated daily reports and the project's cost sections. Review posted material use, labour, equipment and other expenses. A request, purchase or delivery does not by itself count as material use." },

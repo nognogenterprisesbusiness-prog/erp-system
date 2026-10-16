@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 export type ProjectActionState = ActionResult<{ id: string }> | { ok: false; message: string; fieldErrors?: Record<string, string[]>; savedId: string };
 const initialError = (message: string): ProjectActionState => ({ ok: false, message });
 const value = (form: FormData, key: string) => String(form.get(key) ?? "");
+const staffValue = (form: FormData, key: string) => value(form, key) === "unassigned" ? "" : value(form, key);
 function projectPayload(form: FormData) { return { code: value(form, "code").toUpperCase(), name: value(form, "name"), description: value(form, "description"), clientName: value(form, "clientName"), clientEmail: value(form, "clientEmail"), clientPhone: value(form, "clientPhone"), address: value(form, "address"), municipalityCode: value(form, "municipalityCode"), startDate: value(form, "startDate"), targetCompletionDate: value(form, "targetCompletionDate"), actualCompletionDate: value(form, "actualCompletionDate"), contractAmount: value(form, "contractAmount"), status: value(form, "status"), projectManagerId: value(form, "projectManagerId") }; }
 
 export async function saveProjectAction(previous: ProjectActionState, form: FormData): Promise<ProjectActionState> {
@@ -84,7 +85,7 @@ export async function createProjectSiteAction(form: FormData) {
   const taken = new Set((existing ?? []).map((site) => site.name.trim().toLowerCase()));
   let name = project.name.trim();
   for (let number = 2; taken.has(name.toLowerCase()); number++) name = `${project.name.trim().slice(0, 150)} ${number}`;
-  const parsed = projectSiteInputSchema.safeParse({ projectId, name, address: project.address, description: "", engineerId: value(form, "engineerId"), foremanId: value(form, "foremanId"), status: "active" });
+  const parsed = projectSiteInputSchema.safeParse({ projectId, name, address: project.address, description: "", engineerId: staffValue(form, "engineerId"), foremanId: staffValue(form, "foremanId"), status: "active" });
   if (!parsed.success) throw new Error("Review the site details and try again.");
   const { error } = await supabase.from("project_sites").insert({ project_id: parsed.data.projectId, name: parsed.data.name, address: parsed.data.address, description: parsed.data.description || null, engineer_id: parsed.data.engineerId || null, foreman_id: parsed.data.foremanId || null, status: parsed.data.status, created_by: actor.userId, updated_by: actor.userId });
   if (error) throw new Error(`Unable to create site: ${error.message}`);
@@ -97,8 +98,8 @@ export async function updateProjectSiteStaffAction(form: FormData) {
   const actor = await requireManager();
   const siteId = value(form, "siteId");
   const projectId = value(form, "projectId");
-  const engineerId = value(form, "engineerId");
-  const foremanId = value(form, "foremanId");
+  const engineerId = staffValue(form, "engineerId");
+  const foremanId = staffValue(form, "foremanId");
   if (![siteId, projectId].every((id) => uuidSchema.safeParse(id).success)
     || ![engineerId, foremanId].every((id) => id === "" || uuidSchema.safeParse(id).success)) throw new Error("Review the site staff and try again.");
   const supabase = await createClient();
