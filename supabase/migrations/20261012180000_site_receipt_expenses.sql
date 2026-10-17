@@ -15,7 +15,7 @@ declare v public.site_purchases; v_expense uuid := gen_random_uuid();
 begin
   select * into v from public.site_purchases where id=p_purchase_id for update;
   if v.purchase_kind not in ('fuel','expense') then raise exception 'Receipt expense not found' using errcode='22023'; end if;
-  if v.status='approved' then return v.id; end if;
+  if v.status='approved' then return v.id; end if;  
   if v.status<>'submitted' then raise exception 'This purchase was rejected' using errcode='22023'; end if;
   if not exists(select 1 from storage.objects where bucket_id='erp-site-purchase-receipts' and name=v.receipt_photo_path) then
     raise exception 'Add a receipt photo' using errcode='22023';
