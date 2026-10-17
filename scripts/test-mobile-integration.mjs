@@ -1,25 +1,10 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { withLocalFixture } from "./local-integration-fixture.mjs";
 const project = "20000000-0000-0000-0000-000000000001",
   site = "40000000-0000-0000-0000-000000000001";
 await withLocalFixture(async ({ sql, as, users, result }) => {
-  const installed = Number(
-    await sql(
-      "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='get_mobile_projects'",
-    ),
-  );
-  if (!installed)
-    await sql(
-      readFileSync(
-        new URL(
-          "../supabase/migrations/20260928100000_mobile_site_commands.sql",
-          import.meta.url,
-        ),
-        "utf8",
-      ),
-    );
+  const testDate = await sql("select (now() at time zone 'Asia/Manila')::date");
   await as(
     "engineer",
     `select * from public.get_mobile_projects('',null,0,20)`,
@@ -61,7 +46,7 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
       note: "Mobile batch test",
     }))
     .sort((a, b) => a.assignmentId.localeCompare(b.assignmentId));
-  const batch = (rows, date = "2026-09-28") =>
+  const batch = (rows, date = testDate) =>
     `select public.post_project_attendance_batch('${project}','${site}','${date}','${JSON.stringify(rows)}'::jsonb)`;
   const invalid = entries.map((e, i) => (i === 1 ? { ...e, hours: "25" } : e));
   await assert.rejects(as("foreman", batch(invalid)));
@@ -96,7 +81,7 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
   );
   const attendance = await as(
     "engineer",
-    `select record from public.get_mobile_site_operations('attendance','${project}','${site}','2026-09-28')`,
+    `select record from public.get_mobile_site_operations('attendance','${project}','${site}','${testDate}')`,
   );
   assert.ok(attendance.includes('"hours_worked"'));
   for (const field of [
@@ -109,7 +94,7 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
   const report = randomUUID();
   await as(
     "foreman",
-    `select public.save_daily_report('${report}','${project}','${site}','2026-09-28','Clear','Mobile site work','Mobile test complete','','','',false)`,
+    `select public.save_daily_report('${report}','${project}','${site}','${testDate}','Clear','Mobile site work','Mobile test complete','','','',false)`,
   );
   const attendanceId = result(
     await sql(
@@ -122,17 +107,8 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
   const warehouse = "30000000-0000-0000-0000-000000000001",
     material = "60000000-0000-0000-0000-000000000001";
   // Same caller RPCs used by mobile commands and web approval/warehouse actions.
-  await sql(
-    readFileSync(
-      new URL(
-        "../supabase/migrations/20260927160000_repair_request_receipt_access.sql",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
-  );
   const requestKey = randomUUID();
-  const submit = `select public.submit_material_request('${requestKey}','${project}','${site}','${warehouse}','2026-09-28','Mobile material flow','[{"materialId":"${material}","quantity":"8"}]'::jsonb)`;
+  const submit = `select public.submit_material_request('${requestKey}','${project}','${site}','${warehouse}','${testDate}','Mobile material flow','[{"materialId":"${material}","quantity":"8"}]'::jsonb)`;
   const requestId = result(await as("foreman", submit));
   assert.equal(result(await as("foreman", submit)), requestId);
   const line = result(
@@ -151,7 +127,7 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
     `select public.decide_material_request('${randomUUID()}','${requestId}','{"${line}":"8"}'::jsonb,null)`,
   );
   const releaseKey = randomUUID();
-  const release = `select public.dispatch_approved_request_line_with_manifest('${releaseKey}','${line}',8,'2026-09-28','Mobile flow release',null,'Test truck','Test Driver','TEST-TRIP')`;
+  const release = `select public.dispatch_approved_request_line_with_manifest('${releaseKey}','${line}',8,'${testDate}','Mobile flow release',null,'Test truck','Test Driver','TEST-TRIP')`;
   const transfer = result(await as("warehouse_staff", release));
   assert.equal(result(await as("warehouse_staff", release)), transfer);
   const item = result(
@@ -170,7 +146,7 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
     ),
   );
   const receiptKey = randomUUID();
-  const receipt = `select public.receive_request_transfer_with_inspection('${receiptKey}','${item}',3,'2026-09-28','Mobile partial receipt','accepted',null)`;
+  const receipt = `select public.receive_request_transfer_with_inspection('${receiptKey}','${item}',3,'${testDate}','Mobile partial receipt','accepted',null)`;
   assert.equal(
     result(await as("foreman", receipt)),
     result(await as("foreman", receipt)),
@@ -178,12 +154,12 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
   await assert.rejects(
     as(
       "foreman",
-      `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',6,'2026-09-28',null,'accepted',null)`,
+      `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',6,'${testDate}',null,'accepted',null)`,
     ),
   );
   await as(
     "foreman",
-    `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',5,'2026-09-28','Mobile full receipt','accepted',null)`,
+    `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',5,'${testDate}','Mobile full receipt','accepted',null)`,
   );
   assert.equal(
     Number(
@@ -199,7 +175,7 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
     ),
   );
   const consumeKey = randomUUID();
-  const consume = `select public.consume_site_material('${consumeKey}','${material}','${destination}','${project}',2,'${unit}','Mobile flow','2026-09-28','Mobile materials used')`;
+  const consume = `select public.consume_site_material('${consumeKey}','${material}','${destination}','${project}',2,'${unit}','Mobile flow','${testDate}','Mobile materials used')`;
   const consumption = result(await as("foreman", consume));
   assert.equal(result(await as("foreman", consume)), consumption);
   assert.equal(
@@ -251,7 +227,7 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
   );
   await as(
     "foreman",
-    `select public.save_daily_report('${report}','${project}','${site}','2026-09-28','Clear','Mobile site work','Mobile test complete','','','',true)`,
+    `select public.save_daily_report('${report}','${project}','${site}','${testDate}','Clear','Mobile site work','Mobile test complete','','','',true)`,
   );
   await assert.rejects(
     as(
@@ -263,12 +239,13 @@ await withLocalFixture(async ({ sql, as, users, result }) => {
     "engineer",
     `select public.review_daily_report('${report}','approve','Mobile reviewed')`,
   );
-  await assert.rejects(
-    as(
-      "foreman",
-      `select public.detach_daily_report_resource('${report}','material','${consumption}')`,
-    ),
-  );
+  const auditBefore = Number(await sql("select count(*) from public.audit_logs where table_name='daily_report_resource_links'"));
+  await assert.rejects(as("engineer", `select public.detach_daily_report_resource('${report}','material','${consumption}')`));
+  await as("foreman", `select public.detach_daily_report_resource('${report}','material','${consumption}')`);
+  assert.equal(Number(await sql(`select count(*) from public.daily_report_resource_links where report_id='${report}' and transaction_id='${consumption}'`)), 0);
+  await as("foreman", `select public.attach_daily_report_resource('${report}','material','${consumption}')`);
+  assert.ok(Number(await sql("select count(*) from public.audit_logs where table_name='daily_report_resource_links'")) >= auditBefore + 2);
+  assert.equal(await sql(`select cost_total from public.inventory_transactions where id='${consumption}'`), materialCost);
   await as(
     "foreman",
     `do $$ begin if exists(select 1 from public.labor_rates) then raise exception 'Foreman received wages'; end if; end $$`,

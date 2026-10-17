@@ -47,7 +47,7 @@ export function InitialRoleForm({ userId, roles }: { userId: string; roles: AppR
   const [state, action, pending] = useActionState(assignInitialRoleAction, initialState);
   return <form action={action} className="flex flex-wrap items-start justify-end gap-2">
     <input type="hidden" name="userId" value={userId} />
-    <label className="grid min-w-0 content-start gap-2"><span className="sr-only">Initial role</span><select name="role" aria-label="Initial role" className="h-9 rounded-md border border-slate-200 bg-white px-2 text-xs" defaultValue="" required><option value="" disabled>Select role</option>{roles.map((role) => <option key={role} value={role}>{roleLabels[role]}</option>)}</select></label>
+    <label className="grid min-w-0 content-start gap-2"><span className="sr-only">Initial role</span><SelectPicker name="role" label="Initial role" placeholder="Select role" required disabled={pending} className="h-9" options={roles.map((role) => ({ value: role, label: roleLabels[role] }))} /></label>
     <Button type="submit" size="sm" disabled={pending}>Assign role</Button>
     {state.message ? <span role={state.ok ? "status" : "alert"} className={`w-full text-right text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</span> : null}
   </form>;

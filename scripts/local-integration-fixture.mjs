@@ -2,10 +2,12 @@ import { execFileSync, execFile } from "node:child_process";
 import { randomUUID, randomBytes } from "node:crypto";
 import { promisify } from "node:util";
 import { readFileSync } from "node:fs";
+import { withIsolatedPostgres } from "./isolated-postgres-fixture.mjs";
 
 const container = "supabase_db_nognog-enterprises";
 const run = promisify(execFile);
 export async function withLocalFixture(test) {
+  if (process.env.ERP_TEST_PG_BIN) return withIsolatedPostgres(test);
   const endpoint = execFileSync("docker", ["context", "inspect", "--format", "{{.Endpoints.docker.Host}}"], { encoding: "utf8", timeout: 15000 }).trim();
   if (!endpoint.startsWith("npipe://") && !endpoint.startsWith("unix://")) throw new Error("Integration tests require a local Docker socket, not a remote Docker host.");
   if (process.env.DOCKER_HOST && !process.env.DOCKER_HOST.startsWith("npipe://") && !process.env.DOCKER_HOST.startsWith("unix://")) throw new Error("Remote DOCKER_HOST is not permitted.");

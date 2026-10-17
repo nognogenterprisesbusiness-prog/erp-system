@@ -1,5 +1,7 @@
 "use client";
 
+import { SelectPicker } from "@/components/ui/select-picker";
+
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRecordDialog } from "@/components/ui/record-create-dialog";
@@ -65,18 +67,11 @@ export function DailyReportForm({ report, initialId, initialProjectId, initialDa
       <p className="mt-1 text-xs text-slate-500">One report covers one site and one reporting date. Multiple reports may share a date.</p>
       <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <FormField label="Project" htmlFor="projectId" error={error("projectId")}>
-          <select id="projectId" name="projectId" className={fieldControlClass} value={projectId}
-            onChange={(event) => setProjectId(event.target.value)} disabled={Boolean(report)} required>
-            <option value="" disabled>Select project</option>
-            {projects.map((project) => <option key={project.id} value={project.id}>{project.code} · {project.name}</option>)}
-          </select>
+          <SelectPicker id="projectId" name="projectId" label="Project" value={projectId} onValueChange={setProjectId} disabled={Boolean(report) || pending} required placeholder="Select project" options={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))} />
           {report && <input type="hidden" name="projectId" value={projectId} />}
         </FormField>
         <FormField label="Project site" htmlFor="projectSiteId" error={error("projectSiteId")}>
-          <select id="projectSiteId" name="projectSiteId" className={fieldControlClass} key={`${projectId}:${selectedSite}`} defaultValue={selectedSite} required>
-            {!selectedSite && <option value="" disabled>{availableSites.length ? "Select an active site" : "No active sites"}</option>}
-            {availableSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}
-          </select>
+          <SelectPicker id="projectSiteId" name="projectSiteId" label="Project site" key={`${projectId}:${selectedSite}`} defaultValue={selectedSite} required disabled={pending} placeholder={availableSites.length ? "Select an active site" : "No active sites"} options={availableSites.map((site) => ({ value: site.id, label: site.name }))} />
         </FormField>
         <FormField label="Report date" htmlFor="reportDate" hint="Construction dates use Asia/Manila." error={error("reportDate")}>
           <DatePicker id="reportDate" name="reportDate" label="Report date" defaultValue={report?.report_date ?? initialDate} required allowClear={false} />

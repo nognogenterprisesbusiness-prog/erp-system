@@ -4,10 +4,10 @@ import { requireUser } from "@/lib/auth";
 import { pageNumber } from "@/lib/data/pagination";
 import { createClient } from "@/lib/supabase/server";
 export type ReferenceChoice = { value: string; label: string; unitId?: string | null; availableQuantity?: number };
-export type ReferenceKind = "material" | "attendance" | "site_material" | "request_material" | "billable_project" | "delivery_vehicle";
-export async function searchReferenceChoices(kind: ReferenceKind, projectId: string, search: string, requestedPage: number, warehouseId = ""): Promise<{ choices: ReferenceChoice[]; count: number }> {
+export type ReferenceKind = "material" | "attendance" | "site_material" | "billable_project" | "delivery_vehicle";
+export async function searchReferenceChoices(kind: ReferenceKind, projectId: string, search: string, requestedPage: number): Promise<{ choices: ReferenceChoice[]; count: number }> {
   const user = await requireUser();
-  if (search.length > 100 || !["material", "attendance", "site_material", "request_material", "billable_project", "delivery_vehicle"].includes(kind)) throw new Error("Invalid reference search.");
+  if (search.length > 100 || !["material", "attendance", "site_material", "billable_project", "delivery_vehicle"].includes(kind)) throw new Error("Invalid reference search.");
   if (kind === "attendance" && (!uuidSchema.safeParse(projectId).success || (!user.canManage && !user.roles.includes("foreman")))) throw new Error("Not authorized for attendance.");
   const db = await createClient();
   const args = { p_search: search.trim(), p_offset: (pageNumber(requestedPage) - 1) * 20, p_limit: 20 };
@@ -22,15 +22,6 @@ export async function searchReferenceChoices(kind: ReferenceKind, projectId: str
     const { data, error } = await db.rpc("get_delivery_vehicle_choices", args);
     if (error) throw new Error("Unable to search delivery vehicles.");
     return { choices: data.map((r) => ({ value: r.id, label: r.label })), count: data[0]?.total_count ?? 0 };
-  }
-  if (kind === "request_material") {
-    if (!uuidSchema.safeParse(projectId).success || !uuidSchema.safeParse(warehouseId).success)
-      return { choices: [], count: 0 };
-    const { data, error } = await db.rpc("search_requestable_warehouse_stock", {
-      ...args, p_project_id: projectId, p_warehouse_id: warehouseId,
-    });
-    if (error) throw new Error("Unable to search warehouse stock.");
-    return { choices: data.map((r) => ({ value: r.id, label: `${r.label} · ${r.available_quantity} available`, unitId: r.unit_id, availableQuantity: r.available_quantity })), count: data[0]?.total_count ?? 0 };
   }
   if (kind === "site_material") {
     if (!uuidSchema.safeParse(projectId).success) return { choices: [], count: 0 };

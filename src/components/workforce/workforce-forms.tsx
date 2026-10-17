@@ -14,6 +14,7 @@ import {
 } from "@/app/(workspace)/employees/actions";
 import { Button } from "@/components/ui/button";
 import { fieldControlClass } from "@/components/ui/form-field";
+import { SelectPicker } from "@/components/ui/select-picker";
 import { PesoAmountInput } from "@/components/ui/peso-amount-input";
 import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import type { EmployeeProjectAssignmentRow, LaborRateRow, ProjectRow, ProjectSiteRow } from "@/types/database";
@@ -51,9 +52,9 @@ export function WorkforceAssignmentForm({ employees, projects, sites, fixedEmplo
   const [projectId, setProjectId] = useState(fixedProjectId ?? projects[0]?.id ?? "");
   const filteredSites = useMemo(() => sites.filter((site) => site.project_id === projectId), [sites, projectId]);
   return <form action={action} className={inDialog ? "grid gap-4 sm:grid-cols-2" : "grid gap-3 rounded-lg bg-slate-50 p-4 md:grid-cols-2 xl:grid-cols-6"}>
-    {fixedEmployeeId ? <input type="hidden" name="employeeId" value={fixedEmployeeId} /> : <label className="grid min-w-0 content-start gap-2 text-sm font-medium">Employee<select className={fieldControlClass} name="employeeId" aria-label="Employee" required defaultValue=""><option value="" disabled>Select employee</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}</select></label>}
-    {fixedProjectId ? <input type="hidden" name="projectId" value={fixedProjectId} /> : <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Project<select className={fieldControlClass} name="projectId" required value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="" disabled>Select project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>}
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Project site<select key={projectId} className={fieldControlClass} name="projectSiteId" required defaultValue=""><option value="" disabled>Select site</option>{filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+    {fixedEmployeeId ? <input type="hidden" name="employeeId" value={fixedEmployeeId} /> : <label className="grid min-w-0 content-start gap-2 text-sm font-medium">Employee<SelectPicker label="Employee" name="employeeId" required placeholder="Select employee" disabled={pending} options={employees.map((employee) => ({ value: employee.id, label: employee.fullName }))} /></label>}
+    {fixedProjectId ? <input type="hidden" name="projectId" value={fixedProjectId} /> : <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Project<SelectPicker label="Project" name="projectId" required value={projectId} onValueChange={setProjectId} disabled={pending} options={projects.map((project) => ({ value: project.id, label: project.name }))} /></label>}
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Project site<SelectPicker key={projectId} label="Project site" name="projectSiteId" required placeholder="Select site" disabled={pending} options={filteredSites.map((site) => ({ value: site.id, label: site.name }))} /></label>
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Assigned position<input className={fieldControlClass} name="positionTitle" placeholder={getFieldPlaceholder("Assigned position")} required /></label>
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Start date<input className={fieldControlClass} name="startDate" type="date" defaultValue={today} required /></label>
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium sm:col-span-2">Remarks (optional)<input className={fieldControlClass} name="remarks" placeholder={getFieldPlaceholder("Remarks (optional)")} /></label>
@@ -83,8 +84,8 @@ export function TransferAssignmentForm({ assignment, projects, sites }: {
   const filteredSites = useMemo(() => sites.filter((site) => site.project_id === projectId), [sites, projectId]);
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="assignmentId" value={assignment.id} /><input type="hidden" name="employeeId" value={assignment.employee_id} />
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New project<select className={fieldControlClass} name="projectId" value={projectId} onChange={(event) => setProjectId(event.target.value)} required><option value="" disabled>Select new project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New site<select key={projectId} className={fieldControlClass} name="projectSiteId" defaultValue="" required><option value="" disabled>Select new site</option>{filteredSites.map((site) => <option key={site.id} value={site.id}>{site.name}</option>)}</select></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New project<SelectPicker label="New project" name="projectId" value={projectId} onValueChange={setProjectId} required disabled={pending} options={projects.map((project) => ({ value: project.id, label: project.name }))} /></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New site<SelectPicker key={projectId} label="New site" name="projectSiteId" required placeholder="Select new site" disabled={pending} options={filteredSites.map((site) => ({ value: site.id, label: site.name }))} /></label>
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium sm:col-span-2">Position at new site<input className={fieldControlClass} name="positionTitle" defaultValue={assignment.position_title} required placeholder={getFieldPlaceholder("Position at new site")} /></label>
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Current assignment end date<input className={fieldControlClass} name="currentEndDate" type="date" min={assignment.start_date} defaultValue={today < assignment.start_date ? assignment.start_date : today} required /></label>
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium">New assignment start date<input className={fieldControlClass} name="newStartDate" type="date" min={today} required /></label>
@@ -98,7 +99,7 @@ export function LaborRateForm({ employeeId }: { employeeId: string }) {
   useCompleteWorkforceDialog(state);
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="employeeId" value={employeeId} />
-    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Rate type<select className={fieldControlClass} name="rateType" defaultValue="daily"><option value="daily">Daily</option><option value="hourly">Hourly</option></select></label>
+    <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Rate type<SelectPicker label="Rate type" name="rateType" defaultValue="daily" disabled={pending} options={[{ value: "daily", label: "Daily" }, { value: "hourly", label: "Hourly" }]} /></label>
     <PesoAmountInput name="amount" label="Rate amount (PHP)" required submitUngrouped />
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Effective from<input className={fieldControlClass} name="effectiveStartDate" type="date" defaultValue={today} required /></label>
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Effective until (optional)<input className={fieldControlClass} name="effectiveEndDate" type="date" /></label>
@@ -109,7 +110,7 @@ export function LaborRateForm({ employeeId }: { employeeId: string }) {
 export function AttendanceBasisForm({ employeeId }: { employeeId: string }) {
   const [state, action, pending] = useActionState(setAttendanceBasisAction, initialState);
   useCompleteWorkforceDialog(state);
-  return <form action={action} className="grid gap-4"><input type="hidden" name="employeeId" value={employeeId} /><p className="text-sm text-slate-600">Choose how this employee&apos;s future attendance is costed. Historical costs stay unchanged.</p><label className="grid min-w-0 content-start gap-1 text-sm font-medium">Attendance costing basis<select name="rateType" className={fieldControlClass} defaultValue="" required><option value="" disabled>Choose basis</option><option value="daily">Daily</option><option value="hourly">Hourly</option></select></label><FormMessage state={state} /><RecordFormControls busy={pending} label="Save basis" /></form>;
+  return <form action={action} className="grid gap-4"><input type="hidden" name="employeeId" value={employeeId} /><p className="text-sm text-slate-600">Choose how this employee&apos;s future attendance is costed. Historical costs stay unchanged.</p><label className="grid min-w-0 content-start gap-1 text-sm font-medium">Attendance costing basis<SelectPicker label="Attendance costing basis" name="rateType" required placeholder="Choose basis" disabled={pending} options={[{ value: "daily", label: "Daily" }, { value: "hourly", label: "Hourly" }]} /></label><FormMessage state={state} /><RecordFormControls busy={pending} label="Save basis" /></form>;
 }
 
 export function CloseLaborRateForm({ employeeId, rate }: { employeeId: string; rate: LaborRateRow }) {

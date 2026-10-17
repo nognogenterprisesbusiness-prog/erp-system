@@ -10,51 +10,33 @@ import type { MaterialRequestStatus } from "@/types/database";
 
 const PAGE_SIZE = 20;
 
-export async function getMaterialRequestChoices(preferred?: { projectId: string; warehouseId: string; materialId?: string }) {
+export async function getMaterialRequestFormChoices(materialId?: string) {
   const user = await requireUser();
   if (!user.canManage && !user.roles.some((role) => ["engineer", "foreman"].includes(role)))
-    return { projects: [], sites: [], warehouses: [], materials: [], requestableMaterials: [], initialStockWarehouseId: "" };
+    return { projects: [], sites: [], materials: [] };
   const supabase = await createClient();
-  const [reportChoices, warehousesResult, materialsResult] = await Promise.all([
+  const [context, materials] = await Promise.all([
     getDailyReportChoices(),
-    supabase.rpc("get_requestable_warehouses"),
     supabase.from("materials").select("id,code,name,base_unit_id").eq("is_active", true).eq("material_kind", "consumable").is("archived_at", null).order("name").order("id").range(0, 19),
   ]);
-  if (warehousesResult.error || materialsResult.error) throw new Error("Unable to load material request choices.");
-  const projects = reportChoices.projects.filter((row) => row.status === "active");
-  const projectIds = new Set(projects.map((row) => row.id));
-  const warehouses = (warehousesResult.data ?? []).filter((row) => projectIds.has(row.project_id));
-  const initialWarehouse = warehouses.find((row) => row.project_id === preferred?.projectId && row.warehouse_id === preferred.warehouseId)
-    ?? warehouses.find((row) => row.project_id === projects[0]?.id);
-  const initialStock = initialWarehouse
-    ? await supabase.rpc("search_requestable_warehouse_stock", { p_project_id: initialWarehouse.project_id, p_warehouse_id: initialWarehouse.warehouse_id, p_limit: 20 })
-    : { data: [], error: null };
-  if (initialStock.error) throw new Error("Unable to load available warehouse materials.");
-  const stockRows = [...(initialStock.data ?? [])];
-  if (initialWarehouse && preferred?.materialId && !stockRows.some((row) => row.id === preferred.materialId)) {
-    const prefilled = await supabase.rpc("search_requestable_warehouse_stock", {
-      p_project_id: initialWarehouse.project_id, p_warehouse_id: initialWarehouse.warehouse_id,
-      p_material_id: preferred.materialId, p_limit: 1,
-    });
-    if (prefilled.error) throw new Error("Unable to verify the requested material.");
-    stockRows.push(...(prefilled.data ?? []));
+  if (materials.error) throw new Error("Unable to load catalog materials.");
+  const rows = [...(materials.data ?? [])];
+  if (uuidSchema.safeParse(materialId).success && !rows.some((row) => row.id === materialId)) {
+    const selected = await supabase.from("materials").select("id,code,name,base_unit_id").eq("id", materialId!).eq("is_active", true).eq("material_kind", "consumable").is("archived_at", null).maybeSingle();
+    if (selected.error) throw new Error("Unable to verify the selected material.");
+    if (selected.data) rows.push(selected.data);
   }
-  const requestableDetails = stockRows.length
-    ? await supabase.from("materials").select("id,code,name,base_unit_id").in("id", stockRows.map((row) => row.id))
-    : { data: [], error: null };
-  if (requestableDetails.error) throw new Error("Unable to load warehouse material details.");
-  const materialById = new Map((requestableDetails.data ?? []).map((row) => [row.id, row]));
-  return {
-    projects,
-    sites: reportChoices.sites.filter((row) => projectIds.has(row.project_id)),
-    warehouses,
-    initialStockWarehouseId: initialWarehouse?.warehouse_id ?? "",
-    materials: materialsResult.data ?? [],
-    requestableMaterials: stockRows.flatMap((row) => {
-      const material = materialById.get(row.id);
-      return material ? [{ ...material, availableQuantity: row.available_quantity }] : [];
-    }),
-  };
+  const projects = context.projects.filter((row) => row.status === "active");
+  const ids = new Set(projects.map((row) => row.id));
+  return { projects, sites: context.sites.filter((row) => ids.has(row.project_id)), materials: rows };
+}
+
+export async function getMaterialRequestChoices() {
+  const context = await getMaterialRequestFormChoices();
+  const { data, error } = await (await createClient()).rpc("get_requestable_warehouses");
+  if (error) throw new Error("Unable to load project warehouses.");
+  const ids = new Set(context.projects.map((row) => row.id));
+  return { ...context, warehouses: (data ?? []).filter((row) => ids.has(row.project_id)) };
 }
 
 export async function getMaterialRequests(filters: { search?: string; status?: MaterialRequestStatus | "all"; page?: number } = {}) {

@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { cancelMaterialRequestSchema, decideMaterialRequestSchema, dispatchRequestWithManifestSchema, receiveRequestWithInspectionSchema, submitMaterialRequestSchema } from "@nognog/domain";
+import { cancelMaterialRequestSchema, decideMaterialRequestSchema, dispatchRequestWithManifestSchema, receiveRequestWithInspectionSchema, mobileActionCommandSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -52,16 +52,18 @@ export async function submitMaterialRequestAction(_: RequestActionState, form: F
   if (rawLines.length > 8_000) return failure("Too many request lines.");
   let lines: unknown;
   try { lines = JSON.parse(rawLines); } catch { return failure("Review the requested materials."); }
-  const parsed = submitMaterialRequestSchema.safeParse({
+  const parsed = mobileActionCommandSchema.safeParse({ action: "request-materials", input: {
     idempotencyKey: value(form, "idempotencyKey"), projectId: value(form, "projectId"),
-    siteId: value(form, "siteId"), warehouseId: value(form, "warehouseId"),
-    requiredDate: value(form, "requiredDate"), purpose: value(form, "purpose"), lines,
-  });
-  if (!parsed.success) return failure("Review the material request details.", parsed.error.flatten().fieldErrors);
-  const input = parsed.data;
+    siteId: value(form, "siteId"), purpose: value(form, "purpose"), lines,
+  } });
+  if (!parsed.success) {
+    const fields: Record<string, string[]> = {};
+    for (const issue of parsed.error.issues) (fields[String(issue.path[1] ?? "lines")] ??= []).push(issue.message);
+    return failure("Review the highlighted request details.", fields);
+  }
   const supabase = await createClient();
   let data: string | undefined;
-  try { data = (await executeSiteCommand(supabase, { action: "request-materials", input })).id; }
+  try { data = (await executeSiteCommand(supabase, parsed.data)).id; }
   catch (cause) { return failure(cause instanceof Error ? cause.message : "The request could not be saved."); }
   revalidatePath("/requests");
   redirect(`/requests/${data}`);

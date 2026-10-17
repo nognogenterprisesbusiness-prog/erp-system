@@ -1,3 +1,4 @@
+import { SelectPicker } from "@/components/ui/select-picker";
 import { randomUUID } from "node:crypto";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export default async function SupplierQuotationsPage({ searchParams }: {
     </RecordCreateDialog>}
     {params.posted === "1" && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Quotation saved. You can now use it for a purchase.</p>}
     <ListFilterBar><SearchField name="q" label="Search quotations" defaultValue={query} placeholder="Supplier, quotation reference or material" />
-      <select name="material" defaultValue={selectedMaterial ?? ""} aria-label="Compare quotes for material" className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm"><option value="">All materials</option>{materials.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select>
+      <SelectPicker name="material" defaultValue={selectedMaterial ?? "all"} label="Compare quotes for material" options={[{ value: "all", label: "All materials" }, ...materials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))]} />
     </ListFilterBar>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No quotations found" description="Add a supplier quote or change the search." /> : undefined}
       footer={<span className="text-xs text-slate-500">{result.count} quoted item{result.count === 1 ? "" : "s"}</span>}>

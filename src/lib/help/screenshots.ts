@@ -15,7 +15,7 @@ const screenshots: Record<string, ManualFigure[]> = {
   warehouses: [
     { src: "/manual/warehouse-details.webp", title: "Add a warehouse", width: 753, height: 84, alt: "Empty warehouse code and name fields with WH-CEBU-01 and Cebu Main Warehouse examples.", marks: [
       { x: 1, y: 5, width: 48, height: 90, label: "Admin gives each warehouse its own unique code." },
-      { x: 51, y: 5, width: 48, height: 90, label: "Use the actual warehouse name. Set the relevant project and staff links separately before requests begin." },
+      { x: 51, y: 5, width: 48, height: 90, label: "Use the actual warehouse name and assign warehouse staff. Each material request has its own source selection; project links remain relevant to planning and direct deliveries." },
     ] },
   ],
   suppliers: [
@@ -74,9 +74,11 @@ const screenshots: Record<string, ManualFigure[]> = {
     ] },
   ],
   requests: [
-    { src: "/manual/request-items.webp", title: "Request available warehouse material", width: 780, height: 160, alt: "Empty searchable material picker and quantity input in a material request.", marks: [
-      { x: 1, y: 3, width: 73, height: 94, label: "Search and select a material available from the chosen source warehouse. No matches can mean the warehouse or its stock needs checking." },
-      { x: 75, y: 48, width: 24, height: 45, label: "Enter the required quantity. Approval reserves stock; warehouse dispatch and site receipt are later actions." },
+    { src: "/manual/request-items.webp", title: "Request catalog materials", width: 896, height: 466, alt: "Empty material request form with purpose, searchable catalog materials, quantity and submission controls; no warehouse or date selection.", marks: [
+      { x: 1, y: 0, width: 98, height: 20, label: "Describe the site work these materials are needed for." },
+      { x: 1, y: 43, width: 70, height: 37, label: "Search the active catalog and select the correct material. A zero-stock material can still be requested." },
+      { x: 72, y: 43, width: 17, height: 19, label: "Enter the required quantity. Add a line for each different material." },
+      { x: 79, y: 84, width: 20, height: 11, label: "Submit for review. The system dates the request today; Admin or assigned Warehouse Staff chooses its source before approval reserves stock." },
     ] },
   ],
   sourcing: [
