@@ -152,7 +152,7 @@ export async function assignRequestWarehouseAction(_: { ok: boolean; message: st
   const parsed = z.object({ key: z.uuid(), id: z.uuid(), kind: z.enum(["request", "shortage"]), warehouseId: z.uuid() }).safeParse(Object.fromEntries(form));
   if (!parsed.success) return { ok: false, message: "Choose a source warehouse." };
   const i = parsed.data;
-  const { error } = await (await createClient()).rpc(user.canManage ? "link_and_assign_request_warehouse" : "assign_request_warehouse", { p_key: i.key, p_id: i.id, p_kind: i.kind, p_warehouse_id: i.warehouseId });
+  const { error } = await (await createClient()).rpc("assign_request_warehouse", { p_key: i.key, p_id: i.id, p_kind: i.kind, p_warehouse_id: i.warehouseId });
   if (error) return { ok: false, message: error.code === "PGRST202" ? "Warehouse setup needs the latest database update. Contact your system administrator." : error.code === "42501" ? "This warehouse is unavailable for your account or project." : "The warehouse could not be changed. Check whether approval or sourcing has already started." };
   revalidatePath("/requests"); revalidatePath(`/requests/${i.id}`);
   return { ok: true, message: "Source warehouse saved." };

@@ -46,7 +46,7 @@
     "test:mobile-itemized-purchases": "node scripts/test-mobile-itemized-site-purchases.mjs",
     "test:retire-phone-push": "node scripts/test-retire-phone-push.mjs",
     "test:automatic-project-site": "node scripts/test-automatic-project-site.mjs",
-    "test:admin-warehouse-link": "node scripts/test-admin-request-warehouse-link.mjs"
+    "test:request-only-warehouse": "node scripts/test-request-only-warehouse.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",
