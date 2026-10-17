@@ -301,6 +301,8 @@ export type Database = {
       submit_mobile_material_request: { Args: { p_key: string; p_project_id: string; p_site_id: string; p_purpose: string; p_lines: Json }; Returns: string };
       submit_mobile_material_shortage: { Args: { p_key: string; p_project_id: string; p_site_id: string; p_material_id: string | null; p_name: string; p_unit: string; p_quantity: number; p_reason: string }; Returns: string };
       get_request_warehouse_choices: { Args: { p_id: string; p_kind: "request" | "shortage" }; Returns: { id: string; name: string; code: string }[] };
+      get_admin_request_warehouse_choices: { Args: { p_id: string; p_kind: "request" | "shortage" }; Returns: { id: string; name: string; code: string; is_linked: boolean }[] };
+      link_and_assign_request_warehouse: { Args: { p_key: string; p_id: string; p_kind: "request" | "shortage"; p_warehouse_id: string }; Returns: string };
       assign_request_warehouse: { Args: { p_key: string; p_id: string; p_kind: "request" | "shortage"; p_warehouse_id: string }; Returns: string };
       submit_material_request: { Args: { p_idempotency_key: string; p_project_id: string; p_project_site_id: string; p_source_warehouse_id: string | null; p_required_date: string; p_purpose: string; p_lines: Json }; Returns: string };
       decide_material_request: { Args: { p_idempotency_key: string; p_request_id: string; p_decisions: Json; p_reason?: string | null }; Returns: string };

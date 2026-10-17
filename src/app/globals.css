@@ -11,6 +11,14 @@
 * { border-color: rgb(226 232 240); }
 html { scroll-behavior: smooth; scrollbar-gutter: stable; }
 body { margin: 0; font-family: var(--font-sans); }
+/* The root gutter already reserves scrollbar space; do not reserve it twice. */
+@supports (scrollbar-gutter: stable) {
+  html body[data-scroll-locked] { margin-right: 0 !important; --removed-body-scroll-bar-size: 0px !important; }
+}
+[data-erp-select-viewport] { scrollbar-width: thin !important; scrollbar-color: #94a3b8 transparent; }
+[data-erp-select-viewport]::-webkit-scrollbar { display: block !important; width: 6px; }
+[data-erp-select-viewport]::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
+
 button, a, input, summary { -webkit-tap-highlight-color: transparent; }
 table thead th { font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
 table tbody > tr > td { font-size: 0.875rem; line-height: 1.25rem; }
