@@ -20,12 +20,14 @@ const getLocationViews = cache(async function getLocationViews() {
     readByIds(warehouseIds, (ids, from, to) => supabase.from("warehouses").select("id,code,name,address").in("id", ids).order("id").range(from, to), "warehouses"),
     readByIds(siteIds, (ids, from, to) => supabase.from("project_sites").select("id,name,address,project_id").in("id", ids).order("id").range(from, to), "project sites"),
   ]);
+  const projects = await readByIds([...new Set(sites.map((site) => site.project_id))], (ids, from, to) => supabase.from("projects").select("id,code,name").in("id", ids).order("id").range(from, to), "site projects");
+  const projectMap = new Map(projects.map((project) => [project.id, project]));
   const warehouseMap = new Map(warehouses.map((item) => [item.id, item]));
   const siteMap = new Map(sites.map((item) => [item.id, item]));
   return locations.map((location): LocationView => {
     const warehouse = location.warehouse_id ? warehouseMap.get(location.warehouse_id) : undefined;
     const site = location.project_site_id ? siteMap.get(location.project_site_id) : undefined;
-    return { ...location, name: warehouse?.name ?? site?.name ?? "Unavailable location", detail: warehouse ? `${warehouse.code} · ${warehouse.address}` : site?.address ?? "", projectId: site?.project_id ?? null };
+    return { ...location, name: warehouse?.name ?? site?.name ?? "Unavailable location", detail: warehouse ? `${warehouse.code} · ${warehouse.address}` : [site ? projectMap.get(site.project_id)?.code : null, site ? projectMap.get(site.project_id)?.name : null, site?.address].filter(Boolean).join(" · "), projectId: site?.project_id ?? null };
   });
 });
 
