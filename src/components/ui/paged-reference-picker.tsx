@@ -43,8 +43,8 @@ function ReferenceSearch({ disabled = false, kind, projectId = "", label, value,
     <div className="flex items-center gap-2 text-xs text-slate-500">
       {pending ? <span role="status">Loading choices…</span> : <span>{result.count} matches</span>}
       {page > 1 && <Button type="button" size="sm" variant="ghost" disabled={pending || disabled} onClick={() => setPage((previous) => previous - 1)}>Previous</Button>}
-      {!pending && page * 20 < result.count && <Button type="button" size="sm" variant="ghost" onClick={() => setPage((previous) => previous + 1)}>Next</Button>}
+      {!pending && page * 20 < result.count && <Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => setPage((previous) => previous + 1)}>Next</Button>}
     </div>
-    {!pending && result.message && <div role="alert" className="text-xs text-red-700">{result.message}<Button type="button" size="sm" variant="ghost" onClick={() => setRetry((previous) => previous + 1)}>Retry</Button></div>}
+    {!pending && result.message && <div role="alert" className="text-xs text-red-700">{result.message}<Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => setRetry((previous) => previous + 1)}>Retry</Button></div>}
   </div>;
 }

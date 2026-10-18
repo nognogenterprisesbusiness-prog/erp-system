@@ -41,10 +41,10 @@ export default async function ProjectMaterialsPage({ params, searchParams }: { p
   const allowedSites = new Set(reviewSites ?? []);
   const canPlan = allowedSites.size > 0;
   const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));
-  const unfilteredChoices = canPlan ? await getMaterialRequestChoices() : null;
-  const choices = unfilteredChoices ? { ...unfilteredChoices, sites: unfilteredChoices.sites.filter((s) => allowedSites.has(s.id)) } : null;
   const editId = (await searchParams).edit;
   const editing = canPlan ? rows.find((row) => row.id === editId && allowedSites.has(row.project_site_id)) : undefined;
+  const unfilteredChoices = canPlan ? await getMaterialRequestChoices(editing?.material_id) : null;
+  const choices = unfilteredChoices ? { ...unfilteredChoices, sites: unfilteredChoices.sites.filter((s) => allowedSites.has(s.id)) } : null;
   return <>
     <PageHeader title="Material plan" description={`${projectData.project.code} · ${projectData.project.name}`} action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}?tab=materials`}>Back to project</Link></Button>{canPlan && choices && <RecordCreateDialog key={editing?.id ?? "new"} title={editing ? "Edit material plan" : "Add material plan"} initialOpen={Boolean(editing)} closeHref={`/projects/${id}/materials`}><ProjectMaterialPlanForm projectId={id} choices={choices} initial={editing ? { siteId: editing.project_site_id, warehouseId: editing.warehouse_id, materialId: editing.material_id, quantity: String(editing.planned_quantity), requiredOn: editing.required_on, note: editing.note } : undefined} /></RecordCreateDialog>}</div>} />
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">

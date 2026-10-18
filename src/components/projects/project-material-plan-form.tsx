@@ -6,6 +6,7 @@ import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { SelectPicker } from "@/components/ui/select-picker";
+import { PagedReferencePicker } from "@/components/ui/paged-reference-picker";
 import { todayInManila } from "@/lib/date";
 import type { getMaterialRequestChoices } from "@/lib/data/material-requests";
 
@@ -26,7 +27,7 @@ export function ProjectMaterialPlanForm({ projectId, choices, initial }: { proje
     <input type="hidden" name="materialId" value={materialId} />
     <FormField label="Site" htmlFor="plan-site" error={errors?.siteId?.[0]}><SelectPicker label="Site" value={siteId} onValueChange={setSiteId} options={sites.map((site) => ({ value: site.id, label: site.name }))} /></FormField>
     <FormField label="Source warehouse" htmlFor="plan-warehouse" error={errors?.warehouseId?.[0]}><SelectPicker label="Source warehouse" value={warehouseId} onValueChange={setWarehouseId} options={warehouses.map((warehouse) => ({ value: warehouse.warehouse_id, label: warehouse.name }))} /></FormField>
-    <FormField label="Material" htmlFor="plan-material" error={errors?.materialId?.[0]}><SelectPicker label="Material" value={materialId} onValueChange={setMaterialId} options={choices.materials.map((material) => ({ value: material.id, label: `${material.code} · ${material.name}` }))} /></FormField>
+    <FormField label="Material" htmlFor="plan-material" error={errors?.materialId?.[0]}><PagedReferencePicker kind="material" label="Material" disabled={pending} value={materialId} onValueChange={setMaterialId} initialOptions={choices.materials.map((material) => ({ value: material.id, label: `${material.code} · ${material.name}` }))} /></FormField>
     <FormField label="Planned quantity" htmlFor="plan-quantity" error={errors?.quantity?.[0]}><input id="plan-quantity" name="quantity" inputMode="decimal" defaultValue={initial?.quantity} className={fieldControlClass} required /></FormField>
     <FormField label="Required by" htmlFor="plan-date" error={errors?.requiredOn?.[0]}><DatePicker id="plan-date" name="requiredOn" label="Required by" defaultValue={initial?.requiredOn ?? todayInManila()} required allowClear={false} /></FormField>
     <FormField label="Note" htmlFor="plan-note" className="sm:col-span-2" error={errors?.note?.[0]}><input id="plan-note" name="note" maxLength={500} defaultValue={initial?.note} className={fieldControlClass} placeholder="Optional planning note" /></FormField>

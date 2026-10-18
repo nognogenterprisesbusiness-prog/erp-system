@@ -1,0 +1,91 @@
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { withIsolatedPostgres } from './isolated-postgres-fixture.mjs';
+
+const project = '20000000-0000-0000-0000-000000000001';
+const site = '40000000-0000-0000-0000-000000000001';
+const warehouse = '30000000-0000-0000-0000-000000000001';
+const material = '60000000-0000-0000-0000-000000000001';
+
+await withIsolatedPostgres(async ({ sql, as, result, scalar, users }) => {
+  const value = async (statement) => scalar(await sql(statement));
+  const snapshot = () => value('select jsonb_agg(to_jsonb(b) order by id) from public.inventory_balances b');
+  await sql(`insert into public.materials(code,name,category_id,base_unit_id,material_kind,created_by,updated_by)
+    select 'PLAN-PAGE-' || n,'ZZZ Planning material ' || lpad(n::text,3,'0'),category_id,base_unit_id,
+      'consumable','${users.admin}','${users.admin}' from public.materials cross join generate_series(1,35) n where id='${material}'`);
+  const later = await value("select id from public.materials where code='PLAN-PAGE-35'");
+  const firstPage = await as('admin', "select id from public.search_material_choices('',0,20)");
+  assert.ok(!firstPage.includes(later));
+  assert.ok((await as('admin', "select id from public.search_material_choices('',20,20)")).includes(later));
+  assert.equal(result(await as('engineer', "select id from public.search_material_choices('PLAN-PAGE-35',0,20)")), later);
+  await as('engineer', `select public.save_project_material_plan_line('${project}','${site}','${warehouse}','${later}',5,current_date+7,'Beyond first page')`);
+  assert.equal(await value(`select material_id from public.project_material_plan_lines where project_id='${project}' and material_id='${later}'`), later);
+  console.log('PASS: catalog paging/search and saving a plan for a material beyond the first 20.');
+
+  const legacyReport = result(await as('foreman', `select public.submit_material_sourcing_request('${randomUUID()}','${project}','${site}','${warehouse}','Portland Cement','bag',1,current_date+7,'Existing sourced report')`));
+  await sql(`delete from public.project_material_plan_lines where project_id='${project}' and material_id='${later}';
+    delete from public.project_warehouses where project_id='${project}'`);
+  const unchanged = await snapshot();
+  const reportKey = randomUUID();
+  const reportCommand = `select public.submit_material_sourcing_request('${reportKey}','${project}','${site}',null,'Portland Cement','bag',4,current_date+7,'Need material on site')`;
+  const reports = await Promise.all([as('foreman', reportCommand), as('foreman', reportCommand)]);
+  const report = result(reports[0]);
+  assert.equal(result(reports[1]), report);
+  assert.equal(await value(`select source_warehouse_id is null from public.material_sourcing_requests where id='${report}'`), 't');
+  assert.equal(await value(`select needed_on=current_date+7 from public.material_sourcing_requests where id='${report}'`), 't');
+  await assert.rejects(as('foreman', reportCommand.replace('Need material on site','Changed retry')), /another report|different/);
+  await assert.rejects(as('engineer', reportCommand.replace(project,randomUUID()).replace(reportKey,randomUUID())), /Not authorized|unavailable/);
+  for (const role of ['finance', 'warehouse_staff']) await assert.rejects(as(role, reportCommand.replace(reportKey,randomUUID())), /Not authorized/);
+  const chooseKey = randomUUID();
+  const choose = `select public.assign_request_warehouse('${chooseKey}','${report}','shortage','${warehouse}')`;
+  assert.equal(scalar(await as('admin', `select count(*) from public.get_request_warehouse_choices('${report}','shortage')`)), '2');
+  for (const role of ['engineer','foreman','finance','warehouse_staff']) await assert.rejects(as(role,choose), /not authorized/);
+  await assert.rejects(sql(`set role anon; ${choose}`), /permission denied/);
+  const assignments = await Promise.all([as('admin',choose),as('admin',choose)]);
+  assert.equal(result(assignments[0]),report);
+  assert.equal(result(assignments[1]),report);
+  assert.equal(await snapshot(),unchanged);
+  assert.equal(await value(`select count(*) from public.project_warehouses where project_id='${project}'`),'0');
+  assert.equal(await value(`select count(*) from private.request_warehouse_assignments where kind='shortage' and target_id='${report}'`),'1');
+  console.log('PASS: shortage submission and Admin source assignment without permanent links, concurrent retries, denied roles and unchanged stock.');
+
+  // A shortage-specific assignment does not authorize arbitrary explicit-source requests.
+  await assert.rejects(as('admin', `select public.submit_material_request('${randomUUID()}','${project}','${site}','${warehouse}',current_date,'Unrelated request','[{"materialId":"${material}","quantity":"1"}]')`), /authorized warehouse|only staff/);
+  const supplier = result(await as('admin', "select public.save_supplier(null,'','Source Later Hardware',null,null,null,'09170001111',null,'Test address',null,null,null,'Cash','active',null)"));
+  const purchaseKey = randomUUID();
+  const purchaseCommand = `select public.submit_sourcing_purchase('${purchaseKey}','${supplier}','${warehouse}',current_date,null,'Shortage purchase','[{"materialId":"${material}","quantity":"3","unitPrice":"100"}]',null,'${report}','${material}')`;
+  const purchase = JSON.parse(scalar(await as('admin',purchaseCommand)));
+  assert.equal(purchase.kind,'issued');
+  const poLine = await value(`select id from public.purchase_order_lines where purchase_order_id='${purchase.id}'`);
+  await as('warehouse_staff', `select public.inspect_purchase_delivery('${randomUUID()}','${poLine}',2,2,'SOURCE-LATER-RECEIPT',current_date,null)`);
+  await as('warehouse_staff', `select public.receive_purchase_order_line('${randomUUID()}','${poLine}',2,null,'SOURCE-LATER-RECEIPT',current_date,null)`);
+  await assert.rejects(as('admin',choose.replace(chooseKey,randomUUID()).replace(warehouse,'30000000-0000-0000-0000-000000000002')), /Sourcing has started/);
+  const requestKey = randomUUID();
+  const prepare = `select public.create_sourcing_material_request('${requestKey}','${report}','${material}',2,'First partial site request')`;
+  const requests = await Promise.all([as('admin',prepare),as('admin',prepare)]);
+  const request = result(requests[0]);
+  assert.equal(result(requests[1]),request);
+  assert.equal(await value(`select count(*) from private.request_warehouse_assignments where kind='request' and target_id='${request}'`),'1');
+  assert.equal(await value(`select count(*) from public.material_sourcing_request_links where material_sourcing_request_id='${report}'`),'1');
+  await assert.rejects(as('admin', prepare.replace(',2,',',3,')), /different site request/);
+  const line = await value(`select id from public.material_request_lines where request_id='${request}'`);
+  await as('engineer', `select public.decide_material_request('${randomUUID()}','${request}','{"${line}":"2"}',null)`);
+  const dispatch = `select public.dispatch_approved_request_line_with_manifest('${randomUUID()}','${line}',2,current_date,'Sourced stock',null,'Test truck','Test driver','SOURCE-LATER-DISPATCH')`;
+  const deliveries = await Promise.all([as('warehouse_staff',dispatch),as('warehouse_staff',dispatch)]);
+  assert.equal(result(deliveries[0]),result(deliveries[1]));
+  const item = await value(`select transfer_item_id from public.material_request_dispatches where request_line_id='${line}'`);
+  await as('foreman', `select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',1,current_date,'Counted receipt','accepted',null)`);
+  assert.equal(await value(`select dispatched_quantity-received_quantity from public.inventory_transfer_items where id='${item}'`),'1.0000');
+  assert.equal(await value(`select count(*) from public.project_warehouses where project_id='${project}'`),'0');
+  console.log('PASS: sourcing purchase/partial warehouse receipt, concurrent site request, Engineer approval, replayed dispatch and partial site receipt without creating permanent links.');
+  const legacyRequest = result(await as('admin', `select public.create_sourcing_material_request('${randomUUID()}','${legacyReport}','${material}',1,'Preserve existing report workflow')`));
+  assert.equal(await value(`select count(*) from private.request_warehouse_assignments where kind='request' and target_id='${legacyRequest}'`),'1');
+  assert.equal(await value(`select count(*) from public.project_warehouses where project_id='${project}'`),'0');
+  console.log('PASS: existing sourced reports continue after permanent warehouse links are removed.');
+  const beforeRerun = await snapshot();
+  await sql(readFileSync(new URL('../supabase/migrations/20261018100000_shortage_request_only_warehouse.sql', import.meta.url),'utf8'));
+  assert.equal(await snapshot(),beforeRerun);
+  assert.equal(await value(`select count(*) from public.material_sourcing_request_links where material_sourcing_request_id='${report}'`),'1');
+  console.log('PASS: migration rerun preserves balances, linked requests and posted history.');
+});

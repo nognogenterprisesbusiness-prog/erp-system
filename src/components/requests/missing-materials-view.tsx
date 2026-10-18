@@ -4,7 +4,8 @@ import { DismissMissingMaterialForm, MissingMaterialForm, CreateSourcingSiteRequ
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth";
-import { getMaterialRequestChoices } from "@/lib/data/material-requests";
+import { getMaterialRequestFormChoices } from "@/lib/data/material-requests";
+import { readAllPages } from "@/lib/data/read-all-pages";
 import { pageNumber } from "@/lib/data/pagination";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,12 +16,15 @@ export async function MissingMaterialsView({ pageParam }: { pageParam?: string }
   const page = pageNumber(pageParam);
   const db = await createClient();
   const [choices, result] = await Promise.all([
-    getMaterialRequestChoices(),
+    getMaterialRequestFormChoices(),
     db.from("material_sourcing_requests").select("*", { count: "exact" })
       .order("created_at", { ascending: false }).order("id").range((page - 1) * 20, page * 20 - 1),
   ]);
   if (result.error) throw new Error("Unable to load missing material reports.");
   const reports = result.data ?? [];
+  const warehouses = user.canManage && reports.some((item) => item.status === "submitted" && !item.source_warehouse_id)
+    ? await readAllPages((from, to) => db.from("warehouses").select("id,name,code").eq("status", "active").order("name").order("id").range(from, to), "sourcing warehouses")
+    : [];
   const reportIds = reports.map((item) => item.id);
   const [purchaseContexts, requestLinks] = reportIds.length ? await Promise.all([
     db.from("purchase_procurement_context").select("idempotency_key,material_sourcing_request_id,sourcing_material_id").in("material_sourcing_request_id", reportIds),
@@ -67,7 +71,7 @@ export async function MissingMaterialsView({ pageParam }: { pageParam?: string }
           const request = requestsById.get(link.material_request_id);
           return <p key={link.material_request_id}><Link href={`/requests/${link.material_request_id}`} className="text-cyan-700 hover:underline">{request?.request_number ?? "Site request"}</Link> · {link.quantity} {item.unit_name} · {request?.status ?? "submitted"}</p>;
         })}</div>}
-        {user.canManage && item.status === "submitted" && <><div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" size="sm" asChild><Link href="/inventory?create=1">Add catalog material</Link></Button>{item.source_warehouse_id && <Button variant="outline" size="sm" asChild><Link href={`/purchase-orders?${new URLSearchParams({ create: "1", shortage: item.id, warehouse: item.source_warehouse_id ?? "", quantity: String(remaining) })}`}>Purchase material</Link></Button>}</div>{!item.source_warehouse_id && <RequestWarehouseAssignment id={item.id} kind="shortage" current={null} choices={choices.warehouses.filter((w) => w.project_id === item.project_id).map((w) => ({ id: w.warehouse_id, name: w.name, code: w.code }))} />}{item.source_warehouse_id && <CreateSourcingSiteRequestForm id={item.id} materials={linkedMaterial ? choices.materials.filter((material) => material.id === linkedMaterial) : choices.materials} remaining={remaining} />}<DismissMissingMaterialForm id={item.id} /></>}
+        {user.canManage && item.status === "submitted" && <><div className="mt-3 flex flex-wrap gap-2"><Button variant="outline" size="sm" asChild><Link href="/inventory?create=1">Add catalog material</Link></Button>{item.source_warehouse_id && <Button variant="outline" size="sm" asChild><Link href={`/purchase-orders?${new URLSearchParams({ create: "1", shortage: item.id, warehouse: item.source_warehouse_id ?? "", quantity: String(remaining) })}`}>Purchase material</Link></Button>}</div>{!item.source_warehouse_id && <RequestWarehouseAssignment id={item.id} kind="shortage" current={null} choices={choices.projects.some((project) => project.id === item.project_id) ? warehouses : []} />}{item.source_warehouse_id && <CreateSourcingSiteRequestForm id={item.id} materials={linkedMaterial ? choices.materials.filter((material) => material.id === linkedMaterial) : choices.materials} remaining={remaining} />}<DismissMissingMaterialForm id={item.id} /></>}
       </article>})}</div>}
       {(page > 1 || (result.count ?? 0) > page * 20) && <nav aria-label="Out-of-stock report pages" className="mt-4 flex justify-end gap-3">{page > 1 && <Button variant="outline" asChild><Link href={`/requests?view=missing&page=${page - 1}`}>Previous</Link></Button>}{(result.count ?? 0) > page * 20 && <Button variant="outline" asChild><Link href={`/requests?view=missing&page=${page + 1}`}>Next</Link></Button>}</nav>}
     </section>

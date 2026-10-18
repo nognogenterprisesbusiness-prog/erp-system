@@ -46,7 +46,8 @@
     "test:mobile-itemized-purchases": "node scripts/test-mobile-itemized-site-purchases.mjs",
     "test:retire-phone-push": "node scripts/test-retire-phone-push.mjs",
     "test:automatic-project-site": "node scripts/test-automatic-project-site.mjs",
-    "test:request-only-warehouse": "node scripts/test-request-only-warehouse.mjs"
+    "test:request-only-warehouse": "node scripts/test-request-only-warehouse.mjs",
+    "test:planning-shortage": "node scripts/test-planning-shortage-follow-through.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

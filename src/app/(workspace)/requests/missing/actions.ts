@@ -5,10 +5,10 @@ import { z } from "zod";
 import { materialSourcingSchema, uuidSchema } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { todayInManila } from "@/lib/date";
 
 export type MissingMaterialState = { ok: boolean; message: string };
 const value = (form: FormData, key: string) => String(form.get(key) ?? "");
+const shortageSchema = materialSourcingSchema.omit({ warehouseId: true });
 const dismissSchema = z.object({ id: uuidSchema, note: z.string().trim().min(3).max(500) });
 const siteRequestSchema = z.object({
   key: uuidSchema, id: uuidSchema, materialId: uuidSchema,
@@ -20,22 +20,22 @@ export async function submitMissingMaterialAction(_: MissingMaterialState, form:
   const user = await requireUser();
   if (!user.roles.some((role) => role === "engineer" || role === "foreman"))
     return { ok: false, message: "Only assigned site staff can report a missing material." };
-  const parsed = materialSourcingSchema.safeParse({
+  const parsed = shortageSchema.safeParse({
     key: value(form, "key"), projectId: value(form, "projectId"), siteId: value(form, "siteId"),
-    warehouseId: value(form, "warehouseId"), name: value(form, "name"), unit: value(form, "unit"),
+    name: value(form, "name"), unit: value(form, "unit"),
     quantity: value(form, "quantity"), neededOn: value(form, "neededOn"), reason: value(form, "reason"),
   });
-  if (!parsed.success || (parsed.success && parsed.data.neededOn < todayInManila()))
+  if (!parsed.success)
     return { ok: false, message: "Review the material, quantity, and needed date." };
   const input = parsed.data;
   const db = await createClient();
   const { error } = await db.rpc("submit_material_sourcing_request", {
     p_key: input.key, p_project_id: input.projectId, p_site_id: input.siteId,
-    p_warehouse_id: input.warehouseId, p_material_name: input.name,
+    p_warehouse_id: null, p_material_name: input.name,
     p_unit_name: input.unit, p_quantity: Number(input.quantity), p_needed_on: input.neededOn,
     p_reason: input.reason,
   });
-  if (error) return { ok: false, message: error.code === "42501" ? "You are not assigned to this project site." : "The missing material could not be reported. Review the details and try again." };
+  if (error) return { ok: false, message: error.code === "42501" ? "You are not assigned to this project site." : error.message.includes("Needed date cannot be in the past") ? "Choose today or a future needed date." : "The missing material could not be reported. Review the details and try again." };
   revalidatePath("/requests");
   return { ok: true, message: "Sent to Admin for review. No stock was added." };
 }

@@ -31,8 +31,8 @@ export async function getMaterialRequestFormChoices(materialId?: string) {
   return { projects, sites: context.sites.filter((row) => ids.has(row.project_id)), materials: rows };
 }
 
-export async function getMaterialRequestChoices() {
-  const context = await getMaterialRequestFormChoices();
+export async function getMaterialRequestChoices(materialId?: string) {
+  const context = await getMaterialRequestFormChoices(materialId);
   const { data, error } = await (await createClient()).rpc("get_requestable_warehouses");
   if (error) throw new Error("Unable to load project warehouses.");
   const ids = new Set(context.projects.map((row) => row.id));
