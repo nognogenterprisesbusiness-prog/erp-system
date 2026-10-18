@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { cancelMaterialRequestSchema, decideMaterialRequestSchema, dispatchRequestWithManifestSchema, receiveRequestWithInspectionSchema, mobileActionCommandSchema } from "@nognog/domain";
+import { cancelMaterialRequestSchema, closeRequestRemainderSchema, decideMaterialRequestSchema, dispatchRequestWithManifestSchema, receiveRequestWithInspectionSchema, mobileActionCommandSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -42,6 +42,29 @@ export async function cancelMaterialRequestAction(_: RequestActionState, form: F
   revalidatePath("/inventory");
   revalidatePath(`/requests/${data}`);
   redirect(`/requests/${data}?cancelled=1`);
+}
+
+export async function closeRequestRemainderAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
+  await requireUser();
+  const parsed = closeRequestRemainderSchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), requestId: value(form, "requestId"), reason: value(form, "reason"),
+  });
+  if (!parsed.success) return failure("Enter a reason of 3 to 500 characters.", parsed.error.flatten().fieldErrors);
+  const input = parsed.data;
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("close_request_remainder", {
+    p_idempotency_key: input.idempotencyKey, p_request_id: input.requestId, p_reason: input.reason,
+  });
+  if (error) {
+    if (error.code === "42501") return failure("Only an administrator or the assigned warehouse staff can close the remainder.");
+    if (error.message.includes("no reserved stock")) return failure("Nothing is reserved for this request any more. Refresh to see its current state.");
+    if (error.message.includes("nothing dispatched")) return failure("Nothing has been released yet. Cancel the request instead.");
+    return failure(requestError(error));
+  }
+  revalidatePath("/requests");
+  revalidatePath("/inventory");
+  revalidatePath(`/requests/${data}`);
+  redirect(`/requests/${data}?closed=1`);
 }
 
 export async function submitMaterialRequestAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {

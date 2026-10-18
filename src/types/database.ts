@@ -20,7 +20,7 @@ export type MaterialRequestRow = { id: string; request_number: string; submissio
 export type MaterialSourcingRequestRow = { id: string; idempotency_key: string; payload_hash: string; project_id: string; project_site_id: string; source_warehouse_id: string | null; project_name: string; site_name: string; warehouse_name: string; material_name: string; unit_name: string; requested_quantity: number; needed_on: string; reason: string; status: "submitted" | "resolved" | "dismissed"; catalog_material_id: string | null; reported_material_id: string | null; resolution_note: string | null; requested_by: string; resolved_by: string | null; resolved_at: string | null; created_at: string };
 export type MaterialRequestLineRow = { id: string; request_id: string; material_id: string; unit_of_measure_id: string; requested_quantity: number; approved_quantity: number };
 export type MaterialRequestReservationRow = { id: string; request_line_id: string; material_id: string; inventory_location_id: string; original_quantity: number; remaining_quantity: number; status: "active" | "fulfilled" | "released"; reserved_by: string; reserved_at: string; released_at: string | null };
-export type MaterialRequestReservationEventRow = { id: string; reservation_id: string; event_type: "reserved" | "dispatched" | "released"; quantity: number; actor_id: string; occurred_at: string };
+export type MaterialRequestReservationEventRow = { id: string; reservation_id: string; event_type: "reserved" | "dispatched" | "released"; quantity: number; actor_id: string; occurred_at: string; reason: string | null };
 export type MaterialRequestEventRow = { id: string; request_id: string; event_type: MaterialRequestStatus; actor_id: string; details: Json; occurred_at: string };
 export type MaterialRequestDispatchRow = { id: string; request_line_id: string; transfer_item_id: string; created_at: string };
 export type MaterialDeliveryManifestRow = { transfer_id: string; vehicle_asset_id: string | null; vehicle_label: string; driver_name: string; delivery_reference: string; payload_hash: string; dispatched_by: string; created_at: string };
@@ -304,6 +304,7 @@ export type Database = {
       assign_request_warehouse: { Args: { p_key: string; p_id: string; p_kind: "request" | "shortage"; p_warehouse_id: string }; Returns: string };
       submit_material_request: { Args: { p_idempotency_key: string; p_project_id: string; p_project_site_id: string; p_source_warehouse_id: string | null; p_required_date: string; p_purpose: string; p_lines: Json }; Returns: string };
       decide_material_request: { Args: { p_idempotency_key: string; p_request_id: string; p_decisions: Json; p_reason?: string | null }; Returns: string };
+      close_request_remainder: { Args: { p_idempotency_key: string; p_request_id: string; p_reason: string }; Returns: string };
       cancel_material_request: { Args: { p_idempotency_key: string; p_request_id: string; p_reason: string }; Returns: string };
       get_requestable_warehouses: { Args: Record<string, never>; Returns: { project_id: string; warehouse_id: string; code: string; name: string }[] };
       get_material_request_context: { Args: { p_request_ids: string[] }; Returns: { request_id: string; project_id: string; project_code: string; project_name: string; site_id: string; site_name: string }[] };

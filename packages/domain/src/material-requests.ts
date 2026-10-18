@@ -31,6 +31,8 @@ export const cancelMaterialRequestSchema = z.object({
   reason: z.string().trim().min(3).max(500),
 });
 
+export const closeRequestRemainderSchema = cancelMaterialRequestSchema;
+
 const fulfillmentFields = {
   idempotencyKey: uuidSchema,
   quantity: quantitySchema,
@@ -56,3 +58,4 @@ export const receiveRequestWithInspectionSchema = receiveRequestTransferSchema.e
 export type SubmitMaterialRequest = z.infer<typeof submitMaterialRequestSchema>;
 export type DecideMaterialRequest = z.infer<typeof decideMaterialRequestSchema>;
 export type CancelMaterialRequest = z.infer<typeof cancelMaterialRequestSchema>;
+export type CloseRequestRemainder = z.infer<typeof closeRequestRemainderSchema>;

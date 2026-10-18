@@ -7,7 +7,8 @@ const warehouse = "30000000-0000-0000-0000-000000000001";
 const material = "60000000-0000-0000-0000-000000000001";
 await withLocalFixture(async ({ sql, as, result, users }) => {
   await as("admin", "select count(*) from public.inventory_valuations");
-  await as("foreman", "do $$ begin if private.can_manage_inventory() then raise exception 'Foreman gained inventory administration'; end if; end $$");
+  // The private schema is not reachable by signed-in users at all, so a Foreman cannot even ask.
+  await assert.rejects(as("foreman", "select private.can_manage_inventory()"), /permission denied for schema private/);
   const reservedBefore = Number(await sql(`select reserved_quantity from public.inventory_balances b join public.inventory_locations l on l.id=b.inventory_location_id where b.material_id='${material}' and l.warehouse_id='${warehouse}'`));
   const request = result(await as("foreman", `select public.submit_material_request('${randomUUID()}','${project}','${site}','${warehouse}',current_date+7,'Integration test','[{"materialId":"${material}","quantity":"20"}]'::jsonb)`));
   assert.ok(request);
@@ -15,7 +16,8 @@ await withLocalFixture(async ({ sql, as, result, users }) => {
     if (select count(*) from public.material_requests where id='${request}') <> ${visible} then raise exception 'Incorrect warehouse request scope'; end if;
     if (select count(*) from public.get_material_request_context(array['${request}'::uuid])) <> ${visible} then raise exception 'Incorrect destination context scope'; end if;
     end $$`);
-  await assertVisibility(0);
+  // Assigned Warehouse Staff see a submitted request for their warehouse so they can confirm the source.
+  await assertVisibility(1);
   const line = result(await sql(`select id from public.material_request_lines where request_id='${request}'`));
   const key = randomUUID();
   const decision = `select public.decide_material_request('${key}','${request}','{"${line}":"20"}'::jsonb,null)`;
@@ -57,7 +59,7 @@ await withLocalFixture(async ({ sql, as, result, users }) => {
   const beforeReturn = Number(await sql(`select quantity_on_hand from public.inventory_balances where material_id='${material}' and inventory_location_id='${destination}'`));
   const valueQuery = `select sum(total_value)::text from public.inventory_valuations where material_id='${material}' and inventory_location_id in ('${source}','${destination}')`;
   const valueBeforeReturn = await sql(valueQuery);
-  const returned = result(await as("admin", `select public.dispatch_inventory_transfer('${randomUUID()}','${material}','${destination}','${source}',2,'${unit}','Integration return',current_date,null)`));
+  const returned = result(await as("admin", `select public.dispatch_inventory_transfer('${randomUUID()}','${material}','${destination}','${source}',2,'${unit}','Integration return',current_date,'Surplus returned to the warehouse')`));
   const returnItem = result(await sql(`select id from public.inventory_transfer_items where transfer_id='${returned}'`));
   await as("warehouse_staff", `select public.receive_inventory_transfer('${randomUUID()}','${returnItem}',1,current_date,'Partial return')`);
   assert.equal(await sql(`select status from public.inventory_transfers where id='${returned}'`), "partially_received");
