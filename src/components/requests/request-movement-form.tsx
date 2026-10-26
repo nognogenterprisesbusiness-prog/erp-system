@@ -55,7 +55,9 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
         {condition === "accepted_with_note" && <FormField label="Quality note" htmlFor={`quality-note-${id}`}><input id={`quality-note-${id}`} name="qualityNote" className={fieldControlClass} maxLength={500} placeholder="Describe the issue with accepted stock" required /></FormField>}
         <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">Enter only the usable quantity. Report damaged or missing pieces to Admin.</p>
       </>}
-      <RecordFormControls busy={pending} disabled={mode === "dispatch" && companyTransport && !vehicleId} label={label} />
+      <div className={mode === "receive" ? "col-span-full flex justify-start" : undefined}>
+        <RecordFormControls busy={pending} disabled={mode === "dispatch" && companyTransport && !vehicleId} label={label} />
+      </div>
       {state.ok && <p role="status" className="text-sm text-emerald-700 sm:col-span-2 lg:col-span-4">{mode === "dispatch" ? "Materials released." : "Receipt recorded."}</p>}
       {!state.ok && state.message && <p role="alert" className="text-sm text-red-600 sm:col-span-2 lg:col-span-4">{state.message}</p>}
     </form>;
