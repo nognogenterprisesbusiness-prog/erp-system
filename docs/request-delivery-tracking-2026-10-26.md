@@ -15,6 +15,8 @@ Apply `supabase/migrations/20261026100000_request_delivery_tracking.sql` after t
 
 Install a newly built mobile release to obtain the new UI; an already installed build does not inherit source changes. This change does not set a forced-update policy or submit a store release. Native exports are verification artifacts, not signed installable builds.
 
+Release follow-through: production Android build 27 was subsequently built locally from mobile `6fb2c25`, paired with web/API `c191786`. Signed APK/AAB files, certificate/package/version/architecture checks and release metadata are in `D:/Client-Project/output/nognog-mobile/build-27/`. The user confirmed migration installation. The updated request page loaded against the migrated database in a read-only browser check, showing upcoming deliveries separately from current site stock. Annotated client-guide screenshots and their original captures are in `D:/Client-Project/output/nognog-client-update-20261026/`. No receipt or other stock transaction was posted while preparing the guides. Physical-device acceptance remains open.
+
 ## Verification
 
 Database regression follows request-only assignment through reservation, concurrent dispatch retry, partial acceptance and consumption, checking the tracking values at each step. It checks anonymous denial, restricted warehouse-only site stock, Finance/no-request scope, revoked site access and unchanged permanent memberships. Unit tests cover fractional quantities, mixed units, variance closure and optional API fields with price stripping. The existing 42 five-role ERP workflow suite passes. Browser/device visual acceptance remains separate from these tests; no hosted migration or business record was written by the implementation.
