@@ -83,6 +83,9 @@ const request = z.object({
   source_warehouse_id: uuidSchema.nullable().optional(),
   requested_at: z.string(),
   decision_reason: text,
+  delivery_stage: z.enum(["ready", "upcoming", "partial", "received", "settled"]).nullable().optional(),
+  project_name: z.string().optional(),
+  site_name: z.string().optional(),
 });
 const requestLine = z.object({
   id: uuidSchema,
@@ -93,6 +96,8 @@ const requestLine = z.object({
   name: z.string(),
   unit: z.string(),
   photo_path: text.optional(),
+  site_on_hand: number.nullable().optional(),
+  site_available: number.nullable().optional(),
 });
 const report = z.object({
   id: uuidSchema,

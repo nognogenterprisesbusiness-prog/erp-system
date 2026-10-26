@@ -181,3 +181,15 @@ test("direct site receipts validate positive quantities, inspection notes and sc
   assert.equal(mobileCommandSchema.safeParse({ ...command, input: { ...command.input, qualityNote: "x" } }).success, false);
   assert.equal(mobileCommandSchema.safeParse({ ...command, input: { ...command.input, siteId: "" } }).success, false);
 });
+
+test("request tracking is additive for old clients and retains quantity-only site balances", () => {
+  const id = randomUUID();
+  const base = { id, request_number: "MR-1", project_id: randomUUID(), project_site_id: randomUUID(), required_date: "2026-10-26", purpose: "Site work", status: "approved", requested_by: randomUUID(), source_warehouse_name: "Warehouse", requested_at: "2026-10-26T00:00:00Z", decision_reason: null };
+  const old = mobileResponseSchemas.requests.parse({ items: [base], count: 1, page: 1, pageSize: 20 });
+  assert.equal(old.items[0].delivery_stage, undefined);
+  const detail = mobileResponseSchemas.request.parse({ request: { ...base, delivery_stage: "upcoming" }, lines: [{ id: randomUUID(), material_id: randomUUID(), unit_of_measure_id: randomUUID(), requested_quantity: 10, approved_quantity: 10, name: "Cement", unit: "bag", site_on_hand: 4, site_available: 3, unit_price: 900 }], dispatches: [], events: { items: [], count: 0, page: 1, pageSize: 20 } });
+  assert.equal(detail.request.delivery_stage, "upcoming");
+  assert.equal(detail.lines[0].site_on_hand, 4);
+  assert.equal(detail.lines[0].site_available, 3);
+  assert.equal("unit_price" in detail.lines[0], false);
+});

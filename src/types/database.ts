@@ -308,6 +308,7 @@ export type Database = {
       cancel_material_request: { Args: { p_idempotency_key: string; p_request_id: string; p_reason: string }; Returns: string };
       get_requestable_warehouses: { Args: Record<string, never>; Returns: { project_id: string; warehouse_id: string; code: string; name: string }[] };
       get_material_request_context: { Args: { p_request_ids: string[] }; Returns: { request_id: string; project_id: string; project_code: string; project_name: string; site_id: string; site_name: string }[] };
+      get_material_request_tracking: { Args: { p_request_ids: string[] }; Returns: { request_id: string; request_line_id: string; material_id: string; project_name: string; site_name: string; site_on_hand: number | null; site_available: number | null; approved_quantity: number; reserved: number; dispatched: number; received: number; variance: number }[] };
       get_approved_request_queue: { Args: { p_limit?: number; p_offset?: number }; Returns: ApprovedRequestQueueRow[] };
       save_asset_location: { Args: { p_id: string | null; p_location_kind: AssetLocationKind; p_name: string; p_address: string }; Returns: string };
       archive_asset_location: { Args: { p_id: string }; Returns: undefined };

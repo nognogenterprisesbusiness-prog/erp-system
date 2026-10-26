@@ -7,6 +7,8 @@ import { safeSearchTerm } from "@/lib/data/search";
 import { MobileError, databaseError } from "./http";
 import { requireMobileSite } from "./authorization";
 
+import { requestDeliveryStage } from "@/lib/requests/delivery-stage";
+
 const size = 20;
 const requestFields =
   "id,request_number,project_id,project_site_id,required_date,purpose,status,requested_by,source_warehouse_name,source_warehouse_id,requested_at,decision_reason";
@@ -269,7 +271,13 @@ export async function readMobileResource(
       if (search) query = query.ilike("request_number", `%${search}%`);
       const r = await query.range(offset, offset + size - 1);
       if (r.error) databaseError(r.error);
-      return page(r.data ?? [], r.count, q);
+      const rows = r.data ?? [];
+      const tracking = rows.length ? await c.rpc("get_material_request_tracking", { p_request_ids: rows.map((row) => row.id) }) : { data: [], error: null };
+      if (tracking.error) databaseError(tracking.error);
+      return page(rows.map((row) => {
+        const lines = (tracking.data ?? []).filter((line) => line.request_id === row.id);
+        return { ...row, project_name: lines[0]?.project_name, site_name: lines[0]?.site_name, delivery_stage: requestDeliveryStage(row.status, lines) };
+      }), r.count, q);
     }
     case "request": {
       const id = required(q.id);
@@ -300,6 +308,9 @@ export async function readMobileResource(
       if (l.error) databaseError(l.error);
       if (e.error) databaseError(e.error);
       const lines = l.data ?? [];
+      const tracking = await c.rpc("get_material_request_tracking", { p_request_ids: [id] });
+      if (tracking.error) databaseError(tracking.error);
+      const stock = new Map((tracking.data ?? []).map((row) => [row.request_line_id, row]));
       const refs = await materialReferences(
         c,
         lines.map((x) => x.material_id),
@@ -345,9 +356,11 @@ export async function readMobileResource(
       if (manifests.error) databaseError(manifests.error);
       const manifestByTransfer = new Map((manifests.data ?? []).map((item) => [item.transfer_id, item]));
       return {
-        request: r.data,
+        request: { ...r.data, project_name: tracking.data?.[0]?.project_name, site_name: tracking.data?.[0]?.site_name, delivery_stage: requestDeliveryStage(r.data.status, tracking.data ?? []) },
         lines: lines.map((x) => ({
           ...x,
+          site_on_hand: stock.get(x.id)?.site_on_hand ?? null,
+          site_available: stock.get(x.id)?.site_available ?? null,
           name: refs.materials.get(x.material_id)?.name ?? "Material",
           unit: refs.units.get(x.unit_of_measure_id) ?? "",
           photo_path: refs.materials.get(x.material_id)?.photo_path ?? null,
