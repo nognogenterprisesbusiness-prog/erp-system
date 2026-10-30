@@ -20,6 +20,14 @@ body { margin: 0; font-family: var(--font-sans); }
 [data-erp-select-viewport]::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
 
 button, a, input, summary { -webkit-tap-highlight-color: transparent; }
+
+html:is([data-theme="dark"], [data-theme="blue"]) .erp-trend-chart {
+  --chart-cyan: #22d3ee;
+  --chart-amber: #fbbf24;
+  --chart-emerald: #34d399;
+  --chart-violet: #a78bfa;
+  --chart-slate: #cbd5e1;
+}
 table thead th { font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
 table tbody > tr > td { font-size: 0.875rem; line-height: 1.25rem; }
 table :is(th, td) { text-align: left; }
