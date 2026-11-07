@@ -104,7 +104,10 @@ export const vehicleFuelReceiptSchema = z.object({
   amount: moneyInputSchema, paidWith: z.enum(sitePurchasePaidWith).default("company_cash"),
   notes: z.string().trim().max(500).optional(),
 });
-export const siteReceiptExpenseSchema = vehicleFuelReceiptSchema.omit({ vehicleId: true }).extend({ paidWith: z.enum(sitePurchasePaidWith) });
+export const receiptExpenseCostTypes = ["other", "labor", "equipment"] as const;
+export const receiptExpenseCostTypeLabels: Record<(typeof receiptExpenseCostTypes)[number], string> = { other: "Other expenses", labor: "Labour", equipment: "Equipment" };
+// costType is optional so installed mobile builds that omit it keep posting as Other.
+export const siteReceiptExpenseSchema = vehicleFuelReceiptSchema.omit({ vehicleId: true }).extend({ paidWith: z.enum(sitePurchasePaidWith), costType: z.enum(receiptExpenseCostTypes).default("other") });
 export const rejectSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reason: z.string().trim().min(3, "Enter a reason").max(500) });
 export const reimburseSitePurchaseSchema = z.object({ purchaseId: uuidSchema, reimbursedOn: z.iso.date(), reference: z.string().trim().min(2, "Enter the reference").max(120) });
 

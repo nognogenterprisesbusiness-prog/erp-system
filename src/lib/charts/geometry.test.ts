@@ -1,39 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chartScale, monthPosition, monotonePath, ringSegment } from "./geometry";
-
-test("chart scales retain zero, fractional quantities and negative net costs", () => {
-  for (const values of [[], [0, 0], [0.0001, 0.0002], [150, 4200], [-300, 120], [-50, -10]]) {
-    const { minimum, maximum } = chartScale(values);
-    assert.ok(maximum > minimum);
-    assert.ok(minimum <= 0 && maximum >= 0);
-    for (const value of values) assert.ok(value >= minimum && value <= maximum);
-  }
-  assert.ok(chartScale([0.0001, 0.0002]).maximum < 0.001, "Small stock quantities must not appear flat on a whole-unit axis");
-});
-
-test("custom curves pass through every sample without adding peaks or negative stock", () => {
-  for (const values of [[0, 0, 6, 0, 0], [2, 8, 4, 12, 1], [-5, -3, 0, 3, 9], [0.0001, 0.0002, 0.0001]]) {
-    const points = values.map((value, index) => [index * 100, value] as const);
-    const path = monotonePath(points);
-    const segments = [...path.matchAll(/C([^C]+)/g)];
-    assert.equal(segments.length, points.length - 1);
-    segments.forEach((segment, index) => {
-      const [c1x, c1y, c2x, c2y, endX, endY] = segment[1].trim().split(/[ ,]+/).map(Number);
-      assert.equal(endX, points[index + 1][0]);
-      assert.equal(endY, points[index + 1][1]);
-      assert.ok(c1x >= points[index][0] && c2x <= endX);
-      for (let sample = 0; sample <= 100; sample++) {
-        const t = sample / 100, inverse = 1 - t;
-        const value = inverse ** 3 * points[index][1] + 3 * inverse ** 2 * t * c1y + 3 * inverse * t ** 2 * c2y + t ** 3 * endY;
-        assert.ok(value >= Math.min(points[index][1], endY) - 1e-10 && value <= Math.max(points[index][1], endY) + 1e-10);
-      }
-    });
-  }
-  assert.equal(monotonePath([]), "");
-  assert.equal(monotonePath([[10, 20]]), "M10,20");
-  assert.equal(monotonePath([[10, 20], [30, 40]]), "M10,20 L30,40");
-});
+import { monthBands, niceTicks, ringSegment, stackSegments } from "./geometry";
 
 test("custom ring sectors keep very small and large cost shares finite", () => {
   for (const [start, end] of [[0, 0.00001], [0.1, 1], [0.1, 5.9]]) {
@@ -43,8 +10,26 @@ test("custom ring sectors keep very small and large cost shares finite", () => {
   }
 });
 
-test("a single month is centered and multiple months span the plot endpoints", () => {
-  assert.equal(monthPosition(0, 1, 60, 620), 340);
-  assert.equal(monthPosition(0, 6, 60, 620), 60);
-  assert.equal(monthPosition(5, 6, 60, 620), 620);
+test("month bands split the plot evenly and keep bars inside their band", () => {
+  const bands = monthBands(6, 48, 648);
+  assert.equal(bands.band, 100);
+  assert.equal(bands.center(0), 98);
+  assert.equal(bands.center(5), 598);
+  assert.ok(bands.width < bands.band);
+  assert.equal(monthBands(1, 48, 648).center(0), 348);
+  assert.ok(monthBands(40, 48, 248).width >= 4, "Many months stay visible");
+});
+
+test("stacked bars keep each category value and ignore negative or invalid input", () => {
+  assert.deepEqual(stackSegments([636.23, 1600, 0, 1250]).map((segment) => [segment.from, segment.to]), [[0, 636.23], [636.23, 2236.23], [2236.23, 2236.23], [2236.23, 3486.23]]);
+  assert.deepEqual(stackSegments([-5, Number.NaN, 2]).map((segment) => segment.value), [0, 0, 2]);
+});
+
+test("axis ticks use round steps that cover the tallest bar", () => {
+  assert.deepEqual(niceTicks(4086.23), [0, 2000, 4000, 6000]);
+  assert.deepEqual(niceTicks(3486.23), [0, 1000, 2000, 3000, 4000]);
+  assert.deepEqual(niceTicks(6), [0, 2, 4, 6]);
+  assert.deepEqual(niceTicks(0), [0, 0.25, 0.5, 0.75, 1]);
+  assert.deepEqual(niceTicks(0.0003), [0, 0.0001, 0.0002, 0.0003]);
+  for (const max of [1, 7, 99, 1234.5, 987654]) { const ticks = niceTicks(max); assert.ok(ticks.at(-1)! >= max && ticks.length <= 6, String(max)); }
 });

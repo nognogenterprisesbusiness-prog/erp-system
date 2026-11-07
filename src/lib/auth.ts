@@ -19,6 +19,7 @@ export const requireUser = cache(async function requireUser(): Promise<UserConte
   if (profileError || roleError || !profile) redirect("/?error=account");
   if (profile.onboarding_required) redirect("/auth/accept-invite");
   if (!profile.is_active || roles.length === 0) redirect("/?error=account");
+  if (roles.includes("driver") && roles.length === 1) redirect("/driver-account");
   const canManage = roles.includes("admin");
   const canViewFinance = canManage || roles.includes("finance");
   // Finance reads purchasing; every purchasing change stays Admin-only.

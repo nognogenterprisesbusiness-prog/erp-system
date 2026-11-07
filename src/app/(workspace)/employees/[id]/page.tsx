@@ -6,6 +6,8 @@ import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { EmployeeForm } from "@/components/workforce/employee-form";
 import { ArchiveEmployeeForm, AttendanceBasisForm, CloseLaborRateForm, EndAssignmentForm, LaborRateForm, TransferAssignmentForm, WorkforceAssignmentForm } from "@/components/workforce/workforce-forms";
 import { requireUser } from "@/lib/auth";
+import { EmployeeDepartmentForm } from "@/components/payroll/payroll-forms";
+import { createClient } from "@/lib/supabase/server";
 import { getEmployee } from "@/lib/data/workforce";
 
 const date = (value: string | null) => value ? new Intl.DateTimeFormat("en-PH", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`)) : "Present";
@@ -17,10 +19,23 @@ export default async function EmployeeDetailPage({ params, searchParams }: { par
   const { id } = await params;
   const [user, data] = await Promise.all([requireUser(), getEmployee(id)]);
   const { employee, category, contact, linkedProfile, assignments, rates, events, references } = data;
+  // Departments group employees for payroll; only Admin and Finance see them here.
+  const showDepartment = user.canManage || user.canViewLaborRates;
+  const supabase = await createClient();
+  const [departmentRow, departmentList] = showDepartment ? await Promise.all([
+    supabase.from("employees").select("department_id").eq("id", id).maybeSingle(),
+    supabase.from("departments").select("id,name").is("archived_at", null).order("name"),
+  ]) : [null, null];
+  const departmentId = departmentRow?.data?.department_id ?? null;
+  const departments = departmentList?.data ?? [];
   return <>
     <PageHeader eyebrow={employee.code} title={employee.fullName} description={`${category.name} · ${employee.employment_type}`} action={user.canManage && employee.status !== "separated" && <RecordCreateDialog key={employee.updated_at} title="Edit employee" triggerLabel="Edit employee" triggerVariant="outline" initialOpen={editing} closeHref={`/employees/${id}`}><EmployeeForm employee={data.employee} contact={data.contact} categories={data.references.categories} profiles={data.references.profiles} /></RecordCreateDialog>} />
     <section className="mt-7 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-semibold">Employee record</h2><p className="mt-1 text-xs text-slate-500">Identity and employment information</p></div><Badge variant={employee.status === "active" ? "active" : employee.status === "on_leave" ? "review" : "neutral"}>{employee.status.replace("_", " ")}</Badge></div><dl className="grid gap-x-8 gap-y-5 px-6 py-5 sm:grid-cols-2 xl:grid-cols-4"><div><dt className="text-xs text-slate-400">Category / trade</dt><dd className="mt-1 text-sm font-medium">{category.name}</dd></div><div><dt className="text-xs text-slate-400">Hire date</dt><dd className="mt-1 text-sm font-medium">{date(employee.hire_date)}</dd></div><div><dt className="text-xs text-slate-400">User account</dt><dd className="mt-1 text-sm font-medium">{linkedProfile ? linkedProfile.full_name : "No linked account"}</dd></div><div><dt className="text-xs text-slate-400">Contact</dt><dd className="mt-1 text-sm font-medium">{contact?.contact_number ?? "Restricted"}</dd></div></dl>{user.canManage && employee.status !== "separated" && <div className="border-t border-slate-100 px-6 py-4"><ArchiveEmployeeForm employeeId={id} /></div>}</section>
 
+    {showDepartment && <section className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5">
+      <div><h2 className="font-semibold">Payroll department</h2><p className="mt-1 text-xs text-slate-500">{user.canManage ? "Used to group this employee in payroll." : departments.find((item) => item.id === departmentId)?.name ?? "No department"}</p></div>
+      {user.canManage && <EmployeeDepartmentForm employeeId={id} current={departmentId} departments={departments} />}
+    </section>}
     <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
         <div><h2 className="font-semibold">Project assignments</h2><p className="mt-1 text-xs text-slate-500">Current and past workers by site.</p></div>

@@ -136,7 +136,7 @@ export async function executeSiteCommand(
     }
     case "submit-receipt-expense": {
       const i = command.input;
-      const r = await client.rpc("submit_site_receipt_expense", { p_idempotency_key: i.idempotencyKey, p_project_id: i.projectId, p_site_id: i.siteId, p_amount: i.amount, p_paid_with: i.paidWith, p_notes: i.notes || null });
+      const r = await client.rpc("submit_site_receipt_expense", { p_idempotency_key: i.idempotencyKey, p_project_id: i.projectId, p_site_id: i.siteId, p_amount: i.amount, p_paid_with: i.paidWith, p_notes: i.notes || null, p_cost_type: i.costType });
       if (r.error) databaseError(r.error);
       return { id: r.data!, message: Number(i.amount) > 50000 ? "Receipt expense submitted for Admin approval." : "Receipt expense recorded for this project. No material stock was added." };
     }

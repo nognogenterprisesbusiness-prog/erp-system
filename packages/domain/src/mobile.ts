@@ -39,7 +39,8 @@ export const mobileQuerySchema = z.object({
   linked: z.enum(["true", "false"]).default("true"),
   identifier: z.string().trim().max(200).optional(),
 });
-export const mobileRoles = ["foreman", "engineer"] as const;
+const projectMobileRoles = ["foreman", "engineer"] as const;
+export const mobileRoles = [...projectMobileRoles, "driver"] as const;
 const project = z.object({
   id: uuidSchema,
   code: z.string(),
@@ -51,7 +52,7 @@ const project = z.object({
   target_completion_date: z.string(),
   photo_path: text,
   progress: number.nullable(),
-  assignment_role: z.enum(mobileRoles),
+  assignment_role: z.enum(projectMobileRoles),
   site_permissions: z.array(
     z.object({
       id: uuidSchema,

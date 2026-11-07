@@ -45,7 +45,7 @@ export async function submitSitePurchaseAction(_: SitePurchaseActionState, form:
   const purchaseKind = value(form, "purchaseKind") || "inventory";
   if (purchaseKind !== "inventory" && purchaseKind !== "expense") return fail("Choose receipt expense or inventory materials.");
   if (purchaseKind === "expense") {
-    const parsed = siteReceiptExpenseSchema.safeParse({ idempotencyKey: value(form, "idempotencyKey"), projectId: value(form, "projectId"), siteId: value(form, "siteId"), amount: value(form, "amount"), paidWith: value(form, "paidWith"), notes: value(form, "notes") });
+    const parsed = siteReceiptExpenseSchema.safeParse({ idempotencyKey: value(form, "idempotencyKey"), projectId: value(form, "projectId"), siteId: value(form, "siteId"), amount: value(form, "amount"), paidWith: value(form, "paidWith"), notes: value(form, "notes"), costType: value(form, "costType") || undefined });
     if (!parsed.success) return fail("Review the receipt expense.", parsed.error.flatten().fieldErrors);
     let photo: Buffer | undefined;
     try { photo = await prepareRecordPhoto(form.get("photo")); } catch (cause) { return fail(cause instanceof Error ? cause.message : "The receipt photo could not be processed."); }
@@ -53,7 +53,7 @@ export async function submitSitePurchaseAction(_: SitePurchaseActionState, form:
     const input = parsed.data;
     const supabase = await createClient();
     try { await storeSitePurchaseReceipt(supabase, user.userId, input.idempotencyKey, photo); } catch (cause) { return fail(cause instanceof Error ? cause.message : "The receipt photo could not be uploaded."); }
-    const { data, error } = await supabase.rpc("submit_site_receipt_expense", { p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId, p_site_id: input.siteId, p_amount: input.amount, p_paid_with: input.paidWith, p_notes: input.notes || null });
+    const { data, error } = await supabase.rpc("submit_site_receipt_expense", { p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId, p_site_id: input.siteId, p_amount: input.amount, p_paid_with: input.paidWith, p_notes: input.notes || null, p_cost_type: input.costType });
     if (error) return fail(sitePurchaseError(error));
     revalidateSitePurchases(data); revalidatePath(`/projects/${input.projectId}/costs`);
     redirect(`/site-purchases/${data}?posted=${Number(input.amount) <= 50000 ? "approved" : "submitted"}`);

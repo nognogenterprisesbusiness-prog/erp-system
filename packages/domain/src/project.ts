@@ -60,3 +60,23 @@ export type ProjectAssignmentInput = z.infer<typeof projectAssignmentInputSchema
 export type ProjectSiteInput = z.infer<typeof projectSiteInputSchema>;
 export type ProjectStatus = z.infer<typeof projectStatusSchema>;
 export type AssignmentRole = z.infer<typeof assignmentRoleSchema>;
+
+const centavos = (value: number | string) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) throw new Error("Invalid project amount.");
+  return Math.round(amount * 100);
+};
+
+/** Display position of posted costs against the approved budget, computed in whole centavos. */
+export function projectBudgetPosition(approvedBudget: number | string, postedCost: number | string) {
+  const budget = centavos(approvedBudget);
+  const cost = centavos(postedCost);
+  const remaining = budget - cost;
+  return {
+    approvedBudget: budget / 100,
+    actualCosts: cost / 100,
+    remaining: Math.abs(remaining) / 100,
+    overBudget: remaining < 0,
+    remainingLabel: remaining < 0 ? "Over budget" : "Remaining budget",
+  } as const;
+}

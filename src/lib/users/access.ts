@@ -1,6 +1,6 @@
 import type { AppRole } from "@/types/database";
 
-export const invitableRoles = ["engineer", "foreman", "warehouse_staff", "finance"] as const satisfies readonly AppRole[];
+export const invitableRoles = ["engineer", "foreman", "warehouse_staff", "finance", "driver"] as const satisfies readonly AppRole[];
 
 export const roleLabels: Record<AppRole, string> = {
   admin: "Admin",
@@ -8,6 +8,7 @@ export const roleLabels: Record<AppRole, string> = {
   foreman: "Foreman",
   warehouse_staff: "Warehouse staff",
   finance: "Finance",
+  driver: "Driver",
 };
 
 export function canAssignInitialRole(actorRoles: readonly AppRole[], role: AppRole) {

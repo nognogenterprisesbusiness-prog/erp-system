@@ -19,6 +19,7 @@ import { requireUser } from "@/lib/auth";
 import { getProjectEquipmentChoices } from "@/lib/data/assets";
 import { getProject } from "@/lib/data/projects";
 import { getDocumentPage } from "@/lib/data/project-documents";
+import { ProjectBudgetSummary } from "@/components/projects/project-budget-summary";
 import { getProjectProfitability } from "@/lib/data/project-costs";
 import { getProjectMaterialCost } from "@/lib/data/inventory";
 import { getProjectMaterialPlan, getProjectProgress } from "@/lib/data/project-operations";
@@ -73,7 +74,8 @@ export default async function ProjectDetailPage({ params, searchParams }: {
     { label: "Materials", amountCentavos: Math.round(Number(profitability.material_cost) * 100), color: "#0891b2" },
     { label: "Labour", amountCentavos: Math.round(Number(profitability.labor_cost) * 100), color: "#f59e0b" },
     { label: "Equipment", amountCentavos: Math.round(Number(profitability.equipment_cost) * 100), color: "#8b5cf6" },
-    { label: "Other / losses", amountCentavos: Math.round((Number(profitability.other_cost) + Number(profitability.site_stock_loss_cost) + Number(profitability.transfer_loss_cost)) * 100), color: "#10b981" },
+    { label: "Other expenses", amountCentavos: Math.round(Number(profitability.other_cost) * 100), color: "#10b981" },
+    { label: "Stock losses", amountCentavos: Math.round((Number(profitability.site_stock_loss_cost) + Number(profitability.transfer_loss_cost)) * 100), color: "#64748b", hideWhenZero: true },
   ]} /> : null;
   return <>
     <Link href="/projects" className="mb-4 inline-flex items-center gap-2 rounded-full text-sm text-slate-500 hover:text-cyan-700"><HugeiconsIcon icon={ArrowLeft01Icon} size={17} strokeWidth={1.5} />Projects</Link>
@@ -113,7 +115,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
         </section>
         {materialCostSection}
       </div>}
-      {tab === "finance" && profitability && <div className="space-y-5"><div className="flex flex-wrap justify-end gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>{user.canManage ? "Manage costs & budget" : "Costs & budget"}</Link></Button><Button variant="outline" asChild><Link href="/billing">Client invoices & payments</Link></Button></div><section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Project financial summary</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[["Contract value", profitability.contract_value], ["Approved budget", profitability.approved_budget], ["Posted costs", profitability.total_posted_cost], ["Estimated gross profit", profitability.estimated_gross_profit], ["Issued invoices", profitability.invoiced_amount], ["Payments received", profitability.cash_received], ["Outstanding invoices", profitability.receivables]].map(([label, amount]) => <div key={String(label)}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{money.format(Number(amount))}</dd></div>)}</dl><p className="mt-5 text-xs leading-5 text-slate-500">Estimated profit is the contract value minus recorded costs. Invoices and payments are shown separately.</p></section>{costBreakdown}{materialCostSection}</div>}
+      {tab === "finance" && profitability && <div className="space-y-5"><div className="flex flex-wrap justify-end gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>{user.canManage ? "Manage costs & budget" : "Costs & budget"}</Link></Button><Button variant="outline" asChild><Link href="/billing">Client invoices & payments</Link></Button></div><section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Project budget</h2><div className="mt-5"><ProjectBudgetSummary budget={Number(profitability.approved_budget)} cost={Number(profitability.total_posted_cost)} /></div></section><section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Billing and estimated profit</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[["Contract value", profitability.contract_value], ["Estimated gross profit", profitability.estimated_gross_profit], ["Issued invoices", profitability.invoiced_amount], ["Payments received", profitability.cash_received], ["Outstanding invoices", profitability.receivables]].map(([label, amount]) => <div key={String(label)}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{money.format(Number(amount))}</dd></div>)}</dl><p className="mt-5 text-xs leading-5 text-slate-500">Estimated profit is the contract value minus recorded costs. Invoices and payments are shown separately.</p></section>{costBreakdown}{materialCostSection}</div>}
     </div>
   </>;
 }

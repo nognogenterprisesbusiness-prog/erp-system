@@ -9,14 +9,14 @@ import { getGuideFigures } from "./screenshots";
 import sharp from "sharp";
 
 test("manual topics respect role boundaries and combine multiple roles without duplicates", () => {
-  const expected: Record<AppRole, string[]> = {
+  const expected: Record<Exclude<AppRole, "driver">, string[]> = {
     admin: ["access", "deliveries", "purchases", "site-purchases", "finance", "corrections"],
     finance: ["purchases", "site-purchases", "finance"],
     engineer: ["requests", "sourcing", "site-purchases", "reports", "mobile"],
     foreman: ["requests", "sourcing", "reports", "mobile"],
     warehouse_staff: ["requests", "deliveries", "assets"],
   };
-  for (const role of Object.keys(expected) as AppRole[]) {
+  for (const role of Object.keys(expected) as Exclude<AppRole, "driver">[]) {
     const ids = getManualGuides([role]).map((guide) => guide.id);
     for (const id of expected[role]) assert.ok(ids.includes(id), `${role}: ${id}`);
     for (const shared of ["start", "projects", "inventory", "account"]) assert.ok(ids.includes(shared));

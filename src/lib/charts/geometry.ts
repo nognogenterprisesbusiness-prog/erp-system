@@ -1,34 +1,29 @@
-/** Scale includes zero and negative net values without changing the plotted data. */
-export function chartScale(values: number[]): { minimum: number; maximum: number } {
-  const minimum = values.reduce((smallest, value) => Math.min(smallest, value), 0);
-  const maximum = values.reduce((largest, value) => Math.max(largest, value), 0);
-  const magnitude = Math.max(Math.abs(minimum), maximum) || 1;
-  const step = 10 ** Math.floor(Math.log10(magnitude));
-  return { minimum: Math.floor(minimum / step) * step, maximum: maximum === 0 && minimum < 0 ? 0 : Math.max(step, Math.ceil(maximum / step) * step) };
+/** Zero-based axis with round steps (1, 2, 2.5 or 5 × 10ⁿ), so labels read 0, 1K, 2K… */
+export function niceTicks(maximum: number, count = 4): number[] {
+  const top = Number.isFinite(maximum) && maximum > 0 ? maximum : 1;
+  const raw = top / count;
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((factor) => factor * magnitude).find((candidate) => candidate >= raw) ?? 10 * magnitude;
+  const steps = Math.ceil(top / step - 1e-9);
+  return Array.from({ length: steps + 1 }, (_, index) => Number((index * step).toPrecision(12)));
 }
 
-export function monthPosition(index: number, count: number, left: number, right: number): number {
-  return count <= 1 ? (left + right) / 2 : left + index * (right - left) / (count - 1);
+/** Evenly spaced month bands; bars sit in the middle of each band. */
+export function monthBands(count: number, left: number, right: number) {
+  const band = count > 0 ? (right - left) / count : right - left;
+  const width = Math.max(4, Math.min(56, band * 0.56));
+  return { band, width, center: (index: number) => left + band * (index + 0.5) };
 }
 
-export type ChartPoint = readonly [number, number];
-
-/** Monotone cubic interpolation: passes through the samples without inventing peaks. */
-export function monotonePath(points: ChartPoint[]): string {
-  if (!points.length) return "";
-  if (points.length < 3) return points.map(([x, y], i) => `${i ? "L" : "M"}${x},${y}`).join(" ");
-  const slopes = points.slice(1).map(([x, y], i) => (y - points[i][1]) / (x - points[i][0]));
-  const tangents = points.map((_, i) => i === 0 ? slopes[0] : i === points.length - 1 ? slopes[i - 1] : slopes[i - 1] * slopes[i] <= 0 ? 0 : (slopes[i - 1] + slopes[i]) / 2);
-  slopes.forEach((slope, i) => {
-    if (slope === 0) { tangents[i] = 0; tangents[i + 1] = 0; return; }
-    const length = Math.hypot(tangents[i] / slope, tangents[i + 1] / slope);
-    if (length > 3) { tangents[i] *= 3 / length; tangents[i + 1] *= 3 / length; }
+/** Stacks non-negative values bottom-up; each segment keeps its own value. */
+export function stackSegments(values: number[]) {
+  let base = 0;
+  return values.map((raw) => {
+    const value = Number.isFinite(raw) && raw > 0 ? raw : 0;
+    const segment = { from: base, to: base + value, value };
+    base += value;
+    return segment;
   });
-  return points.slice(1).reduce((path, [x, y], i) => {
-    const [previousX, previousY] = points[i];
-    const third = (x - previousX) / 3;
-    return `${path} C${previousX + third},${previousY + tangents[i] * third} ${x - third},${y - tangents[i + 1] * third} ${x},${y}`;
-  }, `M${points[0][0]},${points[0][1]}`);
 }
 
 /** Rounded annular sector; the corner radius shrinks with tiny categories. */

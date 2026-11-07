@@ -3,9 +3,9 @@ import test from "node:test";
 
 import { canAssignInitialRole, canManageAccount, invitableRoles, roleLabels } from "./access";
 
-test("the five approved account roles are exposed", () => {
-  assert.deepEqual(Object.keys(roleLabels), ["admin", "engineer", "foreman", "warehouse_staff", "finance"]);
-  assert.deepEqual([...invitableRoles], ["engineer", "foreman", "warehouse_staff", "finance"]);
+test("the six approved account roles are exposed, including mobile-only Driver", () => {
+  assert.deepEqual(Object.keys(roleLabels), ["admin", "engineer", "foreman", "warehouse_staff", "finance", "driver"]);
+  assert.deepEqual([...invitableRoles], ["engineer", "foreman", "warehouse_staff", "finance", "driver"]);
 });
 
 test("admin can invite Finance but cannot grant another Admin role", () => {
@@ -13,6 +13,8 @@ test("admin can invite Finance but cannot grant another Admin role", () => {
   assert.equal(canAssignInitialRole(["admin"], "foreman"), true);
   assert.equal(canAssignInitialRole(["admin"], "warehouse_staff"), true);
   assert.equal(canAssignInitialRole(["admin"], "finance"), true);
+  assert.equal(canAssignInitialRole(["admin"], "driver"), true);
+  assert.equal(canAssignInitialRole(["finance"], "driver"), false);
   assert.equal(canAssignInitialRole(["admin"], "admin"), false);
   assert.equal(canAssignInitialRole(["foreman"], "engineer"), false);
 });

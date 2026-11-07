@@ -19,6 +19,13 @@ await withIsolatedPostgres(async({sql,as,result,scalar})=>{
  await as('admin',`select public.decide_equipment_request('${id}',true,null)`);
  assert.equal(await value(`select expected_return_on is null and status='approved' from public.equipment_requests where id='${id}'`),'t');
  console.log('PASS: automatic equipment date, no false return deadline, concurrent retry, midnight retry, denied roles and approval');
+ const truck=await value("select id from public.assets where code='VEH-DT-001'");
+ const vehicleSubmit=(k)=>`select public.submit_mobile_equipment_request('${k}','${truck}','${project}','${site}','Haul materials')`;
+ const vehicleKey=randomUUID(), vehicleId=result(await as('engineer',vehicleSubmit(vehicleKey)));
+ assert.equal(await value(`select asset_id='${truck}' and requested_by='10000000-0000-0000-0000-000000000003' and status='submitted' and expected_return_on is null from public.equipment_requests where id='${vehicleId}'`),'t');
+ assert.equal(result(await as('engineer',vehicleSubmit(vehicleKey))),vehicleId);
+ await assert.rejects(as('engineer',vehicleSubmit(randomUUID())),/equipment_requests_no_duplicate_submission/);
+ console.log('PASS: Engineer requests a vehicle on mobile; retries return it and a second pending request is refused');
  const material='60000000-0000-0000-0000-000000000001';
  await sql(`update public.inventory_balances set quantity_on_hand=0,reserved_quantity=0 where material_id='${material}'`);
  const request=result(await as('foreman',`select public.submit_mobile_material_request('${randomUUID()}','${project}','${site}','More cement needed','[{"materialId":"${material}","quantity":"10"}]')`));

@@ -8,6 +8,7 @@ import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import { isValidPurchaseQuantity, isValidPurchaseUnitPrice, PurchaseLineItems, type PurchaseLineInput } from "@/components/purchasing/purchase-line-items";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
 import { SelectPicker } from "@/components/ui/select-picker";
+import { receiptExpenseCostTypeLabels } from "@nognog/domain";
 import type { getSitePurchaseChoices } from "@/lib/data/site-purchases";
 
 type Choices = Awaited<ReturnType<typeof getSitePurchaseChoices>>;
@@ -22,6 +23,7 @@ export function SitePurchaseForm({ choices, idempotencyKey, today }: { choices: 
   const [siteId, setSiteId] = useState(choices.sites.length === 1 ? choices.sites[0].id : "");
   const [purchaseKind, setPurchaseKind] = useState("inventory");
   const [amount, setAmount] = useState("");
+  const [costType, setCostType] = useState("other");
   const [store, setStore] = useState("");
   const [paidWith, setPaidWith] = useState("company_cash");
   const [lines, setLines] = useState<Line[]>([{ key: 0, materialId: "", quantity: "", unitPrice: "" }]);
@@ -34,7 +36,7 @@ export function SitePurchaseForm({ choices, idempotencyKey, today }: { choices: 
     <input type="hidden" name="purchaseKind" value={purchaseKind} />
     <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
     <input type="hidden" name="siteId" value={siteId} /><input type="hidden" name="projectId" value={site?.projectId ?? ""} />
-    <input type="hidden" name="supplierId" value={store === NEW_STORE ? "" : store} /><input type="hidden" name="paidWith" value={paidWith} />
+    <input type="hidden" name="supplierId" value={store === NEW_STORE ? "" : store} /><input type="hidden" name="paidWith" value={paidWith} /><input type="hidden" name="costType" value={costType} />
     <input type="hidden" name="lines" value={JSON.stringify(lines.map(({ materialId, quantity, unitPrice }) => ({ materialId, quantity, unitPrice })))} />
     <FormField label="Purchase type" htmlFor="purchaseKind"><SelectPicker id="purchaseKind" label="Purchase type" value={purchaseKind} onValueChange={setPurchaseKind} disabled={pending || processingPhoto} options={[{ value: "expense", label: "Receipt expense" }, { value: "inventory", label: "Inventory materials" }]} /></FormField>
     <div className="grid gap-4 md:grid-cols-2">
@@ -49,13 +51,14 @@ export function SitePurchaseForm({ choices, idempotencyKey, today }: { choices: 
       <FormField label="Receipt no." htmlFor="receiptNumber" error={error("receiptNumber")}><input id="receiptNumber" name="receiptNumber" className={fieldControlClass} maxLength={80} placeholder="e.g. OR-1001" required /></FormField>
       <FormField label="Receipt date" htmlFor="receiptDate" error={error("receiptDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="receiptDate" name="receiptDate" label="Receipt date" defaultValue={today} allowClear={false} required /></FormField>
       </>}
+      {purchaseKind === "expense" && <FormField label="Charge to" htmlFor="costType"><SelectPicker id="costType" label="Charge to" value={costType} onValueChange={setCostType} disabled={pending || processingPhoto} options={Object.entries(receiptExpenseCostTypeLabels).map(([value, label]) => ({ value, label }))} /></FormField>}
       {purchaseKind === "expense" && <FormField label="Receipt total (PHP)" htmlFor="receiptAmount" error={error("amount")}><input id="receiptAmount" name="amount" value={amount} onChange={(event) => setAmount(event.target.value)} className={fieldControlClass} inputMode="decimal" maxLength={18} placeholder="1500.00" required /></FormField>}
     </div>
     {purchaseKind === "inventory" && <div>
       <PurchaseLineItems title="Items bought" totalLabel="Receipt total" lines={lines} materials={choices.materials} maxLines={30} pending={pending || processingPhoto} idPrefix="site-purchase" onAdd={() => { setLines((current) => [...current, { key: nextKey, materialId: "", quantity: "", unitPrice: "" }]); setNextKey((key) => key + 1); }} onRemove={(key) => setLines((current) => current.filter((line) => line.key !== key))} onUpdate={(key, patch) => updateLine(key, patch)} />
       {error("lines") && <p role="alert" className="mt-2 text-xs text-red-700">{error("lines")}</p>}
     </div>}
-    {purchaseKind === "expense" && <p className="text-sm text-slate-500">Receipt expenses charge this project once and do not add stock. Above ₱50,000 requires Admin approval; the posting date and reference are generated automatically.</p>}
+    {purchaseKind === "expense" && <p className="text-sm text-slate-500">Receipt expenses charge this project once under Labour, Equipment or Other expenses and do not add stock. Above ₱50,000 requires Admin approval; the posting date and reference are generated automatically.</p>}
     <div className="grid gap-4 md:grid-cols-2">
       <FormField label="Paid with" htmlFor="paidWith"><SelectPicker id="paidWith" label="Paid with" value={paidWith} onValueChange={setPaidWith} options={[{ value: "company_cash", label: "Company cash" }, { value: "own_money", label: "Own money (to reimburse)" }]} /></FormField>
       <FormField label="Note (optional)" htmlFor="spNotes" error={error("notes")}><input id="spNotes" name="notes" className={fieldControlClass} maxLength={500} /></FormField>

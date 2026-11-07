@@ -69,6 +69,14 @@ test("database/internal failures never disclose SQL or credentials", async () =>
       error.message.includes("latest purchasing update"),
   );
   assert.throws(
+    () => databaseError({ code: "23505", message: 'duplicate key value violates unique constraint "equipment_requests_no_duplicate_submission"' }),
+    (error) =>
+      error instanceof MobileError &&
+      error.status === 409 &&
+      error.message.includes("already have a pending request") &&
+      !error.message.includes("equipment_requests"),
+  );
+  assert.throws(
     () => databaseError({ code: "22023", message: "Invalid site purchase line" }),
     (error) =>
       error instanceof MobileError &&

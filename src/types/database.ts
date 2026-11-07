@@ -7,7 +7,25 @@ type Table<Row, Insert, Update = Partial<Insert>> = {
   Relationships: [];
 };
 
-export type AppRole = "admin" | "engineer" | "foreman" | "warehouse_staff" | "finance";
+export type AppRole = "admin" | "engineer" | "foreman" | "warehouse_staff" | "finance" | "driver";
+export type DriverAssignmentRow = { driver_id: string; id: string; asset_id: string; assigned_by: string; assigned_at: string };
+export type AssetExpenseRow = {
+  id: string; asset_id: string; submitted_by: string; request_id: string; assignment_id: string | null;
+  category: "fuel" | "oil_change" | "maintenance" | "repair" | "other"; amount: number; expense_date: string;
+  notes: string; receipt_path: string | null; created_at: string; reversed_at: string | null;
+  reversed_by: string | null; reversal_reason: string | null;
+};
+export type DepartmentRow = { id: string; name: string; created_by: string; created_at: string; archived_at: string | null };
+export type PayrollRunRow = {
+  id: string; payroll_number: string; department_id: string | null; period_start: string; period_end: string; pay_date: string;
+  status: "draft" | "finalized" | "paid" | "voided"; notes: string; idempotency_key: string; created_by: string; created_at: string;
+  finalized_by: string | null; finalized_at: string | null; paid_by: string | null; paid_on: string | null; payment_reference: string | null;
+  voided_by: string | null; voided_at: string | null; void_reason: string | null;
+};
+export type PayrollLineRow = {
+  id: string; run_id: string; employee_id: string; employee_code: string; employee_name: string; department_id: string | null;
+  days_worked: number; attendance_pay: number; other_earnings: number; deductions: number; net_pay: number; notes: string; updated_at: string;
+};
 export type ProjectStatus = "draft" | "active" | "on_hold" | "completed" | "cancelled";
 export type ProjectDocumentCategory = "initial" | "other";
 export type AssignmentRole = "engineer" | "foreman";
@@ -88,7 +106,7 @@ export type AssetEventRow = { id: string; asset_id: string; event_type: AssetEve
 export type EquipmentRequestStatus = "submitted" | "approved" | "rejected" | "checked_out" | "returned";
 export type EquipmentRequestRow = { id: string; asset_id: string; asset_code: string; asset_name: string; project_id: string; project_site_id: string; requested_by: string; needed_on: string; expected_return_on: string | null; purpose: string; status: EquipmentRequestStatus; decided_by: string | null; decided_at: string | null; decision_note: string | null; source_location_id: string | null; checked_out_by: string | null; checked_out_at: string | null; returned_by: string | null; returned_at: string | null; return_note: string | null; created_at: string; updated_at: string };
 export type EmployeeCategoryRow = { id: string; name: string; description: string | null; created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
-export type EmployeeRow = { id: string; code: string; first_name: string; middle_name: string | null; last_name: string; category_id: string; employment_type: string; status: EmployeeStatus; hire_date: string; profile_id: string | null; created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
+export type EmployeeRow = { id: string; code: string; first_name: string; middle_name: string | null; last_name: string; category_id: string; department_id?: string | null; employment_type: string; status: EmployeeStatus; hire_date: string; profile_id: string | null; created_by: string; updated_by: string; archived_at: string | null; archived_by: string | null; created_at: string; updated_at: string };
 export type EmployeePrivateContactRow = { employee_id: string; contact_number: string; email_address: string | null; updated_by: string; updated_at: string };
 export type EmployeeProjectAssignmentRow = { id: string; employee_id: string; project_id: string; project_site_id: string; position_title: string; start_date: string; end_date: string | null; status: WorkforceAssignmentStatus; assigned_by: string; ended_by: string | null; remarks: string | null; end_remarks: string | null; transferred_from_assignment_id: string | null; created_at: string; updated_at: string };
 export type LaborRateRow = { id: string; employee_id: string; rate_type: LaborRateType; rate_amount: number; effective_start_date: string; effective_end_date: string | null; approved_by: string; created_at: string; updated_at: string };
@@ -122,7 +140,7 @@ export type ProjectAttendanceReversalRow = { id: string; attendance_id: string; 
 export type EquipmentHourRateRow = { id: string; asset_id: string; hourly_rate: number; effective_start_date: string; effective_end_date: string | null; approved_by: string; created_at: string };
 export type ProjectEquipmentUsageRow = { id: string; project_id: string; asset_id: string; asset_code: string; asset_name: string; use_date: string; hours_used: number; rate_id: string; hourly_rate_snapshot: number; cost_total: number; work_note: string; start_photo_path: string | null; end_photo_path: string | null; recorded_by: string; idempotency_key: string; command_payload: Json; created_at: string };
 export type ProjectEquipmentUsageReversalRow = { id: string; usage_id: string; reason: string; reversed_by: string; reversed_at: string; idempotency_key: string; command_payload: Json };
-export type ProjectAdditionalExpenseRow = { id: string; project_id: string; expense_date: string; category: "permit" | "subcontract" | "utilities" | "other"; description: string; external_reference: string; amount: number; recorded_by: string; idempotency_key: string; command_payload: Json; created_at: string };
+export type ProjectAdditionalExpenseRow = { id: string; project_id: string; expense_date: string; category: "permit" | "subcontract" | "utilities" | "other" | "labor" | "equipment"; description: string; external_reference: string; amount: number; recorded_by: string; idempotency_key: string; command_payload: Json; created_at: string };
 export type ProjectExpenseReversalRow = { id: string; expense_id: string; reason: string; reversed_by: string; reversed_at: string; idempotency_key: string; command_payload: Json };
 export type ProjectBudgetChangeRow = { id: string; project_id: string; change_amount: number; reason: string; approved_by: string; approved_at: string; idempotency_key: string; command_payload: Json };
 export type ProjectManagementSummaryRow = { project_code: string; project_name: string; contract_amount: number; approved_budget: number; material_cost: number; labor_cost: number; equipment_cost: number; additional_cost: number; total_cost: number; invoiced_amount: number; cash_received: number; billed_margin: number };
@@ -186,6 +204,11 @@ export type Database = {
       material_request_cancellation_receipts: Table<{ idempotency_key: string; request_id: string; actor_id: string; payload_hash: string; created_at: string }, never>;
       asset_locations: Table<AssetLocationRow, never>;
       assets: Table<AssetRow, never>;
+      asset_expenses: Table<AssetExpenseRow, never>;
+      departments: Table<DepartmentRow, never>;
+      payroll_runs: Table<PayrollRunRow, never>;
+      payroll_lines: Table<PayrollLineRow, never>;
+      driver_truck_assignments: Table<DriverAssignmentRow, never>;
       equipment_details: Table<EquipmentDetailRow, never>;
       vehicle_details: Table<VehicleDetailRow, never>;
       asset_events: Table<AssetEventRow, never>;
@@ -237,6 +260,17 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      save_department: { Args: { p_id: string | null; p_name: string }; Returns: string };
+      set_employee_department: { Args: { p_employee_id: string; p_department_id?: string | null }; Returns: undefined };
+      create_payroll_run: { Args: { p_key: string; p_department_id: string | null; p_period_start: string; p_period_end: string; p_pay_date: string; p_notes?: string }; Returns: string };
+      update_payroll_line: { Args: { p_line_id: string; p_other_earnings: number; p_deductions: number; p_notes?: string }; Returns: undefined };
+      finalize_payroll_run: { Args: { p_run_id: string }; Returns: undefined };
+      mark_payroll_paid: { Args: { p_run_id: string; p_paid_on: string; p_reference: string }; Returns: undefined };
+      void_payroll_run: { Args: { p_run_id: string; p_reason: string }; Returns: undefined };
+      set_driver_truck: { Args: { p_driver_id: string; p_asset_id?: string }; Returns: undefined };
+      get_my_truck: { Args: never; Returns: { assignment_id: string; asset_id: string; code: string; name: string; plate_number: string | null }[] };
+      post_asset_expense: { Args: { p_asset_id: string; p_request_id: string; p_category: string; p_amount: number; p_expense_date: string; p_notes: string; p_assignment_id: string | null; p_has_receipt: boolean }; Returns: string };
+      reverse_asset_expense: { Args: { p_expense_id: string; p_reason: string }; Returns: undefined };
       submit_catalog_shortage: { Args: { p_key: string; p_project_id: string; p_site_id: string; p_warehouse_id: string; p_material_id: string; p_quantity: number; p_needed_on: string; p_reason: string }; Returns: string };
       prepare_web_inventory_movement: { Args: { p_key: string; p_mode: string }; Returns: { reference_document: string; transaction_date: string }[] };
       post_web_inventory_movement: { Args: { p_key: string; p_mode: string; p_input: Json }; Returns: string };
@@ -377,7 +411,7 @@ export type Database = {
       get_site_purchase_suppliers: { Args: Record<string, never>; Returns: { id: string; supplier_name: string }[] };
       submit_site_purchase: { Args: { p_idempotency_key: string; p_project_id: string; p_site_id: string; p_supplier_id: string | null; p_new_supplier_name: string | null; p_new_supplier_address: string | null; p_new_supplier_contact: string | null; p_receipt_number: string; p_receipt_date: string; p_paid_with: SitePurchasePaidWith; p_notes: string | null; p_lines: Json }; Returns: string };
       get_site_purchase_expense_status: { Args: { p_purchase_ids: string[] }; Returns: { purchase_id: string; expense_reversed: boolean }[] };
-      submit_site_receipt_expense: { Args: { p_idempotency_key: string; p_project_id: string; p_site_id: string; p_amount: string | number; p_paid_with: string; p_notes?: string | null }; Returns: string };
+      submit_site_receipt_expense: { Args: { p_idempotency_key: string; p_project_id: string; p_site_id: string; p_amount: string | number; p_paid_with: string; p_notes?: string | null; p_cost_type?: "other" | "labor" | "equipment" }; Returns: string };
       submit_vehicle_fuel_receipt: { Args: { p_idempotency_key: string; p_project_id: string; p_site_id: string; p_vehicle_id: string; p_amount: string | number; p_paid_with: string; p_notes?: string | null }; Returns: string };
       approve_site_purchase: { Args: { p_purchase_id: string }; Returns: string };
       reject_site_purchase: { Args: { p_purchase_id: string; p_reason: string }; Returns: string };

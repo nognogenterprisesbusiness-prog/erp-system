@@ -1,0 +1,70 @@
+import { randomUUID } from "node:crypto";
+import { payrollStatusLabels, payrollTotals, philippinesDate } from "@nognog/domain";
+import { IntentLink as Link } from "@/components/layout/intent-link";
+import { DepartmentForm, NewPayrollForm } from "@/components/payroll/payroll-forms";
+import { DataTableShell } from "@/components/ui/data-table-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { HistoryPagination } from "@/components/ui/history-pagination";
+import { PageHeader } from "@/components/ui/page-header";
+import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
+import { tableHeadClass } from "@/components/ui/table-sort-heading";
+import { requireFinanceViewer } from "@/lib/auth";
+import { pageNumber } from "@/lib/data/pagination";
+import { createClient } from "@/lib/supabase/server";
+
+const money = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+const statusTone = { draft: "bg-amber-50 text-amber-800", finalized: "bg-cyan-50 text-cyan-800", paid: "bg-emerald-50 text-emerald-700", voided: "bg-slate-100 text-slate-600" } as const;
+
+/** Half-month default: 1–15 or 16–end of the current Philippine month. */
+function defaultPeriod(today: string) {
+  const [year, month, day] = today.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const prefix = `${year}-${pad(month)}`;
+  return Number(day) <= 15 ? { start: `${prefix}-01`, end: `${prefix}-15`, pay: `${prefix}-15` } : { start: `${prefix}-16`, end: `${prefix}-${pad(lastDay)}`, pay: `${prefix}-${pad(lastDay)}` };
+}
+
+export default async function PayrollPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const user = await requireFinanceViewer();
+  const page = pageNumber((await searchParams).page);
+  const pageSize = 20;
+  const supabase = await createClient();
+  const [runs, departments] = await Promise.all([
+    supabase.from("payroll_runs").select("*", { count: "exact" }).order("period_start", { ascending: false }).order("created_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1),
+    supabase.from("departments").select("id,name").is("archived_at", null).order("name"),
+  ]);
+  if (runs.error || departments.error) throw new Error("Unable to load payroll.");
+  const runIds = runs.data.map((run) => run.id);
+  const lines = runIds.length ? await supabase.from("payroll_lines").select("run_id,attendance_pay,other_earnings,deductions").in("run_id", runIds) : null;
+  if (lines?.error) throw new Error("Unable to load payroll totals.");
+  const departmentName = new Map(departments.data.map((item) => [item.id, item.name]));
+  const linesByRun = Map.groupBy(lines?.data ?? [], (line) => line.run_id);
+
+  return <>
+    <PageHeader title="Payroll" description="Pay employees from posted attendance, plus salaries, allowances and deductions you enter." action={<RecordCreateDialog title="New payroll" triggerLabel="New payroll"><NewPayrollForm departments={departments.data} idempotencyKey={randomUUID()} defaults={defaultPeriod(philippinesDate())} /></RecordCreateDialog>} />
+    <p className="mt-4 max-w-3xl text-xs leading-5 text-slate-500">Steps: create a payroll → enter other earnings and deductions → Admin finalizes → mark as paid. Payroll does not add project costs; project labour cost already comes from attendance. Government deductions (SSS, PhilHealth, Pag-IBIG, tax) are entered manually.</p>
+    <div className="mt-6"><DataTableShell empty={runs.data.length === 0 ? <EmptyState title="No payroll yet" description="Use New payroll to pay a period." /> : undefined}>
+      <table className="w-full min-w-[760px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Payroll</th><th className="px-4 py-3">Department</th><th className="px-4 py-3">Period / pay date</th><th className="px-4 py-3 text-right">Employees</th><th className="px-4 py-3 text-right">Net pay</th><th className="px-5 py-3">Status</th></tr></thead>
+        <tbody className="divide-y divide-slate-100">{runs.data.map((run) => {
+          const runLines = linesByRun.get(run.id) ?? [];
+          return <tr key={run.id} className="hover:bg-slate-50/70">
+            <td className="px-5 py-4 font-semibold"><Link href={`/payroll/${run.id}`} className="text-slate-900 hover:text-cyan-700">{run.payroll_number}</Link></td>
+            <td className="px-4 py-4 text-slate-600">{run.department_id ? departmentName.get(run.department_id) ?? "Department" : "All employees"}</td>
+            <td className="px-4 py-4 text-slate-600">{run.period_start} – {run.period_end}<span className="block text-xs text-slate-500">Pay {run.pay_date}</span></td>
+            <td className="px-4 py-4 text-right">{runLines.length}</td>
+            <td className="px-4 py-4 text-right font-semibold tabular-nums">{money.format(payrollTotals(runLines).net)}</td>
+            <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone[run.status]}`}>{payrollStatusLabels[run.status]}</span></td>
+          </tr>;
+        })}</tbody></table>
+    </DataTableShell></div>
+    <HistoryPagination path="/payroll" page={page} count={runs.count ?? 0} pageSize={pageSize} />
+    <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+      <h2 className="text-base font-semibold">Departments</h2>
+      <p className="mt-1 text-xs text-slate-500">Group employees for payroll. Set an employee&apos;s department on their employee page.</p>
+      <ul className="mt-4 space-y-3">{departments.data.length === 0 && <li className="text-sm text-slate-500">No departments yet.</li>}
+        {departments.data.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3"><span className="text-sm font-medium">{item.name}</span>{user.canManage && <DepartmentForm department={item} />}</li>)}
+      </ul>
+      {user.canManage && <div className="mt-5 border-t border-slate-100 pt-4"><DepartmentForm /></div>}
+    </section>
+  </>;
+}

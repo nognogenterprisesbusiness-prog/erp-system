@@ -37,6 +37,11 @@ export const roleResponsibilities: Record<AppRole, { summary: string; tasks: str
     tasks: ["Request materials, equipment or vehicles; report unavailable materials.", "Check delivered quantities and condition, then record actual material use.", "Record attendance, equipment usage with evidence and daily progress reports.", "View assigned site stock and project documents."],
     boundary: "A Foreman does not approve material requests, manage supplier payments or submit Engineer hardware-store purchases.",
   },
+  driver: {
+    summary: "Record expenses for your assigned truck in the mobile app.",
+    tasks: ["Open My Truck to see your assignment.", "Record fuel, oil changes, maintenance, and repairs.", "Review your own expense history."],
+    boundary: "Contact Admin if your truck is missing or needs to change.",
+  },
   warehouse_staff: {
     summary: "Receive and release stock for assigned warehouses.",
     tasks: ["Check warehouse balances, reservations and stock history.", "Inspect supplier deliveries and receive accepted quantities.", "Record verified stock-in at an assigned warehouse; release approved requests with transport details, or dispatch a reasoned delivery to a linked project site. Check asset locations."],
@@ -242,9 +247,9 @@ export const manualGuides: readonly ManualGuide[] = [
   {
     id: "roles", title: "Roles and access", description: "Know who requests, approves, receives, records and pays.", href: "/dashboard", roles: everyone,
     before: "Your account role and active site or warehouse assignments work together. The manual shows the tasks relevant to your account.",
-    steps: everyone.map((role) => ({ title: ({ admin: "Admin", finance: "Finance", engineer: "Engineer", foreman: "Foreman", warehouse_staff: "Warehouse staff" })[role], detail: [roleResponsibilities[role].summary, ...roleResponsibilities[role].tasks, roleResponsibilities[role].boundary].join(" ") })),
+    steps: everyone.map((role) => ({ title: ({ admin: "Admin", finance: "Finance", engineer: "Engineer", foreman: "Foreman", warehouse_staff: "Warehouse staff", driver: "Driver" } satisfies Record<AppRole, string>)[role], detail: [roleResponsibilities[role].summary, ...roleResponsibilities[role].tasks, roleResponsibilities[role].boundary].join(" ") })),
     result: "You know which colleague handles the next stage without sharing accounts or bypassing approval.",
-    tips: ["If the expected button is missing, check your role, assignment and the record's status with Admin.", "The web app supports all five roles. The mobile companion is for Engineer and Foreman accounts."],
+    tips: ["If the expected button is missing, check your role, assignment and the record's status with Admin.", "The web app supports all five staff roles. The mobile companion is for Engineer and Foreman accounts, and Driver accounts use its My Truck screen only."],
   },
   {
     id: "warehouses", title: "Warehouses and stock locations", description: "Know where stock is stored and where it must be delivered.", href: "/warehouses", roles: everyone,

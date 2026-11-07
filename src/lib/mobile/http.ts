@@ -91,7 +91,7 @@ export async function mobileContext(request: Request, write: boolean) {
   )
     throw new MobileError(
       403,
-      "This app is for active Foreman and Engineer accounts. Complete account setup in the web ERP if required.",
+      "This app is for active Foreman, Engineer and Driver accounts. Complete account setup in the web ERP if required.",
     );
   if (allowed.error)
     throw new MobileError(
@@ -106,7 +106,7 @@ export async function mobileContext(request: Request, write: boolean) {
       ...profile.data,
       roles: roles.filter(
         (role): role is (typeof mobileRoles)[number] =>
-          role === "foreman" || role === "engineer",
+          mobileRoles.includes(role as (typeof mobileRoles)[number]),
       ),
     },
   };
@@ -159,6 +159,11 @@ export function databaseError(error: {
     throw new MobileError(
       403,
       "You do not have permission for this action or project.",
+    );
+  if (error.message.includes("equipment_requests_no_duplicate_submission"))
+    throw new MobileError(
+      409,
+      "You already have a pending request for this equipment or vehicle at this site. Check Requests for its status.",
     );
   if (error.code === "23505" || error.code === "55000")
     throw new MobileError(

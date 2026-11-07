@@ -135,6 +135,7 @@ export async function readMobileResource(
       };
     }
     case "session": {
+      if (user.roles.includes("driver")) return { ...user, unread: 0 };
       const r = await c.rpc("get_unread_notification_count");
       if (r.error) databaseError(r.error);
       return { ...user, unread: r.data ?? 0 };
