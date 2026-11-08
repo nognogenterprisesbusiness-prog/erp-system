@@ -14,6 +14,7 @@ export * from "./notifications";
 export * from "./billing";
 export * from "./procurement";
 export * from "./attendance";
+export * from "./attendance-scan";
 export * from "./project-costs";
 export * from "./project-operations";
 export * from "./mobile";

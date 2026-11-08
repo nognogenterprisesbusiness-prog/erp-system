@@ -27,6 +27,7 @@ All routes are under `/api/mobile/v1` and require `Authorization: Bearer <Supaba
 | GET `inventory`, `inventory-history` | Site balances and operational movement history |
 | GET `equipment-options`, `equipment-requests`, `equipment`, `equipment-history` | Requestable assets, request status, custody and hours |
 | GET `workers`, `attendance` | Assigned workers and wage-free attendance |
+| GET/POST `attendance-scans` | Today's worker ID card scans for a site; POST `{ idempotencyKey, projectId, siteId, card }` records time-in/time-out (assigned Foreman only, see [QR attendance](qr-attendance-2026-11-08.md)) |
 | GET `reports`, `report`, `report-resources` | Reports and already posted activity |
 | GET `notifications`, `qr?identifier=…` | Recipient inbox and authorized QR resolution |
 | POST `commands` | Discriminated shared domain command `{ action, input }` |

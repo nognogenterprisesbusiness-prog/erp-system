@@ -23,6 +23,7 @@ import { storeEquipmentEvidence } from "@/lib/media/equipment-evidence";
 import { storeSitePurchaseReceipt } from "@/lib/media/site-purchase-receipt";
 
 import { readDriverDashboard, readDriverReceipt, submitDriverExpense } from "@/lib/mobile/driver";
+import { readAttendanceScans, recordAttendanceScan } from "@/lib/mobile/attendance-scan";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
@@ -40,6 +41,7 @@ export async function GET(request: Request, context: Context) {
       if (path.length === 3 && path[0] === "driver" && path[1] === "receipt") return readDriverReceipt(client, user.id, path[2]);
       if (path.length !== 1 || path[0] !== "session") throw new MobileError(403, "This screen is for staff accounts.");
     }
+    if (path.length === 1 && path[0] === "attendance-scans") return success(await readAttendanceScans(client, request));
     if (path.length === 2 && path[0] === "profile" && path[1] === "photo") {
       if (!user.avatar_path) throw new MobileError(404, "Profile photo not found.");
       const photo = await client.storage.from("erp-profile-photos").download(user.avatar_path);
@@ -84,6 +86,7 @@ export async function POST(request: Request, context: Context) {
       if (path.length === 1 && path[0] === "driver") return success(await submitDriverExpense(client, user.id, request));
       throw new MobileError(403, "This action is for staff accounts.");
     }
+    if (path.length === 1 && path[0] === "attendance-scans") return success(await recordAttendanceScan(client, request));
     if (path.length === 2 && path[0] === "site-purchases" && path[1] === "receipt") {
       if (!request.headers.get("content-type")?.startsWith("multipart/form-data"))
         throw new MobileError(415, "Send the purchase with a receipt photo.");

@@ -7,6 +7,8 @@ import { EmployeeForm } from "@/components/workforce/employee-form";
 import { ArchiveEmployeeForm, AttendanceBasisForm, CloseLaborRateForm, EndAssignmentForm, LaborRateForm, TransferAssignmentForm, WorkforceAssignmentForm } from "@/components/workforce/workforce-forms";
 import { requireUser } from "@/lib/auth";
 import { EmployeeDepartmentForm } from "@/components/payroll/payroll-forms";
+import { ReplaceIdCardForm } from "@/components/workforce/id-card-forms";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { getEmployee } from "@/lib/data/workforce";
 
@@ -35,6 +37,10 @@ export default async function EmployeeDetailPage({ params, searchParams }: { par
     {showDepartment && <section className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5">
       <div><h2 className="font-semibold">Payroll department</h2><p className="mt-1 text-xs text-slate-500">{user.canManage ? "Used to group this employee in payroll." : departments.find((item) => item.id === departmentId)?.name ?? "No department"}</p></div>
       {user.canManage && <EmployeeDepartmentForm employeeId={id} current={departmentId} departments={departments} />}
+    </section>}
+    {user.canManage && employee.status === "active" && <section className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5">
+      <div><h2 className="font-semibold">Worker ID card</h2><p className="mt-1 text-xs text-slate-500">The Foreman scans this QR card in the mobile app for time-in and time-out.</p></div>
+      <div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/employees/id-cards?employee=${id}`}>Print card</Link></Button><RecordCreateDialog title="Replace ID card" triggerLabel="Replace card" triggerVariant="outline" triggerIcon={null}><ReplaceIdCardForm employeeId={id} /></RecordCreateDialog></div>
     </section>}
     <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">

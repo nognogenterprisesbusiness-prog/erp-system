@@ -206,6 +206,7 @@ export type Database = {
       assets: Table<AssetRow, never>;
       asset_expenses: Table<AssetExpenseRow, never>;
       departments: Table<DepartmentRow, never>;
+      employee_id_cards: Table<{ id: string; employee_id: string; public_identifier: string; status: "active" | "replaced"; issued_by: string; issued_at: string; replaced_by: string | null; replaced_at: string | null; replace_reason: string | null }, never>;
       payroll_runs: Table<PayrollRunRow, never>;
       payroll_lines: Table<PayrollLineRow, never>;
       driver_truck_assignments: Table<DriverAssignmentRow, never>;
@@ -268,6 +269,9 @@ export type Database = {
       mark_payroll_paid: { Args: { p_run_id: string; p_paid_on: string; p_reference: string }; Returns: undefined };
       void_payroll_run: { Args: { p_run_id: string; p_reason: string }; Returns: undefined };
       set_driver_truck: { Args: { p_driver_id: string; p_asset_id?: string }; Returns: undefined };
+      replace_employee_id_card: { Args: { p_employee_id: string; p_reason: string }; Returns: string };
+      record_attendance_scan: { Args: { p_idempotency_key: string; p_project_id: string; p_site_id: string; p_card: string }; Returns: Json };
+      get_attendance_scans: { Args: { p_project_id: string; p_site_id: string }; Returns: Json[] };
       get_my_truck: { Args: never; Returns: { assignment_id: string; asset_id: string; code: string; name: string; plate_number: string | null }[] };
       post_asset_expense: { Args: { p_asset_id: string; p_request_id: string; p_category: string; p_amount: number; p_expense_date: string; p_notes: string; p_assignment_id: string | null; p_has_receipt: boolean }; Returns: string };
       reverse_asset_expense: { Args: { p_expense_id: string; p_reason: string }; Returns: undefined };
