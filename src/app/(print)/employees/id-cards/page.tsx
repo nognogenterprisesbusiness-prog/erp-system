@@ -32,7 +32,7 @@ export default async function WorkerIdCardsPage({ searchParams }: { searchParams
     .filter((employee) => cardOf.has(employee.id) && (!onProject || onProject.has(employee.id)))
     .map(async (employee) => {
       const identifier = cardOf.get(employee.id)!;
-      return { ...employee, identifier, svg: await QRCode.toString(identifier, { type: "svg", errorCorrectionLevel: "M", margin: 0 }) };
+      return { ...employee, identifier, svg: await QRCode.toString(identifier, { type: "svg", errorCorrectionLevel: "Q", margin: 2 }) };
     }));
   const back = employeeId.success ? `/employees/${employeeId.data}` : "/employees";
 
