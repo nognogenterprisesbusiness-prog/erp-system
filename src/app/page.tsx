@@ -2,8 +2,10 @@ import Image from "next/image";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { workspaceReturnPath } from "@/lib/auth-return-path";
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
+  const returnPath = workspaceReturnPath((await searchParams).next);
   return (
     <main className="flex min-h-svh items-center justify-center bg-[#f5f6f8] px-5 py-10">
       <div className="absolute right-5 top-5"><ThemeToggle /></div>
@@ -18,7 +20,7 @@ export default function LoginPage() {
           <p className="mt-2 text-sm leading-6 text-slate-500">Sign in to access your construction workspace.</p>
         </div>
 
-        <LoginForm />
+        <LoginForm returnPath={returnPath} />
 
 
         <p className="mt-8 text-center text-xs text-slate-400">Authorized Nognog personnel only.</p>

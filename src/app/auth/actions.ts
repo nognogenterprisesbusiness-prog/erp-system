@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { workspaceReturnPath } from "@/lib/auth-return-path";
 
 export type LoginState = { message?: string };
 const loginSchema = z.object({ email: z.email(), password: z.string().min(6).max(128) });
@@ -12,7 +13,7 @@ export async function loginAction(_: LoginState, formData: FormData): Promise<Lo
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { message: "Email or password is incorrect." };
-  redirect("/dashboard");
+  redirect(workspaceReturnPath(formData.get("returnPath")) ?? "/dashboard");
 }
 
 export async function logoutAction() {

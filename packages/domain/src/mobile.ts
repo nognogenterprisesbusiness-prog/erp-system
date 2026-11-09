@@ -40,7 +40,7 @@ export const mobileQuerySchema = z.object({
   identifier: z.string().trim().max(200).optional(),
 });
 const projectMobileRoles = ["foreman", "engineer"] as const;
-export const mobileRoles = [...projectMobileRoles, "driver"] as const;
+export const mobileRoles = [...projectMobileRoles, "driver", "warehouse_staff"] as const;
 const project = z.object({
   id: uuidSchema,
   code: z.string(),

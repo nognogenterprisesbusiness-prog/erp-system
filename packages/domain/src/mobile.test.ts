@@ -18,12 +18,13 @@ test("released minimum builds apply per platform without forcing the web preview
   assert.equal(mobileBuildStatus("web", null, policy), "compatible");
   assert.equal(mobileBuildStatus(null, null, policy), "compatible");
 });
-test("mobile access requires an active onboarded site role and excludes administration", () => {
+test("mobile access requires an active onboarded mobile role and excludes administration", () => {
   assert.equal(mobileAccess(["foreman"], true, false), true);
   assert.equal(mobileAccess(["engineer"], true, false), true);
+  assert.equal(mobileAccess(["warehouse_staff"], true, false), true);
+  assert.equal(mobileAccess(["warehouse_staff"], true, true), false);
   for (const roles of [
     [],
-    ["warehouse_staff"],
     ["admin"],
     ["admin", "engineer"],
   ])

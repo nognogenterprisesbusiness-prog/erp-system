@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
 import { getSupabaseEnv } from "./env";
+import { workspaceReturnPath } from "@/lib/auth-return-path";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -17,18 +18,17 @@ export async function updateSession(request: NextRequest) {
     },
   });
   const { data } = await supabase.auth.getClaims();
-  const isWorkspaceRoute = ["/dashboard", "/projects", "/warehouses"].some((path) => request.nextUrl.pathname.startsWith(path));
-  if (!data?.claims && isWorkspaceRoute) {
+  const returnPath = workspaceReturnPath(request.nextUrl.pathname + request.nextUrl.search);
+  if (!data?.claims && returnPath) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/";
-    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    loginUrl.search = "";
+    loginUrl.searchParams.set("next", returnPath);
     return NextResponse.redirect(loginUrl);
   }
   if (data?.claims && request.nextUrl.pathname === "/") {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    dashboardUrl.search = "";
-    return NextResponse.redirect(dashboardUrl);
+    const next = workspaceReturnPath(request.nextUrl.searchParams.get("next")) ?? "/dashboard";
+    return NextResponse.redirect(new URL(next, request.url));
   }
   return response;
 }

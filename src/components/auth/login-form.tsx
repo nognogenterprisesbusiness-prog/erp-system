@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { loginAction } from "@/app/auth/actions";
 
-export function LoginForm() {
+export function LoginForm({ returnPath }: { returnPath?: string }) {
   const [showPassword, setShowPassword] = useState(false);
   const [state, action, isPending] = useActionState(loginAction, {});
 
   return (
     <form className="space-y-5" action={action}>
+      {returnPath && <input type="hidden" name="returnPath" value={returnPath} />}
       <div className="space-y-2">
         <label htmlFor="email" className="text-sm font-medium text-slate-700">Email address</label>
         <div className="relative">

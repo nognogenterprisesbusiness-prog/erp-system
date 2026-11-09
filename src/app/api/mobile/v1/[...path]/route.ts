@@ -1,4 +1,5 @@
 import {
+  isMobileWarehouseAccount,
   mobileQuerySchema,
   mobileCommandSchema,
   mobileResponseSchemas,
@@ -25,6 +26,8 @@ import { storeSitePurchaseReceipt } from "@/lib/media/site-purchase-receipt";
 import { readDriverDashboard, readDriverReceipt, submitDriverExpense } from "@/lib/mobile/driver";
 import { readAttendanceScans, recordAttendanceScan } from "@/lib/mobile/attendance-scan";
 
+import { readMobileWarehousePanel, readMobileWarehouses } from "@/lib/mobile/warehouse";
+
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
 const success = (data: unknown) =>
@@ -36,10 +39,18 @@ export async function GET(request: Request, context: Context) {
   try {
     const { path } = await context.params;
     const { client, user } = await mobileContext(request, false);
+    const isSession = path.length === 1 && path[0] === "session";
+    const isAvatar = path.length === 2 && path[0] === "profile" && path[1] === "photo";
     if (user.roles.includes("driver")) {
       if (path.length === 1 && path[0] === "driver") return success(await readDriverDashboard(client, user.id, request));
       if (path.length === 3 && path[0] === "driver" && path[1] === "receipt") return readDriverReceipt(client, user.id, path[2]);
-      if (path.length !== 1 || path[0] !== "session") throw new MobileError(403, "This screen is for staff accounts.");
+      if (!isSession && !isAvatar) throw new MobileError(403, "This screen is for staff accounts.");
+    }
+    if (isMobileWarehouseAccount(user.roles)) {
+      if (path.length === 1 && path[0] === "warehouses") return success(await readMobileWarehouses(client, user.id));
+      if (path.length === 2 && path[0] === "warehouses" && (path[1] === "stock" || path[1] === "dispatch"))
+        return success(await readMobileWarehousePanel(client, user.id, path[1], request));
+      if (!isSession && !isAvatar) throw new MobileError(403, "This screen is for site accounts.");
     }
     if (path.length === 1 && path[0] === "attendance-scans") return success(await readAttendanceScans(client, request));
     if (path.length === 2 && path[0] === "profile" && path[1] === "photo") {

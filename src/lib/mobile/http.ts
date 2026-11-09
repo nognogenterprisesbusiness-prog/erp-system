@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { mobileAccess, mobileRoles } from "@nognog/domain";
+import { isMobileWarehouseAccount, mobileAccess, mobileRoles, mobileWarehouseHeader } from "@nognog/domain";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import type { Database } from "@/types/database";
 import type { MobileCompatibility } from "@nognog/domain";
@@ -91,8 +91,14 @@ export async function mobileContext(request: Request, write: boolean) {
   )
     throw new MobileError(
       403,
-      "This app is for active Foreman, Engineer and Driver accounts. Complete account setup in the web ERP if required.",
+      "This app is for active Foreman, Engineer, Driver and Warehouse Staff accounts. Complete account setup in the web ERP if required.",
     );
+  const warehouseAccount = isMobileWarehouseAccount(roles);
+  if (warehouseAccount) {
+    if (request.headers.get(mobileWarehouseHeader) !== "1")
+      throw new MobileError(403, "Update the Nognog app to open the warehouse workspace.");
+    if (write) throw new MobileError(403, "Record warehouse transactions in the web ERP.");
+  }
   if (allowed.error)
     throw new MobileError(
       503,
@@ -106,7 +112,7 @@ export async function mobileContext(request: Request, write: boolean) {
       ...profile.data,
       roles: roles.filter(
         (role): role is (typeof mobileRoles)[number] =>
-          mobileRoles.includes(role as (typeof mobileRoles)[number]),
+          (role !== "warehouse_staff" || warehouseAccount) && mobileRoles.includes(role as (typeof mobileRoles)[number]),
       ),
     },
   };

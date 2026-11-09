@@ -6,6 +6,7 @@ export * from "./material-requests";
 export * from "./material-sourcing";
 export * from "./assets";
 export * from "./asset-expenses";
+export * from "./mobile-warehouse";
 export * from "./payroll";
 export * from "./workforce";
 export * from "./suppliers";

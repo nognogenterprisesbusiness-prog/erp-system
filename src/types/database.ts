@@ -261,6 +261,7 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      list_mobile_warehouse_dispatch: { Args: { p_warehouse_id: string; p_offset?: number; p_limit?: number }; Returns: { id: string; request_number: string; project_name: string; site_name: string; required_date: string; ready_lines: number }[] };
       save_department: { Args: { p_id: string | null; p_name: string }; Returns: string };
       set_employee_department: { Args: { p_employee_id: string; p_department_id?: string | null }; Returns: undefined };
       create_payroll_run: { Args: { p_key: string; p_department_id: string | null; p_period_start: string; p_period_end: string; p_pay_date: string; p_notes?: string }; Returns: string };
