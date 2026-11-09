@@ -3,15 +3,14 @@
 import { useState } from "react";
 import { ringSegment, stackSegments } from "@/lib/charts/geometry";
 
-type CostCategory = { label: string; amountCentavos: number | null; color: string; hideWhenZero?: boolean };
+type CostCategory = { label: string; amountCentavos: number | null; color: string };
 const money = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 2 });
 const percent = (part: number, total: number) => `${(part / total * 100).toFixed(1)}%`;
 
 /** Donut of posted project costs. The centre shows the total, or the tapped category. */
 export function ProjectCostBreakdown({ categories }: { categories: CostCategory[] }) {
   const [selected, setSelected] = useState<string | null>(null);
-  const rows = categories.filter((item) => !item.hideWhenZero || (item.amountCentavos ?? 0) > 0);
-  const posted = rows.filter((item) => (item.amountCentavos ?? 0) > 0);
+  const posted = categories.filter((item) => (item.amountCentavos ?? 0) > 0);
   const total = posted.reduce((sum, item) => sum + (item.amountCentavos ?? 0), 0);
   const active = posted.find((item) => item.label === selected) ?? null;
   const toggle = (label: string) => setSelected((current) => current === label ? null : label);
@@ -40,7 +39,7 @@ export function ProjectCostBreakdown({ categories }: { categories: CostCategory[
           {active && <span className="mt-0.5 text-xs font-medium tabular-nums text-slate-500">{percent(active.amountCentavos ?? 0, total)}</span>}
         </div>
       </div>
-      <ul className="w-full min-w-0 flex-1 divide-y divide-slate-100">{rows.map((item) => {
+      <ul className="w-full min-w-0 flex-1 divide-y divide-slate-100">{categories.map((item) => {
         const amount = item.amountCentavos ?? 0;
         const hasCost = amount > 0;
         return <li key={item.label}>

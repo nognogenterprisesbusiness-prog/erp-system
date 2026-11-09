@@ -28,7 +28,8 @@ export function stackSegments(values: number[]) {
 
 /** Rounded annular sector; the corner radius shrinks with tiny categories. */
 export function ringSegment(start: number, end: number, outer = 94, inner = 66): string {
-  const point = (radius: number, angle: number) => `${110 + radius * Math.sin(angle)},${110 - radius * Math.cos(angle)}`;
+  // Keep SVG attributes identical across the server and browser math engines.
+  const point = (radius: number, angle: number) => `${(110 + radius * Math.sin(angle)).toFixed(6)},${(110 - radius * Math.cos(angle)).toFixed(6)}`;
   const corner = Math.max(0, Math.min(6, (outer - inner) / 2, inner * (end - start) / 2.2));
   const large = end - start > Math.PI ? 1 : 0;
   return `M${point(outer, start + corner / outer)} A${outer},${outer} 0 ${large} 1 ${point(outer, end - corner / outer)} Q${point(outer, end)} ${point(outer - corner, end)} L${point(inner + corner, end)} Q${point(inner, end)} ${point(inner, end - corner / inner)} A${inner},${inner} 0 ${large} 0 ${point(inner, start + corner / inner)} Q${point(inner, start)} ${point(inner + corner, start)} L${point(outer - corner, start)} Q${point(outer, start)} ${point(outer, start + corner / outer)} Z`;

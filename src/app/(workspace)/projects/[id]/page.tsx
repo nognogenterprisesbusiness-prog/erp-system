@@ -75,7 +75,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
     { label: "Labour", amountCentavos: Math.round(Number(profitability.labor_cost) * 100), color: "#f59e0b" },
     { label: "Equipment", amountCentavos: Math.round(Number(profitability.equipment_cost) * 100), color: "#8b5cf6" },
     { label: "Other expenses", amountCentavos: Math.round(Number(profitability.other_cost) * 100), color: "#10b981" },
-    { label: "Stock losses", amountCentavos: Math.round((Number(profitability.site_stock_loss_cost) + Number(profitability.transfer_loss_cost)) * 100), color: "#64748b", hideWhenZero: true },
+    { label: "Other data", amountCentavos: Math.round((Number(profitability.site_stock_loss_cost) + Number(profitability.transfer_loss_cost)) * 100), color: "#64748b" },
   ]} /> : null;
   return <>
     <Link href="/projects" className="mb-4 inline-flex items-center gap-2 rounded-full text-sm text-slate-500 hover:text-cyan-700"><HugeiconsIcon icon={ArrowLeft01Icon} size={17} strokeWidth={1.5} />Projects</Link>
