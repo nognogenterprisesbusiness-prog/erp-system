@@ -6,6 +6,9 @@ await withIsolatedPostgres(async({sql,as,result,scalar})=>{
  const project='20000000-0000-0000-0000-000000000001',site='40000000-0000-0000-0000-000000000001';
  const value=async(q)=>scalar(await sql(q));
  const asset=await value("select id from public.assets where code='EQ-EXC-001'");
+ await sql(`delete from public.project_warehouses where project_id='${project}'`);
+ assert.equal(scalar(await as('foreman',`select count(*) from public.get_requestable_equipment('${project}','${site}') where asset_id='${asset}'`)),'1');
+ assert.equal(scalar(await as('engineer',`select count(*) from public.get_mobile_site_operations('equipment-options','${project}','${site}') where record->>'id'='${asset}'`)),'1');
  const key=randomUUID();
  const submit=`select public.submit_mobile_equipment_request('${key}','${asset}','${project}','${site}','Excavation work')`;
  const ids=await Promise.all([as('foreman',submit),as('foreman',submit)]),id=result(ids[0]);

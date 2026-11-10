@@ -103,6 +103,9 @@ export async function getMaterialRequest(id: string) {
   const tracking = await supabase.rpc("get_material_request_tracking", { p_request_ids: [id] });
   if (tracking.error) throw new Error("Unable to load current site stock.");
   const stock = new Map((tracking.data ?? []).map((row) => [row.request_line_id, row]));
+  const sourceStockResult = await supabase.rpc("get_material_request_source_stock", { p_request_id: id });
+  if (sourceStockResult.error) throw new Error("Unable to load selected warehouse stock.");
+  const sourceStock = new Map(sourceStockResult.data.map((row) => [row.request_line_id, row]));
   const lineIds = (linesResult.data ?? []).map((row) => row.id);
   const [dispatchesResult, fulfillmentResult, reservationsResult] = await Promise.all([
     lineIds.length ? supabase.from("material_request_dispatches").select("*").in("request_line_id", lineIds) : Promise.resolve({ data: [], error: null }),
@@ -158,7 +161,7 @@ export async function getMaterialRequest(id: string) {
   const reservationLines = new Map((reservationsResult.data ?? []).map((row) => [row.id, (linesResult.data ?? []).find((line) => line.id === row.request_line_id)]));
   return {
     request, project: { id: context.project_id, code: context.project_code, name: context.project_name }, site: { id: context.site_id, name: context.site_name }, warehouse: { id: request.source_warehouse_id, name: request.source_warehouse_name },
-    lines: (linesResult.data ?? []).map((row) => ({ ...row, siteOnHand: stock.get(row.id)?.site_on_hand ?? null, siteAvailable: stock.get(row.id)?.site_available ?? null, material: materials.get(row.material_id), unitSymbol: unitMap.get(row.unit_of_measure_id) ?? "", reservation: reservations.get(row.id) ?? null })),
+    lines: (linesResult.data ?? []).map((row) => ({ ...row, sourceOnHand: sourceStock.get(row.id)?.on_hand ?? null, sourceAvailable: sourceStock.get(row.id)?.available ?? null, siteOnHand: stock.get(row.id)?.site_on_hand ?? null, siteAvailable: stock.get(row.id)?.site_available ?? null, material: materials.get(row.material_id), unitSymbol: unitMap.get(row.unit_of_measure_id) ?? "", reservation: reservations.get(row.id) ?? null })),
     events: (eventsResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user" })),
     fulfillmentEvents: (fulfillmentResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get((linesResult.data ?? []).find((line) => line.id === row.request_line_id)?.material_id ?? "")?.name ?? "Material" })),
     reservationEvents: (reservationEventsResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get(reservationLines.get(row.reservation_id)?.material_id ?? "")?.name ?? "Material" })),

@@ -37,6 +37,10 @@ await withIsolatedPostgres(async({sql,as,result,scalar,users})=>{
     assert.equal(await value(`select count(*) from private.request_warehouse_assignments where target_id='${request}'`),'1');
     assert.equal(await value(`select count(*) from public.material_request_reservations where request_line_id='${line}'`),'0');
     assert.equal(result(await as('foreman',submit)),request);
+    assert.equal(scalar(await as('admin',`select on_hand || '/' || available from public.get_material_request_source_stock('${request}')`)), '100.0000/100.0000');
+    await assert.rejects(as('finance',`select * from public.get_material_request_source_stock('${request}')`), /Request access required/);
+    assert.equal(scalar(await as('foreman',`select on_hand is null and available is null from public.get_material_request_source_stock('${request}')`)), 't');
+    await assert.rejects(as('engineer',`select public.decide_material_request('${randomUUID()}','${request}','{"${line}":"101"}',null)`), /exceed|insufficient|requested|available/i);
     const approvalKey=randomUUID(),approve=`select public.decide_material_request('${approvalKey}','${request}','{"${line}":"3"}',null)`;
     await Promise.all([as('engineer',approve),as('engineer',approve)]);
     assert.equal(await value(`select sum(remaining_quantity) from public.material_request_reservations where request_line_id='${line}'`),'3.0000');
