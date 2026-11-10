@@ -99,6 +99,7 @@ export async function adjustBudgetAction(_: ProjectCostActionState, form: FormDa
   if (error) return fail(costError(error));
   update(input.projectId);
   if (value(form, "returnTo") === "finance") redirect(`/projects/${input.projectId}?tab=finance&posted=budget`);
+  if (value(form, "returnTo") === "budget") redirect(`/projects/${input.projectId}/costs?view=budget&posted=budget`);
   redirect(`/projects/${input.projectId}/costs?posted=budget`);
 }
 

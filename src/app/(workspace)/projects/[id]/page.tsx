@@ -54,8 +54,8 @@ export default async function ProjectDetailPage({ params, searchParams }: {
   const returnHref = `/projects/${id}${returnParams.size ? `?${returnParams}` : ""}`;
   const documentPage = Math.min(10000, Math.max(1, Number.parseInt(filters.page ?? "", 10) || 1));
   const [workerCount, progress, profitability, workforce, materialPlan, materialCosts, siteQrCodes, equipmentChoices, documents, expenseBreakdown] = await Promise.all([
-    getProjectWorkerCount(id),
-    user.canViewDailyReports ? getProjectProgress(id) : Promise.resolve([]),
+    tab !== "finance" ? getProjectWorkerCount(id) : Promise.resolve(0),
+    user.canViewDailyReports && tab !== "finance" ? getProjectProgress(id) : Promise.resolve([]),
     user.canViewLaborRates ? getProjectProfitability(id) : Promise.resolve(null),
     tab === "labour" ? getProjectWorkforce(id, user.canViewLaborRates) : Promise.resolve(null),
     tab === "materials" ? getProjectMaterialPlan(id) : Promise.resolve([]),
@@ -65,7 +65,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
     tab === "sites" && user.canManage ? getActiveQrCodesForEntities("project_site", sites.map((site) => site.id)) : Promise.resolve([]),
     user.roles.includes("foreman") && ["active", "on_hold"].includes(project.status) ? getProjectEquipmentChoices(id) : Promise.resolve([]),
     tab === "documents" ? getDocumentPage({ query: "", projectId: id, category: "all", fileKind: "all", page: documentPage }) : Promise.resolve(null),
-    user.canViewLaborRates ? getProjectExpenseBreakdown(id) : Promise.resolve([]),
+    user.canViewLaborRates && (tab === "overview" || tab === "finance") ? getProjectExpenseBreakdown(id) : Promise.resolve([]),
   ]);
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const completion = Number(progress[0]?.completion_percent ?? 0);
@@ -80,7 +80,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
       <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-cyan-700">{project.code}</p><div className="mt-1.5 flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{project.name}</h1><Badge variant={project.status === "active" || project.status === "completed" ? "active" : project.status === "on_hold" ? "review" : "neutral"}>{project.status.replace("_", " ")}</Badge></div><p className="mt-2 text-sm text-slate-500">{project.city_province}</p></div>
       <div className="flex flex-wrap gap-2"><ShareProjectButton href={`/projects/${id}`} />{user.roles.includes("foreman") && ["active", "on_hold"].includes(project.status) && <RecordCreateDialog title="Record equipment hours" triggerLabel="Record equipment hours"><p className="mb-4 text-sm text-slate-500">Record the hours used at this project&apos;s site. An Admin manages rates; costs are calculated automatically.</p>{equipmentChoices.length ? <EquipmentUsageForm projectId={id} assets={equipmentChoices} initialKey={randomUUID()} today={today} /> : <EmptyState compact title="No equipment or vehicles at an active project site" description="Ask an Admin to assign one and set its hourly rate first." />}</RecordCreateDialog>}{user.canViewLaborRates && <><Button variant="outline" asChild><a href={`/projects/${id}/costs/export?format=pdf`}><HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={1.5} />PDF</a></Button><Button variant="outline" asChild><a href={`/projects/${id}/costs/export?format=xlsx`}><HugeiconsIcon icon={Download04Icon} size={16} strokeWidth={1.5} />Excel</a></Button></>}{user.canManage && <><RecordCreateDialog key={`${project.id}:${project.updated_at}`} title="Edit project" triggerLabel="Edit" triggerVariant="outline" initialOpen={filters.edit === "1"} closeHref={returnHref}><ProjectForm project={project} profiles={data.engineers} /></RecordCreateDialog><form action={archiveProjectAction}><input type="hidden" name="id" value={id} /><Button variant="outline" type="submit">Archive</Button></form></>}</div>
     </header>
-    <div className="relative mt-6 grid h-44 place-items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 text-slate-400 sm:h-60">
+    {tab !== "finance" && <><div className="relative mt-6 grid h-44 place-items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 text-slate-400 sm:h-60">
       {project.photo_path ? <PhotoViewer src={recordPhotoUrl("projects", id, project.updated_at)} alt={`${project.name} project`} sizes="(max-width: 768px) 100vw, 1200px" /> : <HugeiconsIcon icon={Building03Icon} size={48} strokeWidth={1.3} aria-label="No project photo uploaded" />}
     </div>
     <section aria-label="Project summary" className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -88,7 +88,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
       {profitability ? <MetricCard label="Approved budget" value={money.format(Number(profitability.approved_budget))} detail={`Used ${money.format(Number(profitability.total_posted_cost))}`} icon={Money03Icon} tone="bg-emerald-50 text-emerald-600" /> : <MetricCard label="Sites" value={sites.length} icon={Building03Icon} tone="bg-emerald-50 text-emerald-600" />}
       <MetricCard label="Workers" value={workerCount} detail="Active project assignments" icon={UserGroupIcon} tone="bg-amber-50 text-amber-600" />
       <MetricCard label="Progress" value={user.canViewDailyReports ? `${completion}%` : "—"} detail={!user.canViewDailyReports ? "Available to project reporting roles" : progress[0] ? `Updated ${date(progress[0].progress_date)}` : "No progress update recorded"} icon={Building03Icon} tone="bg-violet-50 text-violet-600" />
-    </section>
+    </section></>}
     <nav aria-label="Project sections" className="mt-6 grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 sm:flex sm:rounded-full">{visibleTabs.map((item) => <Link key={item.key} href={`/projects/${id}${item.key === "overview" ? "" : `?tab=${item.key}`}`} scroll={false} aria-current={tab === item.key ? "page" : undefined} className={`min-w-0 flex-1 rounded-full px-3 py-2.5 text-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 ${tab === item.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}>{item.label}</Link>)}</nav>
     <div className="mt-6">
       {tab === "documents" && documents && <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6" aria-label="Project documents">
@@ -117,7 +117,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-base font-semibold">Project budget</h2><p className="mt-1 text-sm text-slate-500">Remaining budget = approved budget minus actual posted costs.</p></div>{user.canManage && <ProjectBudgetAdjustment projectId={id} budget={Number(profitability.approved_budget)} cost={Number(profitability.total_posted_cost)} initialKey={randomUUID()} returnTo="finance" />}</div>
           <div className="mt-5"><ProjectBudgetSummary budget={Number(profitability.approved_budget)} cost={Number(profitability.total_posted_cost)} /></div>
-          <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-100 pt-4"><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>{user.canManage ? "Record costs & view history" : "View cost history"}</Link></Button><Button variant="ghost" asChild><Link href={`/projects/${id}/costs#budget-history`}>Budget change history</Link></Button></div>
+          <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-100 pt-4"><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>{user.canManage ? "Record costs & view history" : "View cost history"}</Link></Button><Button variant="ghost" asChild><Link href={`/projects/${id}/costs?view=budget`}>Budget change history</Link></Button></div>
         </section>
         {costBreakdown}
         {materialCostSection}

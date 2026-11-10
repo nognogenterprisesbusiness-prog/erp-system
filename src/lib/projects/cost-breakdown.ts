@@ -16,7 +16,7 @@ export function projectCostCategories(projectId: string, totals: Totals, expense
     ...expenses.filter((entry) => !["labor", "equipment"].includes(entry.bucket)).map((entry, index) => ({
       label: expenseBucketLabels[entry.bucket] ?? entry.bucket, amountCentavos: cents(entry.amount),
       color: ["#059669", "#2563eb", "#db2777", "#0d9488", "#65a30d", "#c2410c"][index % 6],
-      href: `/projects/${projectId}/costs?expense=${encodeURIComponent(entry.bucket)}#expense-history`,
+      href: `/projects/${projectId}/costs?view=expenses&expense=${encodeURIComponent(entry.bucket)}`,
       detail: `${entry.entry_count} posted ${Number(entry.entry_count) === 1 ? "entry" : "entries"}`,
     })),
     { label: "Site stock loss / damage", amountCentavos: cents(totals.site_stock_loss_cost), color: "#64748b" },

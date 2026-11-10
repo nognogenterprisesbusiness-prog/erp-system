@@ -8,6 +8,6 @@ test("detailed costs preserve centavos and do not count labour/equipment receipt
     { bucket: "permit", amount: 125.25, entry_count: 2 }, { bucket: "fuel", amount: 75.75, entry_count: 1 },
   ]);
   assert.equal(categories.reduce((sum, entry) => sum + entry.amountCentavos, 0), 95810);
-  assert.equal(categories.find((entry) => entry.label === "Vehicle fuel")?.href, "/projects/project/costs?expense=fuel#expense-history");
+  assert.equal(categories.find((entry) => entry.label === "Vehicle fuel")?.href, "/projects/project/costs?view=expenses&expense=fuel");
   assert.equal(categories.filter((entry) => entry.label.includes("receipts")).length, 0);
 });

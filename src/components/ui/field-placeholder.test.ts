@@ -26,3 +26,9 @@ test("numeric and free-text examples follow the field meaning", () => {
   assert.equal(getFieldPlaceholder("Equipment type"), "Concrete mixer");
   assert.equal(getFieldPlaceholder("Vehicle type"), "Dump truck");
 });
+
+test("approval fields retain their explicit guidance instead of a generic correction example", () => {
+  const html = renderToStaticMarkup(FormField({ label: "Reason for the approved change", htmlFor: "approval", children: createElement("textarea", { id: "approval", placeholder: "Approved additional second-floor work" }) }));
+  assert.match(html, /placeholder="Approved additional second-floor work"/);
+  assert.doesNotMatch(html, /Incorrect details recorded/);
+});

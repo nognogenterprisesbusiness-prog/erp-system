@@ -49,6 +49,7 @@ export function withFieldPlaceholder(children: ReactNode, label: string): ReactN
   return Children.map(children, (child) => {
     if (!isValidElement<{ placeholder?: string; type?: string; inputMode?: string; children?: ReactNode }>(child)) return child;
     if (child.type === "input" || child.type === "textarea" || child.type === Input) {
+      if (child.props.placeholder !== undefined) return child;
       const example = getFieldPlaceholder(label, child.props);
       return example ? cloneElement(child, { placeholder: example }) : child;
     }

@@ -24,13 +24,14 @@ export function ProjectCostForms({ projectId, assets, keys, today }: { projectId
 
 function EquipmentRateForm({ projectId, assets, today }: { projectId: string; assets: EquipmentChoice[]; today: string }) {
   const [rateState, rateAction, ratePending] = useActionState(setEquipmentRateAction, initialState);
+  const [hourlyRate, setHourlyRate] = useState("");
   const [rateAssetId, setRateAssetId] = useState(assets[0]?.id ?? "");
   const options = assets.map((asset) => ({ value: asset.id, label: `${assetChoiceLabel(asset)}${asset.rate ? ` · ₱${asset.rate.hourly_rate}/h` : " · no current rate"}` }));
   if (!assets.length) return <p className="text-sm leading-6 text-slate-600">Assign equipment or a vehicle to an active site in this project first. You can then set its hourly project charge here.</p>;
   return <form action={rateAction} className="space-y-4">
       <input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="assetId" value={rateAssetId} />
       <FormField label="Equipment or vehicle" htmlFor="rateAsset" error={rateState.fieldErrors?.assetId?.[0]}><SelectPicker id="rateAsset" label="Equipment or vehicle" disabled={ratePending} value={rateAssetId} onValueChange={setRateAssetId} options={options} placeholder="Choose equipment or vehicle" /></FormField>
-      <FormField label="Hourly project charge (PHP)" htmlFor="hourlyRate" error={rateState.fieldErrors?.hourlyRate?.[0]}><input id="hourlyRate" name="hourlyRate" className={fieldControlClass} inputMode="decimal" placeholder="0.00" required /></FormField>
+      <FormField label="Hourly project charge (PHP)" htmlFor="hourlyRate" error={rateState.fieldErrors?.hourlyRate?.[0]}><input id="hourlyRate" name="hourlyRate" value={hourlyRate} onChange={(event) => setHourlyRate(event.target.value)} disabled={ratePending} className={fieldControlClass} inputMode="decimal" placeholder="0.00" required /></FormField>
       <FormField label="Effective from" htmlFor="effectiveOn" error={rateState.fieldErrors?.effectiveOn?.[0]}><DatePicker id="effectiveOn" name="effectiveOn" label="Effective from" defaultValue={today} allowClear={false} required /></FormField>
       <p className="text-xs leading-5 text-slate-500">Posted equipment costs keep their original hourly rate. This rate is used for new hour entries covered by its effective date.</p>
       {rateState.message && <p role="alert" className="text-xs text-red-700">{rateState.message}</p>}<RecordFormControls busy={ratePending} disabled={!assets.length} label="Save hourly rate" />
@@ -40,13 +41,16 @@ function EquipmentRateForm({ projectId, assets, today }: { projectId: string; as
 function AdditionalExpenseForm({ projectId, initialKey, today }: { projectId: string; initialKey: string; today: string }) {
   const [expenseState, expenseAction, expensePending] = useActionState(postAdditionalExpenseAction, initialState);
   const [category, setCategory] = useState("permit");
+  const [description, setDescription] = useState("");
+  const [reference, setReference] = useState("");
+  const [amount, setAmount] = useState("");
   return <form action={expenseAction} className="space-y-4">
       <input type="hidden" name="idempotencyKey" value={initialKey} /><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="category" value={category} />
       <FormField label="Category" htmlFor="expenseCategory" error={expenseState.fieldErrors?.category?.[0]}><SelectPicker id="expenseCategory" label="Expense category" disabled={expensePending} value={category} onValueChange={setCategory} options={[{ value: "permit", label: "Permit" }, { value: "subcontract", label: "Subcontract" }, { value: "utilities", label: "Utilities" }, { value: "other", label: "Other external expense" }]} /></FormField>
       <FormField label="Expense date" htmlFor="expenseDate" error={expenseState.fieldErrors?.expenseDate?.[0]}><DatePicker id="expenseDate" name="expenseDate" label="Expense date" defaultValue={today} allowClear={false} required /></FormField>
-      <FormField label="Description" htmlFor="expenseDescription" error={expenseState.fieldErrors?.description?.[0]}><input id="expenseDescription" name="description" minLength={3} className={fieldControlClass} maxLength={500} required /></FormField>
-      <FormField label="Receipt / external reference" htmlFor="externalReference" error={expenseState.fieldErrors?.externalReference?.[0]}><input id="externalReference" name="externalReference" minLength={3} className={fieldControlClass} maxLength={120} required /></FormField>
-      <FormField label="Amount (PHP)" htmlFor="expenseAmount" error={expenseState.fieldErrors?.amount?.[0]}><input id="expenseAmount" name="amount" className={fieldControlClass} inputMode="decimal" required /></FormField>
+      <FormField label="Description" htmlFor="expenseDescription" error={expenseState.fieldErrors?.description?.[0]}><input id="expenseDescription" name="description" value={description} onChange={(event) => setDescription(event.target.value)} disabled={expensePending} minLength={3} className={fieldControlClass} maxLength={500} required /></FormField>
+      <FormField label="Receipt / external reference" htmlFor="externalReference" error={expenseState.fieldErrors?.externalReference?.[0]}><input id="externalReference" name="externalReference" value={reference} onChange={(event) => setReference(event.target.value)} disabled={expensePending} minLength={3} className={fieldControlClass} maxLength={120} required /></FormField>
+      <FormField label="Amount (PHP)" htmlFor="expenseAmount" error={expenseState.fieldErrors?.amount?.[0]}><input id="expenseAmount" name="amount" value={amount} onChange={(event) => setAmount(event.target.value)} disabled={expensePending} className={fieldControlClass} inputMode="decimal" required /></FormField>
       <p className="text-xs text-slate-500">Material use, attendance and equipment hours already create project costs. Use this form for permits, utilities, subcontract work or another external expense.</p>
       {expenseState.message && <p role="alert" className="text-xs text-red-700">{expenseState.message}</p>}<RecordFormControls busy={expensePending} label="Post project expense" />
     </form>;
@@ -54,5 +58,6 @@ function AdditionalExpenseForm({ projectId, initialKey, today }: { projectId: st
 
 export function ReverseCostForm({ projectId, kind, entryId, idempotencyKey }: { projectId: string; kind: "equipment" | "expense"; entryId: string; idempotencyKey: string }) {
   const [state, action, pending] = useActionState(reverseProjectCostAction, initialState);
-  return <form action={action} className="space-y-3"><input type="hidden" name="idempotencyKey" value={idempotencyKey} /><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="kind" value={kind} /><input type="hidden" name="entryId" value={entryId} /><FormField label="Correction reason" htmlFor={`reverse-${entryId}`} error={state.fieldErrors?.reason?.[0]}><input id={`reverse-${entryId}`} name="reason" className={fieldControlClass} minLength={3} maxLength={500} disabled={pending} required /></FormField>{state.message && <p role="alert" className="text-xs text-red-700">{state.message}</p>}<RecordFormControls busy={pending} label="Reverse this entry" /></form>;
+  const [reason, setReason] = useState("");
+  return <form action={action} className="space-y-3"><input type="hidden" name="idempotencyKey" value={idempotencyKey} /><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="kind" value={kind} /><input type="hidden" name="entryId" value={entryId} /><FormField label="Correction reason" htmlFor={`reverse-${entryId}`} error={state.fieldErrors?.reason?.[0]}><input id={`reverse-${entryId}`} name="reason" value={reason} onChange={(event) => setReason(event.target.value)} className={fieldControlClass} minLength={3} maxLength={500} disabled={pending} required /></FormField>{state.message && <p role="alert" className="text-xs text-red-700">{state.message}</p>}<RecordFormControls busy={pending} label="Reverse this entry" /></form>;
 }
