@@ -99,6 +99,12 @@ The current app uses mobileActionCommandSchema for general commands and mobileRe
 
 Build 24 removes phone push registration/listeners, Firebase configuration, native notification dependencies and the Profile push toggle. The in-app inbox, unread badge and realtime refresh remain. Apply `20261014110000_retire_phone_push.sql` to remove the push trigger, token/pruning functions, dedicated cron job and token table. It preserves inbox/outbox history and all inventory/cost data; pg_net and the notification-outbox cron job remain. Older builds can still read the inbox but their retired push RPC calls fail harmlessly. No Firebase account or remote credentials were changed.
 
-Warehouse sourcing is unchanged: Admin or authorized Warehouse Staff assigns the source before Engineer/Admin approval reserves stock; dispatch deducts that assigned source. Only project-linked warehouses are eligible.
+Historical build 24 sourcing required one assigned source. The November multi-warehouse update below supersedes that restriction.
 
 Verification for retirement: new isolated PostgreSQL retirement/rerun regression, six source-assignment/PO grouping checks and all 42 ERP workflow checks passed. Web TypeScript, ESLint, 115 tests, production build and migration-version checks passed. No hosted migration was applied.
+
+## Multi-warehouse requests and native warehouse actions — 10 November 2026
+
+Requests can allocate each material across multiple warehouses without permanently linking sources to the project. Approval reserves each source; release deducts its actual source; receipt keeps the existing site posting rules. Warehouse mobile now has native Receive supplier delivery and Release materials actions. Only active assigned warehouses and their actual allocations are exposed. Purchase prices remain private to their existing finance roles. Dates are automatic in the Philippines; units, warehouse, project and site context remain visible.
+
+Requires `20261110120000_request_warehouse_allocations.sql` and `20261110120100_native_warehouse_operations.sql` plus the matching API deployment before mobile build 31. The user applied the combined migration to staging and connected browser/database checks passed. See [warehouse improvements](warehouse-improvements-2026-11-10.md) for tests and rollout evidence.

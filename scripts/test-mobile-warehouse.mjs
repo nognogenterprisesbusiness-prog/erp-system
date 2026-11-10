@@ -11,7 +11,7 @@ const queue = (id = warehouse) => `select id,ready_lines from public.list_mobile
 
 await withIsolatedPostgres(async ({ sql, as, users, result, scalar }) => {
   assert.equal(scalar(await as("warehouse_staff", "select public.guard_mobile_api(false)")), "t");
-  await assert.rejects(as("warehouse_staff", "select public.guard_mobile_api(true)"), /Not authorized/);
+  assert.equal(scalar(await as("warehouse_staff", "select public.guard_mobile_api(true)")), "t");
   for (const role of ["foreman", "engineer", "finance", "admin"]) {
     await assert.rejects(as(role, queue()), /Warehouse access required/);
   }

@@ -1,9 +1,10 @@
 "use server";
+import { decideMaterialRequestSourcesSchema, dispatchRequestAllocationSchema } from "@nognog/domain";
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { cancelMaterialRequestSchema, closeRequestRemainderSchema, decideMaterialRequestSchema, dispatchRequestWithManifestSchema, receiveRequestWithInspectionSchema, mobileActionCommandSchema } from "@nognog/domain";
+import { cancelMaterialRequestSchema, closeRequestRemainderSchema, decideMaterialRequestSchema, receiveRequestWithInspectionSchema, mobileActionCommandSchema } from "@nognog/domain";
 import type { ActionResult } from "@nognog/domain";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -106,6 +107,18 @@ export async function decideMaterialRequestAction(_: RequestActionState, form: F
   if (!parsed.success) return failure("Review the approval details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createClient();
+  const rawAllocations = value(form, "allocations");
+  if (rawAllocations) {
+    if (rawAllocations.length > 30000) return failure("Too many warehouse allocations.");
+    let allocations: unknown;
+    try { allocations=JSON.parse(rawAllocations); } catch { return failure("Review warehouse quantities."); }
+    const sources=decideMaterialRequestSourcesSchema.safeParse({idempotencyKey:input.idempotencyKey,requestId:input.requestId,reason:input.reason,allocations});
+    if (!sources.success) return failure("Review warehouse quantities.");
+    const result=await supabase.rpc("decide_material_request_sources", {p_idempotency_key:input.idempotencyKey,p_request_id:input.requestId,p_decisions:sources.data.allocations,p_reason:input.reason || null});
+    if (result.error) { revalidatePath(`/requests/${input.requestId}`); return failure(requestError(result.error)); }
+    revalidatePath("/requests"); revalidatePath("/inventory"); revalidatePath(`/requests/${input.requestId}`);
+    redirect(`/requests/${input.requestId}?decided=1`);
+  }
   let data: string | undefined;
   try { data = (await executeSiteCommand(supabase, { action: "decide-materials", input })).id; }
   catch (cause) { return failure(cause instanceof Error ? cause.message : "The decision could not be saved."); }
@@ -129,8 +142,8 @@ function fulfillmentError(error: { code?: string; message: string }): string {
 export async function dispatchRequestLineAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {
   const user = await requireUser();
   if (!user.canOperateInventory) return failure("Only assigned warehouse staff or administrators can dispatch stock.");
-  const parsed = dispatchRequestWithManifestSchema.safeParse({
-    idempotencyKey: value(form, "idempotencyKey"), requestLineId: value(form, "requestLineId"),
+  const parsed = dispatchRequestAllocationSchema.safeParse({
+    idempotencyKey: value(form, "idempotencyKey"), allocationId: value(form, "allocationId"),
     quantity: value(form, "quantity"), transactionDate: value(form, "transactionDate"), remarks: value(form, "remarks"),
     vehicleAssetId: value(form, "vehicleAssetId"), vehicleLabel: value(form, "vehicleLabel"),
     driverName: value(form, "driverName"), deliveryReference: value(form, "deliveryReference"),
@@ -138,15 +151,15 @@ export async function dispatchRequestLineAction(_: RequestActionState, form: For
   if (!parsed.success) return failure("Review the dispatch details.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.rpc("dispatch_approved_request_line_with_manifest", {
-    p_idempotency_key: input.idempotencyKey, p_request_line_id: input.requestLineId,
+  const { error } = await supabase.rpc("dispatch_request_allocation_with_manifest", {
+    p_idempotency_key: input.idempotencyKey, p_reservation_id: input.allocationId,
     p_quantity: input.quantity, p_transaction_date: input.transactionDate, p_remarks: input.remarks || null,
     p_vehicle_asset_id: input.vehicleAssetId || null, p_vehicle_label: input.vehicleLabel,
     p_driver_name: input.driverName, p_delivery_reference: input.deliveryReference,
   });
   if (error) return failure(fulfillmentError(error));
   revalidatePath("/requests"); revalidatePath("/requests/[id]", "page"); revalidatePath("/inventory/transfers"); revalidatePath("/inventory");
-  return { ok: true, data: { id: input.requestLineId } };
+  return { ok: true, data: { id: input.allocationId } };
 }
 
 export async function receiveRequestTransferAction(_: RequestActionState, form: FormData): Promise<RequestActionState> {

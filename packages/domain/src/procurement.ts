@@ -40,7 +40,7 @@ export const inspectPurchaseDeliverySchema = z.object({
   idempotencyKey: uuidSchema, orderId: uuidSchema, lineId: uuidSchema,
   deliveredQuantity: quantitySchema, acceptedQuantity: z.string().regex(/^\d+(?:\.\d{1,4})?$/),
   deliveryReference: z.string().trim().min(2).max(120),
-  inspectedOn: z.iso.date(), qualityNote: z.string().trim().max(500),
+  inspectedOn: z.iso.date(), qualityNote: z.string().trim().max(500).refine((note) => !note || note.length >= 3, "Use at least three characters for a delivery note"),
 }).refine((value) => Number(value.acceptedQuantity) <= Number(value.deliveredQuantity),
   { path: ["acceptedQuantity"], message: "Accepted quantity cannot exceed delivered quantity" })
   .refine((value) => Number(value.acceptedQuantity) === Number(value.deliveredQuantity) || value.qualityNote.length >= 3,

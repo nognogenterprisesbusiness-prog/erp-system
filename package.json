@@ -52,7 +52,9 @@
     "test:automatic-project-site": "node scripts/test-automatic-project-site.mjs",
     "test:request-only-warehouse": "node scripts/test-request-only-warehouse.mjs",
     "test:planning-shortage": "node scripts/test-planning-shortage-follow-through.mjs",
-    "test:close-remainder": "node scripts/test-close-request-remainder.mjs"
+    "test:close-remainder": "node scripts/test-close-request-remainder.mjs",
+    "test:multi-warehouse": "node scripts/test-multi-warehouse-requests.mjs",
+    "test:native-warehouse": "node scripts/test-native-warehouse-operations.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

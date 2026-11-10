@@ -26,7 +26,7 @@ import { storeSitePurchaseReceipt } from "@/lib/media/site-purchase-receipt";
 import { readDriverDashboard, readDriverReceipt, submitDriverExpense } from "@/lib/mobile/driver";
 import { readAttendanceScans, recordAttendanceScan } from "@/lib/mobile/attendance-scan";
 
-import { readMobileWarehousePanel, readMobileWarehouses } from "@/lib/mobile/warehouse";
+import { readMobileWarehousePanel, readMobileWarehouses, readMobileWarehouseOperations, postMobileWarehouseOperation } from "@/lib/mobile/warehouse";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
@@ -47,6 +47,7 @@ export async function GET(request: Request, context: Context) {
       if (!isSession && !isAvatar) throw new MobileError(403, "This screen is for staff accounts.");
     }
     if (isMobileWarehouseAccount(user.roles)) {
+      if (path.length === 1 && path[0] === "warehouse-operations") return success(await readMobileWarehouseOperations(client, user.id, request));
       if (path.length === 1 && path[0] === "warehouses") return success(await readMobileWarehouses(client, user.id));
       if (path.length === 2 && path[0] === "warehouses" && (path[1] === "stock" || path[1] === "dispatch"))
         return success(await readMobileWarehousePanel(client, user.id, path[1], request));
@@ -96,6 +97,10 @@ export async function POST(request: Request, context: Context) {
     if (user.roles.includes("driver")) {
       if (path.length === 1 && path[0] === "driver") return success(await submitDriverExpense(client, user.id, request));
       throw new MobileError(403, "This action is for staff accounts.");
+    }
+    if (isMobileWarehouseAccount(user.roles)) {
+      if (path.length===1 && path[0]==="warehouse-operations") return success(await postMobileWarehouseOperation(client,user.id,request));
+      throw new MobileError(403,"Use the warehouse actions for this account.");
     }
     if (path.length === 1 && path[0] === "attendance-scans") return success(await recordAttendanceScan(client, request));
     if (path.length === 2 && path[0] === "site-purchases" && path[1] === "receipt") {

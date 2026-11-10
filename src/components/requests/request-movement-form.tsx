@@ -26,7 +26,7 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
   const label = mode === "dispatch" ? "Release materials" : "Confirm receipt";
   const form = <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.5fr_auto] lg:items-end">
       <input type="hidden" name="idempotencyKey" value={key} />
-      <input type="hidden" name={mode === "dispatch" ? "requestLineId" : "transferItemId"} value={id} />
+      <input type="hidden" name={mode === "dispatch" ? "allocationId" : "transferItemId"} value={id} />
       {requestId && <input type="hidden" name="requestId" value={requestId} />}
       <FormField label={`Quantity (up to ${remaining} ${unit})`} htmlFor={`${mode}-qty-${id}`} error={!state.ok ? state.fieldErrors?.quantity?.[0] : undefined}>
         <input id={`${mode}-qty-${id}`} name="quantity" type="number" min="0.0001" max={remaining} step="0.0001" inputMode="decimal" className={fieldControlClass} required />

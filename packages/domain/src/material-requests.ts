@@ -59,3 +59,20 @@ export type SubmitMaterialRequest = z.infer<typeof submitMaterialRequestSchema>;
 export type DecideMaterialRequest = z.infer<typeof decideMaterialRequestSchema>;
 export type CancelMaterialRequest = z.infer<typeof cancelMaterialRequestSchema>;
 export type CloseRequestRemainder = z.infer<typeof closeRequestRemainderSchema>;
+
+export const requestSourceAllocationSchema = z.object({
+  warehouseId: uuidSchema,
+  quantity: decideMaterialRequestSchema.shape.decisions.valueType.refine((value) => Number(value) > 0, "Enter a positive quantity"),
+});
+export const decideMaterialRequestSourcesSchema = z.object({
+  idempotencyKey: uuidSchema, requestId: uuidSchema,
+  allocations: z.record(uuidSchema, z.array(requestSourceAllocationSchema).max(10)),
+  reason: z.string().trim().max(500),
+});
+export const dispatchRequestAllocationSchema = z.object({
+  ...fulfillmentFields, allocationId: uuidSchema,
+  vehicleAssetId: z.union([uuidSchema, z.literal("")]),
+  vehicleLabel: z.string().trim().max(120), driverName: z.string().trim().min(2).max(120),
+  deliveryReference: z.string().trim().min(2).max(120),
+}).refine((input) => input.vehicleAssetId !== "" || input.vehicleLabel.length >= 2,
+  { path: ["vehicleLabel"], message: "Enter a vehicle or transport description." });

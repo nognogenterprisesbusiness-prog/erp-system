@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import type { getMaterialRequestFormChoices } from "@/lib/data/material-requests";
 
 type Choices = Awaited<ReturnType<typeof getMaterialRequestFormChoices>>;
-type Line = { key: string; materialId: string; quantity: string };
+type Line = { key: string; materialId: string; quantity: string; unitId?: string };
 const initialState: RequestActionState = { ok: false, message: "" };
 
 export function MaterialRequestForm({ choices, idempotencyKey, initialLineKey, initialMaterialId = "", initialProjectId, initialSiteId, initialQuantity }: { choices: Choices; idempotencyKey: string; initialLineKey: string; initialMaterialId?: string; initialProjectId?: string; initialSiteId?: string; initialQuantity?: string }) {
@@ -55,9 +55,9 @@ export function MaterialRequestForm({ choices, idempotencyKey, initialLineKey, i
     </div>
     <div className="mt-4 grid gap-3">{lines.map((line, index) => <div key={line.key} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[minmax(0,1fr)_150px_auto] sm:items-start">
       <FormField label={`Material ${index + 1}`} htmlFor={`material-${line.key}`}>
-        <PagedReferencePicker disabled={pending} key={`${projectId}:${selectedSite}`} kind="material" label={`Material ${index + 1}`} value={line.materialId} onValueChange={(materialId) => updateLine(line.key, { materialId })} initialOptions={choices.materials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}`, unitId: item.base_unit_id }))} disabledValues={lines.filter((other) => other.key !== line.key).map((other) => other.materialId)} />
+        <PagedReferencePicker disabled={pending} key={`${projectId}:${selectedSite}`} kind="material" label={`Material ${index + 1}`} value={line.materialId} onValueChange={(materialId) => updateLine(line.key, { materialId, unitId: undefined })} onPick={(item) => updateLine(line.key, { unitId: item.unitId ?? undefined })} initialOptions={choices.materials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}`, unitId: item.base_unit_id }))} disabledValues={lines.filter((other) => other.key !== line.key).map((other) => other.materialId)} />
       </FormField>
-      <FormField label="Quantity" htmlFor={`quantity-${line.key}`}><input id={`quantity-${line.key}`} className={fieldControlClass} inputMode="decimal" disabled={pending} value={line.quantity} onChange={(event) => updateLine(line.key, { quantity: event.target.value })} placeholder="0.0000" required /></FormField>
+      <FormField label={`Quantity${(() => { const unitId=line.unitId ?? choices.materials.find((item) => item.id === line.materialId)?.base_unit_id; const symbol=choices.units.find((unit) => unit.id === unitId)?.symbol; return symbol ? ` (${symbol})` : ""; })()}`} htmlFor={`quantity-${line.key}`}><input id={`quantity-${line.key}`} className={fieldControlClass} inputMode="decimal" disabled={pending} value={line.quantity} onChange={(event) => updateLine(line.key, { quantity: event.target.value })} placeholder="0.0000" required /></FormField>
       <Button type="button" variant="ghost" size="icon" className="sm:mt-7" aria-label={`Remove material ${index + 1}`} disabled={lines.length === 1 || pending} onClick={() => setLines((current) => current.filter((item) => item.key !== line.key))}><HugeiconsIcon icon={Remove01Icon} size={17} /></Button>
     </div>)}</div>
     {error("lines") && <p role="alert" className="mt-2 text-xs text-red-600">{error("lines")}</p>}

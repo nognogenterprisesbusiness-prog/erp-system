@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
           // bearer token, not cookies, so a wildcard origin exposes nothing.
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
-          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type" },
+          { key: "Access-Control-Allow-Headers", value: "Authorization, Content-Type, X-Nognog-Mobile-Protocol, X-Nognog-Mobile-Platform, X-Nognog-Mobile-Build, X-Nognog-Warehouse-UI" },
         ],
       },
     ];
