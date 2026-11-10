@@ -20,7 +20,9 @@ import { getProjectEquipmentChoices } from "@/lib/data/assets";
 import { getProject } from "@/lib/data/projects";
 import { getDocumentPage } from "@/lib/data/project-documents";
 import { ProjectBudgetSummary } from "@/components/projects/project-budget-summary";
-import { getProjectProfitability } from "@/lib/data/project-costs";
+import { ProjectBudgetAdjustment } from "@/components/projects/project-budget-adjustment";
+import { projectCostCategories } from "@/lib/projects/cost-breakdown";
+import { getProjectExpenseBreakdown, getProjectProfitability } from "@/lib/data/project-costs";
 import { getProjectMaterialCost } from "@/lib/data/inventory";
 import { getProjectMaterialPlan, getProjectProgress } from "@/lib/data/project-operations";
 import { getProjectWorkerCount, getProjectWorkforce } from "@/lib/data/workforce";
@@ -40,7 +42,7 @@ const tabs = [
 
 export default async function ProjectDetailPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; edit?: string; page?: string }>;
+  searchParams: Promise<{ tab?: string; edit?: string; page?: string; posted?: string }>;
 }) {
   const [{ id }, filters, user] = await Promise.all([params, searchParams, requireUser()]);
   const data = await getProject(id);
@@ -51,7 +53,7 @@ export default async function ProjectDetailPage({ params, searchParams }: {
   if (tab !== "overview") returnParams.set("tab", tab);
   const returnHref = `/projects/${id}${returnParams.size ? `?${returnParams}` : ""}`;
   const documentPage = Math.min(10000, Math.max(1, Number.parseInt(filters.page ?? "", 10) || 1));
-  const [workerCount, progress, profitability, workforce, materialPlan, materialCosts, siteQrCodes, equipmentChoices, documents] = await Promise.all([
+  const [workerCount, progress, profitability, workforce, materialPlan, materialCosts, siteQrCodes, equipmentChoices, documents, expenseBreakdown] = await Promise.all([
     getProjectWorkerCount(id),
     user.canViewDailyReports ? getProjectProgress(id) : Promise.resolve([]),
     user.canViewLaborRates ? getProjectProfitability(id) : Promise.resolve(null),
@@ -63,20 +65,15 @@ export default async function ProjectDetailPage({ params, searchParams }: {
     tab === "sites" && user.canManage ? getActiveQrCodesForEntities("project_site", sites.map((site) => site.id)) : Promise.resolve([]),
     user.roles.includes("foreman") && ["active", "on_hold"].includes(project.status) ? getProjectEquipmentChoices(id) : Promise.resolve([]),
     tab === "documents" ? getDocumentPage({ query: "", projectId: id, category: "all", fileKind: "all", page: documentPage }) : Promise.resolve(null),
+    user.canViewLaborRates ? getProjectExpenseBreakdown(id) : Promise.resolve([]),
   ]);
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const completion = Number(progress[0]?.completion_percent ?? 0);
   const municipality = project.municipality_code ? findMunicipality(project.municipality_code) : undefined;
   const manager = profiles.find((profile) => profile.id === project.project_manager_id)?.full_name ?? "Unassigned";
   const totalMaterialCost = materialCosts?.reduce((sum, row) => sum + Number(row.cost_total), 0) ?? 0;
-  const materialCostSection = materialCosts ? <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex justify-between gap-3"><h2 className="text-base font-semibold">Posted material consumption</h2><span className="text-sm font-semibold tabular-nums">{money.format(totalMaterialCost)}</span></div>{materialCosts.length === 0 ? <EmptyState compact title="No material consumption posted" /> : <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[480px] text-left text-sm"><thead className="border-b border-slate-100 text-slate-500"><tr><th className="py-3 font-medium">SKU</th><th className="py-3 font-medium">Material</th><th className="py-3 text-right font-medium">Used</th><th className="py-3 text-right font-medium">Cost</th></tr></thead><tbody className="divide-y divide-slate-100">{materialCosts.map((row) => <tr key={row.material_id}><td className="py-3">{row.material_code}</td><td className="py-3">{row.material_name}</td><td className="py-3 text-right tabular-nums">{quantity.format(Number(row.quantity))} {row.unit_symbol}</td><td className="py-3 text-right font-medium tabular-nums">{money.format(Number(row.cost_total))}</td></tr>)}</tbody></table></div>}</section> : null;
-  const costBreakdown = profitability ? <ProjectCostBreakdown categories={[
-    { label: "Materials", amountCentavos: Math.round(Number(profitability.material_cost) * 100), color: "#0891b2" },
-    { label: "Labour", amountCentavos: Math.round(Number(profitability.labor_cost) * 100), color: "#f59e0b" },
-    { label: "Equipment", amountCentavos: Math.round(Number(profitability.equipment_cost) * 100), color: "#8b5cf6" },
-    { label: "Other expenses", amountCentavos: Math.round(Number(profitability.other_cost) * 100), color: "#10b981" },
-    { label: "Other data", amountCentavos: Math.round((Number(profitability.site_stock_loss_cost) + Number(profitability.transfer_loss_cost)) * 100), color: "#64748b" },
-  ]} /> : null;
+  const materialCostSection = materialCosts ? <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex justify-between gap-3"><h2 className="text-base font-semibold">Posted material consumption</h2><span className="text-sm font-semibold tabular-nums">{money.format(totalMaterialCost)}</span></div>{materialCosts.length === 0 ? <p className="mt-3 text-sm text-slate-500">No material use has been posted. Requested, purchased and delivered materials are charged when actual use is recorded.</p> : <div className="mt-4 overflow-x-auto"><table className="w-full min-w-[480px] text-left text-sm"><thead className="border-b border-slate-100 text-slate-500"><tr><th className="py-3 font-medium">SKU</th><th className="py-3 font-medium">Material</th><th className="py-3 text-right font-medium">Used</th><th className="py-3 text-right font-medium">Cost</th></tr></thead><tbody className="divide-y divide-slate-100">{materialCosts.map((row) => <tr key={row.material_id}><td className="py-3">{row.material_code}</td><td className="py-3">{row.material_name}</td><td className="py-3 text-right tabular-nums">{quantity.format(Number(row.quantity))} {row.unit_symbol}</td><td className="py-3 text-right font-medium tabular-nums">{money.format(Number(row.cost_total))}</td></tr>)}</tbody></table></div>}</section> : null;
+  const costBreakdown = profitability ? <ProjectCostBreakdown categories={projectCostCategories(id, profitability, expenseBreakdown)} /> : null;
   return <>
     <Link href="/projects" className="mb-4 inline-flex items-center gap-2 rounded-full text-sm text-slate-500 hover:text-cyan-700"><HugeiconsIcon icon={ArrowLeft01Icon} size={17} strokeWidth={1.5} />Projects</Link>
     <header className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -115,7 +112,17 @@ export default async function ProjectDetailPage({ params, searchParams }: {
         </section>
         {materialCostSection}
       </div>}
-      {tab === "finance" && profitability && <div className="space-y-5"><div className="flex flex-wrap justify-end gap-2"><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>{user.canManage ? "Manage costs & budget" : "Costs & budget"}</Link></Button><Button variant="outline" asChild><Link href="/billing">Client invoices & payments</Link></Button></div><section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Project budget</h2><div className="mt-5"><ProjectBudgetSummary budget={Number(profitability.approved_budget)} cost={Number(profitability.total_posted_cost)} /></div></section><section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Billing and estimated profit</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[["Contract value", profitability.contract_value], ["Estimated gross profit", profitability.estimated_gross_profit], ["Issued invoices", profitability.invoiced_amount], ["Payments received", profitability.cash_received], ["Outstanding invoices", profitability.receivables]].map(([label, amount]) => <div key={String(label)}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{money.format(Number(amount))}</dd></div>)}</dl><p className="mt-5 text-xs leading-5 text-slate-500">Estimated profit is the contract value minus recorded costs. Invoices and payments are shown separately.</p></section>{costBreakdown}{materialCostSection}</div>}
+      {tab === "finance" && profitability && <div className="space-y-5">
+        {filters.posted === "budget" && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Approved budget updated. The change and reason are saved in budget history.</p>}
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-base font-semibold">Project budget</h2><p className="mt-1 text-sm text-slate-500">Remaining budget = approved budget minus actual posted costs.</p></div>{user.canManage && <ProjectBudgetAdjustment projectId={id} budget={Number(profitability.approved_budget)} cost={Number(profitability.total_posted_cost)} initialKey={randomUUID()} returnTo="finance" />}</div>
+          <div className="mt-5"><ProjectBudgetSummary budget={Number(profitability.approved_budget)} cost={Number(profitability.total_posted_cost)} /></div>
+          <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-100 pt-4"><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>{user.canManage ? "Record costs & view history" : "View cost history"}</Link></Button><Button variant="ghost" asChild><Link href={`/projects/${id}/costs#budget-history`}>Budget change history</Link></Button></div>
+        </section>
+        {costBreakdown}
+        {materialCostSection}
+        <details className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><summary className="cursor-pointer text-base font-semibold">Billing and estimated profit</summary><dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[["Contract value", profitability.contract_value], ["Estimated gross profit", profitability.estimated_gross_profit], ["Issued invoices", profitability.invoiced_amount], ["Payments received", profitability.cash_received], ["Outstanding invoices", profitability.receivables]].map(([label, amount]) => <div key={String(label)}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{money.format(Number(amount))}</dd></div>)}</dl><p className="mt-5 text-sm leading-6 text-slate-500">Estimated profit uses the contract value minus actual costs. Payments do not change the approved budget.</p><Button variant="outline" className="mt-4" asChild><Link href="/billing">Client invoices & payments</Link></Button></details>
+      </div>}
     </div>
   </>;
 }

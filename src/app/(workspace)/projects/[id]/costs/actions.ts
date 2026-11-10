@@ -98,6 +98,7 @@ export async function adjustBudgetAction(_: ProjectCostActionState, form: FormDa
   const { error } = await supabase.rpc("adjust_project_budget", { p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId, p_change_amount: input.changeAmount, p_reason: input.reason });
   if (error) return fail(costError(error));
   update(input.projectId);
+  if (value(form, "returnTo") === "finance") redirect(`/projects/${input.projectId}?tab=finance&posted=budget`);
   redirect(`/projects/${input.projectId}/costs?posted=budget`);
 }
 

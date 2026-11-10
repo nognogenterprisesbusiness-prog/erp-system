@@ -412,6 +412,8 @@ export type Database = {
       reverse_project_cost_entry: { Args: { p_idempotency_key: string; p_kind: "equipment" | "expense"; p_entry_id: string; p_reason: string }; Returns: string };
       get_project_management_summary: { Args: { p_project_id: string }; Returns: ProjectManagementSummaryRow[] };
       get_project_profitability: { Args: { p_project_id: string }; Returns: ProjectProfitabilityRow[] };
+      get_project_expense_breakdown: { Args: { p_project_id: string }; Returns: { bucket: string; amount: number; entry_count: number }[] };
+      get_project_expense_entries: { Args: { p_project_id: string; p_bucket?: string; p_offset?: number; p_limit?: number }; Returns: { id: string; expense_date: string; category: string; bucket: string; description: string; external_reference: string; amount: number; receipt_id: string | null; reversal_reason: string | null; reversed_at: string | null; total_count: number }[] };
       get_dashboard_monthly_project_costs: { Args: { p_months?: number }; Returns: DashboardMonthlyCostRow[] };
       get_dashboard_project_counts: { Args: Record<string, never>; Returns: { total: number; active: number; on_hold: number }[] };
       get_dashboard_totals: { Args: Record<string, never>; Returns: { total_sales: number; total_expenses: number | null; total_material_value: number | null; unvalued_stock: number; unvalued_expenses: number }[] };
