@@ -14,7 +14,7 @@ import { requireUser } from "@/lib/auth";
 import { getMaterialRequest } from "@/lib/data/material-requests";
 import { createClient } from "@/lib/supabase/server";
 
-import { requestDeliveryStage } from "@/lib/requests/delivery-stage";
+import { requestDeliveryLabels, requestDeliveryStage } from "@/lib/requests/delivery-stage";
 
 const labels = { submitted: "For approval", approved: "Approved", partially_approved: "Partially approved", rejected: "Rejected", cancelled: "Cancelled" };
 
@@ -30,16 +30,17 @@ export default async function MaterialRequestDetailPage({ params }: { params: Pr
   if (warehouseChoices.error) throw new Error("Unable to load source warehouses.");
   const canCancel = (request.status === "submitted" || request.status === "approved" || request.status === "partially_approved")
     && dispatches.length === 0 && (user.canManage || request.requested_by === user.userId);
-  const canCloseRemainder = (request.status === "approved" || request.status === "partially_approved") && user.canOperateInventory
+  const canRelease = user.canOperateInventory && lines.some((line) => line.sourceOnHand !== null);
+  const canCloseRemainder = (request.status === "approved" || request.status === "partially_approved") && canRelease
     && dispatches.length > 0 && lines.some((line) => Number(line.reservation?.remaining_quantity ?? 0) > 0);
-  const canReceive = Boolean(capabilities?.[0]?.can_read);
+  const canReceive = Boolean(capabilities?.[0]?.can_read) && (user.canManage || user.roles.some((role) => role === "engineer" || role === "foreman"));
   const vehicles = user.canOperateInventory && (request.status === "approved" || request.status === "partially_approved")
     ? await (await createClient()).rpc("get_delivery_vehicle_choices")
     : { data: [], error: null };
   if (vehicles.error) throw new Error("Unable to load delivery vehicles.");
   const totals = new Map(lines.map((line) => [line.id, dispatches.filter((dispatch) => dispatch.request_line_id === line.id).reduce((total, dispatch) => ({ dispatched: total.dispatched + dispatch.item.dispatched_quantity, received: total.received + dispatch.item.received_quantity, variance: total.variance + dispatch.item.variance_quantity }), { dispatched: 0, received: 0, variance: 0 })]));
   const stage = requestDeliveryStage(request.status, lines.map((line) => ({ approved_quantity: line.approved_quantity, reserved: Number(line.reservation?.remaining_quantity ?? 0), ...totals.get(line.id)! })));
-  const deliveryLabel = stage ? { ready: "Ready for dispatch", upcoming: "Upcoming delivery", partial: "Partly received", received: "Received", settled: "Completed with variance" }[stage] : null;
+  const deliveryLabel = stage ? requestDeliveryLabels[stage] : null;
   const hasReservedStock = lines.some((line) => Number(line.reservation?.remaining_quantity ?? 0) > 0);
   const hasIncoming = dispatches.some((dispatch) => dispatch.remainingQuantity > 0);
   const nextStep = request.status === "submitted"
@@ -50,7 +51,7 @@ export default async function MaterialRequestDetailPage({ params }: { params: Pr
         : { title: "Waiting for approval", detail: "An authorized reviewer must approve this request before stock can be released.", target: null, action: "" }
     : hasIncoming && canReceive
       ? { title: "Confirm what arrived", detail: "Record only the quantity delivered to the site.", target: "#site-deliveries", action: "Receive delivery" }
-      : hasReservedStock && user.canOperateInventory
+      : hasReservedStock && canRelease
         ? { title: "Release approved stock", detail: "Enter the quantity leaving the warehouse and its delivery details.", target: "#release-materials", action: "Release stock" }
         : null;
   const history = [
@@ -78,14 +79,14 @@ export default async function MaterialRequestDetailPage({ params }: { params: Pr
       : <RequestWarehouseAssignment key={`${id}:${request.source_warehouse_id}`} id={id} kind="request" current={null} choices={warehouseChoices.data ?? []} />)}
     {(!user.canOperateInventory || request.status !== "submitted") && <p className="mt-4 text-sm text-slate-600">Source warehouse: <strong>{warehouse.name}</strong></p>}
     {request.status === "submitted" && !request.source_warehouse_id && <p role="status" className="mt-4 text-sm text-amber-700">Waiting for Admin or Warehouse Staff to choose the source warehouse before approval.</p>}
-    {deliveryLabel && !nextStep && <div role="status" className="mt-5 rounded-xl border border-cyan-100 bg-cyan-50 p-4 text-sm text-cyan-900"><p className="font-semibold">{deliveryLabel}</p><p className="mt-1">{stage === "ready" ? "Approved stock is reserved at the warehouse. Release it to start delivery." : stage === "upcoming" || stage === "partial" ? "Open Site deliveries below to confirm only what arrives. The remaining quantity stays in transit." : "Check receipt and variance history below for the quantities accepted at the site."}</p></div>}
+    {deliveryLabel && !nextStep && <div role="status" className="mt-5 rounded-xl border border-cyan-100 bg-cyan-50 p-4 text-sm text-cyan-900"><p className="font-semibold">{deliveryLabel}</p><p className="mt-1">{stage === "ready" ? "Approved stock is reserved at the warehouse. Release it to start delivery." : stage === "upcoming" || stage === "partial" ? "Open Site deliveries below to confirm only what arrives. The remaining quantity stays in transit." : "All released quantities are accounted for. Check history for any undelivered quantities that were closed."}</p></div>}
     <MaterialRequestItems key={`${request.id}:${request.source_warehouse_id}:${request.status}`} requestId={request.id} canDecide={canDecide} submitted={request.status === "submitted"} hasSource={request.source_warehouse_id !== null} sourceName={warehouse.name} siteName={site.name} lines={lines.map((line) => ({
       id: line.id, name: line.material?.name ?? "Unavailable material", code: line.material?.code ?? "—", unit: line.unitSymbol,
       requested: line.requested_quantity, approved: line.approved_quantity, reserved: Number(line.reservation?.remaining_quantity ?? 0),
       dispatched: totals.get(line.id)!.dispatched, received: totals.get(line.id)!.received, variance: totals.get(line.id)!.variance,
       sourceOnHand: line.sourceOnHand, sourceAvailable: line.sourceAvailable, siteOnHand: line.siteOnHand, siteAvailable: line.siteAvailable,
     }))} />
-    {(request.status === "approved" || request.status === "partially_approved") && user.canOperateInventory && lines.some((line) => Number(line.reservation?.remaining_quantity ?? 0) > 0) && <section id="release-materials" className="mt-5 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-base font-semibold">Release materials</h2><div className="mt-3 space-y-3">{lines.filter((line) => Number(line.reservation?.remaining_quantity ?? 0) > 0).map((line) => <div key={line.id} className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm"><span className="font-medium">{line.material?.name ?? "Material"}</span><span className="ml-2 text-slate-500">{line.reservation?.remaining_quantity} {line.unitSymbol} ready to release</span></p><RecordCreateDialog title="Release materials" triggerLabel="Release" triggerVariant="outline"><p className="mb-3 text-sm text-slate-500">{line.material?.name} · {warehouse?.name} → {site?.name}</p><RequestMovementForm mode="dispatch" id={line.id} requestId={request.id} remaining={Number(line.reservation?.remaining_quantity ?? 0)} unit={line.unitSymbol} vehicles={vehicles.data ?? []} expanded /></RecordCreateDialog></div>)}</div></section>}
+    {(request.status === "approved" || request.status === "partially_approved") && canRelease && lines.some((line) => Number(line.reservation?.remaining_quantity ?? 0) > 0) && <section id="release-materials" className="mt-5 scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5"><h2 className="text-base font-semibold">Release materials</h2><div className="mt-3 space-y-3">{lines.filter((line) => Number(line.reservation?.remaining_quantity ?? 0) > 0).map((line) => <div key={line.id} className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm"><span className="font-medium">{line.material?.name ?? "Material"}</span><span className="ml-2 text-slate-500">{line.reservation?.remaining_quantity} {line.unitSymbol} ready to release</span></p><RecordCreateDialog title="Release materials" triggerLabel="Release" triggerVariant="outline"><p className="mb-3 text-sm text-slate-500">{line.material?.name} · {warehouse?.name} → {site?.name}</p><RequestMovementForm mode="dispatch" id={line.id} requestId={request.id} remaining={Number(line.reservation?.remaining_quantity ?? 0)} unit={line.unitSymbol} vehicles={vehicles.data ?? []} expanded /></RecordCreateDialog></div>)}</div></section>}
     {canCloseRemainder && <RequestRemainderClosure requestId={request.id} />}
     {dispatches.length > 0 && <section id="site-deliveries" className="mt-8 scroll-mt-24"><h2 className="text-lg font-semibold text-slate-900">Site deliveries</h2><p className="mt-1 text-sm text-slate-500">Enter only what actually arrived. Any shortage stays in transit until an Admin reviews it.</p><div className="mt-4 grid gap-3">{dispatches.map((dispatch) => {
       const line = lines.find((entry) => entry.id === dispatch.request_line_id);

@@ -7,6 +7,7 @@ import { safeSearchTerm } from "./search";
 import { readAllPages, readByIds } from "./read-all-pages";
 import { getDailyReportChoices } from "./daily-reports";
 import type { MaterialRequestStatus } from "@/types/database";
+import { requestDeliveryStage } from "@/lib/requests/delivery-stage";
 
 const PAGE_SIZE = 20;
 
@@ -52,11 +53,18 @@ export async function getMaterialRequests(filters: { search?: string; status?: M
   if (error) throw new Error("Unable to load material requests.");
   const rows = data ?? [];
   const requestIds = rows.map((row) => row.id);
-  const [contexts, lines] = await Promise.all([
+  const [contexts, lines, tracking] = await Promise.all([
     requestIds.length ? supabase.rpc("get_material_request_context", { p_request_ids: requestIds }) : Promise.resolve({ data: [], error: null }),
     requestIds.length ? supabase.from("material_request_lines").select("id,request_id,material_id").in("request_id", requestIds).order("id") : Promise.resolve({ data: [], error: null }),
+    requestIds.length ? supabase.rpc("get_material_request_tracking", { p_request_ids: requestIds }) : Promise.resolve({ data: [], error: null }),
   ]);
-  if (contexts.error || lines.error || contexts.data?.length !== rows.length) throw new Error("Unable to resolve request locations.");
+  if (contexts.error || lines.error || tracking.error || contexts.data?.length !== rows.length) throw new Error("Unable to resolve request locations and progress.");
+  const trackingByRequest = new Map<string, NonNullable<typeof tracking.data>[number][]>();
+  for (const line of tracking.data ?? []) {
+    const entries = trackingByRequest.get(line.request_id) ?? [];
+    entries.push(line);
+    trackingByRequest.set(line.request_id, entries);
+  }
   const materialIds = [...new Set((lines.data ?? []).map((line) => line.material_id))];
   const materials = materialIds.length ? await supabase.from("materials").select("id,name,photo_path").in("id", materialIds) : { data: [], error: null };
   if (materials.error) throw new Error("Unable to load request materials.");
@@ -75,6 +83,7 @@ export async function getMaterialRequests(filters: { search?: string; status?: M
       const material = preview ? materialMap.get(preview.materialId) : null;
       return {
         ...row,
+        deliveryStage: requestDeliveryStage(row.status, trackingByRequest.get(row.id) ?? []),
         project: { id: context.project_id, code: context.project_code, name: context.project_name },
         siteName: context.site_name,
         warehouseName: row.source_warehouse_name,

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { PagedReferencePicker } from "@/components/ui/paged-reference-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { SelectPicker } from "@/components/ui/select-picker";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { getMaterialRequestFormChoices } from "@/lib/data/material-requests";
 
 type Choices = Awaited<ReturnType<typeof getMaterialRequestFormChoices>>;
@@ -19,14 +20,16 @@ export function MaterialRequestForm({ choices, idempotencyKey, initialLineKey, i
   const [state, action, pending] = useActionState(submitMaterialRequestAction, initialState);
   const [requestKey] = useState(idempotencyKey);
   const [purpose, setPurpose] = useState("");
-  const [projectId, setProjectId] = useState(initialProjectId ?? choices.projects[0]?.id ?? "");
+  const [projectId, setProjectId] = useState(initialProjectId ?? (choices.projects.length === 1 ? choices.projects[0].id : ""));
   const [siteId, setSiteId] = useState(initialSiteId ?? "");
   const [lines, setLines] = useState<Line[]>([{ key: initialLineKey, materialId: initialMaterialId, quantity: initialQuantity ?? "" }]);
   const sites = choices.sites.filter((item) => item.project_id === projectId);
-  const selectedSite = sites.some((item) => item.id === siteId) ? siteId : sites[0]?.id ?? "";
+  const selectedSite = sites.some((item) => item.id === siteId) ? siteId : sites.length === 1 ? sites[0].id : "";
   const error = (field: string) => state.ok ? undefined : state.fieldErrors?.[field]?.[0];
   const updateLine = (key: string, patch: Partial<Line>) => setLines((current) => current.map((line) => line.key === key ? { ...line, ...patch } : line));
   const payload = lines.map(({ materialId, quantity }) => ({ materialId, quantity }));
+
+  if (!choices.projects.length) return <EmptyState title="No assigned project" description="Ask Admin to assign you to an active project before requesting materials." />;
 
   return <form action={action} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
     <input type="hidden" name="idempotencyKey" value={requestKey} />
@@ -35,7 +38,7 @@ export function MaterialRequestForm({ choices, idempotencyKey, initialLineKey, i
     <input type="hidden" name="lines" value={JSON.stringify(payload)} />
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="Project" htmlFor="requestProject" error={error("projectId")}>
-        <SelectPicker id="requestProject" disabled={pending} label="Project" value={projectId} onValueChange={(next) => { setProjectId(next); setSiteId(""); setLines((current) => current.map((line) => ({ ...line, materialId: "" }))); }} options={choices.projects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} />
+        <SelectPicker id="requestProject" disabled={pending} label="Project" placeholder="Choose the project that needs materials" value={projectId} onValueChange={(next) => { setProjectId(next); setSiteId(""); setLines((current) => current.map((line) => ({ ...line, materialId: "" }))); }} options={choices.projects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} />
       </FormField>
       <FormField label="Site" htmlFor="requestSite" error={error("siteId")}>
         <SelectPicker id="requestSite" disabled={pending} label="Site" value={selectedSite} onValueChange={setSiteId} options={sites.map((item) => ({ value: item.id, label: item.name }))} placeholder="Select site" />

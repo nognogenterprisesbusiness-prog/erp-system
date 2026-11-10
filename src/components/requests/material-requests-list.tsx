@@ -1,5 +1,6 @@
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { z } from "zod";
+import { requestDeliveryLabels } from "@/lib/requests/delivery-stage";
 import { Button } from "@/components/ui/button";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -25,7 +26,7 @@ export async function MaterialRequestsList({ params, canRequest }: { params: Rec
   return <>
     <ListFilterBar>
       <SearchField name="q" label="Search request number" defaultValue={search} placeholder="Search request number" />
-      <div className="min-w-[180px]"><SelectPicker name="status" label="Status" defaultValue={filters.status} options={[{ value: "all", label: "All statuses" }, ...statuses.map((value) => ({ value, label: statusLabels[value] }))]} /></div>
+      <div className="min-w-[180px]"><SelectPicker name="status" label="Approval status" defaultValue={filters.status} options={[{ value: "all", label: "All approval statuses" }, ...statuses.map((value) => ({ value, label: statusLabels[value] }))]} /></div>
     </ListFilterBar>
     <DataTableShell empty={result.requests.length === 0 ? <EmptyState title="No material requests found" description={canRequest ? "Create a request or change the filters." : "No requests are available to your account."} /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} request{result.count === 1 ? "" : "s"}</span>}>
       <table className="w-full min-w-[900px] text-left text-sm"><thead className={tableHeadClass}><tr>
@@ -35,7 +36,7 @@ export async function MaterialRequestsList({ params, canRequest }: { params: Rec
         <td className="px-4 py-4"><Link href={`/requests/${request.id}`} className="flex items-center gap-3 hover:text-cyan-700"><MaterialThumbnail name={request.materialPreview?.name ?? "Material"} photo={request.materialPreview?.photo_path ? recordPhotoUrl("materials", request.materialPreview.materialId) : null} /><span className="min-w-0"><span className="block font-medium text-slate-800">{request.materialPreview?.name ?? "Material"}</span>{(request.materialPreview?.count ?? 0) > 1 && <span className="mt-0.5 block text-xs text-slate-500">+{(request.materialPreview?.count ?? 0) - 1} more materials</span>}</span></Link></td>
         <td className="px-4 py-4"><p className="font-medium text-slate-800">{request.project?.code ?? "—"} · {request.project?.name ?? "Unavailable project"}</p><p className="mt-1 text-xs text-slate-500">{request.siteName}</p></td>
         <td className="px-4 py-4 text-slate-600">{request.warehouseName}</td><td className="px-4 py-4 text-slate-600">{request.required_date}</td>
-        <td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${request.status === "rejected" ? "bg-red-50 text-red-700" : request.status === "submitted" ? "bg-amber-50 text-amber-800" : "bg-cyan-50 text-cyan-800"}`}>{statusLabels[request.status]}</span></td>
+        <td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${request.status === "rejected" ? "bg-red-50 text-red-700" : request.status === "submitted" ? "bg-amber-50 text-amber-800" : "bg-cyan-50 text-cyan-800"}`}>{request.deliveryStage ? requestDeliveryLabels[request.deliveryStage] : statusLabels[request.status]}</span>{request.deliveryStage && <p className="mt-1 text-xs text-slate-500">{statusLabels[request.status]}</p>}</td>
         <td className="px-5 py-4 text-right text-xs text-slate-500">{new Date(request.requested_at).toLocaleDateString("en-PH")}</td><td className="px-5 py-4 text-right"><Button asChild variant="outline" size="sm"><Link href={`/requests/${request.id}`} aria-label={`View request ${request.request_number}`}>View</Link></Button></td>
       </tr>)}</tbody></table>
     </DataTableShell>

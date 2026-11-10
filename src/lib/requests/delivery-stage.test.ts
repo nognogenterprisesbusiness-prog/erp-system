@@ -17,3 +17,12 @@ test("different units and fractional receipts do not produce false delivery comp
   assert.equal(requestDeliveryStage("approved", [{ ...line, approved_quantity: 0.3, dispatched: 0.3, received: 0.1, variance: 0.2 }]), "settled");
   assert.equal(requestDeliveryStage("approved", []), null);
 });
+
+test("closing an undispatched remainder completes only after dispatched stock is settled", () => {
+  assert.equal(requestDeliveryStage("approved", [{ ...line, dispatched: 6, received: 6 }]), "received");
+  assert.equal(requestDeliveryStage("approved", [{ ...line, dispatched: 6, received: 6, reserved: 4 }]), "partial");
+  assert.equal(requestDeliveryStage("approved", [{ ...line, dispatched: 6, received: 3 }]), "partial");
+  assert.equal(requestDeliveryStage("approved", [{ ...line, dispatched: 6, received: 4, variance: 2 }]), "settled");
+  assert.equal(requestDeliveryStage("approved", [{ ...line, dispatched: 6, received: 6 }, { ...line }]), "received");
+  assert.equal(requestDeliveryStage("approved", [{ ...line, dispatched: 6, variance: 6 }]), "settled");
+});

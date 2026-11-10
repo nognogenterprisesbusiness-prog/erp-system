@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { decideMaterialRequestSchema } from "@nognog/domain";
 import { decideMaterialRequestAction, type RequestActionState } from "@/app/(workspace)/requests/actions";
 import { Button } from "@/components/ui/button";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -35,9 +36,10 @@ export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, s
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [quantities, setQuantities] = useState<Record<string, string>>(() => Object.fromEntries(lines.map((line) => [line.id, String(line.requested)])));
   const exceedsStock = lines.some((line) => line.sourceAvailable !== null && Number(quantities[line.id]) > line.sourceAvailable);
-  const invalid = lines.some((line) => !quantities[line.id]?.trim() || !Number.isFinite(Number(quantities[line.id])) || Number(quantities[line.id]) < 0 || Number(quantities[line.id]) > line.requested);
+  const invalid = !decideMaterialRequestSchema.shape.decisions.safeParse(quantities).success || lines.some((line) => Number(quantities[line.id]) > line.requested);
   const isReduced = lines.some((line) => Number(quantities[line.id]) < line.requested);
-  const display = (value: number | null, unit: string) => value === null ? "Restricted" : `${quantity.format(value)} ${unit}`;
+  const showWarehouse = submitted && (canDecide || lines.some((line) => line.sourceAvailable !== null));
+  const display = (value: number | null, unit: string) => value === null ? "Not visible to your account" : `${quantity.format(value)} ${unit}`;
   const content = <>
     <div className="px-5 pt-5">
       <h2 className="text-base font-semibold text-slate-900">{canDecide ? "Review requested materials" : "Requested materials"}</h2>
@@ -48,20 +50,22 @@ export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, s
         <thead className={`hidden sm:table-header-group ${tableHeadClass}`}><tr>
           <th scope="col" className="px-5 py-3">Material</th>
           <th scope="col" className="px-4 py-3 text-right">Requested</th>
-          {submitted && <th scope="col" className="px-4 py-3 text-right">Warehouse available</th>}
+          {showWarehouse && <th scope="col" className="px-4 py-3 text-right">Warehouse available</th>}
           {canDecide ? <th scope="col" className="px-4 py-3">Approve quantity</th> : !submitted && <><th scope="col" className="px-4 py-3 text-right">Approved</th><th scope="col" className="px-4 py-3 text-right">Received</th></>}
           <th scope="col" className="px-5 py-3 text-right">Details</th>
         </tr></thead>
         <tbody className="block divide-y divide-slate-100 sm:table-row-group">{lines.map((line) => {
-          const overAvailable = line.sourceAvailable !== null && Number(quantities[line.id]) > line.sourceAvailable;
+          const limit = Math.min(line.requested, line.sourceAvailable ?? line.requested);
+          const exceedsLimit = Number(quantities[line.id]) > limit;
+          const invalidFormat = !decideMaterialRequestSchema.shape.decisions.valueType.safeParse(quantities[line.id]).success;
           return <tr key={line.id} className="grid grid-cols-2 sm:table-row">
             <td className="col-span-2 px-5 py-4"><p className="font-medium text-slate-900">{line.name}</p><p className="mt-1 text-xs text-slate-500">{line.code}</p></td>
             <td className="px-4 py-4 text-right tabular-nums"><span className="mb-1 block text-left text-xs text-slate-500 sm:hidden">Requested</span>{display(line.requested, line.unit)}</td>
-            {submitted && <td className="px-4 py-4 text-right tabular-nums"><span className="mb-1 block text-left text-xs text-slate-500 sm:hidden">Warehouse available</span><span className={line.sourceAvailable !== null && line.requested > line.sourceAvailable ? "font-semibold text-amber-800" : "font-semibold text-slate-900"}>{hasSource ? display(line.sourceAvailable, line.unit) : "Choose warehouse"}</span>{line.sourceAvailable !== null && line.requested > line.sourceAvailable && <span className="mt-1 block text-xs text-amber-800">Short by {display(line.requested - line.sourceAvailable, line.unit)}</span>}</td>}
+            {showWarehouse && <td className="px-4 py-4 text-right tabular-nums"><span className="mb-1 block text-left text-xs text-slate-500 sm:hidden">Warehouse available</span><span className={line.sourceAvailable !== null && line.requested > line.sourceAvailable ? "font-semibold text-amber-800" : "font-semibold text-slate-900"}>{!hasSource ? "Choose warehouse" : line.sourceAvailable === null && canDecide ? "Checked on approval" : display(line.sourceAvailable, line.unit)}</span>{line.sourceAvailable !== null && line.requested > line.sourceAvailable && <span className="mt-1 block text-xs text-amber-800">Short by {display(line.requested - line.sourceAvailable, line.unit)}</span>}</td>}
             {canDecide ? <td className="px-4 py-4 sm:w-44">
               <span aria-hidden="true" className="mb-1 block text-xs text-slate-500 sm:hidden">Approve quantity</span><label className="sr-only" htmlFor={`approved-${line.id}`}>Approve quantity for {line.name} ({line.unit})</label>
-              <div className="flex items-center gap-2"><input id={`approved-${line.id}`} className={`${fieldControlClass} min-w-20 ${overAvailable ? "border-amber-500" : ""}`} type="number" inputMode="decimal" min={0} max={Math.min(line.requested, line.sourceAvailable ?? line.requested)} step="any" value={quantities[line.id] ?? ""} onChange={(event) => setQuantities((current) => ({ ...current, [line.id]: event.target.value }))} aria-invalid={overAvailable || undefined} aria-describedby={overAvailable ? `stock-error-${line.id}` : undefined} disabled={pending} required /><span className="text-xs text-slate-500">{line.unit}</span></div>
-              {overAvailable && <p id={`stock-error-${line.id}`} className="mt-1 text-xs text-amber-800">Approve up to {display(line.sourceAvailable, line.unit)}.</p>}
+              <div className="flex items-center gap-2"><input id={`approved-${line.id}`} className={`${fieldControlClass} min-w-20 ${exceedsLimit || invalidFormat ? "border-amber-500" : ""}`} type="number" inputMode="decimal" min={0} max={limit} step="0.0001" value={quantities[line.id] ?? ""} onChange={(event) => setQuantities((current) => ({ ...current, [line.id]: event.target.value }))} aria-invalid={exceedsLimit || invalidFormat || undefined} aria-describedby={exceedsLimit || invalidFormat ? `stock-error-${line.id}` : undefined} disabled={pending} required /><span className="text-xs text-slate-500">{line.unit}</span></div>
+              {(exceedsLimit || invalidFormat) && <p id={`stock-error-${line.id}`} className="mt-1 text-xs text-amber-800">{invalidFormat ? "Enter 0 or a positive quantity, with up to 4 decimal places." : `Approve up to ${display(limit, line.unit)}.`}</p>}
             </td> : !submitted && <><td className="px-4 py-4 text-right tabular-nums"><span className="mb-1 block text-xs text-slate-500 sm:hidden">Approved</span>{display(line.approved, line.unit)}</td><td className="px-4 py-4 text-right tabular-nums"><span className="mb-1 block text-xs text-slate-500 sm:hidden">Received</span>{display(line.received, line.unit)}</td></>}
             <td className="px-5 py-4 text-right"><RecordCreateDialog title={line.name} triggerLabel="View" triggerAriaLabel={`View stock and delivery details for ${line.name}`} triggerVariant="outline" triggerSize="sm" triggerIcon={null}>
               <p className="mb-4 text-sm text-slate-500">{line.code}</p>
@@ -84,7 +88,7 @@ export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, s
     </div>
     {canDecide && <div className="border-t border-slate-100 p-5">
       <FormField label={isReduced ? "Reason for reduction or rejection" : "Decision note (optional)"} htmlFor="decisionReason">
-        <textarea id="decisionReason" name="reason" className={`${fieldControlClass} h-auto py-3`} rows={2} maxLength={500} required={isReduced} disabled={pending} />
+        <textarea id="decisionReason" name="reason" className={`${fieldControlClass} h-auto py-3`} rows={2} minLength={isReduced ? 3 : undefined} maxLength={500} required={isReduced} disabled={pending} />
       </FormField>
       {!state.ok && state.message && <p role="alert" className="mt-3 text-sm font-medium text-red-600">{state.message}</p>}
       {exceedsStock && <p role="alert" className="mt-3 text-sm text-amber-800">Reduce the highlighted quantities to available stock, or change the source warehouse.</p>}
