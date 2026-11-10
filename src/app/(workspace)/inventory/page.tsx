@@ -24,13 +24,18 @@ import { requireUser } from "@/lib/auth";
 import { getInventoryMaterials, getMaterialReferences, getInventoryOptions, getSiteConsumptionOptions } from "@/lib/data/inventory";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
 import { InventoryTypeTabs } from "@/components/inventory/inventory-type-tabs";
-import { AssetRegistryPage } from "@/components/assets/asset-registry-page";
+import { redirect } from "next/navigation";
 import { inventoryScopeLabel, parseInventoryScope } from "@/lib/inventory/scope";
 
 export default async function InventoryPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
   if (params.type === "equipment" || params.type === "vehicle") {
-    return <AssetRegistryPage kind={params.type} searchParams={Promise.resolve(params)} inventoryMode />;
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (key !== "type" && typeof value === "string") query.set(key, value);
+    }
+    const destination = params.type === "equipment" ? "/equipment" : "/vehicles";
+    redirect(query.size ? `${destination}?${query}` : destination);
   }
   const query = typeof params.q === "string" ? params.q.slice(0, 80) : "";
   const locationId = typeof params.location === "string" ? params.location : "";

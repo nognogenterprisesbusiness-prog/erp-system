@@ -1,6 +1,6 @@
 "use client";
 
-import { AssignmentsIcon, Audit01Icon, Money03Icon, Building03Icon, DashboardSquare01Icon, File02Icon, FilePenLineIcon, Logout01Icon, Invoice01Icon, Package01Icon, ShoppingCart01Icon, PackageReceiveIcon, QrCodeIcon, Store02Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { AssignmentsIcon, Audit01Icon, Money03Icon, Building03Icon, DashboardSquare01Icon, File02Icon, FilePenLineIcon, Logout01Icon, Invoice01Icon, Package01Icon, ShoppingCart01Icon, PackageReceiveIcon, QrCodeIcon, Store02Icon, UserGroupIcon, WarehouseIcon, HelpCircleIcon, Notification01Icon, UserCircleIcon, ExcavatorIcon, DeliveryTruck01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { logoutAction } from "@/app/auth/actions";
@@ -17,6 +17,8 @@ const navItems = [
   { href: "/dashboard", label: "Overview", icon: DashboardSquare01Icon, group: "Main work" },
   { href: "/projects", label: "Projects", icon: Building03Icon, group: "Main work" },
   { href: "/inventory", label: "Inventory", icon: Package01Icon, group: "Main work" },
+  { href: "/equipment", label: "Equipment", icon: ExcavatorIcon, group: "Main work" },
+  { href: "/vehicles", label: "Vehicles", icon: DeliveryTruck01Icon, group: "Main work" },
   { href: "/requests", label: "Requests", icon: AssignmentsIcon, requests: true, group: "Main work" },
   { href: "/purchase-orders", label: "Purchasing", icon: ShoppingCart01Icon, procurement: true, group: "Main work" },
   { href: "/suppliers", label: "Suppliers", icon: Store02Icon, procurement: true, group: "Main work" },
@@ -43,7 +45,7 @@ export function WorkspaceShell({ children, userId, name, avatar, roleLabel, canV
     if ("financeSitePurchase" in item) return canViewFinance;
     return (!("procurement" in item) || canViewProcurement) && (!("finance" in item) || canViewFinance) && (!("reports" in item) || canViewDailyReports) && (!("requests" in item) || canViewRequests || canDispatchRequests) && (!("receiving" in item) || (canDispatchRequests && !canManage)) && (!("sitePurchases" in item) || canViewFinance || canSubmitSitePurchases) && (!("manager" in item) || canManage);
   }).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item);
-  const activeHref = pathname.startsWith("/materials") || pathname.startsWith("/equipment") || pathname.startsWith("/vehicles") ? "/inventory" : pathname.startsWith("/purchase-orders/receive") ? "/purchase-orders/receive" : pathname.startsWith("/purchase-orders") ? "/purchase-orders" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
+  const activeHref = pathname.startsWith("/materials") ? "/inventory" : pathname.startsWith("/purchase-orders/receive") ? "/purchase-orders/receive" : pathname.startsWith("/purchase-orders") ? "/purchase-orders" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
   return <><Suspense fallback={null}><LiveRouteRefresh userId={userId} /></Suspense><AppShell name={name} avatar={avatar} roleLabel={roleLabel} items={items} activeHref={activeHref} footerItems={[{ href: "/profile", label: "My profile", icon: UserCircleIcon }, { href: "/notifications", label: "Notifications", icon: Notification01Icon }, { href: "/manual", label: "User manual", icon: HelpCircleIcon, newTab: true }]} homeHref="/dashboard" headerSearch={<HeaderSearch />} headerActions={<>
     <NotificationBell userId={userId} />
   </>} profileActions={<><Link href="/profile" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-normal text-slate-700 hover:bg-slate-50"><HugeiconsIcon icon={UserCircleIcon} size={17} strokeWidth={1.7} />My profile</Link><form action={logoutAction}><Button variant="ghost" className="w-full justify-start gap-2 px-3 text-sm font-normal" type="submit"><HugeiconsIcon icon={Logout01Icon} size={17} strokeWidth={1.7} />Sign out</Button></form></>}>{children}</AppShell></>;

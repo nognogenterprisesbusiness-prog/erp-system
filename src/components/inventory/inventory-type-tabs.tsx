@@ -3,8 +3,6 @@ import { IntentLink as Link } from "@/components/layout/intent-link";
 const types = [
   { key: "materials", label: "Materials", href: "/inventory" },
   { key: "sku", label: "SKU catalog", href: "/inventory?type=sku" },
-  { key: "equipment", label: "Equipment", href: "/inventory?type=equipment" },
-  { key: "vehicle", label: "Vehicles", href: "/inventory?type=vehicle" },
 ] as const;
 
 export function InventoryTypeTabs({ active }: { active: (typeof types)[number]["key"] }) {
