@@ -45,6 +45,7 @@
     "test:asset-expenses": "node scripts/test-asset-expenses.mjs",
     "test:payroll": "node scripts/test-payroll-and-receipt-types.mjs",
     "test:qr-attendance": "node scripts/test-qr-attendance.mjs",
+    "test:attendance-face": "node scripts/test-attendance-face-evidence.mjs",
     "test:project-costs": "node scripts/test-project-costs.mjs",
     "test:project-expense-breakdown": "node scripts/test-project-expense-breakdown.mjs",
     "test:receipt-stock-entry": "node scripts/test-receipt-expense-warehouse-entry.mjs",

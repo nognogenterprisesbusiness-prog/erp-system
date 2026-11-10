@@ -1,6 +1,6 @@
 # QR worker ID attendance — 2026-11-08
 
-The client asked for QR or face-based attendance. This adds **QR worker ID cards scanned by the assigned Foreman**. Face recognition is not included: it is biometric (sensitive) personal information under the Data Privacy Act, needs worker consent and a paid or on-device matching service, and the README lists biometric attendance as needing separate approval.
+Historical implementation notes. The client subsequently confirmed **QR verification followed by a new face photo** on November 11. See [the current attendance flow and validation](attendance-face-evidence-2026-11-11.md). Face recognition is not included. The workflow and rollout notes below describe the original photo-free version.
 
 ## Workflow
 

@@ -24,7 +24,8 @@ import { storeEquipmentEvidence } from "@/lib/media/equipment-evidence";
 import { storeSitePurchaseReceipt } from "@/lib/media/site-purchase-receipt";
 
 import { readDriverDashboard, readDriverReceipt, submitDriverExpense } from "@/lib/mobile/driver";
-import { readAttendanceScans, recordAttendanceScan } from "@/lib/mobile/attendance-scan";
+import { prepareAttendanceScan, readAttendanceScans, recordAttendanceScan } from "@/lib/mobile/attendance-scan";
+import { readAttendancePhoto } from "@/lib/media/attendance-evidence";
 
 import { readMobileWarehousePanel, readMobileWarehouses, readMobileWarehouseOperations, postMobileWarehouseOperation } from "@/lib/mobile/warehouse";
 
@@ -54,6 +55,7 @@ export async function GET(request: Request, context: Context) {
       if (!isSession && !isAvatar) throw new MobileError(403, "This screen is for site accounts.");
     }
     if (path.length === 1 && path[0] === "attendance-scans") return success(await readAttendanceScans(client, request));
+    if (path.length === 3 && path[0] === "attendance-scans" && path[2] === "photo") return readAttendancePhoto(client, path[1]);
     if (path.length === 2 && path[0] === "profile" && path[1] === "photo") {
       if (!user.avatar_path) throw new MobileError(404, "Profile photo not found.");
       const photo = await client.storage.from("erp-profile-photos").download(user.avatar_path);
@@ -102,7 +104,8 @@ export async function POST(request: Request, context: Context) {
       if (path.length===1 && path[0]==="warehouse-operations") return success(await postMobileWarehouseOperation(client,user.id,request));
       throw new MobileError(403,"Use the warehouse actions for this account.");
     }
-    if (path.length === 1 && path[0] === "attendance-scans") return success(await recordAttendanceScan(client, request));
+    if (path.length === 1 && path[0] === "attendance-card") return success(await prepareAttendanceScan(client, request));
+    if (path.length === 1 && path[0] === "attendance-scans") return success(await recordAttendanceScan(client, user.id, request));
     if (path.length === 2 && path[0] === "site-purchases" && path[1] === "receipt") {
       if (!request.headers.get("content-type")?.startsWith("multipart/form-data"))
         throw new MobileError(415, "Send the purchase with a receipt photo.");

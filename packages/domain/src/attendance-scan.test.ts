@@ -42,8 +42,9 @@ test("time-in and time-out pre-fill hours and a note that the attendance batch a
   assert.equal(batch.success, true);
 });
 
-test("without a time-out the Foreman starts from 8 hours; daily workers default to a full day", () => {
+test("a time-in without time-out never invents eight worked hours", () => {
   const filled = attendanceFromScan({ ...scan, basis: "daily", time_out: null, last_scan: "in", hours: 0 });
-  assert.deepEqual({ hours: filled.hours, dayFraction: filled.dayFraction, scanned: filled.scanned }, { hours: "8", dayFraction: "1", scanned: false });
+  assert.deepEqual({ hours: filled.hours, dayFraction: filled.dayFraction, scanned: filled.scanned }, { hours: "", dayFraction: "1", scanned: false });
   assert.match(filled.note, /no time-out$/);
+  assert.equal(attendanceBatchSchema.safeParse({ projectId: scan.employee_id, siteId: scan.project_site_id, workDate: scan.work_date, entries: [{ idempotencyKey: scan.employee_id, assignmentId: scan.assignment_id, status: "present", ...filled }] }).success, false);
 });

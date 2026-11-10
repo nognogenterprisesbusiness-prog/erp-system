@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { HistoryPagination } from "@/components/ui/history-pagination";
 import { AttendancePostDialog } from "./attendance-post-dialog";
 import { readAllPages } from "@/lib/data/read-all-pages";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export async function ProjectSiteAttendance({ projectId, page, canRecord }: { projectId: string; page: number; canRecord: boolean }) {
   const db = await createClient();
@@ -32,9 +34,7 @@ export async function ProjectSiteAttendance({ projectId, page, canRecord }: { pr
   const attendanceAssignments = assignments.map((assignment) => ({ ...assignment, employee: employeeById.get(assignment.employee_id) }));
 
   return <>
-    <PageHeader title="Project attendance" description={`${project.data.code} · ${project.data.name}`} action={canRecord && attendanceAssignments.length > 0
-      ? <AttendancePostDialog projectId={projectId} assignments={attendanceAssignments} idempotencyKey={randomUUID()} today={today} />
-      : undefined} />
+    <PageHeader title="Project attendance" description={`${project.data.code} · ${project.data.name}`} action={canRecord ? <div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link href={`/projects/${projectId}/attendance/scans`}>ID scans & face photos</Link></Button>{attendanceAssignments.length > 0 && <AttendancePostDialog projectId={projectId} assignments={attendanceAssignments} idempotencyKey={randomUUID()} today={today} />}</div> : undefined} />
     <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <table className="w-full text-left text-sm">
         <thead><tr>{["Employee", "Date", "Attendance", "Hours", "Record"].map((label) => <th className="px-4 py-3" key={label}>{label}</th>)}</tr></thead>

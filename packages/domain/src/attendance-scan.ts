@@ -11,6 +11,14 @@ export const attendanceScanInputSchema = z.object({
   siteId: uuidSchema,
   card: z.string().trim().toUpperCase().regex(workerCardPattern, "This is not a worker ID card."),
 });
+export const attendanceCardSchema = z.object({
+  employee_id: uuidSchema,
+  name: z.string(),
+  code: z.string(),
+  scan_type: z.enum(["in", "out"]),
+  recently_scanned: z.boolean(),
+});
+export type AttendanceCard = z.output<typeof attendanceCardSchema>;
 export type AttendanceScanInput = z.input<typeof attendanceScanInputSchema>;
 
 export const attendanceScanSummarySchema = z.object({
@@ -41,11 +49,11 @@ export function scanClock(value: string) {
 
 /**
  * Pre-fills one attendance entry from today's scans. Hours are the time between time-in and time-out,
- * including breaks; the Foreman reviews them before posting. Without a time-out the usual 8 hours stay.
+ * including breaks; the Foreman reviews them before posting. A time-in alone has no worked hours yet.
  */
 export function attendanceFromScan(scan: AttendanceScanSummary) {
   const scanned = scan.time_out !== null && scan.hours > 0;
-  const hours = scanned ? String(Math.min(24, Math.round(scan.hours * 100) / 100)) : "8";
+  const hours = scanned ? String(Math.min(24, Math.round(scan.hours * 100) / 100)) : "";
   const note = scan.time_in
     ? `QR in ${scanClock(scan.time_in)} · ${scan.time_out ? `out ${scanClock(scan.time_out)}` : "no time-out"}`
     : "Site attendance";

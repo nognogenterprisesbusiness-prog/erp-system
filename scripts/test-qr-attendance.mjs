@@ -37,7 +37,11 @@ await withIsolatedPostgres(async ({ sql, as, users, scalar }) => {
   console.log('PASS: every employee gets a card automatically; Admin-only read and replacement with reason; old card retired; audited; no direct writes');
 
   // ---------- Scans: Foreman of the site only, card must be valid and assigned ----------
-  const scan=(card,key=randomUUID(),p=project,s=site)=>`select public.record_attendance_scan('${key}','${p}','${s}','${card}')`;
+  const scan=(card,key=randomUUID(),p=project,s=site)=>`
+    select public.prepare_attendance_scan('${key}','${p}','${s}','${card}');
+    insert into storage.objects(bucket_id,name,owner,created_at) select 'erp-attendance-evidence','${users.foreman}/${key}/face.webp','${users.foreman}',now()
+      where not exists(select 1 from storage.objects where bucket_id='erp-attendance-evidence' and name='${users.foreman}/${key}/face.webp');
+    select public.record_attendance_scan_with_photo('${key}','${p}','${s}','${card}','${'a'.repeat(64)}')`;
   for(const role of ['engineer','warehouse_staff','finance'])
     await assert.rejects(as(role,scan(second)),/Only the assigned Foreman/,`${role} cannot scan`);
   await assert.rejects(as('foreman',scan(second,randomUUID(),otherProject,otherSite)),/Only the assigned Foreman/,'other project is denied');
@@ -56,7 +60,7 @@ await withIsolatedPostgres(async ({ sql, as, users, scalar }) => {
   const again=json(await as('foreman',scan(second.toLowerCase())));
   assert.equal(again.repeated,true,'a second scan within five minutes is ignored');
   assert.equal(await value(`select count(*) from public.attendance_scans where employee_id='${worker}'`),'1');
-  await assert.rejects(as('foreman',scan(second.replace(/.$/,c=>c==='A'?'B':'A'),key)),/already used/,'key reuse with another card is refused');
+  await assert.rejects(as('foreman',scan(second.replace(/.$/,c=>c==='A'?'B':'A'),key)),/not recognised/,'changed card is refused before photo capture');
 
   // Time-out: move the time-in back 9h15m (superuser fixture only) and scan again.
   await sql(`alter table public.attendance_scans disable trigger attendance_scans_append_only;
