@@ -63,7 +63,7 @@ export function RecordListView({ storageKey, title, columns, rows, children }: {
   const { mode } = useRecordView(storageKey);
   if (!mode && rows.length) return <RecordViewLoading />;
   return <>
-    {mode === "cards" || !rows.length ? children : <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><caption className="sr-only">{title}</caption><thead className="bg-slate-50 text-xs font-medium text-slate-500"><tr>{columns.map((column) => <th key={column} scope="col" className="whitespace-nowrap px-5 py-3">{column}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row) => <tr key={row.id} className="hover:bg-slate-50/60">{row.cells.map((cell, index) => <td key={index} className="px-5 py-4 align-middle">{cell}</td>)}</tr>)}</tbody></table></div></div>}
+    {mode === "cards" || !rows.length ? children : <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><caption className="sr-only">{title}</caption><thead className="bg-slate-50 text-xs font-medium text-slate-500"><tr>{columns.map((column) => <th key={column} scope="col" className={`whitespace-nowrap px-5 py-3 ${column === "Actions" ? "sticky right-0 z-10 bg-slate-50 text-right" : ""}`}>{column}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row) => <tr key={row.id} className="hover:bg-slate-50/60">{row.cells.map((cell, index) => <td key={index} className={`px-5 py-4 align-middle ${columns[index] === "Actions" ? "sticky right-0 z-10 bg-white text-right" : ""}`}>{cell}</td>)}</tr>)}</tbody></table></div></div>}
   </>;
 }
 

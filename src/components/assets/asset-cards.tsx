@@ -27,7 +27,7 @@ export function AssetCards({ assets, kind, canManage, locations }: { assets: Ass
         <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">{[
           ...(kind === "equipment" ? [["Brand / model", [asset.brand, asset.model].filter(Boolean).join(" ")]] : []),
           [kind === "equipment" ? "Serial number" : "Plate number", asset.equipment?.serial_number ?? asset.vehicle?.plate_number ?? "—"],
-          ...(kind === "equipment" ? [["SKU", asset.equipment?.sku || "—"], ["Type", asset.equipment?.equipment_type ?? "—"]] : [["Ownership", asset.ownership_type.replaceAll("_", " ")]]),
+          ...(kind === "equipment" ? [...(asset.equipment?.sku ? [["Model reference", asset.equipment.sku]] : []), ["Type", asset.equipment?.equipment_type ?? "—"]] : [["Ownership", asset.ownership_type.replaceAll("_", " ")]]),
         ].map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 break-words font-medium">{value}</dd></div>)}</dl>
         <p className="mt-5 flex items-center gap-2 text-sm text-slate-500"><HugeiconsIcon icon={Location01Icon} size={16} strokeWidth={1.5} />{asset.location?.displayName ?? "Unavailable location"}</p>
       </div>

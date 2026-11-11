@@ -4,6 +4,7 @@ import { Building03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { HistoryLink } from "@/components/layout/history-link";
+import { Button } from "@/components/ui/button";
 
 type ProjectSummaryCardProps = {
   href: string;
@@ -41,6 +42,7 @@ export function ProjectSummaryCard({ href, navigation = "app", code, name, locat
         <div role="progressbar" aria-label={`${name} progress${progress === undefined ? " (no update recorded)" : ""}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress ?? 0} className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-cyan-600" style={{ width: `${Math.max(0, Math.min(100, progress ?? 0))}%` }} /></div>
       </div>}
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">{details.map((detail) => <div key={detail.label} className="min-w-0"><dt className="text-xs text-slate-500">{detail.label}</dt><dd className="mt-1 line-clamp-2 break-words text-sm font-semibold tabular-nums text-slate-800" title={detail.value}>{detail.value}</dd></div>)}</dl>
+      <div className="mt-auto flex justify-end pt-4"><Button variant="outline" size="sm" asChild><NavigationLink href={href} aria-label={`View ${name}`}>View</NavigationLink></Button></div>
     </div>
   </article>;
 }

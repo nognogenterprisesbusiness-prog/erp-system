@@ -2,4 +2,4 @@ import { WarehouseListControls, warehouseListHeader } from "@/components/warehou
 import { PageHeader } from "@/components/ui/page-header";
 import { RecordListSkeleton } from "@/components/ui/record-list-view";
 
-export default function Loading() { return <><PageHeader {...warehouseListHeader} /><WarehouseListControls /><RecordListSkeleton storageKey="warehouses" columns={5} /></>; }
+export default function Loading() { return <><PageHeader {...warehouseListHeader} /><WarehouseListControls /><RecordListSkeleton storageKey="warehouses" columns={6} /></>; }

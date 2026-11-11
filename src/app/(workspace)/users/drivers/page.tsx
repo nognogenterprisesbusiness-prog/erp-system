@@ -1,3 +1,4 @@
+import { RecordViewLink } from "@/components/ui/record-view-link";
 import { z } from "zod";
 import { notFound } from "next/navigation";
 import { DriverTruckForm } from "@/components/assets/asset-expense-forms";
@@ -81,7 +82,7 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
         if (!profile) return null;
         return <li key={id} className="p-4"><Link className="font-medium text-cyan-800 underline" href={`/users/drivers?driver=${id}`}>{profile.full_name}</Link>
           <p className="mt-1 text-sm text-slate-600">{profile.email} · {profile.onboarding_required ? "Invitation pending" : profile.is_active ? "Enabled" : "Disabled"}</p>
-          <p className="mt-1 text-sm text-slate-700">{truckByDriver.get(id) ? `Truck: ${truckByDriver.get(id)!.code} · ${truckByDriver.get(id)!.name}` : "No truck assigned"}</p></li>;
+          <p className="mt-1 text-sm text-slate-700">{truckByDriver.get(id) ? `Truck: ${truckByDriver.get(id)!.code} · ${truckByDriver.get(id)!.name}` : "No truck assigned"}</p><div className="mt-3 flex justify-end"><RecordViewLink href={`/users/drivers?driver=${id}`} name={profile.full_name} /></div></li>;
       })}
     </ul>
     <HistoryPagination path="/users/drivers" page={page} count={roles.count ?? 0} pageSize={pageSize} />

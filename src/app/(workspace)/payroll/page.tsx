@@ -1,3 +1,4 @@
+import { RecordViewLink } from "@/components/ui/record-view-link";
 import { randomUUID } from "node:crypto";
 import { payrollStatusLabels, payrollTotals, philippinesDate } from "@nognog/domain";
 import { IntentLink as Link } from "@/components/layout/intent-link";
@@ -44,7 +45,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
     <PageHeader title="Payroll" description="Pay employees from posted attendance, plus salaries, allowances and deductions you enter." action={<RecordCreateDialog title="New payroll" triggerLabel="New payroll"><NewPayrollForm departments={departments.data} idempotencyKey={randomUUID()} defaults={defaultPeriod(philippinesDate())} /></RecordCreateDialog>} />
     <p className="mt-4 max-w-3xl text-xs leading-5 text-slate-500">Steps: create a payroll → enter other earnings and deductions → Admin finalizes → mark as paid. Payroll does not add project costs; project labour cost already comes from attendance. Government deductions (SSS, PhilHealth, Pag-IBIG, tax) are entered manually.</p>
     <div className="mt-6"><DataTableShell empty={runs.data.length === 0 ? <EmptyState title="No payroll yet" description="Use New payroll to pay a period." /> : undefined}>
-      <table className="w-full min-w-[760px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Payroll</th><th className="px-4 py-3">Department</th><th className="px-4 py-3">Period / pay date</th><th className="px-4 py-3 text-right">Employees</th><th className="px-4 py-3 text-right">Net pay</th><th className="px-5 py-3">Status</th></tr></thead>
+      <table className="w-full min-w-[760px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Payroll</th><th className="px-4 py-3">Department</th><th className="px-4 py-3">Period / pay date</th><th className="px-4 py-3 text-right">Employees</th><th className="px-4 py-3 text-right">Net pay</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
         <tbody className="divide-y divide-slate-100">{runs.data.map((run) => {
           const runLines = linesByRun.get(run.id) ?? [];
           return <tr key={run.id} className="hover:bg-slate-50/70">
@@ -54,6 +55,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
             <td className="px-4 py-4 text-right">{runLines.length}</td>
             <td className="px-4 py-4 text-right font-semibold tabular-nums">{money.format(payrollTotals(runLines).net)}</td>
             <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone[run.status]}`}>{payrollStatusLabels[run.status]}</span></td>
+            <td className="px-5 py-4 text-right"><RecordViewLink href={`/payroll/${run.id}`} name={`payroll ${run.payroll_number}`} /></td>
           </tr>;
         })}</tbody></table>
     </DataTableShell></div>

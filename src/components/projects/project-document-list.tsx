@@ -1,4 +1,4 @@
-import { Download04Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { Download04Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Button } from "@/components/ui/button";
@@ -43,7 +43,7 @@ export function ProjectDocumentList({ documents, showProject = true, canManage =
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        {canPreviewProjectDocument(document.content_type) && <Button variant="outline" size="icon" asChild><a href={`/project-documents/${document.id}?view=1`} target="_blank" rel="noopener" aria-label={`View ${document.file_name}`} title="View"><HugeiconsIcon icon={ViewIcon} size={18} strokeWidth={1.6} /></a></Button>}
+        {canPreviewProjectDocument(document.content_type) && <Button variant="outline" size="sm" asChild><a href={`/project-documents/${document.id}?view=1`} target="_blank" rel="noopener" aria-label={`View ${document.file_name}`}>View</a></Button>}
         <Button variant="outline" size="icon" asChild><a href={`/project-documents/${document.id}`} aria-label={`Download ${document.file_name}`} title="Download"><HugeiconsIcon icon={Download04Icon} size={18} strokeWidth={1.6} /></a></Button>
         {canManage && <ProjectDocumentActions document={document} />}
       </div>

@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import Image from "next/image";
 import { IntentLink as Link } from "@/components/layout/intent-link";
-import { PrinterIcon, ViewIcon } from "@hugeicons/core-free-icons";
+import { PrinterIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ export function QrRegistryActions({ id, identifier, label, status }: { id: strin
   const active = status === "active";
   return <>
     <div className="flex justify-end gap-1">
-      <button type="button" aria-label={`View ${label} QR label`} title="View QR label" className={actionClass} onClick={() => dialog.current?.showModal()}><HugeiconsIcon icon={ViewIcon} size={18} /></button>
+      <Button type="button" variant="outline" size="sm" aria-label={`View ${label} QR label`} onClick={() => dialog.current?.showModal()}>View</Button>
       {active ? <Link href={`/qr-codes/${id}/label`} target="_blank" aria-label={`Print ${label} QR label`} title="Print QR label" className={actionClass}><HugeiconsIcon icon={PrinterIcon} size={18} /></Link> : <button type="button" disabled aria-label="Inactive QR label cannot be printed" title="Inactive QR label cannot be printed" className={actionClass}><HugeiconsIcon icon={PrinterIcon} size={18} /></button>}
     </div>
     <dialog ref={dialog} aria-labelledby={`qr-dialog-${id}`} className="m-auto w-[min(100%-2rem,420px)] rounded-2xl border border-slate-200 bg-white p-6 text-[#07152d] shadow-2xl backdrop:bg-slate-950/45">

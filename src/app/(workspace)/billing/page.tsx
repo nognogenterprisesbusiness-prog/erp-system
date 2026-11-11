@@ -1,3 +1,4 @@
+import { RecordViewLink } from "@/components/ui/record-view-link";
 import { Suspense } from "react";
 import { BillingListShell } from "@/components/billing/billing-list-shell";
 import { IntentLink as Link } from "@/components/layout/intent-link";
@@ -16,7 +17,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q.slice(0, 80) : "";
   const page = typeof params.page === "string" ? Number(params.page) : 1;
-  return <><BillingListShell query={query} /><Suspense key={`${query}:${page}`} fallback={<TableSkeleton columns={7} filters={0} />}><BillingResults query={query} page={page} /></Suspense></>;
+  return <><BillingListShell query={query} /><Suspense key={`${query}:${page}`} fallback={<TableSkeleton columns={8} filters={0} />}><BillingResults query={query} page={page} /></Suspense></>;
 }
 
 async function BillingResults({ query, page }: { query: string; page: number }) {
@@ -25,13 +26,14 @@ async function BillingResults({ query, page }: { query: string; page: number }) 
   return <>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No invoices found" description="Issue an invoice or change the search." /> : undefined}>
       <table className="w-full min-w-[790px] text-left text-sm"><thead className={tableHeadClass}><tr>
-        <th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / client</th><th className="px-4 py-3">Issued / due</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Outstanding</th><th className="px-5 py-3">Status</th>
+        <th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / client</th><th className="px-4 py-3">Issued / due</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Outstanding</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th>
       </tr></thead><tbody className="divide-y divide-slate-100">{result.rows.map((row) => <tr key={row.id} className="hover:bg-slate-50/70">
         <td className="px-5 py-4 font-semibold"><Link href={`/billing/${row.id}`} className="text-slate-900 hover:text-cyan-700">{row.invoice_number}</Link></td>
         <td className="px-4 py-4"><p className="font-medium text-slate-800">{row.project_code} · {row.project_name}</p><p className="mt-1 text-xs text-slate-500">{row.client_name}</p></td>
         <td className="px-4 py-4 text-slate-600">{row.issued_on}<br /><span className="text-xs text-slate-500">Due {row.due_on}</span></td>
         <td className="px-4 py-4 text-right font-medium">{money(row.amount)}</td><td className="px-4 py-4 text-right">{money(row.balance?.paid_amount ?? 0)}</td><td className="px-4 py-4 text-right font-semibold">{money(row.balance?.outstanding_amount ?? 0)}</td>
         <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${row.status === "void" ? "bg-slate-100 text-slate-600" : row.balance?.outstanding_amount === 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{row.status === "void" ? "Void" : row.balance?.outstanding_amount === 0 ? "Paid" : "Open"}</span></td>
+        <td className="px-5 py-4 text-right"><RecordViewLink href={`/billing/${row.id}`} name={`invoice ${row.invoice_number}`} /></td>
       </tr>)}</tbody></table>
     </DataTableShell>
     <p className="mt-2 text-right text-xs text-slate-500">{result.count} invoice{result.count === 1 ? "" : "s"}</p>

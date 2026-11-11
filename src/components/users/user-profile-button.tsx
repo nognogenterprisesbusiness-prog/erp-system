@@ -15,10 +15,7 @@ export function UserProfileButton({ name, email, phone, roles, status, avatarUrl
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   return <>
-    <button type="button" onClick={() => dialog.current?.showModal()} className="flex items-center gap-3 text-left hover:text-cyan-700 focus-visible:rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">
-      <AccountAvatar name={name} photo={avatarUrl} className="bg-cyan-50 font-semibold text-cyan-700" />
-      <span><span className="block font-semibold">{name}</span><span className="block text-xs text-slate-500">{email}</span></span>
-    </button>
+    <Button type="button" variant="outline" size="sm" aria-label={`View ${name} profile`} onClick={() => dialog.current?.showModal()}>View</Button>
     <dialog ref={dialog} aria-label={`${name} profile`} className="m-auto w-[min(100%-2rem,480px)] rounded-2xl border border-slate-200 bg-white p-6 text-[#07152d] shadow-2xl backdrop:bg-slate-950/45">
       <DialogHeading title={name} onClose={() => dialog.current?.close()} />
       <div className="mt-4"><AccountAvatar name={name} photo={avatarUrl} className="size-12 text-sm bg-cyan-50 font-semibold text-cyan-700" /></div>

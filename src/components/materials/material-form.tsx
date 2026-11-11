@@ -28,7 +28,7 @@ export function MaterialForm({ material, units }: { material?: MaterialRow; unit
   return <form action={action} className={dialog ? undefined : "rounded-xl border border-slate-200 bg-white p-5 sm:p-6"}>
     {material && <input type="hidden" name="id" value={material.id} />}
     <div className="grid gap-5 md:grid-cols-2">
-      <FormField label="SKU / material code" htmlFor="code" error={error("code")}><input className={fieldControlClass} id="code" name="code" defaultValue={material?.code} placeholder="MAT-CEMENT" required /></FormField>
+      <FormField label="Material code" htmlFor="code" error={error("code")}><input className={fieldControlClass} id="code" name="code" defaultValue={material?.code} placeholder="MAT-CEMENT" required /></FormField>
       <FormField label="Material name" htmlFor="name" error={error("name")}><input className={fieldControlClass} id="name" name="name" defaultValue={material?.name} required /></FormField>
       <FormField label="Base unit" htmlFor="baseUnitId" error={error("baseUnitId")}><SelectPicker label="Base unit" name="baseUnitId" defaultValue={material?.base_unit_id} placeholder="Select unit" options={units.map((item) => ({ value: item.id, label: `${item.name} (${item.symbol})` }))} /></FormField>
       <input type="hidden" name="materialKind" value="consumable" />

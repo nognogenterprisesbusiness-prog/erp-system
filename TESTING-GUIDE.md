@@ -8,6 +8,12 @@ This guide shows what each account can do and walks through one complete project
 
 ---
 
+## Finding record details
+
+Use **View** at the end of a record row or on its card to open its details. **Actions** contains additional operations such as Edit or Archive when your account has permission. On wide tables, scroll across to see all quantities; the shared table's Actions column remains visible at the right edge.
+
+Inventory contains one materials list. **Material code** is the existing identifier; it does not represent another stock balance. Old SKU catalog bookmarks open Inventory with their filters retained. Equipment and Vehicles remain separate workspaces with their own unit details and history.
+
 ## Three ways material moves
 
 | # | When | Steps | Who |

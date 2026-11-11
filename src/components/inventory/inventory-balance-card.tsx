@@ -1,4 +1,5 @@
 import { IntentLink as Link } from "@/components/layout/intent-link";
+import { RecordActionIcon } from "@/components/ui/record-action-menu";
 
 import { InventoryStockLocations } from "./inventory-stock-locations";
 import { MaterialThumbnail } from "@/components/ui/material-thumbnail";
@@ -33,6 +34,6 @@ export function InventoryBalanceCard({ name, sku, photo, unit, active = true, lo
     <div className="mt-4 flex justify-between gap-2 text-xs"><span className="text-slate-500">Available share of on-hand</span><span className="font-semibold tabular-nums text-slate-800">{Math.round(share)}%</span></div>
     <div role="progressbar" aria-label={`${name} available share of on-hand`} aria-valuenow={Math.round(share)} aria-valuemin={0} aria-valuemax={100} className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"><span className={`block h-full rounded-full ${low ? "bg-amber-500" : "bg-cyan-700"}`} style={{ width: `${share}%` }} /></div>
     <dl className={`mt-4 grid gap-3 text-xs ${minimum === undefined ? "grid-cols-2" : "grid-cols-3"}`}><div><dt className="text-slate-500">On hand</dt><dd className="mt-1 font-semibold tabular-nums text-slate-800">{quantity.format(onHand)} {unit}</dd></div><div><dt className="text-slate-500">Reserved</dt><dd className="mt-1 font-semibold tabular-nums text-slate-800">{quantity.format(reserved)} {unit}</dd></div>{minimum !== undefined && <div><dt className="text-slate-500">Minimum</dt><dd className="mt-1 font-semibold tabular-nums text-slate-800">{quantity.format(minimum)} {unit}</dd></div>}</dl>
-    {actions && <div className="mt-auto flex justify-end pt-3">{actions}</div>}
+    {(actions || href || onView) && <div className="mt-auto flex flex-wrap justify-end gap-2 pt-3">{(href || onView) && <RecordActionIcon label="View" name={name} href={href} onSelect={onView} />}{actions}</div>}
   </article>;
 }

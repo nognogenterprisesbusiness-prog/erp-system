@@ -1,3 +1,4 @@
+import { RecordViewLink } from "@/components/ui/record-view-link";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Suspense } from "react";
 import { ProjectListControls, projectListHeader } from "@/components/projects/project-list-controls";
@@ -59,9 +60,10 @@ async function ProjectResults({ filters, canViewDailyReports }: { filters: Filte
   const { query, status } = filters;
   const data = await getProjects({ ...filters, includeProgress: canViewDailyReports });
   return <>
-    <RecordListView storageKey="projects" title="Projects" columns={["Project", "Client", "Location", "Status", ...(canViewDailyReports ? ["Progress"] : []), "Timeline"]} rows={data.projects.map((project) => ({ id: project.id, cells: [
+    <RecordListView storageKey="projects" title="Projects" columns={["Project", "Client", "Location", "Status", ...(canViewDailyReports ? ["Progress"] : []), "Timeline", "Actions"]} rows={data.projects.map((project) => ({ id: project.id, cells: [
       <div key="record" className="flex min-w-56 items-center gap-3"><RecordThumbnail name={project.name} photo={project.photo_path ? recordPhotoUrl("projects", project.id, project.updated_at) : null} /><Link key="project" href={`/projects/${project.id}`} className="font-semibold hover:text-cyan-700">{project.code} · {project.name}</Link></div>, project.client_name, project.city_province, labels[project.status],
       ...(canViewDailyReports ? [`${project.progress ?? 0}%`] : []), `${date(project.start_date)} – ${date(project.target_completion_date)}`,
+      <RecordViewLink key="view" href={`/projects/${project.id}`} name={project.name} />,
     ] }))}>
     {data.projects.length === 0 ? <div className="mt-5 rounded-2xl border border-slate-200 bg-white"><EmptyState kind={query || status !== "all" ? "results" : "items"} title={query || status !== "all" ? "No matching projects" : "No projects yet"} description={query || status !== "all" ? "Try changing the search or status." : "Create a project to start tracking work."} /></div> : <section aria-label="Project list" className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.projects.map((project) => <ProjectSummaryCard key={project.id} href={`/projects/${project.id}`} code={project.code} name={project.name} location={project.city_province.split(",")[0]} photo={project.photo_path ? recordPhotoUrl("projects", project.id, project.updated_at) : null} progress={project.progress} showProgress={canViewDailyReports} status={labels[project.status]} statusTone={tones[project.status]} details={[
       { label: "Client", value: project.client_name },
