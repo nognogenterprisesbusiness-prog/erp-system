@@ -8,6 +8,8 @@ Read README sections 0–3, 5, 9, 15–17 before changes to inventory, roles, ex
 
 ## Before every task
 
+Workflow reference: read [`docs/workflow-state-machines.md`](./docs/workflow-state-machines.md) before changing status-driven actions. Run `npm run audit:workflows -- ../output/workflow-state-inventory.json` to locate current status declarations and UI controls. Shared guidance is display policy; SQL/RLS still authorize every transition. Preserve an unconfirmed submission's payload and key until its result is reconciled.
+
 1. Inspect existing repository structure, package scripts, schema/migrations, permissions, tests and related screens. **Do not assume the README's proposed structure is already present.**
 2. Summarize the task's end-user workflow, affected entities, approved decision(s), access roles and exact acceptance criteria.
 3. If a key business rule is undecided (README D01–D18), implement only the uncontroversial layer, document the blocker, and ask for a product decision rather than inventing a policy.

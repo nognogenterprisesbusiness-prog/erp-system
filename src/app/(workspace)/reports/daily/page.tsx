@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { DailyReportForm } from "@/components/reports/daily-report-form";
 import { todayInManila } from "@/lib/date";
-import { dailyReportStatuses, uuidSchema } from "@nognog/domain";
+import { dailyReportStatuses, reportStatusLabels, uuidSchema } from "@nognog/domain";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -45,7 +45,7 @@ export default async function DailyReportsPage({ searchParams }: { searchParams:
       <SearchField key={search} name="q" label="Search report number or work" defaultValue={search} placeholder="Search reports" />
       <SelectPicker name="project" label="Project" defaultValue={filters.projectId || "all"} options={[{ value: "all", label: "All projects" }, ...filterChoices.projects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))]} />
       <SelectPicker name="site" label="Site" defaultValue={filters.siteId || "all"} options={[{ value: "all", label: "All sites" }, ...filterChoices.sites.map((item) => ({ value: item.id, label: item.name }))]} />
-      <SelectPicker name="status" label="Status" defaultValue={filters.status} options={[{ value: "all", label: "All statuses" }, ...dailyReportStatuses.map((item) => ({ value: item, label: item.replaceAll("_", " ") }))]} />
+      <SelectPicker name="status" label="Status" defaultValue={filters.status} options={[{ value: "all", label: "All statuses" }, ...dailyReportStatuses.map((item) => ({ value: item, label: reportStatusLabels[item] }))]} />
     </ListFilterBar>
     <Suspense key={`${search}:${filters.projectId}:${filters.siteId}:${filters.reportDateFrom}:${filters.reportDateTo}:${filters.status}:${page}`} fallback={<TableSkeleton filters={0} />}><DailyReportResults resultPromise={resultPromise} pageHref={pageHref} /></Suspense>
   </>;

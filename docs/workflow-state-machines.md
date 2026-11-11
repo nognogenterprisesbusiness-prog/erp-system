@@ -1,0 +1,91 @@
+# Workflow map: states, actions and recovery
+
+This is the navigation map for developers and coding agents. It describes implemented flows, not new business policy. PostgreSQL commands and RLS remain authoritative. UI guidance must use existing capabilities and quantities, never authorize a transition itself.
+
+Run `npm run audit:workflows -- ../output/workflow-qa-20261111/state-inventory.json` to inventory current TypeScript status unions, React state/reducer/mutation hooks, and status comparisons across web and mobile. The initial scan covered 554 files, 44 status declarations, 463 controls and 334 comparisons. These overlap; they are not 463 independent business machines. The inventory supplies source file/line references. It is a static discovery aid, not proof that every possible runtime path is safe.
+
+## Business state families
+
+| Family | States / progression | Authority and guard |
+|---|---|---|
+| Account | invited → onboarding → active; inactive blocks access | Auth/profile/user-role checks, `guard_mobile_api`, RLS; no peer-Admin invitation/escalation |
+| Project | draft, active, on hold, completed, cancelled; archived is separate | Project commands; memberships and active sites govern operational access |
+| Project/site selection | restoring → none → loading → valid; transient stale vs revoked | Mobile `project-provider`, `project-context`, `resource-state`; never keep revoked context |
+| Project and warehouse assignments | active ↔ inactive; worker assignments end/transfer by date | Assignment commands plus effective dates; UI selection is not authorization |
+| Materials/catalog | active/archive; legacy reusable material records remain historical | Material commands; equipment is a separate asset lifecycle |
+| Material sourcing | submitted → resolved/dismissed | Missing-material/sourcing commands with resolution links |
+| Request approval | submitted → approved/partially approved/rejected; cancellation where allowed | `decide_material_request_sources`, cancellation RPCs; independent Engineer or Admin; same-key retries |
+| Per-warehouse reservation | active → fulfilled/released | Reservation ledger, row locking; decreases available, not on-hand |
+| Physical delivery | ready → released/in transit → partial receipt → accounted for | Per-allocation and transfer-item quantities; cannot sum different material units to infer completion |
+| Transit variance | outstanding → Admin-approved missing/damaged | Variance RPC, immutable reason/actor; not a normal receipt |
+| Undispatched remainder | reserved → explicitly closed | Close-remainder command; does not pretend undelivered stock arrived |
+| Site stock and use | receipt adds stock → consumption/return reduces it | Inventory movement commands and purchase batches; project material cost posts at consumption |
+| Stock counts/corrections | draft/count → approved adjustment; original → reversal | Authorized adjustment/reversal RPC; retain the original ledger and reason |
+| Purchase order | submitted/ordered → partial receipt → received; cancellation | PO/inspection/receipt commands; prices and costs remain snapshots |
+| Delivery inspection | delivered → accepted/rejected portions → stock receipt | Inspection and receipt are atomic where combined; retries do not create duplicate stock |
+| Supplier payment | unpaid → partly paid → paid | Supplier payment command and outstanding balance, independent of delivery status |
+| Site purchase/receipt | submitted → approved/rejected; item stock entry separately tracked | Receipt approval/posting commands; never post linked project expense twice |
+| Reimbursement | eligible → outstanding → reimbursed | Finance/Admin reimbursement command; distinct from supplier payment |
+| Equipment request | submitted → approved/rejected → checked out → returned | Equipment decision/handover/return commands; approval alone is not physical handover |
+| Asset condition/location | available, assigned, in use, maintenance, out of service, retired | Asset event/custody commands; do not infer status solely from expense history |
+| Driver assignment | unassigned ↔ one current truck; a truck may have multiple drivers | Assignment RPC; stale open forms rejected; own prior expenses remain visible |
+| Asset expense | submitted/posted → audited reversal | Immutable asset ledger; retries once; asset expenses do not automatically post project costs |
+| Worker identity | employee record + current QR; replaced card becomes invalid | Current-card and active/date/site checks; worker self-service accounts remain an unapproved product decision |
+| Attendance capture | QR verification → identity review → camera → photo review → scan save | `prepare_attendance_scan`, private upload, `record_attendance_scan_with_photo`; cancel/expiry creates no scan |
+| Attendance and cost | time-in → time-out → reviewed hours → posted; Admin reversal | Attendance batch command/rate snapshot. No automatic eight hours from unfinished scan; missing rate is not absence |
+| Equipment usage | photos/hours prepared → posted → audited reversal | Existing usage-with-photos command; effective rates, once-only historical cost |
+| Project expense/budget | expense posted/reversed; budget adjustment adds audited delta | Budget minus net posted costs; zero/under/over budget are derived display states, not editable statuses |
+| Invoice/payment | issued → partial payment → paid; authorized void | Invoice/payment allocation commands; contract/billing values remain separate from approved budget |
+| Payroll | draft → finalized → paid; authorized void | Payroll RPC; does not add the same labour cost to projects again |
+| Daily report | draft → submitted → approved or requires revision → corrected draft | Shared `dailyReportActions`; author cannot self-review. SQL accepts review only from submitted. Legacy pending_review/rejected records do not gain invented transitions |
+| QR registry | active → inactive/replaced | Identifier lookup still checks access; labels never carry authorization or prices |
+| Notifications | unread → read; delivery outbox pending/retry/delivered/failed | Inbox reads are safe optimistic UI; stock/money posting is never optimistic |
+
+The actual SQL spellings and any additional historical enum values are in migrations and the generated database types. Older README diagrams contain conceptual stages (e.g. UNDER_REVIEW/CLOSED) that are not necessarily stored enum values. Do not create status strings from a diagram.
+
+```mermaid
+flowchart LR
+  A[Request submitted] --> B[Independent approval]
+  B --> C[Reserve each source]
+  C --> D[Release from warehouse]
+  D --> E[In transit]
+  E --> F[Confirm actual receipt]
+  E --> G[Admin reviews shortage/damage]
+  F --> H[Site stock]
+  H --> I[Record actual use]
+  I --> J[Project material cost]
+```
+
+## UI and asynchronous state families
+
+| Family | Rules |
+|---|---|
+| Resource loading | No data + fetching = loading; paused offline = connection message; resolved zero records = empty |
+| Cached refresh | A transient failure retains validated cached content with a visible warning; 401/403/404/426 blocks cached details. Disabled scoped lists must not render old rows |
+| Submission | editing → sending → confirmed, known rejection, or unconfirmed result. No automatic retry of posted stock/money |
+| Unconfirmed result | Driver/warehouse forms retain the exact command, date, photo and key and lock edits. Retry the same command; do not silently create a new key |
+| Validation rejection | Keep typed values; allow corrections when the server definitely rejected the request. An earlier unconfirmed result stays protected even after a later 4xx |
+| Modal/confirmation | idle → open → confirming → submitting → result. Block close/escape while submitting; important actions have visible text |
+| Camera/photo | permission → ready → capture/prepare → review → upload/save. No camera requests on mount; capture/retry pair remains bound to the verified worker |
+| Daily report composition | draft save → verify existing posted activity → link/detach → optional photo → submit; recover lost response by reading the existing report. Links do not re-post costs |
+| Search/pagination | scope + filters + page form query identity; reset page when filtering; keep selection only within the correct scope |
+| Live sync | connected → batched refresh; disconnected → foreground polling/backoff; reconnect → reconcile. A realtime event is not posting confirmation |
+| Compatibility | compatible, temporary metadata failure, confirmed update required, backend outdated. A connection error is not proof that an app update is mandatory |
+
+## Code entry points
+
+- Shared display/action guidance: `packages/domain/src/workflow-guidance.ts`; web request delivery import remains a compatibility re-export. This avoids divergent web/mobile status meanings.
+- Mobile readable/error state: `src/lib/resource-state.ts` in the mobile repository.
+- Mobile retry outcome: `src/lib/submission-recovery.ts`; used by Driver expenses and Warehouse receive/release. It is not an offline outbox. Closing/reinstalling the app does not promise durable recovery: check history before re-entering an uncertain operation.
+- Web Purchasing: `src/lib/purchasing/workflow.ts` computes the allowed primary action; `purchase-workflow-cell.tsx` shows a readable action instead of an unexplained pencil.
+- Business source of truth: relevant functions under `supabase/migrations`; regression suites listed in `package.json`.
+
+## Before changing a flow
+
+1. Identify whether the state is stored, derived from quantities, a capability, or a temporary UI state. Do not merge these.
+2. Locate the current SQL command and its guards; check the latest migration rather than only the original definition.
+3. Match UI actions to those guards. Test self-review, another site/warehouse, terminal states, stale assignment and invalid status.
+4. For writes, test lost response/concurrent retry and reconciliation. Keep posted values immutable; use audited corrections.
+5. Run the audit, relevant tests and visual checks; record what was actually exercised. Do not equate static inventory or passing unit tests with every device/workflow being accepted.
+
+Worker-account self-service, new approval tiers, automatic break/overtime rules, biometric matching, offline posting and retention policy are not silently introduced by a UX cleanup.

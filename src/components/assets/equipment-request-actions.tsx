@@ -5,7 +5,6 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { checkoutEquipmentRequestAction, decideEquipmentRequestAction, returnEquipmentRequestAction, type EquipmentRequestActionState } from "@/app/(workspace)/equipment/requests/actions";
 import { Button } from "@/components/ui/button";
 import { DialogHeading } from "@/components/ui/dialog-heading";
-import { RecordActionIcon } from "@/components/ui/record-action-menu";
 import type { EquipmentRequestStatus } from "@/types/database";
 
 const initialState: EquipmentRequestActionState = { ok: false, message: "" };
@@ -19,7 +18,7 @@ export function EquipmentRequestActions({ id, status }: { id: string; status: Eq
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => { if (mode && !dialog.current?.open) dialog.current?.showModal(); }, [mode]);
-  function close() { dialog.current?.close(); setMode(null); }
+  function close() { if (!decisionPending && !checkoutPending && !returnPending) { dialog.current?.close(); setMode(null); } }
 
   if (status === "returned" || status === "rejected") return null;
   const pending = decisionPending || checkoutPending || returnPending;
@@ -27,13 +26,13 @@ export function EquipmentRequestActions({ id, status }: { id: string; status: Eq
   const activeResult = mode === "return" ? returned : mode === "checkout" ? checkout : decision;
 
   return <>
-    <div className="flex items-center justify-end gap-1">
-      {status === "submitted" && <><RecordActionIcon label="Approve" name="equipment request" onSelect={() => setMode("approve")} disabled={pending} /><RecordActionIcon label="Reject" name="equipment request" onSelect={() => setMode("reject")} disabled={pending} destructive /></>}
-      {status === "approved" && <><RecordActionIcon label="Check out" name="equipment to site" onSelect={() => setMode("checkout")} disabled={pending} /><RecordActionIcon label="Withdraw" name="equipment approval" onSelect={() => setMode("withdraw")} disabled={pending} destructive /></>}
-      {status === "checked_out" && <RecordActionIcon label="Record return" name="equipment" onSelect={() => setMode("return")} disabled={pending} />}
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {status === "submitted" && <><Button size="sm" onClick={() => setMode("approve")} disabled={pending}>Approve</Button><Button size="sm" variant="outline" className="text-red-700" onClick={() => setMode("reject")} disabled={pending}>Reject</Button></>}
+      {status === "approved" && <><Button size="sm" onClick={() => setMode("checkout")} disabled={pending}>Hand over to site</Button><Button size="sm" variant="outline" className="text-red-700" onClick={() => setMode("withdraw")} disabled={pending}>Withdraw approval</Button></>}
+      {status === "checked_out" && <Button size="sm" variant="outline" onClick={() => setMode("return")} disabled={pending}>Record return</Button>}
     </div>
     {checkout.message && <p role={checkout.ok ? "status" : "alert"} className={`mt-1 text-xs ${checkout.ok ? "text-emerald-700" : "text-red-600"}`}>{checkout.message}</p>}
-    <dialog ref={dialog} onClose={() => setMode(null)} aria-label={title} className="m-auto w-[min(100%-2rem,440px)] rounded-2xl border border-slate-200 bg-white p-6 text-[#07152d] shadow-2xl backdrop:bg-slate-950/45">
+    <dialog ref={dialog} onCancel={event => { if (pending) event.preventDefault(); }} onClose={() => setMode(null)} aria-label={title} className="m-auto w-[min(100%-2rem,440px)] rounded-2xl border border-slate-200 bg-white p-6 text-[#07152d] shadow-2xl backdrop:bg-slate-950/45">
       <DialogHeading title={title} onClose={close} disabled={pending} />
       {mode && <form action={mode === "return" ? returnAction : mode === "checkout" ? handover : decide} className="mt-5 grid gap-4">
         <input type="hidden" name="id" value={id} />

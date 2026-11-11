@@ -14,9 +14,8 @@ import { requireUser } from "@/lib/auth";
 import { getMaterialRequest } from "@/lib/data/material-requests";
 import { createClient } from "@/lib/supabase/server";
 
-import { requestDeliveryLabels, requestDeliveryStage } from "@/lib/requests/delivery-stage";
-
-const labels = { submitted: "For approval", approved: "Approved", partially_approved: "Partially approved", rejected: "Rejected", cancelled: "Cancelled" };
+import { requestDeliveryStage } from "@/lib/requests/delivery-stage";
+import { materialRequestGuide, materialRequestStatusLabels as labels } from "@nognog/domain";
 
 export default async function MaterialRequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -40,20 +39,13 @@ export default async function MaterialRequestDetailPage({ params }: { params: Pr
   if (vehicles.error) throw new Error("Unable to load delivery vehicles.");
   const totals = new Map(lines.map((line) => [line.id, dispatches.filter((dispatch) => dispatch.request_line_id === line.id).reduce((total, dispatch) => ({ dispatched: total.dispatched + dispatch.item.dispatched_quantity, received: total.received + dispatch.item.received_quantity, variance: total.variance + dispatch.item.variance_quantity }), { dispatched: 0, received: 0, variance: 0 })]));
   const stage = requestDeliveryStage(request.status, lines.map((line) => ({ approved_quantity: line.approved_quantity, reserved: line.reservedQuantity, allocations: data.allocations.filter((allocation) => allocation.request_line_id === line.id), ...totals.get(line.id)! })));
-  const deliveryLabel = stage ? requestDeliveryLabels[stage] : null;
   const hasReservedStock = lines.some((line) => line.reservedQuantity > 0);
   const hasIncoming = dispatches.some((dispatch) => dispatch.remainingQuantity > 0);
-  const nextStep = request.status === "submitted"
-    ? canDecide ? null : !request.source_warehouse_id
-      ? { title: "Choose the source warehouse", detail: "Stock stays in the warehouse until approval and release.", target: user.canOperateInventory ? "#source-warehouse" : null, action: "Choose warehouse" }
-      : canDecide
-        ? null
-        : { title: "Waiting for approval", detail: "An authorized reviewer must approve this request before stock can be released.", target: null, action: "" }
-    : hasIncoming && canReceive
-      ? { title: "Confirm what arrived", detail: "Record only the quantity delivered to the site.", target: "#site-deliveries", action: "Receive delivery" }
-      : hasReservedStock && canRelease
-        ? { title: "Release approved stock", detail: "Enter the quantity leaving the warehouse and its delivery details.", target: "#release-materials", action: "Release stock" }
-        : null;
+  const guide = materialRequestGuide({ status: request.status, hasSource: !!request.source_warehouse_id,
+    ownRequest: request.requested_by === user.userId, canReview: canDecide, canChooseSource: user.canOperateInventory,
+    canRelease, canReceive, hasIncoming, hasReserved: hasReservedStock, deliveryStage: stage });
+  const targets = { review: "#request-decision", source: "#source-warehouse", receive: "#site-deliveries", release: "#release-materials" };
+  const nextStep = { ...guide, target: guide.action ? targets[guide.action] : null, action: guide.actionLabel };
   const history = [
     ...correctionEvents.map((event) => ({ id: event.original_transaction_id, event: "Receipt reversed", material: "—", quantity: "—", actor: event.actorName, detail: event.reason, occurredAt: event.created_at })),
     ...events.map((event) => ({ id: event.id, event: labels[event.event_type], material: "—", quantity: "—", actor: event.actorName, detail: "", occurredAt: event.occurred_at })),
@@ -79,7 +71,6 @@ export default async function MaterialRequestDetailPage({ params }: { params: Pr
       : user.canManage ? <details className="mt-4 rounded-xl border border-slate-200 bg-white p-4"><summary className="cursor-pointer text-sm text-slate-700">Use one default warehouse for all items (optional)</summary><RequestWarehouseAssignment id={id} kind="request" current={null} choices={warehouseChoices.data ?? []} /></details> : <RequestWarehouseAssignment key={`${id}:${request.source_warehouse_id}`} id={id} kind="request" current={null} choices={warehouseChoices.data ?? []} />)}
     {(!user.canOperateInventory || request.status !== "submitted") && <p className="mt-4 text-sm text-slate-600">Source warehouse: <strong>{warehouse.name}</strong></p>}
     {request.status === "submitted" && !request.source_warehouse_id && !canDecide && <p role="status" className="mt-4 text-sm text-amber-700">Waiting for Admin or Warehouse Staff to choose the source warehouse before approval.</p>}
-    {deliveryLabel && !nextStep && <div role="status" className="mt-5 rounded-xl border border-cyan-100 bg-cyan-50 p-4 text-sm text-cyan-900"><p className="font-semibold">{deliveryLabel}</p><p className="mt-1">{stage === "ready" ? "Approved stock is reserved at the warehouse. Release it to start delivery." : stage === "upcoming" || stage === "partial" ? "Open Site deliveries below to confirm only what arrives. The remaining quantity stays in transit." : "All released quantities are accounted for. Check history for any undelivered quantities that were closed."}</p></div>}
     <MaterialRequestItems key={`${request.id}:${request.source_warehouse_id}:${request.status}`} requestId={request.id} defaultWarehouseId={request.source_warehouse_id} stockSources={data.stockSources} canDecide={canDecide} submitted={request.status === "submitted"} hasSource={request.source_warehouse_id !== null} sourceName={warehouse.name} siteName={site.name} lines={lines.map((line) => ({
       id: line.id, name: line.material?.name ?? "Unavailable material", code: line.material?.code ?? "—", unit: line.unitSymbol,
       requested: line.requested_quantity, approved: line.approved_quantity, reserved: line.reservedQuantity, allocations: data.allocations.filter((allocation) => allocation.request_line_id === line.id),

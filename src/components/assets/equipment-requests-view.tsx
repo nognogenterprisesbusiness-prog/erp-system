@@ -1,7 +1,7 @@
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import Image from "next/image";
-import { uuidSchema } from "@nognog/domain";
+import { equipmentRequestGuides, uuidSchema } from "@nognog/domain";
 import { z } from "zod";
 import { EquipmentRequestActions } from "@/components/assets/equipment-request-actions";
 import { EquipmentRequestForm } from "@/components/assets/equipment-request-form";
@@ -19,7 +19,7 @@ import type { EquipmentRequestRow } from "@/types/database";
 
 const pageSize = 20;
 const statuses = ["all", "submitted", "approved", "checked_out", "overdue", "returned", "rejected"] as const;
-const statusLabels: Record<(typeof statuses)[number], string> = { all: "All statuses", submitted: "Submitted", approved: "Approved", checked_out: "Checked out", overdue: "Overdue", returned: "Returned", rejected: "Rejected" };
+const statusLabels: Record<(typeof statuses)[number], string> = { all: "All statuses", submitted: equipmentRequestGuides.submitted.label, approved: equipmentRequestGuides.approved.label, checked_out: equipmentRequestGuides.checked_out.label, overdue: "Overdue", returned: equipmentRequestGuides.returned.label, rejected: equipmentRequestGuides.rejected.label };
 
 function HandoverRow({ item, isVehicle, photoPath, projectName, siteName, canManage, today }: {
   item: EquipmentRequestRow;
@@ -46,7 +46,7 @@ function HandoverRow({ item, isVehicle, photoPath, projectName, siteName, canMan
     <td className="px-4 py-4 text-slate-600">{projectName}<span className="block text-xs text-slate-500">{siteName}</span></td>
     <td className="px-4 py-4 text-slate-600">{item.needed_on}<span className={overdue ? "block text-xs font-semibold text-red-700" : "block text-xs text-slate-500"}>{item.expected_return_on ? `Return ${item.expected_return_on}` : "No return deadline"}{overdue ? " · overdue" : ""}</span></td>
     <td className="max-w-[230px] px-4 py-4 text-slate-600">{item.purpose}{item.decision_note && <span className="block text-xs text-slate-500">Decision: {item.decision_note}</span>}{item.return_note && <span className="block text-xs text-slate-500">Return: {item.return_note}</span>}</td>
-    <td className="px-4 py-4"><span className={overdue ? "rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-700"}>{overdue ? "Overdue" : item.status.replaceAll("_", " ")}</span></td>
+    <td className="px-4 py-4"><span className={overdue ? "rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"}>{overdue ? "Overdue" : statusLabels[item.status]}</span></td>
     {canManage && <td className="px-5 py-4 text-right"><EquipmentRequestActions id={item.id} status={item.status} /></td>}
   </tr>;
 }

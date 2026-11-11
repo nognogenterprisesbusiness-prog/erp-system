@@ -11,9 +11,7 @@ import { SelectPicker } from "@/components/ui/select-picker";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
 import { getMaterialRequests } from "@/lib/data/material-requests";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
-
-const statuses = ["submitted", "approved", "partially_approved", "rejected", "cancelled"] as const;
-const statusLabels = { submitted: "For approval", approved: "Approved", partially_approved: "Partially approved", rejected: "Rejected", cancelled: "Cancelled" };
+import { materialRequestStatuses as statuses, materialRequestStatusLabels as statusLabels } from "@nognog/domain";
 
 /** Material request list with its filters; the requests page renders the header and type tabs. */
 export async function MaterialRequestsList({ params, canRequest }: { params: Record<string, string | string[] | undefined>; canRequest: boolean }) {

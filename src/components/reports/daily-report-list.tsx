@@ -1,4 +1,5 @@
 import { IntentLink as Link } from "@/components/layout/intent-link";
+import { reportStatusLabels } from "@nognog/domain";
 import { PhotoViewer } from "@/components/ui/photo-viewer";
 import { Badge } from "@/components/ui/badge";
 import { DataTableShell } from "@/components/ui/data-table-shell";
@@ -25,7 +26,7 @@ export function DailyReportList({ reports, count }: { reports: DailyReportListIt
         <td className="px-4 py-4"><div className="flex items-center gap-3">{report.photo_path ? <span className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-slate-100"><PhotoViewer src={recordPhotoUrl("daily-reports", report.id)} alt={`Site photo for ${report.report_number}`} sizes="40px" /></span> : null}<span><span className="block font-medium">{report.project?.name ?? "Unavailable project"}</span><span className="mt-0.5 block text-xs text-slate-400">{report.project?.code} · {report.siteName}</span></span></div></td>
         <td className="px-4 py-4 text-sm text-slate-600">{report.preparerName}</td>
         <td className="px-4 py-4 text-sm text-slate-600">{date(report.report_date)}</td>
-        <td className="px-5 py-4 text-right"><Badge variant={report.status === "approved" ? "active" : report.status === "draft" || report.status === "requires_revision" ? "review" : "neutral"}>{report.status.replaceAll("_", " ")}</Badge></td>
+        <td className="px-5 py-4 text-right"><Badge variant={report.status === "approved" ? "active" : report.status === "draft" || report.status === "requires_revision" ? "review" : "neutral"}>{reportStatusLabels[report.status]}</Badge></td>
       </tr>)}</tbody>
     </table>
   </DataTableShell><p className="mt-3 text-sm text-slate-500">{count} report{count === 1 ? "" : "s"}</p></>;

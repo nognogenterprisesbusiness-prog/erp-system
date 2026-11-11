@@ -17,6 +17,7 @@ import { DailyReportCorrection } from "@/components/reports/daily-report-correct
 import { ProjectProgressForm } from "@/components/reports/project-progress-form";
 import { getReportProgress } from "@/lib/data/project-operations";
 import { createClient } from "@/lib/supabase/server";
+import { dailyReportActions, dailyReportGuide, reportStatusLabels } from "@nognog/domain";
 
 const date = (value: string) => new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeZone: "Asia/Manila" }).format(new Date(`${value}T00:00:00+08:00`));
 const dateTime = (value: string) => new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" }).format(new Date(value));
@@ -36,19 +37,19 @@ export default async function DailyReportDetailPage({ params, searchParams }: { 
   const filters = await searchParams;
   const [user, data, progress] = await Promise.all([requireUser(), getDailyReport(id), getReportProgress(id)]);
   const { report, project, site, preparerName, events } = data;
-  const canEdit = report.status === "draft" && user.userId === report.prepared_by;
-  const choices = canEdit ? await getDailyReportChoices() : null;
-  const canCorrect = report.status === "requires_revision" && user.userId === report.prepared_by;
   const { data: capabilities, error: accessError } = await (await createClient()).rpc("get_project_site_capabilities", { p_project_id: report.project_id, p_site_id: report.project_site_id });
   if (accessError) throw new Error("Unable to verify site capabilities.");
-  const canReview = report.status === "submitted" && user.userId !== report.prepared_by && Boolean(capabilities?.[0]?.can_review);
+  const { canEdit, canCorrect, canReview } = dailyReportActions(report.status, user.userId === report.prepared_by, Boolean(capabilities?.[0]?.can_review));
+  const choices = canEdit ? await getDailyReportChoices() : null;
+  const guide = dailyReportGuide(report.status, user.userId === report.prepared_by, canReview);
   const canRecordProgress = report.status === "approved" && !progress && Boolean(capabilities?.[0]?.can_review);
   return <>
     <PageHeader eyebrow={report.report_number} title="Daily construction report" description={`${project.code} · ${project.name} · ${site.name}`}
       action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${report.project_id}/reports`}>Project reports</Link></Button>{canEdit && choices && <RecordCreateDialog key={report.updated_at} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen={filters.edit === "1"} closeHref={`/reports/daily/${id}`}><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}{canCorrect && <DailyReportCorrection reportId={id} />}</div>} />
+    <div className="mt-5 rounded-xl border border-cyan-100 bg-cyan-50 p-4"><h2 className="font-semibold">{guide.title}</h2><p className="mt-1 text-sm text-slate-700">{guide.detail}</p></div>
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       {report.photo_path && <div className="relative mb-6 h-56 overflow-hidden rounded-xl bg-slate-100 sm:h-72"><PhotoViewer src={recordPhotoUrl("daily-reports", report.id, report.updated_at)} alt={`Site photo for ${report.report_number}`} sizes="(max-width: 640px) 100vw, 960px" /></div>}
-      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold">Report details</h2><Badge variant={report.status === "draft" || report.status === "requires_revision" ? "review" : report.status === "approved" ? "active" : "neutral"}>{report.status.replaceAll("_", " ")}</Badge></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold">Report details</h2><Badge variant={report.status === "draft" || report.status === "requires_revision" ? "review" : report.status === "approved" ? "active" : "neutral"}>{reportStatusLabels[report.status]}</Badge></div>
       <dl className="mt-5 grid gap-5 border-t border-slate-100 pt-5 sm:grid-cols-2 xl:grid-cols-4">
         <div><dt className="text-xs text-slate-400">Reporting date</dt><dd className="mt-1 text-sm font-medium">{date(report.report_date)}</dd></div>
         <div><dt className="text-xs text-slate-400">Site</dt><dd className="mt-1 text-sm font-medium">{site.name}</dd></div>
