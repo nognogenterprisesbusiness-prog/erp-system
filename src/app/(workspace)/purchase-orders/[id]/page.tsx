@@ -1,3 +1,4 @@
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { randomUUID } from "node:crypto";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { uuidSchema } from "@nognog/domain";
@@ -59,6 +60,6 @@ export default async function PurchaseOrderPage({ params, searchParams }: { para
     </DataTableShell>
     <h2 className="mt-8 text-lg font-semibold text-slate-900">Receipt history</h2>
     <DataTableShell empty={receipts.length === 0 ? <EmptyState compact title="No deliveries recorded" description="Post a delivery from an outstanding order line." /> : undefined} footer={<span className="text-xs text-slate-500">{receipts.length} receipt{receipts.length === 1 ? "" : "s"}</span>}><table className="w-full min-w-[650px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Delivery reference</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Quantity</th><th className="px-4 py-3 text-right">Goods cost</th><th className="px-5 py-3">Variance</th></tr></thead><tbody className="divide-y divide-slate-100">{receipts.map((receipt) => <tr key={receipt.id}><td className="px-5 py-4 font-medium text-slate-800">{receipt.delivery_reference}</td><td className="px-4 py-4">{receipt.received_on}</td><td className="px-4 py-4 text-right">{receipt.quantity}</td><td className="px-4 py-4 text-right">{money(receipt.goods_total_cost)}</td><td className="px-5 py-4 text-xs text-slate-500">{receipt.correctionReason ? <span>Reversed · {receipt.correctionReason}</span> : <>{receipt.cost_variance_reason ?? "—"}{user.canManage && <Link className="ml-2 text-cyan-700" href={`/inventory/transactions?reverse=${receipt.inventory_transaction_id}`}>Correct receipt</Link>}</>}</td></tr>)}</tbody></table></DataTableShell>
-    {user.canManage && order.status === "issued" && <details className="mt-6 max-w-md rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-medium text-slate-700">Cancel order</summary><div className="mt-4"><CancelPurchaseOrderForm orderId={id} /></div></details>}
+    {user.canManage && order.status === "issued" && <ActionDialog title="Cancel order" description="Confirm why this purchase order is being cancelled. The order stays in history."><div className="mt-4"><CancelPurchaseOrderForm orderId={id} /></div></ActionDialog>}
   </>;
 }

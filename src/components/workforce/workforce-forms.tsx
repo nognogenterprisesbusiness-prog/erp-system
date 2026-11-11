@@ -100,7 +100,7 @@ export function LaborRateForm({ employeeId }: { employeeId: string }) {
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="employeeId" value={employeeId} />
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Rate type<SelectPicker label="Rate type" name="rateType" defaultValue="daily" disabled={pending} options={[{ value: "daily", label: "Daily" }, { value: "hourly", label: "Hourly" }]} /></label>
-    <PesoAmountInput name="amount" label="Rate amount (PHP)" required submitUngrouped />
+    <PesoAmountInput name="amount" label="Rate amount (PHP)" required />
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Effective from<input className={fieldControlClass} name="effectiveStartDate" type="date" defaultValue={today} required /></label>
     <label className="grid min-w-0 content-start gap-1 text-sm font-medium">Effective until (optional)<input className={fieldControlClass} name="effectiveEndDate" type="date" /></label>
     <div className="sm:col-span-2"><FormMessage state={state} /><RecordFormControls busy={pending} label="Add rate" /></div>

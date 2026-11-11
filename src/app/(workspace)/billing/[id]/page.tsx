@@ -1,3 +1,4 @@
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { randomUUID } from "node:crypto";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { uuidSchema } from "@nognog/domain";
@@ -36,9 +37,9 @@ export default async function InvoiceDetailPage({ params, searchParams }: { para
     <DataTableShell empty={payments.length === 0 ? <EmptyState compact title="No payments recorded" description="Record a partial or full payment above." /> : undefined} footer={<span className="text-xs text-slate-500">{payments.length} payment{payments.length === 1 ? "" : "s"}</span>}>
       <table className="w-full min-w-[650px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Reference</th><th className="px-4 py-3">Date</th><th className="px-4 py-3 text-right">Amount</th><th className="px-5 py-3">Status</th></tr></thead><tbody className="divide-y divide-slate-100">{payments.map((payment) => <tr key={payment.id}>
         <td className="px-5 py-4 font-medium text-slate-800">{payment.reference}</td><td className="px-4 py-4 text-slate-600">{payment.paid_on}</td><td className="px-4 py-4 text-right">{money(payment.amount)}</td>
-        <td className="px-5 py-4">{payment.reversal ? <span className="text-xs text-slate-500">Reversed · {payment.reversal.reason}</span> : user.canManage ? <details className="max-w-xs"><summary className="cursor-pointer text-xs font-medium text-cyan-700">Posted · Correct</summary><div className="mt-3"><BillingCorrectionForm kind="reverse" invoiceId={id} paymentId={payment.id} idempotencyKey={randomUUID()} /></div></details> : <span className="text-xs text-emerald-700">Posted</span>}</td>
+        <td className="px-5 py-4">{payment.reversal ? <span className="text-xs text-slate-500">Reversed · {payment.reversal.reason}</span> : user.canManage ? <ActionDialog title="Correct payment" description="Reverse the posted payment with a reason, then record the correct payment. The original stays in history."><div className="mt-3"><BillingCorrectionForm kind="reverse" invoiceId={id} paymentId={payment.id} idempotencyKey={randomUUID()} /></div></ActionDialog> : <span className="text-xs text-emerald-700">Posted</span>}</td>
       </tr>)}</tbody></table>
     </DataTableShell>
-    {user.canManage && invoice.status === "issued" && outstanding === invoice.amount && <details className="mt-6 max-w-md rounded-xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer text-sm font-medium text-slate-700">Void invoice</summary><div className="mt-4"><BillingCorrectionForm kind="void" invoiceId={id} /></div></details>}
+    {user.canManage && invoice.status === "issued" && outstanding === invoice.amount && <ActionDialog title="Void invoice" description="Enter a reason to void this unpaid invoice. The original record stays in history."><div className="mt-4"><BillingCorrectionForm kind="void" invoiceId={id} /></div></ActionDialog>}
   </>;
 }

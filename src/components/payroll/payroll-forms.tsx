@@ -1,5 +1,6 @@
 "use client";
 
+import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -39,8 +40,8 @@ export function PayrollLineForm({ runId, line }: { runId: string; line: { id: st
   const [state, action, pending] = useActionState(updatePayrollLineAction, initial);
   return <form action={action} className="flex flex-wrap items-end gap-2">
     <input type="hidden" name="runId" value={runId} /><input type="hidden" name="lineId" value={line.id} />
-    <label className="grid gap-1 text-[11px] font-medium text-slate-500">Other earnings<input name="otherEarnings" defaultValue={Number(line.other_earnings).toFixed(2)} inputMode="decimal" maxLength={10} className={`${fieldControlClass} h-9 w-28 text-right`} /></label>
-    <label className="grid gap-1 text-[11px] font-medium text-slate-500">Deductions<input name="deductions" defaultValue={Number(line.deductions).toFixed(2)} inputMode="decimal" maxLength={10} className={`${fieldControlClass} h-9 w-28 text-right`} /></label>
+    <label className="grid gap-1 text-[11px] font-medium text-slate-500">Other earnings<MoneyInput name="otherEarnings" defaultValue={Number(line.other_earnings).toFixed(2)} inputMode="decimal" maxLength={10} className={`${fieldControlClass} h-9 w-28 text-right`} /></label>
+    <label className="grid gap-1 text-[11px] font-medium text-slate-500">Deductions<MoneyInput name="deductions" defaultValue={Number(line.deductions).toFixed(2)} inputMode="decimal" maxLength={10} className={`${fieldControlClass} h-9 w-28 text-right`} /></label>
     <label className="grid gap-1 text-[11px] font-medium text-slate-500">Note<input name="notes" defaultValue={line.notes} maxLength={300} placeholder="e.g. Salary; SSS" className={`${fieldControlClass} h-9 w-40`} /></label>
     <Button type="submit" size="sm" variant="outline" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
     {state.message && <span role={state.ok ? "status" : "alert"} className={`basis-full text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</span>}
@@ -67,7 +68,7 @@ export function VoidPayrollForm({ runId }: { runId: string }) {
   const [state, action, pending] = useActionState(voidPayrollAction, initial);
   return <form action={action} className="grid gap-2"><input type="hidden" name="runId" value={runId} />
     <FormField label="Reason" htmlFor="voidReason" error={state.fieldErrors?.reason?.[0]}><input id="voidReason" name="reason" required minLength={3} maxLength={500} className={fieldControlClass} /></FormField>
-    <div><Button type="submit" variant="outline" disabled={pending}>{pending ? "Voiding…" : "Void payroll"}</Button></div><Message state={state} /></form>;
+    <RecordFormControls busy={pending} label="Confirm void payroll" /><Message state={state} /></form>;
 }
 
 export function DepartmentForm({ department }: { department?: Department }) {

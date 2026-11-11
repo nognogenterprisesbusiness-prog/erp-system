@@ -22,7 +22,7 @@ import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { randomUUID } from "node:crypto";
 import { uuidSchema } from "@nognog/domain";
 import { todayInManila } from "@/lib/date";
-import { PurchaseWorkflowCell } from "@/components/purchase-orders/purchase-workflow-cell";
+import { PurchaseWorkflowCell, PurchaseWorkflowAction } from "@/components/purchase-orders/purchase-workflow-cell";
 
 const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 
@@ -93,7 +93,7 @@ async function PurchaseResults({ resultPromise, pageHref, canManage, canViewFina
   const today = todayInManila();
   return <>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No purchases found" description="Add a purchase, or change the search." /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} purchase{result.count === 1 ? "" : "s"}</span>}>
-      <table className="w-full min-w-[1160px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Item · purchase</th><th className="px-4 py-3">Quantity</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Location</th><th className="px-5 py-3">Workflow stage / action</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th></tr></thead>
+      <table className="w-full min-w-[1160px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Item · purchase</th><th className="px-4 py-3">Quantity</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Location</th><th className="px-5 py-3">Status</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th></tr></thead>
         <tbody className="divide-y divide-slate-100">{result.rows.map((row) => {
           const href = row.source === "purchase_order" ? `/purchase-orders/${row.purchase_id}` : `/site-purchases/${row.purchase_id}`;
           return <tr key={`${row.source}:${row.purchase_id}`} className="hover:bg-slate-50/70">
@@ -103,7 +103,7 @@ async function PurchaseResults({ resultPromise, pageHref, canManage, canViewFina
             <td className="px-4 py-4 font-semibold tabular-nums">{peso.format(Number(row.order_total))}</td>
             <td className="px-4 py-4 text-slate-600">{row.location_name ?? "—"}</td>
             <td className="px-5 py-4"><PurchaseWorkflowCell row={row} canManage={canManage} canViewFinance={canViewFinance} paymentBalance={row.paymentBalance} today={today} /></td>
-            <td data-record-actions className="px-5 py-4 text-right bg-white"><RecordViewLink href={href} name={`purchase ${row.purchase_number}`} /></td>
+            <td data-record-actions className="min-w-48 px-5 py-4 text-right bg-white"><div className="flex flex-wrap items-center justify-end gap-2"><PurchaseWorkflowAction row={row} canManage={canManage} canViewFinance={canViewFinance} paymentBalance={row.paymentBalance} today={today} /><RecordViewLink href={href} name={`purchase ${row.purchase_number}`} /></div></td>
           </tr>;
         })}</tbody></table>
     </DataTableShell>

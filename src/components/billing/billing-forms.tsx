@@ -1,5 +1,7 @@
 "use client";
 
+import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useState } from "react";
 import { issueInvoiceAction, recordPaymentAction, reversePaymentAction, voidInvoiceAction, type BillingActionState } from "@/app/(workspace)/billing/actions";
 import { Button } from "@/components/ui/button";
@@ -22,7 +24,7 @@ export function IssueInvoiceForm({ projects, idempotencyKey, today }: { projects
         <input type="hidden" name="projectId" value={projectId} /><PagedReferencePicker kind="billable_project" label="Project" value={projectId} onValueChange={setProjectId} initialOptions={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name} · ${project.client_name}` }))} />
       </FormField>
       <FormField label="Amount (PHP)" htmlFor="amount" error={error("amount")}>
-        <input id="amount" name="amount" type="text" inputMode="decimal" className={fieldControlClass} placeholder="0.00" required />
+        <MoneyInput id="amount" name="amount" inputMode="decimal" className={fieldControlClass} placeholder="0.00" required />
       </FormField>
       <FormField label="Issue date" htmlFor="issuedOn" error={error("issuedOn")}><DatePicker id="issuedOn" name="issuedOn" label="Issue date" defaultValue={today} allowClear={false} required /></FormField>
       <FormField label="Due date" htmlFor="dueOn" error={error("dueOn")}><DatePicker id="dueOn" name="dueOn" label="Due date" defaultValue={today} allowClear={false} required /></FormField>
@@ -43,7 +45,7 @@ export function RecordPaymentForm({ invoiceId, idempotencyKey, today, outstandin
     <h2 className="text-base font-semibold text-slate-900">Record a payment</h2>
     <p className="mt-1 text-xs text-slate-500">Outstanding balance: {formatPhp(outstanding)}. Partial payments are supported.</p>
     <div className="mt-5 grid gap-4 sm:grid-cols-3">
-      <FormField label="Amount (PHP)" htmlFor="paymentAmount" error={error("amount")}><input id="paymentAmount" name="amount" type="text" inputMode="decimal" className={fieldControlClass} placeholder="0.00" required /></FormField>
+      <FormField label="Amount (PHP)" htmlFor="paymentAmount" error={error("amount")}><MoneyInput id="paymentAmount" name="amount" inputMode="decimal" className={fieldControlClass} placeholder="0.00" required /></FormField>
       <FormField label="Payment date" htmlFor="paidOn" error={error("paidOn")}><DatePicker id="paidOn" name="paidOn" label="Payment date" defaultValue={today} allowClear={false} required /></FormField>
       <FormField label="Receipt / bank reference" htmlFor="reference" error={error("reference")}><input id="reference" name="reference" className={fieldControlClass} maxLength={100} placeholder="OR-12345" required /></FormField>
     </div>
@@ -62,7 +64,7 @@ export function BillingCorrectionForm({ kind, invoiceId, paymentId, idempotencyK
       <input id={`${kind}-${paymentId ?? invoiceId}`} name="reason" className={fieldControlClass} minLength={3} maxLength={500} required />
     </FormField>
     {state.message && <p role="alert" className="text-xs text-red-700">{state.message}</p>}
-    <Button type="submit" variant="outline" size="sm" disabled={pending}>{pending ? "Saving…" : kind === "reverse" ? "Reverse payment" : "Void invoice"}</Button>
+    <RecordFormControls busy={pending} label={kind === "reverse" ? "Confirm payment reversal" : "Confirm void invoice"} />
   </form>;
 }
 

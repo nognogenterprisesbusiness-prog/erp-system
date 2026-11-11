@@ -1,5 +1,7 @@
 "use client";
 
+import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useState } from "react";
 import { assetExpenseLabels } from "@nognog/domain";
 import { Button } from "@/components/ui/button";
@@ -29,12 +31,12 @@ export function AddAssetExpenseForm({ assetId, initialKey, today }: { assetId: s
       <label className={labelClass}>Category<select name="category" className={fieldControlClass} required defaultValue="fuel">
         {Object.entries(assetExpenseLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
       </select></label>
-      <label className={labelClass}>Amount (PHP)<input name="amount" inputMode="decimal" required maxLength={13} className={fieldControlClass} /></label>
+      <label className={labelClass}>Amount (PHP)<MoneyInput name="amount" inputMode="decimal" required maxLength={13} className={fieldControlClass} /></label>
       <label className={labelClass}>Date<input name="expenseDate" type="date" required max={today} defaultValue={today} className={fieldControlClass} /></label>
       <label className={labelClass}>Notes (optional)<input name="notes" maxLength={500} className={fieldControlClass} /></label>
     </fieldset>
     <Feedback state={state} />
-    <div><Button disabled={pending} type="submit">{pending ? "Saving…" : "Save expense"}</Button></div>
+    <RecordFormControls busy={pending} success={state.success} label="Save expense" />
   </form>;
 }
 
@@ -45,7 +47,7 @@ export function ReverseAssetExpenseForm({ assetId, expenseId }: { assetId: strin
     <input type="hidden" name="expenseId" value={expenseId} />
     <label className={labelClass}>Correction reason<input name="reason" className={fieldControlClass} required minLength={3} maxLength={500} /></label>
     <Feedback state={state} />
-    <div><Button type="submit" size="sm" variant="outline" disabled={pending}>{pending ? "Reversing…" : "Reverse expense"}</Button></div>
+    <RecordFormControls busy={pending} success={state.success} label="Confirm expense reversal" />
   </form>;
 }
 

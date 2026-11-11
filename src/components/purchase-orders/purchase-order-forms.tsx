@@ -1,8 +1,8 @@
 "use client";
 
+import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useId, useState } from "react";
 import { cancelPurchaseOrderAction, decidePurchaseOwnerApprovalAction, inspectPurchaseDeliveryAction, issuePurchaseOrderAction, receivePurchaseOrderLineAction, receiveWarehouseDeliveryAction, recordSupplierPaymentAction, recordSupplierQuotationAction, voidSupplierPaymentAction, type PurchaseActionState } from "@/app/(workspace)/purchase-orders/actions";
-import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { SelectPicker } from "@/components/ui/select-picker";
@@ -140,7 +140,7 @@ export function ReceivePurchaseLineForm({ orderId, lineId, remaining, unitPrice,
   return <form action={action} className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-2">
     <input type="hidden" name="orderId" value={orderId} /><input type="hidden" name="lineId" value={lineId} /><input type="hidden" name="idempotencyKey" value={idempotencyKey} />
     <FormField label={`Accepted quantity (${unitSymbol})`} htmlFor={`po-receive-quantity-${inspection?.id ?? lineId}`} error={error("quantity")}><input id={`po-receive-quantity-${inspection?.id ?? lineId}`} name="quantity" inputMode="decimal" className={fieldControlClass} value={quantity} readOnly={Boolean(inspection)} onChange={(event) => { setQuantity(event.target.value); const next = Number(event.target.value); if (Number.isFinite(next)) setCost((Math.round(next * unitPrice * 100) / 100).toFixed(2)); }} required /></FormField>
-    <FormField label="Actual goods cost (PHP)" htmlFor={`po-cost-${lineId}`} error={error("goodsTotalCost")} hint="Material cost on the delivery receipt, without freight or VAT."><input id={`po-cost-${lineId}`} name="goodsTotalCost" inputMode="decimal" className={fieldControlClass} value={cost} onChange={(event) => setCost(event.target.value)} required /></FormField>
+    <FormField label="Actual goods cost (PHP)" htmlFor={`po-cost-${lineId}`} error={error("goodsTotalCost")} hint="Material cost on the delivery receipt, without freight or VAT."><MoneyInput id={`po-cost-${lineId}`} name="goodsTotalCost" inputMode="decimal" className={fieldControlClass} value={cost} onValueChange={(raw) => setCost(raw)} required /></FormField>
     <FormField label="Delivery reference" htmlFor={`po-delivery-${inspection?.id ?? lineId}`} error={error("deliveryReference")}><input id={`po-delivery-${inspection?.id ?? lineId}`} name="deliveryReference" className={fieldControlClass} maxLength={120} value={inspection?.delivery_reference} readOnly={Boolean(inspection)} placeholder="DR-12345" required /></FormField>
     {inspection ? <><input type="hidden" name="receivedOn" value={inspection.inspected_on} /><p className="self-center text-sm text-slate-600">Inspected {inspection.inspected_on}{inspection.quality_note ? ` · ${inspection.quality_note}` : ""}</p></> : <FormField label="Receipt date" htmlFor={`po-date-${lineId}`} error={error("receivedOn")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id={`po-date-${lineId}`} name="receivedOn" label="Receipt date" defaultValue={today} allowClear={false} required /></FormField>}
     <FormField label="Price variance reason" htmlFor={`po-reason-${lineId}`} error={error("costVarianceReason")} className="sm:col-span-2" hint="Only needed if the cost differs from the purchase order."><input id={`po-reason-${lineId}`} name="costVarianceReason" className={fieldControlClass} maxLength={500} /></FormField>
@@ -165,7 +165,7 @@ export function ReceiveWarehouseDeliveryForm({ orderId, lineId, remaining, unitS
 
 export function CancelPurchaseOrderForm({ orderId }: { orderId: string }) {
   const [state, action, pending] = useActionState(cancelPurchaseOrderAction, initialState);
-  return <form action={action} className="space-y-3"><input type="hidden" name="orderId" value={orderId} /><FormField label="Cancellation reason" htmlFor="cancelPoReason" error={state.fieldErrors?.reason?.[0]}><input id="cancelPoReason" name="reason" className={fieldControlClass} minLength={3} maxLength={500} required /></FormField>{state.message && <p role="alert" className="text-xs text-red-700">{state.message}</p>}<Button type="submit" variant="outline" size="sm" disabled={pending}>{pending ? "Cancelling…" : "Cancel order"}</Button></form>;
+  return <form action={action} className="space-y-3"><input type="hidden" name="orderId" value={orderId} /><FormField label="Cancellation reason" htmlFor="cancelPoReason" error={state.fieldErrors?.reason?.[0]}><input id="cancelPoReason" name="reason" className={fieldControlClass} minLength={3} maxLength={500} required /></FormField>{state.message && <p role="alert" className="text-xs text-red-700">{state.message}</p>}<RecordFormControls busy={pending} label="Confirm cancellation" /></form>;
 }
 
 // How a purchase was paid, as in the client's sheet: cash, or a check (often
@@ -183,7 +183,7 @@ export function RecordSupplierPaymentForm({ orderId, balance, idempotencyKey, to
       <FormField label="Bank" htmlFor={fieldId("bankName")} error={error("bankName")}><input id={fieldId("bankName")} name="bankName" className={fieldControlClass} maxLength={80} placeholder="e.g. Metrobank" required /></FormField>
       <FormField label="Check no." htmlFor={fieldId("checkNumber")} error={error("checkNumber")}><input id={fieldId("checkNumber")} name="checkNumber" className={fieldControlClass} maxLength={40} placeholder="e.g. 123456" required /></FormField>
     </>}
-    <FormField label="Amount (PHP)" htmlFor={fieldId("paymentAmount")} error={error("amount")} hint={`Unpaid balance ${peso.format(balance)}`}><input id={fieldId("paymentAmount")} name="amount" inputMode="decimal" className={fieldControlClass} defaultValue={balance > 0 ? balance.toFixed(2) : ""} required /></FormField>
+    <FormField label="Amount (PHP)" htmlFor={fieldId("paymentAmount")} error={error("amount")} hint={`Unpaid balance ${peso.format(balance)}`}><MoneyInput id={fieldId("paymentAmount")} name="amount" inputMode="decimal" className={fieldControlClass} defaultValue={balance > 0 ? balance.toFixed(2) : ""} required /></FormField>
     <FormField label={method === "check" ? "Check date" : "Payment date"} htmlFor={fieldId("paymentDate")} error={error("paymentDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id={fieldId("paymentDate")} name="paymentDate" label={method === "check" ? "Check date" : "Payment date"} defaultValue={today} allowClear={false} required /></FormField>
     <FormField label="Note (optional)" htmlFor={fieldId("paymentRemarks")} className="sm:col-span-2" error={error("remarks")}><input id={fieldId("paymentRemarks")} name="remarks" className={fieldControlClass} maxLength={500} /></FormField>
     {state.message && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{state.message}</p>}

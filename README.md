@@ -1,5 +1,7 @@
 # Nognog Enterprises — Construction ERP
 
+**Readable amounts and visible actions (2026-11-12):** Web money inputs display comma grouping while server payloads and calculations retain plain decimal strings. Cancellation, voiding, correction, stock-count and expense actions open labeled dialogs instead of action accordions. Purchasing commands sit beside View in Actions. Selection controls, history, approval rules and database schemas remain unchanged. No migration or mobile build is required. See the money/action section in the testing guide.
+
 > **Testing with the client?** Start with the [testing guide](TESTING-GUIDE.md): what each account can do and a step-by-step full-project test.
 
 **Contextual details and request clarity (2026-11-11):** View opens an existing record in a right-side panel while retaining the source list. Direct URLs still work. Material, Equipment and Vehicle request lists use a Requested item column with their existing reference underneath. Unselected warehouse choice is visible, with explicit source requirements for every approved material quantity and the existing multi-warehouse flow retained. Headers, repeated project/site labels, amount alignment and receipt preview spacing are refined. Canonical server pages, role checks, stock commands and data schemas are reused. No new migration or mobile build is required. See [the panel state and maintenance rules](docs/workflow-state-machines.md#contextual-record-panels).

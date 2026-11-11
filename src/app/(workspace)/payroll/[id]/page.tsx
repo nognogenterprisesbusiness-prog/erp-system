@@ -1,3 +1,4 @@
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { notFound } from "next/navigation";
 import { payrollStatusLabels, payrollTotals, philippinesDate, uuidSchema } from "@nognog/domain";
 import { IntentLink as Link } from "@/components/layout/intent-link";
@@ -64,7 +65,7 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
           {payroll.status === "paid" && <p className="text-sm text-slate-600">This payroll is complete.</p>}
         </div>
       </div>
-      {user.canManage && <details><summary className="cursor-pointer text-sm font-medium text-slate-700">Void this payroll</summary><div className="mt-3"><VoidPayrollForm runId={id} /></div><p className="mt-2 text-xs text-slate-500">Voiding keeps the record and lets you create a corrected payroll for the same period.</p></details>}
+      {user.canManage && <ActionDialog title="Void payroll" description="Enter a reason to void this payroll. The record is retained so a corrected payroll can be created for the same period."><div className="mt-3"><VoidPayrollForm runId={id} /></div><p className="mt-2 text-xs text-slate-500">Voiding keeps the record and lets you create a corrected payroll for the same period.</p></ActionDialog>}
     </section>}
   </>;
 }

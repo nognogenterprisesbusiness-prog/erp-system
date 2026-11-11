@@ -3,7 +3,6 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { postAttendanceAction, reverseAttendanceAction, type AttendanceActionState } from "@/app/(workspace)/projects/[id]/attendance/actions";
 import { useRecordDialog, RecordFormControls } from "@/components/ui/record-create-dialog";
-import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PagedReferencePicker } from "@/components/ui/paged-reference-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -41,5 +40,5 @@ export function PostAttendanceForm({ projectId, assignments, idempotencyKey, tod
 
 export function ReverseAttendanceForm({ projectId, attendanceId, idempotencyKey }: { projectId: string; attendanceId: string; idempotencyKey: string }) {
   const [state, action, pending] = useActionState(reverseAttendanceAction, initialState);
-  return <form action={action} className="space-y-3"><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="attendanceId" value={attendanceId} /><input type="hidden" name="idempotencyKey" value={idempotencyKey} /><FormField label="Correction reason" htmlFor={`attendance-reason-${attendanceId}`} error={state.fieldErrors?.reason?.[0]}><input id={`attendance-reason-${attendanceId}`} name="reason" className={fieldControlClass} minLength={3} maxLength={500} required /></FormField>{state.message && <p role="alert" className="text-xs text-red-700">{state.message}</p>}<Button type="submit" variant="outline" size="sm" disabled={pending}>{pending ? "Reversing…" : "Reverse entry"}</Button></form>;
+  return <form action={action} className="space-y-3"><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="attendanceId" value={attendanceId} /><input type="hidden" name="idempotencyKey" value={idempotencyKey} /><FormField label="Correction reason" htmlFor={`attendance-reason-${attendanceId}`} error={state.fieldErrors?.reason?.[0]}><input id={`attendance-reason-${attendanceId}`} name="reason" className={fieldControlClass} minLength={3} maxLength={500} required /></FormField>{state.message && <p role="alert" className="text-xs text-red-700">{state.message}</p>}<RecordFormControls busy={pending} label="Confirm attendance reversal" /></form>;
 }

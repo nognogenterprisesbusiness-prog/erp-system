@@ -1,5 +1,6 @@
 import { Children, cloneElement, isValidElement, type ReactNode } from "react";
 import { Input } from "./input";
+import { MoneyInput } from "./money-input";
 
 type InputOptions = { type?: string; inputMode?: string };
 const examples: Record<string, string> = {
@@ -36,7 +37,7 @@ export function getFieldPlaceholder(label: string, { type, inputMode }: InputOpt
   if (type === "email" || /email/.test(key)) return "rich@example.com";
   if (type === "tel" || /phone|contact number/.test(key)) return "09150365602";
   if (/address/.test(key)) return examples.address;
-  if (/price|amount|cost|value|charge/.test(key) && !/reason|note|basis/.test(key)) return "1500.00";
+  if (/price|amount|cost|value|charge/.test(key) && !/reason|note|basis/.test(key)) return "1,500.00";
   if (/quantity/.test(key) || type === "number" || inputMode === "numeric" || inputMode === "decimal") return "100";
   if (/reason/.test(key)) return "Incorrect details recorded";
   if (/reference|receipt no/.test(key)) return "DR-001";
@@ -48,7 +49,7 @@ export function getFieldPlaceholder(label: string, { type, inputMode }: InputOpt
 export function withFieldPlaceholder(children: ReactNode, label: string): ReactNode {
   return Children.map(children, (child) => {
     if (!isValidElement<{ placeholder?: string; type?: string; inputMode?: string; children?: ReactNode }>(child)) return child;
-    if (child.type === "input" || child.type === "textarea" || child.type === Input) {
+    if (child.type === "input" || child.type === "textarea" || child.type === Input || child.type === MoneyInput) {
       if (child.props.placeholder !== undefined) return child;
       const example = getFieldPlaceholder(label, child.props);
       return example ? cloneElement(child, { placeholder: example }) : child;

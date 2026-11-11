@@ -1,5 +1,6 @@
 "use client";
 
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { dispatchRequestLineAction, receiveRequestTransferAction, type RequestActionState } from "@/app/(workspace)/requests/actions";
 import { useRecordDialog, RecordFormControls } from "@/components/ui/record-create-dialog";
@@ -10,7 +11,7 @@ import { SelectPicker } from "@/components/ui/select-picker";
 
 const initialState: RequestActionState = { ok: false, message: "" };
 
-export function RequestMovementForm({ mode, id, requestId, remaining, unit, expanded = false, vehicles = [] }: {
+function MovementForm({ mode, id, requestId, remaining, unit, expanded = false, vehicles = [] }: {
   mode: "dispatch" | "receive"; id: string; requestId?: string; remaining: number; unit: string; expanded?: boolean;
   vehicles?: { id: string; label: string }[];
 }) {
@@ -24,7 +25,7 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
   const [companyTransport, setCompanyTransport] = useState(false);
   const [condition, setCondition] = useState<"accepted" | "accepted_with_note">("accepted");
   const label = mode === "dispatch" ? "Release materials" : "Confirm receipt";
-  const form = <form action={action} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1.5fr_auto] lg:items-end">
+  const form = <form action={action} className="mt-4 grid gap-4 sm:grid-cols-2">
       <input type="hidden" name="idempotencyKey" value={key} />
       <input type="hidden" name={mode === "dispatch" ? "allocationId" : "transferItemId"} value={id} />
       {requestId && <input type="hidden" name="requestId" value={requestId} />}
@@ -50,18 +51,24 @@ export function RequestMovementForm({ mode, id, requestId, remaining, unit, expa
       {mode === "receive" && <>
         <input type="hidden" name="condition" value={condition} />
         <FormField label="Material check" htmlFor={`condition-${id}`}>
-          <SelectPicker label="Material check" value={condition} onValueChange={(next) => setCondition(next as typeof condition)} options={[{ value: "accepted", label: "Quantity and condition accepted" }, { value: "accepted_with_note", label: "Accepted with quality note" }]} />
+          <SelectPicker id={`condition-${id}`} label="Material check" value={condition} onValueChange={(next) => setCondition(next as typeof condition)} options={[{ value: "accepted", label: "Quantity and condition accepted" }, { value: "accepted_with_note", label: "Accepted with quality note" }]} />
         </FormField>
         {condition === "accepted_with_note" && <FormField label="Quality note" htmlFor={`quality-note-${id}`}><input id={`quality-note-${id}`} name="qualityNote" className={fieldControlClass} maxLength={500} placeholder="Describe the issue with accepted stock" required /></FormField>}
-        <p className="text-xs text-slate-500 sm:col-span-2 lg:col-span-4">Enter only the usable quantity. Report damaged or missing pieces to Admin.</p>
+        <p className="text-xs text-slate-500 sm:col-span-2">Enter only the usable quantity. Report damaged or missing pieces to Admin.</p>
       </>}
-      <div className={mode === "receive" ? "col-span-full flex justify-start" : undefined}>
+      <div className="col-span-full">
         <RecordFormControls busy={pending} disabled={mode === "dispatch" && companyTransport && !vehicleId} label={label} />
       </div>
-      {state.ok && <p role="status" className="text-sm text-emerald-700 sm:col-span-2 lg:col-span-4">{mode === "dispatch" ? "Materials released." : "Receipt recorded."}</p>}
-      {!state.ok && state.message && <p role="alert" className="text-sm text-red-600 sm:col-span-2 lg:col-span-4">{state.message}</p>}
+      {state.ok && <p role="status" className="text-sm text-emerald-700 sm:col-span-2">{mode === "dispatch" ? "Materials released." : "Receipt recorded."}</p>}
+      {!state.ok && state.message && <p role="alert" className="text-sm text-red-600 sm:col-span-2">{state.message}</p>}
     </form>;
   if (expanded && dialog) return form;
   if (expanded) return <section className="rounded-xl border border-slate-200 bg-white p-5"><h2 className="text-base font-semibold text-slate-900">{label}</h2>{form}</section>;
-  return <details className="group rounded-xl border border-slate-200 bg-white p-4"><summary className="cursor-pointer text-sm font-semibold text-cyan-800 focus-visible:outline-cyan-700">{label}</summary>{form}</details>;
+  return form;
+}
+
+export function RequestMovementForm(props: Parameters<typeof MovementForm>[0]) {
+  if (props.expanded) return <MovementForm {...props} />;
+  const title = props.mode === "dispatch" ? "Release materials" : "Confirm receipt";
+  return <ActionDialog retainDraft title={title} description={props.mode === "dispatch" ? "Enter the quantity leaving the warehouse and its delivery details." : "Enter only the usable quantity actually received at the site."}><MovementForm {...props} expanded /></ActionDialog>;
 }

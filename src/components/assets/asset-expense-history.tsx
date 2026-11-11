@@ -1,3 +1,4 @@
+import { ActionDialog } from "@/components/ui/action-dialog";
 import { randomUUID } from "node:crypto";
 import { assetExpenseLabels, philippinesDate } from "@nognog/domain";
 import { IntentLink as Link } from "@/components/layout/intent-link";
@@ -23,9 +24,9 @@ export async function AssetExpenseHistory({ assetId, kind, page, canManage, canA
   return <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
     <h2 className="text-lg font-semibold">Asset expenses</h2>
     {kind === "vehicle" && <p className="mt-1 text-sm text-slate-600">Project diesel receipts appear separately below.</p>}
-    {canManage && canAdd && <details className="mt-4"><summary className="cursor-pointer font-medium text-cyan-800">Add expense</summary>
+    {canManage && canAdd && <ActionDialog title="Add expense" description="Record an expense for this unit. This does not automatically change project costs.">
       <AddAssetExpenseForm assetId={assetId} initialKey={randomUUID()} today={philippinesDate()} />
-    </details>}
+    </ActionDialog>}
     {data.length === 0 ? <p className="mt-4 text-sm text-slate-600">No asset expenses on this page.</p> :
       <ul className="mt-4 divide-y divide-slate-100">
         {data.map((entry) => <li key={entry.id} className="grid gap-1 py-3 text-sm">
@@ -34,7 +35,7 @@ export async function AssetExpenseHistory({ assetId, kind, page, canManage, canA
           {entry.notes && <p className="break-words text-slate-600">{entry.notes}</p>}
           {entry.receipt_path && <a className="w-fit text-cyan-800 underline" href={`/asset-expense-receipts/${entry.id}`} target="_blank" rel="noreferrer">View receipt</a>}
           {entry.reversed_at ? <p className="text-slate-600">Reversed · {entry.reversal_reason}</p> :
-            canManage && <details><summary className="w-fit cursor-pointer text-cyan-800">Correct expense</summary><ReverseAssetExpenseForm assetId={assetId} expenseId={entry.id} /></details>}
+            canManage && <ActionDialog title="Correct expense" description="Enter a reason to reverse this expense, then add the correct entry. The original stays in history."><ReverseAssetExpenseForm assetId={assetId} expenseId={entry.id} /></ActionDialog>}
         </li>)}
       </ul>}
     <HistoryPagination path={path} page={page} count={count ?? 0} pageSize={pageSize} parameter="assetExpensePage" filters={filters} />

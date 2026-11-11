@@ -1,5 +1,6 @@
 "use client";
 
+import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useState } from "react";
 import { budgetChangeSchema } from "@nognog/domain";
 import { adjustBudgetAction, type ProjectCostActionState } from "@/app/(workspace)/projects/[id]/costs/actions";
@@ -28,7 +29,7 @@ function BudgetForm({ projectId, budget, cost, initialKey, returnTo = "costs" }:
     <p className="text-sm leading-6 text-slate-600">Admin records a budget change that has been approved. This changes the project budget immediately and keeps the reason in its history.</p>
     <div className="rounded-xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Current approved budget</p><p className="mt-1 text-xl font-semibold tabular-nums">{money.format(budget)}</p></div>
     <FormField label="What changed?" htmlFor="budgetDirection"><SelectPicker id="budgetDirection" label="Budget change type" value={direction} onValueChange={setDirection} disabled={pending} options={[{ value: "increase", label: "Increase the budget" }, { value: "reduce", label: "Reduce the budget" }]} /></FormField>
-    <FormField label={direction === "reduce" ? "Amount to subtract (PHP)" : "Amount to add (PHP)"} htmlFor="budgetAmount" error={state.fieldErrors?.changeAmount?.[0]} hint="Enter a positive amount, for example 10000.00."><input id="budgetAmount" className={fieldControlClass} value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="0.00" disabled={pending} required /></FormField>
+    <FormField label={direction === "reduce" ? "Amount to subtract (PHP)" : "Amount to add (PHP)"} htmlFor="budgetAmount" error={state.fieldErrors?.changeAmount?.[0]} hint="Enter a positive amount, for example 10,000.00."><MoneyInput id="budgetAmount" className={fieldControlClass} value={amount} onValueChange={(raw) => setAmount(raw)} inputMode="decimal" placeholder="0.00" disabled={pending} required /></FormField>
     {valid && <div aria-live="polite" className="grid gap-4 rounded-xl border border-cyan-100 bg-cyan-50 p-4 sm:grid-cols-2"><div><p className="text-xs text-slate-600">New approved budget</p><p className="mt-1 font-semibold tabular-nums">{money.format(updated)}</p></div><div><p className="text-xs text-slate-600">{remaining < 0 ? "Over budget after change" : "Remaining after actual costs"}</p><p className={`mt-1 font-semibold tabular-nums ${remaining < 0 ? "text-red-700" : ""}`}>{money.format(Math.abs(remaining))}</p></div></div>}
     {valid && updated < 0 && <p role="alert" className="text-sm text-red-700">The approved budget cannot be below ₱0.00. Reduce the amount to subtract.</p>}
     <FormField label="Reason for the approved change" htmlFor="budgetReason" error={state.fieldErrors?.reason?.[0]}><textarea id="budgetReason" name="reason" value={reason} onChange={(event) => setReason(event.target.value)} className={`${fieldControlClass} h-auto py-3`} rows={2} minLength={3} maxLength={500} placeholder="For example, approved additional second-floor work" disabled={pending} required /></FormField>

@@ -1,5 +1,6 @@
 "use client";
 
+import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useState } from "react";
 import { approveSitePurchaseAction, reimburseSitePurchaseAction, rejectSitePurchaseAction, submitSitePurchaseAction, type SitePurchaseActionState } from "@/app/(workspace)/site-purchases/actions";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -52,7 +53,7 @@ export function SitePurchaseForm({ choices, idempotencyKey, today }: { choices: 
       <FormField label="Receipt date" htmlFor="receiptDate" error={error("receiptDate")}><DatePicker className="[&>button]:h-11 [&>button]:rounded-lg" id="receiptDate" name="receiptDate" label="Receipt date" defaultValue={today} allowClear={false} required /></FormField>
       </>}
       {purchaseKind === "expense" && <FormField label="Charge to" htmlFor="costType"><SelectPicker id="costType" label="Charge to" value={costType} onValueChange={setCostType} disabled={pending || processingPhoto} options={Object.entries(receiptExpenseCostTypeLabels).map(([value, label]) => ({ value, label }))} /></FormField>}
-      {purchaseKind === "expense" && <FormField label="Receipt total (PHP)" htmlFor="receiptAmount" error={error("amount")}><input id="receiptAmount" name="amount" value={amount} onChange={(event) => setAmount(event.target.value)} className={fieldControlClass} inputMode="decimal" maxLength={18} placeholder="1500.00" required /></FormField>}
+      {purchaseKind === "expense" && <FormField label="Receipt total (PHP)" htmlFor="receiptAmount" error={error("amount")}><MoneyInput id="receiptAmount" name="amount" value={amount} onValueChange={(raw) => setAmount(raw)} className={fieldControlClass} inputMode="decimal" maxLength={18} placeholder="1,500.00" required /></FormField>}
     </div>
     {purchaseKind === "inventory" && <div>
       <PurchaseLineItems title="Items bought" totalLabel="Receipt total" lines={lines} materials={choices.materials} maxLines={30} pending={pending || processingPhoto} idPrefix="site-purchase" onAdd={() => { setLines((current) => [...current, { key: nextKey, materialId: "", quantity: "", unitPrice: "" }]); setNextKey((key) => key + 1); }} onRemove={(key) => setLines((current) => current.filter((line) => line.key !== key))} onUpdate={(key, patch) => updateLine(key, patch)} />
