@@ -11,7 +11,7 @@ import { inventoryScopeLabel, type InventoryScope } from "@/lib/inventory/scope"
 type Location = { id: string; name: string; location_type: string; detail?: string };
 const collator = new Intl.Collator("en-PH", { numeric: true, sensitivity: "base" });
 
-export function InventoryLocationPicker({ locations, value, scope }: { locations: Location[]; value: string; scope?: InventoryScope }) {
+export function InventoryLocationPicker({ locations, value, scope, allowSummary = true }: { locations: Location[]; value: string; scope?: InventoryScope; allowSummary?: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -21,7 +21,7 @@ export function InventoryLocationPicker({ locations, value, scope }: { locations
   const descriptionId = useId();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-  const summaryScopes: InventoryScope[] = scope ? [
+  const summaryScopes: InventoryScope[] = !allowSummary ? [] : scope ? [
     ...(locations.some((location) => location.location_type === "warehouse") ? ["warehouses" as const] : []),
     ...(locations.some((location) => location.location_type === "project_site") ? ["sites" as const] : []),
     "overview",
@@ -63,18 +63,18 @@ export function InventoryLocationPicker({ locations, value, scope }: { locations
       className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-950/50">
       <div className="border-b border-slate-100 p-5 sm:p-6">
         <DialogHeading id={titleId} title="Choose stock location" onClose={() => dialog.current?.close()} />
-        <p id={descriptionId} className="mt-2 text-sm text-slate-500">Choose combined totals or a specific warehouse or project site.</p>
+        <p id={descriptionId} className="mt-2 text-sm text-slate-500">{allowSummary ? "Choose combined totals or a specific warehouse or project site." : "Choose the warehouse or project site you are counting. Counts always belong to one location."}</p>
         <input ref={search} type="search" aria-label="Search stock locations" placeholder="Search warehouse, site, project or address…" maxLength={100}
           value={query} onChange={(event) => setQuery(event.target.value)} className={`${fieldControlClass} mt-4`} />
       </div>
       <div className="dialog-scroll max-h-[calc(90dvh-12rem)] space-y-5 overflow-y-auto overscroll-contain p-5 sm:p-6">
-        <section aria-label="Combined stock totals">
+        {allowSummary && <section aria-label="Combined stock totals">
           <h3 className="mb-2 text-sm font-semibold text-slate-700">Combined totals</h3>
           <div className="grid gap-2 sm:grid-cols-3">{summaryScopes.map((item) => <button key={item} type="button" aria-pressed={selected === item} onClick={() => choose(item)}
             className={`min-h-11 rounded-xl border px-3 py-2 text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 ${selected === item ? "border-cyan-600 bg-cyan-50 text-cyan-800" : "border-slate-200 hover:bg-slate-50"}`}>
             {inventoryScopeLabel(item)}
           </button>)}</div>
-        </section>
+        </section>}
         <p role="status" className="text-sm text-slate-500">{matches.length} matching location{matches.length === 1 ? "" : "s"}</p>
         {groups.map((group) => {
           const rows = matches.filter((location) => location.location_type === group.kind);

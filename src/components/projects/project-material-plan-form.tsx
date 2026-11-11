@@ -16,9 +16,9 @@ export function ProjectMaterialPlanForm({ projectId, choices, initial }: { proje
   const [state, action, pending] = useActionState<PlanActionState, FormData>(saveProjectMaterialPlanAction, { message: "" });
   const sites = choices.sites.filter((site) => site.project_id === projectId);
   const warehouses = choices.warehouses.filter((warehouse) => warehouse.project_id === projectId);
-  const [siteId, setSiteId] = useState(initial?.siteId ?? sites[0]?.id ?? "");
-  const [warehouseId, setWarehouseId] = useState(initial?.warehouseId ?? warehouses[0]?.warehouse_id ?? "");
-  const [materialId, setMaterialId] = useState(initial?.materialId ?? choices.materials[0]?.id ?? "");
+  const [siteId, setSiteId] = useState(initial?.siteId ?? "");
+  const [warehouseId, setWarehouseId] = useState(initial?.warehouseId ?? "");
+  const [materialId, setMaterialId] = useState(initial?.materialId ?? "");
   const errors = state.fieldErrors;
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="projectId" value={projectId} />

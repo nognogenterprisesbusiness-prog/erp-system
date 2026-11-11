@@ -24,6 +24,7 @@ export default async function InvoiceDetailPage({ params, searchParams }: { para
   const outstanding = balance?.outstanding_amount ?? 0;
   return <>
     <PageHeader title={invoice.invoice_number} description={`${invoice.project_code} · ${invoice.project_name} · ${invoice.client_name}`} action={<Button variant="outline" asChild><Link data-detail-back href="/billing">Back to billing</Link></Button>} />
+    <div className="mt-4 flex flex-wrap items-center gap-3"><p className="text-sm text-slate-600">Project and client names are recorded as they were when this invoice was issued.</p><Button variant="outline" size="sm" asChild><Link href={`/projects/${invoice.project_id}`}>View current project</Link></Button></div>
     {posted && ["payment", "reversal", "void"].includes(posted) && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{posted === "payment" ? "Payment recorded." : posted === "reversal" ? "Payment reversed with an audit record." : "Invoice voided."}</p>}
     <section className="mt-7 grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-3 sm:p-6">
       <div><p className="text-xs text-slate-500">Invoice amount</p><p className="mt-1 text-xl font-semibold text-slate-900">{money(invoice.amount)}</p></div>

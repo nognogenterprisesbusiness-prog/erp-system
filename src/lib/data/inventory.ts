@@ -248,8 +248,10 @@ export async function getInventoryTransfers(page = 1) {
   const canReceive = new Map((receivingPermissions.data ?? []).map((row) => [row.id, row.can_receive]));
   const links = linksResult.data ?? [];
   const linkMap = new Map((links ?? []).map((link) => [link.transfer_item_id, link]));
+  const requestLines = links.length ? await readByIds([...new Set(links.map(link => link.request_line_id))], (ids, from, to) => supabase.from("material_request_lines").select("id,request_id").in("id", ids).order("id").range(from, to), "transfer request links") : [];
+  const requestByLine = new Map(requestLines.map(line => [line.id, line.request_id]));
   const itemMap = new Map((items ?? []).map((item) => [item.transfer_id, item])); const materialMap = new Map((materialsResult.data ?? []).map((item) => [item.id, item])); const unitMap = new Map((unitsResult.data ?? []).map((item) => [item.id, item.symbol])); const locationMap = new Map([...locations, ...deliveryDestinations].map((item) => [item.id, item]));
-  return { count: count ?? 0, rows: (transfers ?? []).map((transfer) => { const item = itemMap.get(transfer.id); return { ...transfer, item, canReceive: item ? canReceive.get(item.id) === true : false, requestBound: item ? linkMap.has(item.id) : false, material: item ? { ...materialMap.get(item.material_id), unitSymbol: unitMap.get(item.unit_of_measure_id) ?? "" } : undefined, source: locationMap.get(transfer.source_location_id), destination: locationMap.get(transfer.destination_location_id) }; }) };
+  return { count: count ?? 0, rows: (transfers ?? []).map((transfer) => { const item = itemMap.get(transfer.id); return { ...transfer, item, canReceive: item ? canReceive.get(item.id) === true : false, requestBound: item ? linkMap.has(item.id) : false, requestId: item ? requestByLine.get(linkMap.get(item.id)?.request_line_id ?? "") : undefined, material: item ? { ...materialMap.get(item.material_id), unitSymbol: unitMap.get(item.unit_of_measure_id) ?? "" } : undefined, source: locationMap.get(transfer.source_location_id), destination: locationMap.get(transfer.destination_location_id) }; }) };
 }
 
 export async function getSiteConsumptionOptions() {

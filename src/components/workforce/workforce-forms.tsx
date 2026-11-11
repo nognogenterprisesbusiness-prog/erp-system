@@ -49,7 +49,7 @@ export function WorkforceAssignmentForm({ employees, projects, sites, fixedEmplo
 }) {
   const [state, action, pending] = useActionState(assignEmployeeAction, initialState);
   const inDialog = useCompleteWorkforceDialog(state);
-  const [projectId, setProjectId] = useState(fixedProjectId ?? projects[0]?.id ?? "");
+  const [projectId, setProjectId] = useState(fixedProjectId ?? "");
   const filteredSites = useMemo(() => sites.filter((site) => site.project_id === projectId), [sites, projectId]);
   return <form action={action} className={inDialog ? "grid gap-4 sm:grid-cols-2" : "grid gap-3 rounded-lg bg-slate-50 p-4 md:grid-cols-2 xl:grid-cols-6"}>
     {fixedEmployeeId ? <input type="hidden" name="employeeId" value={fixedEmployeeId} /> : <label className="grid min-w-0 content-start gap-2 text-sm font-medium">Employee<SelectPicker label="Employee" name="employeeId" required placeholder="Select employee" disabled={pending} options={employees.map((employee) => ({ value: employee.id, label: employee.fullName }))} /></label>}
@@ -80,7 +80,7 @@ export function TransferAssignmentForm({ assignment, projects, sites }: {
 }) {
   const [state, action, pending] = useActionState(transferEmployeeAssignmentAction, initialState);
   useCompleteWorkforceDialog(state);
-  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
+  const [projectId, setProjectId] = useState("");
   const filteredSites = useMemo(() => sites.filter((site) => site.project_id === projectId), [sites, projectId]);
   return <form action={action} className="grid gap-4 sm:grid-cols-2">
     <input type="hidden" name="assignmentId" value={assignment.id} /><input type="hidden" name="employeeId" value={assignment.employee_id} />

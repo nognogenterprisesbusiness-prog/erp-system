@@ -32,3 +32,11 @@ test("approval fields retain their explicit guidance instead of a generic correc
   assert.match(html, /placeholder="Approved additional second-floor work"/);
   assert.doesNotMatch(html, /Incorrect details recorded/);
 });
+
+test("field labels stay separate from guidance and errors describe the control", () => {
+  const html = renderToStaticMarkup(FormField({ label: "Quantity", htmlFor: "quantity", error: "Enter an available quantity", children: createElement("input", { id: "quantity", required: true }) }));
+  assert.match(html, /<label for="quantity">Quantity<\/label>/);
+  assert.match(html, /aria-describedby="quantity-error"/);
+  assert.match(html, /aria-invalid="true"/);
+  assert.match(html, /id="quantity-error" role="alert"/);
+});

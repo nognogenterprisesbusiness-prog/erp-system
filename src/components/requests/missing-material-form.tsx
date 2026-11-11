@@ -22,10 +22,10 @@ export function MissingMaterialForm({ choices }: { choices: Choices }) {
     if (result.ok) { setDraft(emptyShortageDraft()); setKey(crypto.randomUUID()); }
     return result;
   }, initial);
-  const [projectId, setProjectId] = useState(choices.projects[0]?.id ?? "");
+  const [projectId, setProjectId] = useState("");
   const [siteId, setSiteId] = useState("");
   const sites = choices.sites.filter((item) => item.project_id === projectId);
-  const selectedSite = sites.some((item) => item.id === siteId) ? siteId : sites[0]?.id ?? "";
+  const selectedSite = sites.some((item) => item.id === siteId) ? siteId : sites.length === 1 ? sites[0].id : "";
   const update = (field: keyof typeof draft, value: string) => setDraft((previous) => ({ ...previous, [field]: value }));
   return <form action={action} className="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-2">
     <input type="hidden" name="key" value={key} />

@@ -13,7 +13,7 @@ type AssignmentChoice = { id: string; employee_id: string; start_date: string; e
 
 export function PostAttendanceForm({ projectId, assignments, idempotencyKey, today, embedded = false }: { projectId: string; assignments: AssignmentChoice[]; idempotencyKey: string; today: string; embedded?: boolean }) {
   const [state, action, pending] = useActionState(postAttendanceAction, initialState);
-  const [assignmentId, setAssignmentId] = useState(assignments[0]?.id ?? "");
+  const [assignmentId, setAssignmentId] = useState("");
   const [status, setStatus] = useState<"present" | "absent">("present");
   const dialog = useRecordDialog();
   const complete = dialog?.complete;

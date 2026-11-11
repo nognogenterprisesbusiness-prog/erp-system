@@ -22,10 +22,10 @@ export async function AssetExpenseHistory({ assetId, kind, page, canManage, canA
   const submitters = submitterIds.length ? await client.from("profiles").select("id,full_name").in("id", submitterIds) : null;
   const submitterName = new Map(submitters?.data?.map((profile) => [profile.id, profile.full_name]));
   const path = `/${kind === "vehicle" ? "vehicles" : "equipment"}/${assetId}`;
-  return <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
-    <h2 className="text-lg font-semibold">Asset expenses</h2>
-    {kind === "vehicle" && <p className="mt-1 text-sm text-slate-600">Project diesel receipts appear separately below.</p>}
-    {canManage && canAdd && <ActionDialog title="Add expense" description="Record an expense for this unit. This does not automatically change project costs.">
+  return <section id="unit-expenses" className="mt-6 scroll-mt-6 rounded-xl border border-slate-200 bg-white p-5">
+    <h2 className="text-lg font-semibold">Unit operating expenses</h2>
+    <p className="mt-1 text-sm text-slate-600">Expenses recorded for this unit. These entries do not automatically charge a project. Project-linked fuel receipts are listed separately.</p>
+    {canManage && canAdd && <ActionDialog title="Add unit expense" triggerLabel="Add expense" description="Record an expense for this unit. This does not automatically change project costs.">
       <AddAssetExpenseForm assetId={assetId} initialKey={randomUUID()} today={philippinesDate()} />
     </ActionDialog>}
     {data.length === 0 ? <p className="mt-4 text-sm text-slate-600">No asset expenses on this page.</p> :

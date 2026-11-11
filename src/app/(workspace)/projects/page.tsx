@@ -34,7 +34,7 @@ function projectListHref(filters: Filters, page = filters.page) {
 
 async function ProjectCreateAction({ creating, closeHref }: { creating: boolean; closeHref: string }) {
   const profiles = await getAssignableProfiles("engineer");
-  return <RecordCreateDialog title="Add project" initialOpen={creating} closeHref={closeHref}><ProjectForm profiles={profiles} /></RecordCreateDialog>;
+  return <RecordCreateDialog confirmDiscard title="Add project" initialOpen={creating} closeHref={closeHref}><ProjectForm profiles={profiles} /></RecordCreateDialog>;
 }
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

@@ -23,8 +23,8 @@ const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP"
 // quantity and price per line. The price starts at the supplier's latest price.
 export function IssuePurchaseOrderForm({ choices, idempotencyKey, today, initialMaterialId, initialWarehouseId, initialQuantity, quotation, sourceRequest, sourceReport }: { choices: Choices; idempotencyKey: string; today: string; initialMaterialId?: string; initialWarehouseId?: string; initialQuantity?: string; quotation?: LinkedQuotation; sourceRequest?: LinkedRequest; sourceReport?: LinkedShortage }) {
   const [state, action, pending] = useActionState(issuePurchaseOrderAction, initialState);
-  const [supplierId, setSupplierId] = useState(quotation?.supplierId ?? choices.suppliers[0]?.id ?? "");
-  const [warehouseId, setWarehouseId] = useState(sourceRequest?.warehouseId ?? sourceReport?.warehouseId ?? initialWarehouseId ?? choices.warehouses[0]?.id ?? "");
+  const [supplierId, setSupplierId] = useState(quotation?.supplierId ?? "");
+  const [warehouseId, setWarehouseId] = useState(sourceRequest?.warehouseId ?? sourceReport?.warehouseId ?? initialWarehouseId ?? "");
   const latestPrice = (supplier: string, materialId: string) => {
     const price = choices.latestPrices[`${supplier}:${materialId}`];
     return price === undefined ? "" : price.toFixed(2);
@@ -90,7 +90,7 @@ export function PurchaseApprovalForm({ requestId, decision }: { requestId: strin
 
 export function SupplierQuotationForm({ choices, idempotencyKey, today }: { choices: Choices; idempotencyKey: string; today: string }) {
   const [state, action, pending] = useActionState(recordSupplierQuotationAction, initialState);
-  const [supplierId, setSupplierId] = useState(choices.suppliers[0]?.id ?? "");
+  const [supplierId, setSupplierId] = useState("");
   const [lines, setLines] = useState<Line[]>([{ key: 0, materialId: "", quantity: "", unitPrice: "" }]);
   const [nextKey, setNextKey] = useState(1);
   const error = (field: string) => state.fieldErrors?.[field]?.[0];

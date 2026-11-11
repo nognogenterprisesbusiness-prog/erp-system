@@ -1,3 +1,4 @@
+import { displayQuantity, displayStatus } from "@/lib/ui/display";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { uuidSchema } from "@nognog/domain";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
@@ -50,11 +51,11 @@ export default async function TransfersPage({ searchParams }: { searchParams: Pr
           <td className="px-5 py-4"><p className="font-semibold">{item.transfer_number}</p><p className="text-xs text-slate-500">{item.external_reference}</p></td>
           <td className="px-4 py-4">{item.material?.name ?? "Unavailable"}</td>
           <td className="px-4 py-4 text-slate-600">{item.source?.name} → {item.destination?.name}</td>
-          <td className="px-4 py-4 text-right tabular-nums">{item.item?.dispatched_quantity ?? 0} {item.material?.unitSymbol}</td>
-          <td className="px-4 py-4 text-right font-semibold tabular-nums">{inTransit} {item.material?.unitSymbol}</td>
-          <td className="px-4 py-4"><Badge variant={item.status === "received" ? "active" : item.status === "cancelled" ? "neutral" : "review"}>{item.item?.variance_quantity ? item.status === "received" ? "Reconciled with variance" : "Partial · variance" : item.status.replace("_", " ")}</Badge></td>
+          <td className="px-4 py-4 text-right tabular-nums">{displayQuantity(item.item?.dispatched_quantity ?? 0)} {item.material?.unitSymbol}</td>
+          <td className="px-4 py-4 text-right font-semibold tabular-nums">{displayQuantity(inTransit)} {item.material?.unitSymbol}</td>
+          <td className="px-4 py-4"><Badge variant={item.status === "received" ? "active" : item.status === "cancelled" ? "neutral" : "review"}>{item.item?.variance_quantity ? item.status === "received" ? "Reconciled with variance" : "Partial · variance" : displayStatus(item.status)}</Badge></td>
           <td className="px-5 py-4 text-right"><div className="flex justify-end gap-2">
-            {item.requestBound ? <span className="text-xs text-slate-500">Material request</span> : canReceive && item.canReceive && inTransit > 0 && item.item && item.status !== "cancelled" ? <Button variant="outline" size="sm" asChild><Link href={actionHref("receive", item.item.id)}>Receive</Link></Button> : null}
+            {item.requestBound ? <Button variant="outline" size="sm" asChild><Link href={item.requestId ? `/requests/${item.requestId}` : "/requests"}>{item.requestId ? "Open request" : "View requests"}</Link></Button> : canReceive && item.canReceive && inTransit > 0 && item.item && item.status !== "cancelled" ? <Button variant="outline" size="sm" asChild><Link href={actionHref("receive", item.item.id)}>Receive</Link></Button> : null}
             {user.canManage && !item.requestBound && inTransit > 0 && item.item && <Button variant="outline" size="sm" asChild><Link href={actionHref("variance", item.item.id)}>Variance</Link></Button>}
           </div></td>
         </tr>;

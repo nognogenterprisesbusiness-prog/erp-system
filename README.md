@@ -845,3 +845,7 @@ Shared PostgreSQL identifier validation now accepts existing seeded GUIDs across
 ### Web preview and daily-report photo follow-through (2026-09-24)
 
 Project, warehouse, material, equipment, employee, and account names now open record-detail dialogs in the demo. Warehouse and daily-report seeds have illustrative WebP images; record upload fields remain editable. Request creation, result counts, and pagination controls are outside data tables, with a consistent 12px/14px header/body table scale. The shared calendar filters demo and connected daily reports. Connected daily-report photos use private WebP storage, a draft-only attachment RPC, and project-scoped read policies. Admin account profiles can show privately stored avatars. Typecheck, lint, demo tests, production build, and local preview interaction checks pass. The new migrations and live storage/RLS paths still require an isolated Supabase staging run and role-by-role verification before release.
+
+### Web UX refinement (2026-11-12)
+
+Existing web actions now have clearer location selection, request handoffs, confirmation dialogs, operational expense sections and responsive headers. Posting/approval rules and schema remain unchanged. See [verification and limits](docs/ux-refinement-20261112.md).

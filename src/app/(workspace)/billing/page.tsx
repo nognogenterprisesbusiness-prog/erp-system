@@ -26,7 +26,7 @@ async function BillingResults({ query, page }: { query: string; page: number }) 
   return <>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No invoices found" description="Issue an invoice or change the search." /> : undefined}>
       <table className="w-full min-w-[790px] text-left text-sm"><thead className={tableHeadClass}><tr>
-        <th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / client</th><th className="px-4 py-3">Issued / due</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Outstanding</th><th className="px-5 py-3">Status</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th>
+        <th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / client at issuance</th><th className="px-4 py-3">Issued / due</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3 text-right">Paid</th><th className="px-4 py-3 text-right">Outstanding</th><th className="px-5 py-3">Status</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th>
       </tr></thead><tbody className="divide-y divide-slate-100">{result.rows.map((row) => <tr key={row.id} className="hover:bg-slate-50/70">
         <td className="px-5 py-4 font-semibold"><Link href={`/billing/${row.id}`} className="text-slate-900 hover:text-cyan-700">{row.invoice_number}</Link></td>
         <td className="px-4 py-4"><p className="font-medium text-slate-800">{row.project_code} · {row.project_name}</p><p className="mt-1 text-xs text-slate-500">{row.client_name}</p></td>

@@ -1,5 +1,7 @@
 "use client";
 
+import { ActionDialog } from "@/components/ui/action-dialog";
+import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import { getFieldPlaceholder } from "@/components/ui/field-placeholder";
 import { useActionState, useRef, useState } from "react";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
@@ -53,21 +55,29 @@ export function InitialRoleForm({ userId, roles }: { userId: string; roles: AppR
   </form>;
 }
 
-export function UserStatusForm({ userId, isActive }: { userId: string; isActive: boolean }) {
+function UserStatusFields({ userId, isActive }: { userId: string; isActive: boolean }) {
   const [state, action, pending] = useActionState(setUserActiveAction, initialState);
-  return <form action={action} onSubmit={(event) => { if (isActive && !window.confirm("Deactivate this account? The person will lose ERP access immediately.")) event.preventDefault(); }} className="flex flex-col items-end gap-1">
+  return <form action={action} className="flex flex-col items-end gap-1">
     <input type="hidden" name="userId" value={userId} />
     <input type="hidden" name="isActive" value={String(!isActive)} />
-    <Button type="submit" size="sm" variant="outline" disabled={pending}>{pending ? "Saving…" : isActive ? "Deactivate" : "Reactivate"}</Button>
+    <RecordFormControls busy={pending} success={state.ok} label={isActive ? "Confirm deactivation" : "Reactivate account"} />
     {state.message ? <span role={state.ok ? "status" : "alert"} className={`text-right text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</span> : null}
   </form>;
 }
 
-export function UserPasswordResetForm({ userId }: { userId: string }) {
+function UserPasswordResetFields({ userId }: { userId: string }) {
   const [state, action, pending] = useActionState(sendManagedPasswordResetAction, initialState);
-  return <form action={action} onSubmit={(event) => { if (!window.confirm("Send a password-reset link to this user?")) event.preventDefault(); }} className="flex flex-col items-end gap-1">
+  return <form action={action} className="flex flex-col items-end gap-1">
     <input type="hidden" name="userId" value={userId} />
-    <Button type="submit" size="sm" variant="outline" disabled={pending}>{pending ? "Sending…" : "Reset password"}</Button>
+    <RecordFormControls busy={pending} success={state.ok} label="Send password-reset link" />
     {state.message ? <span role={state.ok ? "status" : "alert"} className={`max-w-48 text-right text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</span> : null}
   </form>;
+}
+
+export function UserStatusForm(props: Parameters<typeof UserStatusFields>[0]) {
+  return <ActionDialog title={props.isActive ? "Deactivate account" : "Reactivate account"} triggerLabel={props.isActive ? "Deactivate" : "Reactivate"} description={props.isActive ? "This person will lose ERP access immediately. Their existing records remain in history." : "This person will regain access according to their existing role and assignments."}><UserStatusFields {...props} /></ActionDialog>;
+}
+
+export function UserPasswordResetForm(props: Parameters<typeof UserPasswordResetFields>[0]) {
+  return <ActionDialog title="Send password-reset link" triggerLabel="Reset password" description="Send a reset link to this user’s existing email address. Their password changes only after they complete the reset."><UserPasswordResetFields {...props} /></ActionDialog>;
 }

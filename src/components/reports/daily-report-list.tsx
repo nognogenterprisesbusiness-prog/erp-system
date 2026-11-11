@@ -1,3 +1,4 @@
+import { projectSiteLabel } from "@/lib/ui/display";
 import { RecordViewLink } from "@/components/ui/record-view-link";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { reportStatusLabels } from "@nognog/domain";
@@ -24,7 +25,7 @@ export function DailyReportList({ reports, count }: { reports: DailyReportListIt
       <thead className={tableHeadClass}><tr><th className="px-5 py-3">Code</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Prepared by</th><th className="px-4 py-3">Date</th><th className="px-5 py-3 text-right">Status</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th></tr></thead>
       <tbody className="divide-y divide-slate-100">{reports.map((report) => <tr key={report.id} className="hover:bg-slate-50/70">
         <td className="px-5 py-4"><Link href={`/reports/daily/${report.id}`} className="text-sm font-semibold hover:text-cyan-700">{report.report_number}</Link></td>
-        <td className="px-4 py-4"><div className="flex items-center gap-3">{report.photo_path ? <span className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-slate-100"><PhotoViewer src={recordPhotoUrl("daily-reports", report.id)} alt={`Site photo for ${report.report_number}`} sizes="40px" /></span> : null}<span><span className="block font-medium">{report.project?.name ?? "Unavailable project"}</span><span className="mt-0.5 block text-xs text-slate-400">{report.project?.code} · {report.siteName}</span></span></div></td>
+        <td className="px-4 py-4"><div className="flex items-center gap-3">{report.photo_path ? <span className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-slate-100"><PhotoViewer src={recordPhotoUrl("daily-reports", report.id)} alt={`Site photo for ${report.report_number}`} sizes="40px" /></span> : null}<span><span className="block font-medium">{projectSiteLabel(report.project?.name ?? "Unavailable project", report.siteName)}</span><span className="mt-0.5 block text-xs text-slate-500">{report.project?.code}</span></span></div></td>
         <td className="px-4 py-4 text-sm text-slate-600">{report.preparerName}</td>
         <td className="px-4 py-4 text-sm text-slate-600">{date(report.report_date)}</td>
         <td className="px-5 py-4 text-right"><Badge variant={report.status === "approved" ? "active" : report.status === "draft" || report.status === "requires_revision" ? "review" : "neutral"}>{reportStatusLabels[report.status]}</Badge></td>

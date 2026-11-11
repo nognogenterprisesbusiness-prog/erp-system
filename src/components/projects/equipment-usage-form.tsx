@@ -1,5 +1,8 @@
 "use client";
 
+import { displayMoney } from "@/lib/ui/display";
+import { Button } from "@/components/ui/button";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { useActionState, useState } from "react";
 import { postEquipmentUsageAction, type ProjectCostActionState } from "@/app/(workspace)/projects/[id]/costs/actions";
 import { RecordFormControls } from "@/components/ui/record-create-dialog";
@@ -14,7 +17,7 @@ export type EquipmentChoice = { id: string; code: string; name: string; kind?: A
 
 export function EquipmentUsageForm({ projectId, assets, initialKey, today, showRates = false }: { projectId: string; assets: EquipmentChoice[]; initialKey: string; today: string; showRates?: boolean }) {
   const initialState: ProjectCostActionState = { message: "" };
-  const [assetId, setAssetId] = useState(assets[0]?.id ?? "");
+  const [assetId, setAssetId] = useState("");
   const [commandKey, setCommandKey] = useState(initialKey);
   const [hours, setHours] = useState("");
   const [workNote, setWorkNote] = useState("");
@@ -33,8 +36,8 @@ export function EquipmentUsageForm({ projectId, assets, initialKey, today, showR
     }
     return result;
   }, initialState);
-  const options = assets.map((asset) => ({ value: asset.id, label: `${assetChoiceLabel(asset)}${showRates ? asset.rate ? ` · ₱${asset.rate.hourly_rate}/h` : " · no rate" : ""}` }));
-  if (!assets.length) return <p className="text-sm leading-6 text-slate-600">No equipment or vehicle is assigned to an active site in this project. Ask Admin to assign one and set its hourly rate before recording hours.</p>;
+  const options = assets.map((asset) => ({ value: asset.id, label: `${assetChoiceLabel(asset)}${showRates ? asset.rate ? ` · ${displayMoney(asset.rate.hourly_rate)}/h` : " · no rate" : ""}` }));
+  if (!assets.length) return <div className="space-y-4"><p className="text-sm leading-6 text-slate-600">No equipment or vehicle is assigned to an active site in this project. Review the existing equipment assignments before recording hours.</p><Button variant="outline" asChild><Link href="/equipment">View equipment</Link></Button></div>;
   return <form action={action} className="space-y-4">
     <input type="hidden" name="idempotencyKey" value={commandKey} /><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="assetId" value={assetId} />
     <FormField label="Equipment or vehicle at this project site" htmlFor="usageAsset" error={state.fieldErrors?.assetId?.[0]}><SelectPicker id="usageAsset" disabled={pending} label="Equipment or vehicle" value={assetId} onValueChange={setAssetId} options={options} placeholder="Choose equipment or vehicle" /></FormField>

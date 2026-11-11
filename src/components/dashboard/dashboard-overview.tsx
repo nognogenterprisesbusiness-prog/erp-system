@@ -1,3 +1,4 @@
+import { auditActivityLabel } from "@/lib/ui/display";
 import Image from "next/image";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { AssignmentsIcon, Building03Icon, Money03Icon, PackageIcon, PauseIcon } from "@hugeicons/core-free-icons";
@@ -39,8 +40,8 @@ export function DashboardOverview({ name, canManage, canViewRequests, canViewCon
 
   ];
   const visibleCards = financialTotals !== undefined ? [cards[0],
-    { label: "Total sales", value: money(financialTotals?.total_sales), detail: financialTotals ? "Invoices issued to date" : "Sales totals are unavailable", icon: Money03Icon, tone: "bg-emerald-50 text-emerald-700" },
-    { label: "Total expenses", value: money(financialTotals?.total_expenses), detail: financialTotals?.unvalued_expenses ? "Add costs to expenses that are missing them" : financialTotals ? "Project costs recorded to date" : "Expense totals are unavailable", icon: Money03Icon, tone: "bg-amber-50 text-amber-700" },
+    { label: "Invoices issued", value: money(financialTotals?.total_sales), detail: financialTotals ? "Invoices issued to date" : "Invoice totals are unavailable", icon: Money03Icon, tone: "bg-emerald-50 text-emerald-700" },
+    { label: "Project costs", value: money(financialTotals?.total_expenses), detail: financialTotals?.unvalued_expenses ? "Add costs to expenses that are missing them" : financialTotals ? "Project costs recorded to date" : "Expense totals are unavailable", icon: Money03Icon, tone: "bg-amber-50 text-amber-700" },
     { label: "Total material value", value: money(financialTotals?.total_material_value), detail: financialTotals?.unvalued_stock ? "Stock values need administrator reconciliation" : financialTotals ? "Stock currently at warehouses and sites" : "Stock totals are unavailable", icon: PackageIcon, tone: "bg-violet-50 text-violet-700" },
   ] : cards;
   return <>
@@ -71,7 +72,7 @@ export function DashboardOverview({ name, canManage, canViewRequests, canViewCon
       {canViewConsumption && <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><div className="flex items-center justify-between gap-3"><h2 className="text-base font-semibold text-slate-900">Material consumption</h2><Button variant="outline" size="sm" asChild><Link href="/inventory/transactions">View all</Link></Button></div><p className="mt-1 text-xs text-slate-500">Material use in the last 6 months, excluding reversed entries.</p><TrendChart {...consumptionTrend} /></section>}
     </div>
     {canManage && <div className="mt-5">
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" aria-labelledby="recent-activity-heading"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><h2 id="recent-activity-heading" className="text-base font-semibold text-slate-900">Recent activity</h2><Button variant="outline" size="sm" asChild><Link href="/audit-logs">View all</Link></Button></div>{recentActivity.length === 0 ? <EmptyState compact kind="items" title="No activity recorded" /> : <div className="divide-y divide-slate-100">{recentActivity.map((entry) => <Link key={entry.id} href={`/audit-logs/${entry.id}`} className="block px-5 py-3 hover:bg-slate-50"><p className="text-sm font-semibold capitalize text-slate-900">{entry.action.replaceAll("_", " ")} · {entry.table_name.replaceAll("_", " ")}</p><p className="mt-1 text-xs text-slate-500">{entry.actorName} · {new Date(entry.created_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" })}</p></Link>)}</div>}</section>
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" aria-labelledby="recent-activity-heading"><div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><h2 id="recent-activity-heading" className="text-base font-semibold text-slate-900">Recent activity</h2><Button variant="outline" size="sm" asChild><Link href="/audit-logs">View all</Link></Button></div>{recentActivity.length === 0 ? <EmptyState compact kind="items" title="No activity recorded" /> : <div className="divide-y divide-slate-100">{recentActivity.map((entry) => <Link key={entry.id} href={`/audit-logs/${entry.id}`} className="block px-5 py-3 hover:bg-slate-50"><p className="text-sm font-semibold capitalize text-slate-900">{auditActivityLabel(entry.action, entry.table_name)}</p><p className="mt-1 text-xs text-slate-500">{entry.actorName} · {new Date(entry.created_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" })}</p></Link>)}</div>}</section>
     </div>}
   </>;
 }

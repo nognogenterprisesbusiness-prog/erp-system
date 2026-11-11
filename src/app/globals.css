@@ -30,7 +30,7 @@ html:is([data-theme="dark"], [data-theme="blue"]) .erp-trend-chart {
 }
 table thead th { font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; letter-spacing: normal; text-transform: none; }
 table tbody > tr > td { font-size: 0.875rem; line-height: 1.25rem; }
-table :is(th, td) { text-align: left; }
+table { text-align: left; }
 
 html[data-theme="dark"] {
   --erp-dark-canvas: #111214;

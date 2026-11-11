@@ -19,9 +19,10 @@ export default async function VehicleDetailPage({ params, searchParams }: {
     user.canViewLaborRates ? getVehicleFuelReceipts(id, pageNumber(filters.fuelPage)) : undefined,
   ]);
   return <>
-    <AssetDetail data={data} kind="vehicle" canManage={user.canManage} usage={usage} references={references} editing={filters.edit === "1"} />
-    {user.canManage && <VehicleDrivers assetId={id} />}
+    <AssetDetail data={data} kind="vehicle" canManage={user.canManage} usage={usage} references={references} editing={filters.edit === "1"} operations={user.canViewLaborRates ? <>
+{user.canManage && <VehicleDrivers assetId={id} />}
     {user.canViewLaborRates && <AssetExpenseHistory assetId={id} kind="vehicle" page={pageNumber(filters.assetExpensePage)} canManage={user.canManage} canAdd={data.asset.status !== "retired"} filters={{ eventPage: filters.eventPage ?? "1", usagePage: filters.usagePage ?? "1", fuelPage: filters.fuelPage ?? "1" }} />}
     {fuel && <VehicleFuelHistory assetId={id} data={fuel} />}
+    </> : undefined} />
   </>;
 }

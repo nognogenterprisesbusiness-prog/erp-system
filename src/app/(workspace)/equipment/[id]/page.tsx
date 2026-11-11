@@ -17,9 +17,10 @@ export default async function EquipmentDetailPage({ params, searchParams }: {
     user.canManage ? getAssetReferences() : undefined,
   ]);
   return <>
-    <AssetDetail data={data} kind="equipment" canManage={user.canManage} usage={usage} references={references} editing={filters.edit === "1"} />
-    {user.canViewLaborRates && <AssetExpenseHistory assetId={id} kind="equipment" page={pageNumber(filters.assetExpensePage)}
+    <AssetDetail data={data} kind="equipment" canManage={user.canManage} usage={usage} references={references} editing={filters.edit === "1"} operations={user.canViewLaborRates ? <>
+{user.canViewLaborRates && <AssetExpenseHistory assetId={id} kind="equipment" page={pageNumber(filters.assetExpensePage)}
       canManage={user.canManage} canAdd={data.asset.status !== "retired"}
       filters={{ eventPage: filters.eventPage ?? "1", usagePage: filters.usagePage ?? "1" }} />}
+    </> : undefined} />
   </>;
 }

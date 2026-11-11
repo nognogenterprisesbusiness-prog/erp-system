@@ -1,5 +1,8 @@
 "use client";
 
+import { displayMoney } from "@/lib/ui/display";
+import { Button } from "@/components/ui/button";
+import { IntentLink as Link } from "@/components/layout/intent-link";
 import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useState } from "react";
 import { postAdditionalExpenseAction, reverseProjectCostAction, setEquipmentRateAction, type ProjectCostActionState } from "@/app/(workspace)/projects/[id]/costs/actions";
@@ -26,9 +29,9 @@ export function ProjectCostForms({ projectId, assets, keys, today }: { projectId
 function EquipmentRateForm({ projectId, assets, today }: { projectId: string; assets: EquipmentChoice[]; today: string }) {
   const [rateState, rateAction, ratePending] = useActionState(setEquipmentRateAction, initialState);
   const [hourlyRate, setHourlyRate] = useState("");
-  const [rateAssetId, setRateAssetId] = useState(assets[0]?.id ?? "");
-  const options = assets.map((asset) => ({ value: asset.id, label: `${assetChoiceLabel(asset)}${asset.rate ? ` · ₱${asset.rate.hourly_rate}/h` : " · no current rate"}` }));
-  if (!assets.length) return <p className="text-sm leading-6 text-slate-600">Assign equipment or a vehicle to an active site in this project first. You can then set its hourly project charge here.</p>;
+  const [rateAssetId, setRateAssetId] = useState("");
+  const options = assets.map((asset) => ({ value: asset.id, label: `${assetChoiceLabel(asset)}${asset.rate ? ` · ${displayMoney(asset.rate.hourly_rate)}/h` : " · no current rate"}` }));
+  if (!assets.length) return <div className="space-y-4"><p className="text-sm leading-6 text-slate-600">Assign equipment or a vehicle to an active site in this project first. You can then set its hourly project charge here.</p><Button variant="outline" asChild><Link href="/equipment">View equipment</Link></Button></div>;
   return <form action={rateAction} className="space-y-4">
       <input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="assetId" value={rateAssetId} />
       <FormField label="Equipment or vehicle" htmlFor="rateAsset" error={rateState.fieldErrors?.assetId?.[0]}><SelectPicker id="rateAsset" label="Equipment or vehicle" disabled={ratePending} value={rateAssetId} onValueChange={setRateAssetId} options={options} placeholder="Choose equipment or vehicle" /></FormField>

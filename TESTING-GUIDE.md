@@ -220,3 +220,7 @@ Also try each account on a project or warehouse it is **not** assigned to: it sh
 - Labour offers **View attendance** and, when posted labour receipts exist, **View labour receipts**. Equipment offers **View hours** and its receipt link when applicable. Verify the combined totals stay unchanged.
 - Row commands display their text beside the icon. Verify a disabled command stays disabled and restricted actions are absent for unauthorized roles. Check View/Edit/Archive targets, approval links, receipt corrections and document Download actions.
 - Navigate from a linked record to a page in another sidebar group. That group opens and identifies the current page; manually collapsing it remains possible until the next navigation.
+
+## Web refinement acceptance (2026-11-12)
+
+Open Stock Counts directly and select a location before counting. Open a request-linked transfer through **Open request**. In Vehicles, **View** shows drivers and unit expenses before registry history; project-linked fuel remains separate. Confirm that an unscoped purchase asks for supplier and warehouse, while a request or quotation keeps its explicit context. Change a project field, cancel, choose **Keep editing**, then cancel and discard; nothing should be saved. Check account and assignment confirmation dialogs without submitting against real staff. Attendance search/status applies to the displayed page; use paging for other workers. See [verification details](docs/ux-refinement-20261112.md).

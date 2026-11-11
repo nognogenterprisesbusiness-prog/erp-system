@@ -30,7 +30,7 @@ function documentsHref(filters: DocumentFilters, page = filters.page) {
 async function UploadAction({ filters, initialOpen }: { filters: DocumentFilters; initialOpen: boolean }) {
   const projects = await getDocumentProjects();
   if (projects.length === 0) return <Button disabled>Upload document</Button>;
-  return <RecordCreateDialog title="Upload documents" triggerLabel="Upload document" initialOpen={initialOpen} closeHref={documentsHref(filters)}>
+  return <RecordCreateDialog confirmDiscard title="Upload documents" triggerLabel="Upload document" initialOpen={initialOpen} closeHref={documentsHref(filters)}>
     <p className="mb-5 text-sm text-slate-600">Choose a project and upload its files. Each document stays with that project.</p>
     <ProjectDocumentUpload projects={projects} initialProjectId={filters.projectId} />
   </RecordCreateDialog>;

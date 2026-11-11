@@ -39,12 +39,12 @@ export function DailyReportForm({ report, initialId, initialProjectId, initialDa
     else startTransition(() => router.replace(`/reports/daily/${state.id ?? initialId}`));
   }, [state, dialog, router, initialId]);
   const [reportId] = useState(initialId);
-  const [projectId, setProjectId] = useState(report?.project_id ?? initialProjectId ?? projects[0]?.id ?? "");
+  const [projectId, setProjectId] = useState(report?.project_id ?? initialProjectId ?? "");
   const [processingPhoto, setProcessingPhoto] = useState(false);
   const availableSites = sites.filter((site) => site.project_id === projectId);
   const selectedSite = report?.project_id === projectId
     ? availableSites.some((site) => site.id === report.project_site_id) ? report.project_site_id : ""
-    : availableSites[0]?.id ?? "";
+    : availableSites.length === 1 ? availableSites[0].id : "";
   const error = (field: string) => state.ok ? undefined : state.fieldErrors?.[field]?.[0];
   const textArea = (name: keyof DailyReportRow, inputName: string, label: string, rows = 3) => (
     <FormField label={label} htmlFor={inputName} error={error(inputName)}>

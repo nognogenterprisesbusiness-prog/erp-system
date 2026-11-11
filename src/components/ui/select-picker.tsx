@@ -1,7 +1,7 @@
 "use client";
 
 import * as Select from "@radix-ui/react-select";
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useState, type AriaAttributes } from "react";
 import { CheckmarkCircle02Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
@@ -10,7 +10,7 @@ import { FilterBarContext } from "./filter-bar-context";
 
 export type SelectOption = { value: string; label: string; disabled?: boolean };
 
-type SelectPickerProps = {
+type SelectPickerProps = Pick<AriaAttributes, "aria-describedby" | "aria-invalid" | "aria-required"> & {
   id?: string;
   options: readonly SelectOption[];
   label: string;
@@ -24,12 +24,12 @@ type SelectPickerProps = {
   className?: string;
 };
 
-export function SelectPicker({ id, options, label, name, value, defaultValue, onValueChange, placeholder = "Select an option", disabled, required, className }: SelectPickerProps) {
+export function SelectPicker({ id, options, label, name, value, defaultValue, onValueChange, placeholder = `Choose ${label.toLowerCase()}`, disabled, required, className, "aria-describedby": describedBy, "aria-invalid": invalid, "aria-required": ariaRequired }: SelectPickerProps) {
   const [portalContainer, setPortalContainer] = useState<HTMLElement>();
   const filterChange = useContext(FilterBarContext);
   const attachTrigger = useCallback((node: HTMLButtonElement | null) => setPortalContainer(node?.closest("dialog") ?? undefined), []);
   return <Select.Root name={name} value={value} defaultValue={defaultValue} onValueChange={(next) => { onValueChange?.(next); if (name) filterChange?.(name, next); }} disabled={disabled || options.length === 0} required={required}>
-    <Select.Trigger id={id} ref={attachTrigger} aria-label={label} className={cn("inline-flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm text-slate-800 outline-none transition-colors focus-visible:border-cyan-600 focus-visible:ring-2 focus-visible:ring-cyan-600/20 disabled:cursor-not-allowed disabled:opacity-50", className)}>
+    <Select.Trigger aria-describedby={describedBy} aria-invalid={invalid} aria-required={ariaRequired ?? required} id={id} ref={attachTrigger} aria-label={label} className={cn("inline-flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm text-slate-800 outline-none transition-colors focus-visible:border-cyan-600 focus-visible:ring-2 focus-visible:ring-cyan-600/20 disabled:cursor-not-allowed disabled:opacity-50", className)}>
       <span className="min-w-0 flex-1 truncate"><Select.Value placeholder={placeholder} /></span>
       <Select.Icon><HugeiconsIcon icon={ArrowDown01Icon} size={16} /></Select.Icon>
     </Select.Trigger>

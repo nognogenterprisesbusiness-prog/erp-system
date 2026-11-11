@@ -111,3 +111,20 @@ export async function getQrAssociatedRecord(code: QrCodeRow) {
   if (error) throw new Error("Unable to load associated site.");
   return { name: data.name, code: null, href: `/projects/${data.project_id}` };
 }
+
+/** Resolve names for the visible registry page using the caller's existing RLS scope. */
+export async function getQrRecordNames(codes: QrCodeRow[]) {
+  const supabase = await createClient();
+  const names = new Map<string, { name: string; code: string | null }>();
+  await Promise.all((["material", "equipment", "vehicle", "warehouse", "project_site"] as const).map(async type => {
+    const ids = [...new Set(codes.filter(code => code.entity_type === type).map(code => code.entity_id))];
+    if (!ids.length) return;
+    const table = type === "material" ? "materials" : type === "warehouse" ? "warehouses" : type === "project_site" ? "project_sites" : "assets";
+    const { data, error } = await supabase.from(table).select(type === "project_site" ? "id,name" : "id,name,code").in("id", ids);
+    if (error) throw new Error("Unable to load QR record names.");
+    for (const row of data ?? []) {
+      if ("id" in row && "name" in row && typeof row.id === "string" && typeof row.name === "string") names.set(`${type}:${row.id}`, { name: row.name, code: "code" in row && typeof row.code === "string" ? row.code : null });
+    }
+  }));
+  return names;
+}

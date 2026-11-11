@@ -37,7 +37,7 @@ export default async function DailyReportsPage({ searchParams }: { searchParams:
     <PageHeader eyebrow="Site reporting" title="Daily reports" description="Daily site reports for your assigned projects."
       action={<div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
         <ReportDateRangeFilter key={`${filters.reportDateFrom}:${filters.reportDateTo}`} startDate={filters.reportDateFrom} endDate={filters.reportDateTo} search={search} projectId={filters.projectId} siteId={filters.siteId} status={filters.status} />
-        {choices.sites.length > 0 && <RecordCreateDialog title="Add daily report" triggerLabel="Add report" initialOpen={params.create === "1"} closeHref="/reports/daily"><DailyReportForm initialId={randomUUID()} initialProjectId={filters.projectId || undefined} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}
+        {choices.sites.length > 0 && <RecordCreateDialog confirmDiscard title="Add daily report" triggerLabel="Add report" initialOpen={params.create === "1"} closeHref="/reports/daily"><DailyReportForm initialId={randomUUID()} initialProjectId={filters.projectId || undefined} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}
       </div>} />
     <ListFilterBar>
       <input type="hidden" name="from" value={filters.reportDateFrom} />
