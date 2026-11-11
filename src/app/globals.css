@@ -152,3 +152,14 @@ html:is([data-theme="dark"], [data-theme="blue"]) [class~="text-violet-700"] { c
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Detail routes keep their canonical content inside the contextual panel. */
+.record-detail-content > :first-child { margin-top: 0; }
+.record-detail-content > div { max-width: 100%; }
+.record-detail-content [data-detail-back] { display: none; }
+.record-detail-content :is(input, textarea, select) { max-width: 100%; }
+
+[data-record-actions] { position: sticky; right: 0; z-index: 1; width: 1%; min-width: 5rem; }
+@media (max-width: 639px) {
+  [data-record-actions] > div { max-width: 7rem; flex-direction: column; align-items: stretch; }
+}

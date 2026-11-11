@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BACKGROUND_STALE_MS, ROUTE_CACHE_MS, markOtherRoutesStale, shouldRefreshCachedRoute } from "./navigation-cache";
+import { BACKGROUND_STALE_MS, ROUTE_CACHE_MS, markOtherRoutesStale, shouldDeferRouteRefresh, shouldRefreshCachedRoute } from "./navigation-cache";
+
+test("a read-only detail panel keeps live stock and status refresh enabled", () => {
+  assert.equal(shouldDeferRouteRefresh({ visible: true, editingDialogOpen: false, submissionPending: false }), false);
+});
+
+test("background pages, nested editing dialogs and pending panel saves defer refresh", () => {
+  assert.equal(shouldDeferRouteRefresh({ visible: false, editingDialogOpen: false, submissionPending: false }), true);
+  assert.equal(shouldDeferRouteRefresh({ visible: true, editingDialogOpen: true, submissionPending: false }), true);
+  assert.equal(shouldDeferRouteRefresh({ visible: true, editingDialogOpen: false, submissionPending: true }), true);
+});
 
 test("cold and expired destinations do not duplicate their navigation fetch", () => {
   assert.equal(shouldRefreshCachedRoute(undefined, ROUTE_CACHE_MS), false);

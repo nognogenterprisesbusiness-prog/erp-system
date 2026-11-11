@@ -50,7 +50,7 @@ export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, s
   const content = <>
     <div className="px-5 pt-5">
       <h2 className="text-base font-semibold text-slate-900">{canDecide ? "Review requested materials" : "Requested materials"}</h2>
-      <p className="mt-1 text-sm text-slate-500">{canDecide ? defaultWarehouseId ? `Approve quantities using available stock at ${sourceName}. Enter 0 to reject an item.` : "Choose warehouses for each material, then approve the request. You can use more than one warehouse." : "Requested quantities are what the Engineer or Foreman asked for. View an item for stock and delivery details."}</p>
+      <p className="mt-1 text-sm text-slate-500">{canDecide ? defaultWarehouseId ? `Approve quantities using available stock at ${sourceName}. Enter 0 to reject an item.` : "Select the source warehouse above, or assign warehouses to each material below. Every approved quantity must have a warehouse." : "Requested quantities are what the Engineer or Foreman asked for. View an item for stock and delivery details."}</p>
     </div>
     <div className="mt-4 overflow-x-auto">
       <table className="w-full text-left text-sm">
@@ -73,7 +73,7 @@ export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, s
             {showWarehouse && <td className="px-4 py-4 text-right tabular-nums"><span className="mb-1 block text-left text-xs text-slate-500 sm:hidden">Warehouse available</span><span className={line.sourceAvailable !== null && line.requested > line.sourceAvailable ? "font-semibold text-amber-800" : "font-semibold text-slate-900"}>{custom ? custom.map((item) => `${stockSources.find((source) => source.warehouse_id===item.warehouseId)?.warehouse_name ?? "Warehouse"}: ${item.quantity} ${line.unit}`).join(" · ") || "No stock allocated" : !hasSource ? "Choose warehouse" : line.sourceAvailable === null && canDecide ? "Checked on approval" : display(line.sourceAvailable, line.unit)}</span>{!custom && line.sourceAvailable !== null && line.requested > line.sourceAvailable && <span className="mt-1 block text-xs text-amber-800">Short by {display(line.requested - line.sourceAvailable, line.unit)}</span>}</td>}
             {canDecide ? <td className="px-4 py-4 sm:w-44">
               <span aria-hidden="true" className="mb-1 block text-xs text-slate-500 sm:hidden">Approve quantity</span><label className="sr-only" htmlFor={`approved-${line.id}`}>Approve quantity for {line.name} ({line.unit})</label>
-              <div className="flex items-center gap-2"><input id={`approved-${line.id}`} className={`${fieldControlClass} min-w-20 ${exceedsLimit || invalidFormat ? "border-amber-500" : ""}`} type="number" inputMode="decimal" min={0} max={limit} step="0.0001" value={quantities[line.id] ?? ""} onChange={(event) => setQuantities((current) => ({ ...current, [line.id]: event.target.value }))} aria-invalid={exceedsLimit || invalidFormat || undefined} aria-describedby={exceedsLimit || invalidFormat ? `stock-error-${line.id}` : undefined} disabled={pending} readOnly={!!custom} required /><span className="text-xs text-slate-500">{line.unit}</span></div>
+              <div className="flex items-center gap-2"><input id={`approved-${line.id}`} className={`${fieldControlClass} min-w-20 ${exceedsLimit || invalidFormat ? "border-amber-500" : ""}`} type="number" inputMode="decimal" min={0} max={limit} step="0.0001" value={quantities[line.id] ?? ""} onChange={(event) => setQuantities((current) => ({ ...current, [line.id]: event.target.value }))} aria-invalid={exceedsLimit || invalidFormat || undefined} aria-describedby={exceedsLimit || invalidFormat ? `stock-error-${line.id}` : undefined} disabled={pending} readOnly={!!custom} required /><span className="shrink-0 whitespace-nowrap text-xs text-slate-500">{line.unit}</span></div>
               {(exceedsLimit || invalidFormat) && <p id={`stock-error-${line.id}`} className="mt-1 text-xs text-amber-800">{invalidFormat ? "Enter 0 or a positive quantity, with up to 4 decimal places." : `Approve up to ${display(limit, line.unit)}.`}</p>}
               {sources.length > 0 && <div className="mt-2"><RecordCreateDialog title={`Choose warehouses · ${line.name}`} triggerLabel={custom ? "Edit sources" : !defaultWarehouseId ? "Choose warehouses" : "Find stock elsewhere"} triggerVariant="ghost" triggerSize="sm" triggerIcon={null}>
                 <WarehouseAllocationEditor sources={sources} current={custom ?? (defaultWarehouseId ? [{warehouseId:defaultWarehouseId,quantity:quantities[line.id]}] : [])} requested={line.requested} unit={line.unit} onApply={(next) => {
@@ -112,7 +112,7 @@ export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, s
     </div>}
   </>;
   const className = "mt-5 scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white";
-  return canDecide ? <form id="request-decision" action={action} className={className}>
+  return canDecide ? <form id="request-decision" aria-busy={pending} action={action} className={className}>
     <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
     <input type="hidden" name="requestId" value={requestId} />
     <input type="hidden" name="decisions" value={JSON.stringify(quantities)} />

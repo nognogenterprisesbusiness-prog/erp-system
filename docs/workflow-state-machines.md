@@ -89,3 +89,19 @@ flowchart LR
 5. Run the audit, relevant tests and visual checks; record what was actually exercised. Do not equate static inventory or passing unit tests with every device/workflow being accepted.
 
 Worker-account self-service, new approval tiers, automatic break/overtime rules, biometric matching, offline posting and retention policy are not silently introduced by a UX cleanup.
+
+## Contextual record panels
+
+The web uses the existing `@modal` parallel slot and explicit intercepting detail routes. A list link opens `closed → loading → ready` in `RecordDetailPanel`; a failed load provides retry/close, and an unavailable record retains the canonical page's access checks. Direct links and refresh render the canonical full page. The intercepted wrapper imports that same server page: never duplicate its queries, permissions or posting commands in a client preview API.
+
+Close and Escape use router history to restore the source list, including its filters. Native dialogs provide focus containment. A nested dialog's Escape must close only that dialog. Cleanup closes the native element without navigating again. Do not add a second router-back handler to `onClose`.
+
+Loading boundaries belong to the intercepted `[id]` segments, not the entire modal slot: closing a record must not show a new loading drawer while the list returns. Streamed loading/ready panels may overlap; `lockBodyScroll` reference-counts their locks and restores scrolling after the final owner closes, regardless of cleanup order.
+
+Submitting is distinct from an invalid draft. The panel watches `aria-busy` on its forms/controls and disables Close for an in-flight save. New inline posting forms must expose their pending state; the shared `RecordFormControls` already does so. Ordinary nested editing dialogs and pending saves defer background refresh. A read-only detail panel does not freeze live stock/status updates; `shouldDeferRouteRefresh` owns that distinction and has regression coverage.
+
+Closed `RecordCreateDialog` instances do not keep form controls mounted. Open mounts a fresh keyed form; Cancel/Close unmounts it; a new opening starts with saved values. Keep the existing initial-open URL and completed/cancelled close behavior intact. This prevents hidden forms from competing for generic field IDs and label focus. Popup menus store their portal host when opened and render inside the closest native dialog; their Escape handler closes the menu without dismissing the record panel.
+
+Collection tools such as New, Receive deliveries and supplier Prices have explicit null entries in the intercepted slot. This keeps their existing full routes from being mistaken for a record ID. Keep the existing intercepted New invoice flow intact. When adding a detail route, check its collection's static paths and test soft navigation, direct URL, Back/Forward, close, nested dialogs, errors and phone width.
+
+Source selection is required for every positive approved material quantity. A request-wide warehouse applies one default to the lines; per-line allocations may use different warehouses. The visible source picker and missing-source guard must explain this distinction. Do not require a single request-wide default or move warehouse choice into an unauthorized requester role as a copy/layout change. Approval reserves; release deducts; site receipt and actual use remain separate commands.

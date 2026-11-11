@@ -1,3 +1,4 @@
+import { RecordViewLink } from "@/components/ui/record-view-link";
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import Image from "next/image";
@@ -21,11 +22,11 @@ const pageSize = 20;
 const statuses = ["all", "submitted", "approved", "checked_out", "overdue", "returned", "rejected"] as const;
 const statusLabels: Record<(typeof statuses)[number], string> = { all: "All statuses", submitted: equipmentRequestGuides.submitted.label, approved: equipmentRequestGuides.approved.label, checked_out: equipmentRequestGuides.checked_out.label, overdue: "Overdue", returned: equipmentRequestGuides.returned.label, rejected: equipmentRequestGuides.rejected.label };
 
-function HandoverRow({ item, isVehicle, photoPath, projectName, siteName, canManage, today }: {
+function HandoverRow({ item, isVehicle, photoPath, project, siteName, canManage, today }: {
   item: EquipmentRequestRow;
   isVehicle: boolean;
   photoPath: string | null;
-  projectName: string;
+  project: { code: string; name: string };
   siteName: string;
   canManage: boolean;
   today: string;
@@ -43,11 +44,11 @@ function HandoverRow({ item, isVehicle, photoPath, projectName, siteName, canMan
         </div>
       </div>
     </td>
-    <td className="px-4 py-4 text-slate-600">{projectName}<span className="block text-xs text-slate-500">{siteName}</span></td>
+    <td className="px-4 py-4 text-slate-600">{project.code} · {project.name}{siteName !== project.name && <span className="block text-xs text-slate-500">{siteName}</span>}</td>
     <td className="px-4 py-4 text-slate-600">{item.needed_on}<span className={overdue ? "block text-xs font-semibold text-red-700" : "block text-xs text-slate-500"}>{item.expected_return_on ? `Return ${item.expected_return_on}` : "No return deadline"}{overdue ? " · overdue" : ""}</span></td>
     <td className="max-w-[230px] px-4 py-4 text-slate-600">{item.purpose}{item.decision_note && <span className="block text-xs text-slate-500">Decision: {item.decision_note}</span>}{item.return_note && <span className="block text-xs text-slate-500">Return: {item.return_note}</span>}</td>
     <td className="px-4 py-4"><span className={overdue ? "rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"}>{overdue ? "Overdue" : statusLabels[item.status]}</span></td>
-    {canManage && <td className="px-5 py-4 text-right"><EquipmentRequestActions id={item.id} status={item.status} /></td>}
+    <td data-record-actions className="px-5 py-4 text-right bg-white"><div className="flex flex-wrap items-center justify-end gap-2">{(canManage || item.status === "checked_out") && <RecordViewLink href={`/${isVehicle ? "vehicles" : "equipment"}/${item.asset_id}`} name={item.asset_name} />}{canManage && <EquipmentRequestActions id={item.id} status={item.status} />}</div></td>
   </tr>;
 }
 
@@ -90,7 +91,7 @@ export async function EquipmentRequestsView({ params, kind, canManage, canReques
   const { data: photos, error: photoError } = assetIds.length ? await supabase.rpc("get_asset_photo_paths", { p_asset_ids: assetIds }) : { data: [], error: null };
   if (photoError) throw new Error("Unable to load equipment requests.");
   const photoPaths = new Map((photos ?? []).map((photo) => [photo.asset_id, photo.photo_path]));
-  const projectNames = new Map(projects.map((item) => [item.id, `${item.code} · ${item.name}`]));
+  const projectNames = new Map(projects.map((item) => [item.id, { code: item.code, name: item.name }]));
   const siteNames = new Map(sites.map((item) => [item.id, item.name]));
   const total = count ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
@@ -108,9 +109,9 @@ export async function EquipmentRequestsView({ params, kind, canManage, canReques
     {canRequest && projectId && siteId && <EquipmentRequestForm key={`${projectId}:${siteId}:${kind}`} projectId={projectId} siteId={siteId} equipment={(equipment ?? []).filter((item) => item.asset_kind === kind)} kind={kind} initialAssetId={requestedAsset.success ? requestedAsset.data : ""} />}
     <div className="mt-5"><DataTableShell empty={(requests ?? []).length === 0 ? <EmptyState kind="items" title={`No ${kind} requests`} /> : undefined}>
       <table className="w-full min-w-[960px] text-left text-sm">
-        <thead className={tableHeadClass}><tr><th className="px-5 py-3">Equipment / vehicle</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Needed / return</th><th className="px-4 py-3">Purpose</th><th className="px-4 py-3">Status</th>{canManage && <th className="px-5 py-3 text-right">Actions</th>}</tr></thead>
+        <thead className={tableHeadClass}><tr><th className="px-5 py-3">Requested item</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Needed / return</th><th className="px-4 py-3">Purpose / notes</th><th className="px-4 py-3">Status</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th></tr></thead>
         <tbody className="divide-y divide-slate-100">{(requests ?? []).map((item) => (
-          <HandoverRow key={item.id} item={item} isVehicle={kind === "vehicle"} photoPath={photoPaths.get(item.asset_id) ?? null} projectName={projectNames.get(item.project_id) ?? "Project"} siteName={siteNames.get(item.project_site_id) ?? "Site"} canManage={canManage} today={today} />
+          <HandoverRow key={item.id} item={item} isVehicle={kind === "vehicle"} photoPath={photoPaths.get(item.asset_id) ?? null} project={projectNames.get(item.project_id) ?? { code: "", name: "Project" }} siteName={siteNames.get(item.project_site_id) ?? "Site"} canManage={canManage} today={today} />
         ))}</tbody>
       </table>
     </DataTableShell></div>

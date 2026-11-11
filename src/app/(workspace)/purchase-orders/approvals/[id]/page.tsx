@@ -20,7 +20,7 @@ export default async function PurchaseApprovalPage({ params, searchParams }: {
   const query = await searchParams;
   return <>
     <PageHeader eyebrow="Purchasing & suppliers" title="Owner approval" description={`${supplierName} · ${warehouseName}`}
-      action={<Button variant="outline" asChild><Link href="/purchase-orders">Back to purchases</Link></Button>} />
+      action={<Button variant="outline" asChild><Link data-detail-back href="/purchase-orders">Back to purchases</Link></Button>} />
     {query.posted === "rejected" && <p role="status" className="mt-5 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm">Purchase rejected. No order, supplier price, or stock was posted.</p>}
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-700">
       <div className="flex flex-wrap items-start justify-between gap-4">

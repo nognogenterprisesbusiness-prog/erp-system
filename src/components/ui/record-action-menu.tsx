@@ -38,21 +38,21 @@ export function RecordActionIcon({ label, name, href, onSelect, disabled = false
 export function RecordActionMenu({ name, actions, disabled = false, triggerLabel }: { name: string; actions: RecordAction[]; disabled?: boolean; triggerLabel?: string }) {
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
+  const [position, setPosition] = useState<{ top: number; right: number; container: HTMLElement } | null>(null);
   const view = actions.find(action => isViewAction(action.label));
   const menuActions = view ? actions.filter(action => action !== view) : actions;
 
   useEffect(() => {
     if (!position) return;
     const dismiss = (event: PointerEvent) => { if (!trigger.current?.contains(event.target as Node) && !menu.current?.contains(event.target as Node)) setPosition(null); };
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { setPosition(null); trigger.current?.focus(); } };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setPosition(null); trigger.current?.focus(); } };
     const close = () => setPosition(null);
     document.addEventListener("pointerdown", dismiss);
-    document.addEventListener("keydown", escape);
+    document.addEventListener("keydown", escape, true);
     window.addEventListener("resize", close);
     window.addEventListener("scroll", close, true);
     menu.current?.querySelector<HTMLElement>("a,button")?.focus();
-    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape); window.removeEventListener("resize", close); window.removeEventListener("scroll", close, true); };
+    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape, true); window.removeEventListener("resize", close); window.removeEventListener("scroll", close, true); };
   }, [position]);
 
   function toggle() {
@@ -60,7 +60,7 @@ export function RecordActionMenu({ name, actions, disabled = false, triggerLabel
     const bounds = trigger.current?.getBoundingClientRect();
     if (!bounds) return;
     const height = menuActions.length * 44 + 12;
-    setPosition({ top: bounds.bottom + height + 8 > window.innerHeight ? Math.max(8, bounds.top - height - 6) : bounds.bottom + 6, right: Math.max(8, window.innerWidth - bounds.right) });
+    setPosition({ top: bounds.bottom + height + 8 > window.innerHeight ? Math.max(8, bounds.top - height - 6) : bounds.bottom + 6, right: Math.max(8, window.innerWidth - bounds.right), container: trigger.current?.closest("dialog") ?? document.body });
   }
 
   if (!actions.length) return null;
@@ -69,7 +69,7 @@ export function RecordActionMenu({ name, actions, disabled = false, triggerLabel
   return <div className="flex flex-wrap items-center justify-end gap-2">
     {view && <RecordActionIcon {...view} name={name} disabled={disabled} />}
     <button ref={trigger} type="button" disabled={disabled} onClick={toggle} aria-label={triggerLabel ?? `Actions for ${name}`} title={triggerLabel ?? `Actions for ${name}`} aria-haspopup="menu" aria-expanded={Boolean(position)} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-sm text-slate-600 hover:border-cyan-300 hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 disabled:opacity-50 sm:min-h-9"><HugeiconsIcon icon={MoreVerticalIcon} size={18} /><span>{triggerLabel ?? "Actions"}</span></button>
-    {position && createPortal(<div ref={menu} role="menu" aria-label={`Actions for ${name}`} style={position} className="fixed z-[90] max-h-[min(70vh,24rem)] w-44 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 text-sm text-slate-700 shadow-xl" onKeyDown={(event) => {
+    {position && createPortal(<div ref={menu} role="menu" aria-label={`Actions for ${name}`} style={{ top: position.top, right: position.right }} className="fixed z-[90] max-h-[min(70vh,24rem)] w-44 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 text-sm text-slate-700 shadow-xl" onKeyDown={(event) => {
       const items = Array.from(menu.current?.querySelectorAll<HTMLElement>("a,button") ?? []);
       const index = items.indexOf(document.activeElement as HTMLElement);
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); items[(index + (event.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus(); }
@@ -80,6 +80,6 @@ export function RecordActionMenu({ name, actions, disabled = false, triggerLabel
       const icon = actionIcon(action.label);
       const content = <><HugeiconsIcon icon={icon} size={16} aria-hidden="true" /><span>{action.label}</span></>;
       return action.href ? <Link role="menuitem" key={action.label} href={action.href} onClick={() => setPosition(null)} className={className}>{content}</Link> : <button role="menuitem" key={action.label} type="button" onClick={() => { setPosition(null); action.onSelect?.(); }} className={className}>{content}</button>;
-    })}</div>, document.body)}
+    })}</div>, position.container)}
   </div>;
 }

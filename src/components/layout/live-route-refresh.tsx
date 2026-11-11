@@ -4,7 +4,7 @@ import { startTransition, useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 import { liveTablesForPath, refreshIntervalForPath } from "@/lib/realtime/route-sources";
-import { ROUTE_CACHE_MS as routeCacheMs, markOtherRoutesStale, shouldRefreshCachedRoute } from "@/lib/realtime/navigation-cache";
+import { ROUTE_CACHE_MS as routeCacheMs, markOtherRoutesStale, shouldDeferRouteRefresh, shouldRefreshCachedRoute } from "@/lib/realtime/navigation-cache";
 
 export function LiveRouteRefresh({ userId }: { userId: string }) {
   const pathname = usePathname();
@@ -35,7 +35,11 @@ export function LiveRouteRefresh({ userId }: { userId: string }) {
 
     const refresh = () => {
       if (disposed) return;
-      if (document.visibilityState !== "visible" || document.querySelector("dialog[open]")) {
+      if (shouldDeferRouteRefresh({
+        visible: document.visibilityState === "visible",
+        editingDialogOpen: !!document.querySelector('dialog[open]:not([data-record-detail-panel])'),
+        submissionPending: !!document.querySelector('[data-record-detail-panel][open] [aria-busy="true"]'),
+      })) {
         pendingDeferred = true;
         return;
       }

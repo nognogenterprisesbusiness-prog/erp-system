@@ -10,7 +10,11 @@ This guide shows what each account can do and walks through one complete project
 
 ## Finding record details
 
-Use **View** at the end of a record row or on its card to open its details. **Actions** contains additional operations such as Edit or Archive when your account has permission. On wide tables, scroll across to see all quantities; the shared table's Actions column remains visible at the right edge.
+Use **View** at the end of a record row or on its card to open its details. **Actions** contains additional operations such as Edit or Archive when your account has permission. On wide record tables, scroll across to see all quantities; the Actions column remains visible at the right edge.
+
+View now opens a right-side panel. Use **Close** to return to the same list and filters. On phones the panel fills the screen. Opening a saved record link or refreshing it shows the full record. Nested forms and stock-detail dialogs keep their own Close button.
+
+On material requests, select a source warehouse for each quantity you approve. The visible warehouse picker applies one warehouse to all materials; **Choose warehouses** on a material lets you split its approved quantity across warehouses. Approval stays disabled until those sources are assigned. Saving a warehouse alone does not reserve or deduct stock. Rejecting a quantity of zero needs no stock source; the existing decision-note requirement still applies.
 
 Inventory contains one materials list. **Material code** is the existing identifier; it does not represent another stock balance. Old SKU catalog bookmarks open Inventory with their filters retained. Equipment and Vehicles remain separate workspaces with their own unit details and history.
 

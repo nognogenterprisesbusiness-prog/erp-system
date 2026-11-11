@@ -68,8 +68,8 @@ async function PendingPurchaseApprovals({ resultPromise, canManage, query, page 
   const href = (target: number) => `/purchase-orders?${new URLSearchParams({ ...(query ? { q: query } : {}), page: String(page), approvalPage: String(target) })}`;
   return <section className="mt-7" aria-labelledby="purchase-approvals-heading">
     <div className="mb-3 flex flex-wrap items-end justify-between gap-2"><h2 id="purchase-approvals-heading" className="text-lg font-semibold text-slate-900">Waiting for owner approval</h2><p className="text-sm text-slate-600">{result.count} purchase{result.count === 1 ? "" : "s"} above ₱50,000</p></div>
-    <DataTableShell><table className="w-full min-w-[640px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Supplier</th><th className="px-4 py-3">Warehouse</th><th className="px-4 py-3">Submitted</th><th className="px-4 py-3">Total</th><th className="px-5 py-3">Action</th></tr></thead>
-      <tbody className="divide-y divide-slate-100">{result.rows.map((row) => <tr key={row.id}><td className="px-5 py-4 font-medium text-slate-900">{row.supplierName}</td><td className="px-4 py-4">{row.warehouseName}</td><td className="px-4 py-4">{new Date(row.createdAt).toLocaleDateString("en-PH", { timeZone: "Asia/Manila" })}</td><td className="px-4 py-4 font-semibold tabular-nums">{peso.format(row.orderTotal)}</td><td className="px-5 py-4"><Button variant="outline" size="sm" asChild><Link href={`/purchase-orders/approvals/${row.id}`}>{canManage ? "Review" : "View"}</Link></Button></td></tr>)}</tbody></table></DataTableShell>
+    <DataTableShell><table className="w-full min-w-[640px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Supplier</th><th className="px-4 py-3">Warehouse</th><th className="px-4 py-3">Submitted</th><th className="px-4 py-3">Total</th><th data-record-actions className="px-5 py-3 bg-slate-50">Action</th></tr></thead>
+      <tbody className="divide-y divide-slate-100">{result.rows.map((row) => <tr key={row.id}><td className="px-5 py-4 font-medium text-slate-900">{row.supplierName}</td><td className="px-4 py-4">{row.warehouseName}</td><td className="px-4 py-4">{new Date(row.createdAt).toLocaleDateString("en-PH", { timeZone: "Asia/Manila" })}</td><td className="px-4 py-4 font-semibold tabular-nums">{peso.format(row.orderTotal)}</td><td data-record-actions className="px-5 py-4 bg-white"><Button variant="outline" size="sm" asChild><Link href={`/purchase-orders/approvals/${row.id}`}>{canManage ? "Review" : "View"}</Link></Button></td></tr>)}</tbody></table></DataTableShell>
     {result.pageCount > 1 && <nav aria-label="Purchase approval pages" className="mt-3 flex items-center justify-end gap-2">
       {result.page > 1 ? <Button variant="outline" size="sm" asChild><Link href={href(result.page - 1)}>Previous</Link></Button> : <Button variant="outline" size="sm" disabled>Previous</Button>}
       <span className="px-2 text-xs text-slate-500">Page {result.page} of {result.pageCount}</span>
@@ -93,7 +93,7 @@ async function PurchaseResults({ resultPromise, pageHref, canManage, canViewFina
   const today = todayInManila();
   return <>
     <DataTableShell empty={result.rows.length === 0 ? <EmptyState title="No purchases found" description="Add a purchase, or change the search." /> : undefined} footer={<span className="text-xs text-slate-500">{result.count} purchase{result.count === 1 ? "" : "s"}</span>}>
-      <table className="w-full min-w-[1160px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Item · purchase</th><th className="px-4 py-3">Quantity</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Location</th><th className="px-5 py-3">Workflow stage / action</th><th className="px-5 py-3 text-right">Actions</th></tr></thead>
+      <table className="w-full min-w-[1160px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Item · purchase</th><th className="px-4 py-3">Quantity</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Location</th><th className="px-5 py-3">Workflow stage / action</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th></tr></thead>
         <tbody className="divide-y divide-slate-100">{result.rows.map((row) => {
           const href = row.source === "purchase_order" ? `/purchase-orders/${row.purchase_id}` : `/site-purchases/${row.purchase_id}`;
           return <tr key={`${row.source}:${row.purchase_id}`} className="hover:bg-slate-50/70">
@@ -103,7 +103,7 @@ async function PurchaseResults({ resultPromise, pageHref, canManage, canViewFina
             <td className="px-4 py-4 font-semibold tabular-nums">{peso.format(Number(row.order_total))}</td>
             <td className="px-4 py-4 text-slate-600">{row.location_name ?? "—"}</td>
             <td className="px-5 py-4"><PurchaseWorkflowCell row={row} canManage={canManage} canViewFinance={canViewFinance} paymentBalance={row.paymentBalance} today={today} /></td>
-            <td className="px-5 py-4 text-right"><RecordViewLink href={href} name={`purchase ${row.purchase_number}`} /></td>
+            <td data-record-actions className="px-5 py-4 text-right bg-white"><RecordViewLink href={href} name={`purchase ${row.purchase_number}`} /></td>
           </tr>;
         })}</tbody></table>
     </DataTableShell>
