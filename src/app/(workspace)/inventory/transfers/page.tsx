@@ -54,8 +54,8 @@ export default async function TransfersPage({ searchParams }: { searchParams: Pr
           <td className="px-4 py-4 text-right font-semibold tabular-nums">{inTransit} {item.material?.unitSymbol}</td>
           <td className="px-4 py-4"><Badge variant={item.status === "received" ? "active" : item.status === "cancelled" ? "neutral" : "review"}>{item.item?.variance_quantity ? item.status === "received" ? "Reconciled with variance" : "Partial · variance" : item.status.replace("_", " ")}</Badge></td>
           <td className="px-5 py-4 text-right"><div className="flex justify-end gap-2">
-            {item.requestBound ? <span className="text-xs text-slate-500">Material request</span> : canReceive && item.canReceive && inTransit > 0 && item.item && item.status !== "cancelled" ? <Button variant="ghost" size="sm" asChild><Link href={actionHref("receive", item.item.id)}>Receive</Link></Button> : null}
-            {user.canManage && !item.requestBound && inTransit > 0 && item.item && <Button variant="ghost" size="sm" asChild><Link href={actionHref("variance", item.item.id)}>Variance</Link></Button>}
+            {item.requestBound ? <span className="text-xs text-slate-500">Material request</span> : canReceive && item.canReceive && inTransit > 0 && item.item && item.status !== "cancelled" ? <Button variant="outline" size="sm" asChild><Link href={actionHref("receive", item.item.id)}>Receive</Link></Button> : null}
+            {user.canManage && !item.requestBound && inTransit > 0 && item.item && <Button variant="outline" size="sm" asChild><Link href={actionHref("variance", item.item.id)}>Variance</Link></Button>}
           </div></td>
         </tr>;
       })}</tbody></table>

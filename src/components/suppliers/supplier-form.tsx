@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 import { SelectPicker } from "@/components/ui/select-picker";
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
@@ -49,7 +50,7 @@ export function SupplierForm({ supplier }: { supplier?: SupplierRow }) {
         <div className="md:col-span-2"><RecordPhotoInput label="Supplier photo" currentPhoto={supplier?.photo_path ? recordPhotoUrl("suppliers", supplier.id) : undefined} convertBeforeSubmit onProcessingChange={setProcessingPhoto} /></div>
       </div>
     </details>
-    {state.message && <p role={state.ok ? "status" : "alert"} className={`mt-5 text-sm font-medium ${state.ok ? "text-amber-700" : "text-red-600"}`}>{state.message}{state.ok && state.data?.id ? <a href={`/suppliers/${state.data.id}`} className="ml-2 underline">Open saved supplier</a> : null}</p>}
+    {state.message && <p role={state.ok ? "status" : "alert"} className={`mt-5 text-sm font-medium ${state.ok ? "text-amber-700" : "text-red-600"}`}>{state.message}{state.ok && state.data?.id ? <Button variant="outline" size="sm" asChild><a href={`/suppliers/${state.data.id}`} >Open saved supplier</a></Button> : null}</p>}
     <RecordFormControls busy={pending || processingPhoto} />
   </form>;
 }

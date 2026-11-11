@@ -1,5 +1,7 @@
 # Nognog Enterprises — Construction ERP
 
+**Record discoverability (2026-11-12):** Cost categories, original receipts and operational record links use visible outlined actions. Finance links directly to expense entries; cost pages expose All cost records, Expense entries and Budget history. Labour and equipment categories provide their attendance/hour and linked-receipt sources without changing totals. Row actions show text, document downloads have labels, and the active sidebar group opens when navigating to its page. Existing permissions, pages and database commands are retained.
+
 **Readable amounts and visible actions (2026-11-12):** Web money inputs display comma grouping while server payloads and calculations retain plain decimal strings. Cancellation, voiding, correction, stock-count and expense actions open labeled dialogs instead of action accordions. Purchasing commands sit beside View in Actions. Selection controls, history, approval rules and database schemas remain unchanged. No migration or mobile build is required. See the money/action section in the testing guide.
 
 > **Testing with the client?** Start with the [testing guide](TESTING-GUIDE.md): what each account can do and a step-by-step full-project test.

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { randomUUID } from "node:crypto";
 import { assetExpenseLabels, philippinesDate } from "@nognog/domain";
@@ -33,7 +34,7 @@ export async function AssetExpenseHistory({ assetId, kind, page, canManage, canA
           <div className="flex flex-wrap justify-between gap-2"><strong>{assetExpenseLabels[entry.category]} · {entry.expense_date}</strong><span className={entry.reversed_at ? "text-slate-500 line-through" : undefined}>{money.format(entry.amount)}</span></div>
           <p className="text-slate-600">Recorded by {submitterName.get(entry.submitted_by) ?? "a team member"}</p>
           {entry.notes && <p className="break-words text-slate-600">{entry.notes}</p>}
-          {entry.receipt_path && <a className="w-fit text-cyan-800 underline" href={`/asset-expense-receipts/${entry.id}`} target="_blank" rel="noreferrer">View receipt</a>}
+          {entry.receipt_path && <Button variant="outline" size="sm" asChild><a  href={`/asset-expense-receipts/${entry.id}`} target="_blank" rel="noreferrer">View receipt</a></Button>}
           {entry.reversed_at ? <p className="text-slate-600">Reversed · {entry.reversal_reason}</p> :
             canManage && <ActionDialog title="Correct expense" description="Enter a reason to reverse this expense, then add the correct entry. The original stays in history."><ReverseAssetExpenseForm assetId={assetId} expenseId={entry.id} /></ActionDialog>}
         </li>)}
@@ -56,6 +57,6 @@ export async function VehicleDrivers({ assetId }: { assetId: string }) {
       {profiles?.data?.map((driver) => <li key={driver.id}><Link className="text-cyan-800 underline" href={`/users/drivers?driver=${driver.id}`}>{driver.full_name}</Link>
         {driver.onboarding_required ? " · Invitation pending" : !driver.is_active ? " · Disabled" : ""}</li>)}
     </ul>
-    <Link className="mt-3 inline-block text-sm text-cyan-800 underline" href="/users/drivers">Manage drivers</Link>
+    <Button variant="outline" size="sm" asChild><Link  href="/users/drivers">Manage drivers</Link></Button>
   </section>;
 }

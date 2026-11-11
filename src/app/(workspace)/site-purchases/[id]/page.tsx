@@ -45,10 +45,10 @@ export default async function SitePurchasePage({ params, searchParams }: { param
         <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
           <div><dt className="text-xs text-slate-500">{isFuel ? "Vehicle" : isExpense ? "Purchase type" : "Store"}</dt><dd className="mt-1 font-medium">{purchase.supplier_name}</dd></div>
           <div><dt className="text-xs text-slate-500">{purchase.receipt_number_generated || isExpense ? "System reference" : "Receipt"}</dt><dd className="mt-1 font-medium">{purchase.receipt_number} · {purchase.receipt_date}</dd></div>
-          <div><dt className="text-xs text-slate-500">Bought by</dt><dd className="mt-1 font-medium">{data.submittedByName}</dd></div>
+          <div><dt className="text-xs text-slate-500">Bought by</dt><dd className="mt-1 font-medium">{data.submittedByName || "Name unavailable"}</dd></div>
           <div><dt className="text-xs text-slate-500">Paid with</dt><dd className="mt-1 font-medium">{purchase.paid_with === "own_money" ? (purchase.reimbursed_on ? `Own money · reimbursed ${purchase.reimbursed_on} (${purchase.reimbursement_reference})` : "Own money · to reimburse") : "Company cash"}</dd></div>
           {purchase.notes && <div className="sm:col-span-2"><dt className="text-xs text-slate-500">Note</dt><dd className="mt-1">{purchase.notes}</dd></div>}
-          {purchase.status !== "submitted" && <div className="sm:col-span-2"><dt className="text-xs text-slate-500">{purchase.status === "approved" ? "Approved by" : "Rejected by"}</dt><dd className="mt-1">{data.decidedByName}{purchase.rejection_reason ? ` · ${purchase.rejection_reason}` : ""}</dd></div>}
+          {purchase.status !== "submitted" && <div className="sm:col-span-2"><dt className="text-xs text-slate-500">{purchase.status === "approved" ? "Approved by" : "Rejected by"}</dt><dd className="mt-1">{data.decidedByName || "Name unavailable"}{purchase.rejection_reason ? ` · ${purchase.rejection_reason}` : ""}</dd></div>}
         </dl>
         {canDecide && purchase.status === "submitted" && <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
           <RecordCreateDialog title="Reject purchase" triggerLabel="Reject" triggerVariant="outline"><RejectSitePurchaseForm purchaseId={purchase.id} /></RecordCreateDialog>

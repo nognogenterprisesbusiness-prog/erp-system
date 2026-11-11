@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 import { withFieldPlaceholder } from "@/components/ui/field-placeholder";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -51,5 +52,5 @@ export function WarehouseForm({ warehouse, municipalityLabel = "" }: { warehouse
       </p>}
     </div>
     <div className="md:col-span-2">{field("Description", "description", <textarea id="description" name="description" rows={4} className={`${inputClass} h-auto py-3`} defaultValue={warehouse?.description ?? ""} />)}</div>
-  </div>{!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}{state.ok && "message" in state && <p role="status" className="mt-5 text-sm text-amber-700">{state.message} <Link className="underline" href={`/warehouses/${state.data.id}`}>Open saved warehouse</Link></p>}<RecordFormControls busy={pending || photoBusy} /></form>;
+  </div>{!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}{state.ok && "message" in state && <p role="status" className="mt-5 text-sm text-amber-700">{state.message} <Button variant="outline" size="sm" asChild><Link  href={`/warehouses/${state.data.id}`}>Open saved warehouse</Link></Button></p>}<RecordFormControls busy={pending || photoBusy} /></form>;
 }

@@ -88,7 +88,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
       <Suspense fallback={<><div className="h-10 w-full rounded-lg bg-slate-100 sm:w-64" /><div className="h-10 w-full rounded-lg bg-slate-100 sm:w-44" /></>}>
         <DocumentFilterChoices filters={filters} />
       </Suspense>
-      {filtered(filters) && <Link href="/documents" className="text-sm font-medium text-cyan-700 hover:underline">Show all documents</Link>}
+      {filtered(filters) && <Button variant="outline" size="sm" asChild><Link href="/documents" >Show all documents</Link></Button>}
     </div>
     <Suspense key={`${filters.query}:${filters.projectId}:${filters.category}:${filters.fileKind}:${filters.page}`} fallback={<DocumentResultsSkeleton />}><DocumentResults filters={filters} canManage={user.canManage} /></Suspense>
   </>;

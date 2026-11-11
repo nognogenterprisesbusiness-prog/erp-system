@@ -1,4 +1,5 @@
 import { IntentLink as Link } from "@/components/layout/intent-link";
+import { Button } from "@/components/ui/button";
 import { ringSegment, stackSegments } from "@/lib/charts/geometry";
 import type { ProjectCostCategory } from "@/lib/projects/cost-breakdown";
 
@@ -30,8 +31,12 @@ export function ProjectCostBreakdown({ categories }: { categories: ProjectCostCa
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-9 text-center"><span className="text-xs text-slate-500">Total costs</span><span className="mt-1 text-xl font-semibold tabular-nums">{compactMoney.format(total / 100)}</span></div>
       </div>
       <ul className="min-w-0 divide-y divide-slate-100">{posted.map((item) => <li key={item.label} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 py-3 first:pt-0">
-        <div className="flex min-w-0 items-start gap-2"><span aria-hidden="true" className="mt-1.5 size-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} /><div><p className="text-sm font-medium text-slate-800">{item.label}</p>{item.detail && <p className="mt-1 text-xs text-slate-500">{item.detail}</p>}{item.href && <Link href={item.href} className="mt-1 inline-flex min-h-9 items-center text-xs font-medium text-cyan-700 underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-cyan-600">View entries<span className="sr-only"> for {item.label}</span></Link>}</div></div>
+        <div className="flex min-w-0 items-start gap-2"><span aria-hidden="true" className="mt-1.5 size-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.color }} /><div className="min-w-0"><p className="text-sm font-medium text-slate-800">{item.label}</p>{item.detail && <p className="mt-1 text-xs text-slate-500">{item.detail}</p>}</div></div>
         <div className="text-right"><p className="text-sm font-semibold tabular-nums">{money.format(item.amountCentavos / 100)}</p><p className="mt-1 text-xs tabular-nums text-slate-500">{(item.amountCentavos / total * 100).toFixed(1)}%</p></div>
+        {(item.href || item.relatedLinks?.length) ? <div className="col-span-2 mt-2 flex flex-wrap gap-2 pl-4">
+          {item.href && <Button variant="outline" size="sm" asChild><Link href={item.href} aria-label={`${item.actionLabel ?? "View entries"} for ${item.label}`}>{item.actionLabel ?? "View entries"}</Link></Button>}
+          {item.relatedLinks?.map(link => <Button key={link.href} variant="outline" size="sm" asChild><Link href={link.href}>{link.label}</Link></Button>)}
+        </div> : null}
       </li>)}</ul>
     </div>}
   </section>;

@@ -211,3 +211,12 @@ Also try each account on a project or warehouse it is **not** assigned to: it sh
 - **Cancel order**, **Cancel request**, **Void invoice/payroll**, attendance/payment/expense corrections, **Record physical count**, expense entry and collapsed release/receipt/variance actions open dialogs from labeled buttons. Existing dedicated workflows stay available.
 - For cancellation: open the dialog, enter a reason, choose **Go back**, and confirm no status change. Reopen and verify the draft is cleared. Escape closes a nested action dialog without closing its record panel. Verify required reasons and existing server permissions before an authorized staging submission.
 - Verify action buttons and dialog footers on a narrow phone viewport. Normal warehouse/category/date choices and history/optional-field disclosures remain selection or information controls.
+
+
+### Discoverable cost records and source receipts (12 November 2026)
+
+- Finance → **View entries** on a populated cost category → matching project/category entries → **View original receipt** in Actions. Confirm receipt number, project and amount, close its side panel and confirm the category/filter is retained.
+- Open Expense entries and Budget history from the visible project-cost navigation, then return to Finance. Check the selected section and category headings, phone-width wrapping and keyboard focus.
+- Labour offers **View attendance** and, when posted labour receipts exist, **View labour receipts**. Equipment offers **View hours** and its receipt link when applicable. Verify the combined totals stay unchanged.
+- Row commands display their text beside the icon. Verify a disabled command stays disabled and restricted actions are absent for unauthorized roles. Check View/Edit/Archive targets, approval links, receipt corrections and document Download actions.
+- Navigate from a linked record to a page in another sidebar group. That group opens and identifies the current page; manually collapsing it remains possible until the next navigation.

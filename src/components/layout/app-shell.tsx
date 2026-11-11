@@ -11,6 +11,7 @@ import { AccountAvatar } from "@/components/ui/account-avatar";
 import { HistoryLink } from "@/components/layout/history-link";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { cn } from "@/lib/utils";
+import { activeNavigationGroup } from "@/lib/ui/active-navigation";
 
 export type ShellNavItem = { href: string; label: string; icon: IconSvgElement; group?: string; nested?: boolean; newTab?: boolean };
 type FooterAction = { label: string; icon: IconSvgElement; onClick: () => void };
@@ -88,16 +89,21 @@ export function AppShell({ children, name, avatar, roleLabel, items, footerItems
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<string[]>(() => {
-    const activeItem = items.filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)).sort((left, right) => right.href.length - left.href.length)[0];
-    const activeGroup = activeItem?.group ?? (["/profile", "/notifications", "/help"].includes(pathname) ? "Settings" : undefined);
-    return ["Project tools", "Inventory tools", "Purchasing tools", "People", "Administration", "Settings"].filter((group) => group !== activeGroup);
-  });
+  const navigationPath = activeHref ?? pathname;
+  const activeGroup = activeNavigationGroup(navigationPath, [...items, ...(footerItems ?? []).map(item => ({ ...item, group: "Settings" }))]);
+  const [groupState, setGroupState] = useState(() => ({
+    path: navigationPath,
+    collapsed: ["Project tools", "Inventory tools", "Purchasing tools", "People", "Administration", "Settings"].filter(group => group !== activeGroup),
+  }));
+  if (groupState.path !== navigationPath) {
+    setGroupState({ path: navigationPath, collapsed: groupState.collapsed.filter(group => group !== activeGroup) });
+  }
+  const collapsedGroups = groupState.collapsed;
   const mobileNavigation = useRef<HTMLDivElement>(null);
   const mobileNavigationTrigger = useRef<HTMLButtonElement>(null);
   const mobileNavigationClose = useRef<HTMLButtonElement>(null);
   function toggleGroup(group: string) {
-    setCollapsedGroups((current) => current.includes(group) ? current.filter((item) => item !== group) : [...current, group]);
+    setGroupState(current => ({ ...current, collapsed: current.collapsed.includes(group) ? current.collapsed.filter(item => item !== group) : [...current.collapsed, group] }));
   }
   useEffect(() => {
     queueMicrotask(() => {

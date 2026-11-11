@@ -27,9 +27,8 @@ function actionIcon(label: string) {
 export function RecordActionIcon({ label, name, href, onSelect, disabled = false, destructive = false, submit = false }: RecordAction & { name: string; disabled?: boolean; submit?: boolean }) {
   const icon = actionIcon(label);
   const accessibleLabel = `${label} ${name}`;
-  const view = isViewAction(label);
-  const className = `${view ? "inline-flex h-11 items-center justify-center whitespace-nowrap border border-slate-200 bg-white px-3 text-sm font-semibold sm:h-9 sm:text-xs" : "grid size-11 place-items-center sm:size-9"} rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 disabled:opacity-50 ${destructive ? "text-red-600 hover:bg-red-50" : "text-slate-600 hover:bg-slate-100 hover:text-cyan-700"}`;
-  const content = view ? label : <HugeiconsIcon icon={icon} size={18} aria-hidden="true" />;
+  const className = `inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 disabled:opacity-50 sm:min-h-9 sm:text-xs ${destructive ? "text-red-600 hover:bg-red-50" : "text-slate-600 hover:bg-slate-100 hover:text-cyan-700"}`;
+  const content = <><HugeiconsIcon icon={icon} size={16} aria-hidden="true" /><span>{label}</span></>;
   if (href && disabled) return <span aria-label={accessibleLabel} aria-disabled="true" title={accessibleLabel} className={`${className} opacity-50`}>{content}</span>;
   return href ? <Link href={href} aria-label={accessibleLabel} title={accessibleLabel} className={className}>{content}</Link>
     : <button type={submit ? "submit" : "button"} disabled={disabled} onClick={onSelect} aria-label={accessibleLabel} title={accessibleLabel} className={className}>{content}</button>;
@@ -64,7 +63,7 @@ export function RecordActionMenu({ name, actions, disabled = false, triggerLabel
   }
 
   if (!actions.length) return null;
-  if (actions.length <= 2) return <div className="flex items-center justify-end gap-1">{actions.map((action) => <RecordActionIcon key={action.label} {...action} name={name} disabled={disabled} />)}</div>;
+  if (actions.length <= 2) return <div className="flex flex-wrap items-center justify-end gap-2">{actions.map((action) => <RecordActionIcon key={action.label} {...action} name={name} disabled={disabled} />)}</div>;
 
   return <div className="flex flex-wrap items-center justify-end gap-2">
     {view && <RecordActionIcon {...view} name={name} disabled={disabled} />}

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { RecordViewLink } from "@/components/ui/record-view-link";
 import { z } from "zod";
 import { notFound } from "next/navigation";
@@ -37,7 +38,7 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
       if (existing.data) { options.unshift(existing.data); currentTruck = existing.data; }
     }
     return <>
-      <PageHeader title={profile.data.full_name} description={profile.data.email ?? undefined} action={<Link className="text-sm underline" href="/users/drivers">Back to drivers</Link>} />
+      <PageHeader title={profile.data.full_name} description={profile.data.email ?? undefined} action={<Button variant="outline" size="sm" asChild><Link  href="/users/drivers">Back to drivers</Link></Button>} />
       <section className="mt-6 max-w-xl space-y-4 rounded-xl border border-slate-200 bg-white p-5">
         <div>
           <p className="text-xs text-slate-600">Current truck</p>
