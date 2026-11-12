@@ -1,5 +1,6 @@
 "use client";
 
+import { RecordFormControls } from "@/components/ui/record-create-dialog";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -13,7 +14,7 @@ export function ReplaceIdCardForm({ employeeId }: { employeeId: string }) {
     <input type="hidden" name="employeeId" value={employeeId} />
     <p className="text-sm text-slate-600">Use this when a card is lost or damaged. The old card stops working immediately.</p>
     <FormField label="Reason" htmlFor="replaceCardReason"><input id="replaceCardReason" name="reason" required minLength={3} maxLength={500} placeholder="e.g. Lost card" className={fieldControlClass} /></FormField>
-    <div><Button type="submit" disabled={pending || state.ok}>{pending ? "Issuing…" : "Issue new card"}</Button></div>
+    <RecordFormControls busy={pending} disabled={state.ok} label="Issue new card" />
     {state.message && <p role={state.ok ? "status" : "alert"} className={`text-sm ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}
   </form>;
 }

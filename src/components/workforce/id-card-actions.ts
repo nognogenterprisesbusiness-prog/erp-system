@@ -21,3 +21,16 @@ export async function replaceIdCardAction(_: IdCardActionState, form: FormData):
   revalidatePath(`/employees/${parsed.data.employeeId}`);
   return { ok: true, message: "New card issued. Print it; the old card no longer scans." };
 }
+
+const previewSchema = z.object({ employeeId: uuidSchema.optional(), projectId: uuidSchema.optional() }).strict();
+
+export async function loadWorkerIdCardPreview(filters: { employeeId?: string; projectId?: string }) {
+  const parsed = previewSchema.safeParse(filters);
+  if (!parsed.success) return { message: "The employee or project selection is invalid." };
+  try {
+    const { getWorkerIdCards } = await import("@/lib/data/worker-id-cards");
+    return { data: await getWorkerIdCards(parsed.data) };
+  } catch {
+    return { message: "ID cards could not be loaded. Check your access and try again." };
+  }
+}

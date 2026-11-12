@@ -881,3 +881,11 @@ The final action rule is one visible button for one action, otherwise one three-
 | Date | Refinement | Verification | Scope |
 | --- | --- | --- | --- |
 | 2026-11-12 | Unified menus and in-place driver assignment editing | 173 unit tests, typecheck, lint, build, isolated asset suite and focused desktop/phone browser QA | Existing account and assignment permissions retained; no migration or mobile changes |
+
+### Archive confirmations and worker-card navigation (2026-11-12)
+
+Employee, supplier, material and employee-category archiving now use confirmation dialogs. Project assignment ending uses a reason/date dialog. Worker-card printing opens an in-place preview without changing the current page, fixing the employee detail interception error. See [verification and scope](docs/archive-dialogs-print-navigation-20261112.md).
+
+| Date | Refinement | Verification | Scope |
+| --- | --- | --- | --- |
+| 2026-11-12 | Archive confirmation dialogs and employee print route | Reproduced the Print card unavailable-panel bug; 173 unit tests, typecheck, lint, build and focused desktop/phone browser checks | Existing permission, SQL archive and assignment rules retained; no migration or mobile change |

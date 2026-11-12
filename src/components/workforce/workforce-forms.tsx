@@ -12,7 +12,6 @@ import {
   transferEmployeeAssignmentAction,
   type WorkforceActionState,
 } from "@/app/(workspace)/employees/actions";
-import { Button } from "@/components/ui/button";
 import { fieldControlClass } from "@/components/ui/form-field";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { PesoAmountInput } from "@/components/ui/peso-amount-input";
@@ -25,7 +24,7 @@ type SelectEmployee = { id: string; fullName: string };
 
 function FormMessage({ state }: { state: WorkforceActionState }) {
   if (!state.message) return null;
-  return <p role="status" className={`text-xs font-medium ${state.ok ? "text-emerald-700" : "text-red-600"}`}>{state.message}</p>;
+  return <p role={state.ok ? "status" : "alert"} className={`text-xs font-medium ${state.ok ? "text-emerald-700" : "text-red-600"}`}>{state.message}</p>;
 }
 
 function useCompleteWorkforceDialog(state: WorkforceActionState) {
@@ -64,12 +63,13 @@ export function WorkforceAssignmentForm({ employees, projects, sites, fixedEmplo
 
 export function EndAssignmentForm({ assignment }: { assignment: EmployeeProjectAssignmentRow }) {
   const [state, action, pending] = useActionState(endEmployeeAssignmentAction, initialState);
-  const inDialog = useCompleteWorkforceDialog(state);
-  return <form action={action} className={inDialog ? "grid gap-4" : "flex flex-wrap items-center justify-end gap-2"}>
+  useCompleteWorkforceDialog(state);
+  return <form action={action} className="grid gap-4">
     <input type="hidden" name="assignmentId" value={assignment.id} /><input type="hidden" name="employeeId" value={assignment.employee_id} /><input type="hidden" name="projectId" value={assignment.project_id} />
-    <label className={inDialog ? "grid gap-1 text-sm font-medium" : "text-xs"}>{inDialog && "End date"}<input className={inDialog ? fieldControlClass : "h-9 rounded-md border border-slate-200 px-2 text-xs"} name="endDate" aria-label="Assignment end date" type="date" min={assignment.start_date} defaultValue={today < assignment.start_date ? assignment.start_date : today} required /></label>
-    <label className={inDialog ? "grid gap-1 text-sm font-medium" : "text-xs"}>{inDialog && "Reason"}<input className={inDialog ? fieldControlClass : "h-9 min-w-40 rounded-md border border-slate-200 px-2 text-xs"} name="remarks" aria-label="Assignment end reason" placeholder={getFieldPlaceholder("Assignment end reason")} required /></label>
-    {inDialog ? <><FormMessage state={state} /><RecordFormControls busy={pending} label="End assignment" /></> : <><Button variant="outline" size="sm" disabled={pending}>{pending ? "Ending…" : "End"}</Button><FormMessage state={state} /></>}
+    <label className="grid gap-2 text-sm font-medium">End date<input className={fieldControlClass} name="endDate" type="date" min={assignment.start_date} defaultValue={today < assignment.start_date ? assignment.start_date : today} required disabled={pending} /></label>
+    <label className="grid gap-2 text-sm font-medium">Reason<input className={fieldControlClass} name="remarks" placeholder={getFieldPlaceholder("Assignment end reason")} required disabled={pending} /></label>
+    <FormMessage state={state} />
+    <RecordFormControls busy={pending} label="End assignment" />
   </form>;
 }
 
@@ -121,5 +121,11 @@ export function CloseLaborRateForm({ employeeId, rate }: { employeeId: string; r
 
 export function ArchiveEmployeeForm({ employeeId }: { employeeId: string }) {
   const [state, action, pending] = useActionState(archiveEmployeeAction, initialState);
-  return <form action={action} className="flex flex-wrap items-center justify-end gap-2"><input type="hidden" name="id" value={employeeId} /><input className="h-10 min-w-52 rounded-lg border border-slate-200 px-3 text-sm" name="reason" placeholder="Separation / archive reason" required minLength={3} /><Button variant="outline" type="submit" disabled={pending}>{pending ? "Archiving…" : "Archive employee"}</Button><FormMessage state={state} /></form>;
+  return <form action={action} className="grid gap-4">
+    <input type="hidden" name="id" value={employeeId} />
+    <p className="text-sm leading-6 text-slate-600">Remove this employee from the active list. Their record and history are kept. End any active project assignments before archiving.</p>
+    <label className="grid gap-2 text-sm font-medium">Separation / archive reason<textarea className={`${fieldControlClass} h-auto py-3`} name="reason" rows={3} placeholder="Explain why this employee is being archived" required minLength={3} maxLength={500} disabled={pending} /></label>
+    <FormMessage state={state} />
+    <RecordFormControls busy={pending} label="Confirm archive" />
+  </form>;
 }

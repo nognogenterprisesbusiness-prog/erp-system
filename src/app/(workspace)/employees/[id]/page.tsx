@@ -1,3 +1,4 @@
+import { WorkerIdCardPreview } from "@/components/workforce/worker-id-card-preview";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,7 +9,6 @@ import { ArchiveEmployeeForm, AttendanceBasisForm, CloseLaborRateForm, EndAssign
 import { requireUser } from "@/lib/auth";
 import { EmployeeDepartmentForm } from "@/components/payroll/payroll-forms";
 import { ReplaceIdCardForm } from "@/components/workforce/id-card-forms";
-import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { getEmployee } from "@/lib/data/workforce";
 
@@ -32,7 +32,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: { par
   const departments = departmentList?.data ?? [];
   return <>
     <PageHeader eyebrow={employee.code} title={employee.fullName} description={`${category.name} · ${employee.employment_type}`} action={user.canManage && employee.status !== "separated" && <RecordCreateDialog key={employee.updated_at} title="Edit employee" triggerLabel="Edit employee" triggerVariant="outline" initialOpen={editing} closeHref={`/employees/${id}`}><EmployeeForm employee={data.employee} contact={data.contact} categories={data.references.categories} profiles={data.references.profiles} /></RecordCreateDialog>} />
-    <section className="mt-7 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-semibold">Employee record</h2><p className="mt-1 text-xs text-slate-500">Identity and employment information</p></div><Badge variant={employee.status === "active" ? "active" : employee.status === "on_leave" ? "review" : "neutral"}>{employee.status.replace("_", " ")}</Badge></div><dl className="grid gap-x-8 gap-y-5 px-6 py-5 sm:grid-cols-2 xl:grid-cols-4"><div><dt className="text-xs text-slate-400">Category / trade</dt><dd className="mt-1 text-sm font-medium">{category.name}</dd></div><div><dt className="text-xs text-slate-400">Hire date</dt><dd className="mt-1 text-sm font-medium">{date(employee.hire_date)}</dd></div><div><dt className="text-xs text-slate-400">User account</dt><dd className="mt-1 text-sm font-medium">{linkedProfile ? linkedProfile.full_name : "No linked account"}</dd></div><div><dt className="text-xs text-slate-400">Contact</dt><dd className="mt-1 text-sm font-medium">{contact?.contact_number ?? "Restricted"}</dd></div></dl>{user.canManage && employee.status !== "separated" && <div className="border-t border-slate-100 px-6 py-4"><ArchiveEmployeeForm employeeId={id} /></div>}</section>
+    <section className="mt-7 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-semibold">Employee record</h2><p className="mt-1 text-xs text-slate-500">Identity and employment information</p></div><Badge variant={employee.status === "active" ? "active" : employee.status === "on_leave" ? "review" : "neutral"}>{employee.status.replace("_", " ")}</Badge></div><dl className="grid gap-x-8 gap-y-5 px-6 py-5 sm:grid-cols-2 xl:grid-cols-4"><div><dt className="text-xs text-slate-400">Category / trade</dt><dd className="mt-1 text-sm font-medium">{category.name}</dd></div><div><dt className="text-xs text-slate-400">Hire date</dt><dd className="mt-1 text-sm font-medium">{date(employee.hire_date)}</dd></div><div><dt className="text-xs text-slate-400">User account</dt><dd className="mt-1 text-sm font-medium">{linkedProfile ? linkedProfile.full_name : "No linked account"}</dd></div><div><dt className="text-xs text-slate-400">Contact</dt><dd className="mt-1 text-sm font-medium">{contact?.contact_number ?? "Restricted"}</dd></div></dl>{user.canManage && employee.status !== "separated" && <div className="border-t border-slate-100 px-6 py-4"><RecordCreateDialog title={`Archive ${employee.fullName}`} triggerLabel="Archive employee" triggerVariant="outline" triggerIcon={null} size="sm"><ArchiveEmployeeForm employeeId={id} /></RecordCreateDialog></div>}</section>
 
     {showDepartment && <section className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5">
       <div><h2 className="font-semibold">Payroll department</h2><p className="mt-1 text-xs text-slate-500">{user.canManage ? "Used to group this employee in payroll." : departments.find((item) => item.id === departmentId)?.name ?? "No department"}</p></div>
@@ -40,7 +40,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: { par
     </section>}
     {user.canManage && employee.status === "active" && <section className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5">
       <div><h2 className="font-semibold">Worker ID card</h2><p className="mt-1 text-xs text-slate-500">The Foreman scans this QR card in the mobile app for time-in and time-out.</p></div>
-      <div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/employees/id-cards?employee=${id}`}>Print card</Link></Button><RecordCreateDialog title="Replace ID card" triggerLabel="Replace card" triggerVariant="outline" triggerIcon={null}><ReplaceIdCardForm employeeId={id} /></RecordCreateDialog></div>
+      <div className="flex flex-wrap gap-2"><WorkerIdCardPreview employeeId={id} label="Print card" /><RecordCreateDialog size="sm" title="Replace ID card" triggerLabel="Replace card" triggerVariant="outline" triggerIcon={null}><ReplaceIdCardForm employeeId={id} /></RecordCreateDialog></div>
     </section>}
     <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
@@ -63,7 +63,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: { par
                     <p className="mb-4 text-sm text-slate-600">Move {employee.fullName} from {assignment.siteName} to another project site.</p>
                     <TransferAssignmentForm assignment={assignment} projects={references.projects} sites={references.sites} />
                   </RecordCreateDialog>
-                  <RecordCreateDialog title="End assignment" triggerVariant="outline" triggerIcon={null}>
+                  <RecordCreateDialog size="sm" title="End assignment" triggerVariant="outline" triggerIcon={null}>
                     <p className="mb-4 text-sm text-slate-600">End the {assignment.position_title} assignment at {assignment.siteName}.</p>
                     <EndAssignmentForm assignment={assignment} />
                   </RecordCreateDialog>
@@ -79,7 +79,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: { par
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
         <div><h2 className="font-semibold">Labor rate history</h2><p className="mt-1 text-xs text-slate-500">Effective dates preserve each version of this employee&apos;s rate.</p></div>
         {user.canManage && <div className="flex flex-wrap gap-2">
-          <RecordCreateDialog title="Set attendance costing basis" triggerLabel="Costing basis" triggerVariant="outline" triggerIcon={null}><AttendanceBasisForm employeeId={id} /></RecordCreateDialog>
+          <RecordCreateDialog size="sm" title="Set attendance costing basis" triggerLabel="Costing basis" triggerVariant="outline" triggerIcon={null}><AttendanceBasisForm employeeId={id} /></RecordCreateDialog>
           <RecordCreateDialog title="Add labor rate" triggerLabel="Add rate"><LaborRateForm employeeId={id} /></RecordCreateDialog>
         </div>}
       </div>
@@ -91,7 +91,7 @@ export default async function EmployeeDetailPage({ params, searchParams }: { par
                 <p className="text-sm font-semibold">{money.format(rate.rate_amount)} / {rate.rate_type === "daily" ? "day" : "hour"}</p>
                 <p className="mt-1 text-xs text-slate-500">Effective {date(rate.effective_start_date)} – {date(rate.effective_end_date)} · Approved by {rate.approvedByName}</p>
               </div>
-              {user.canManage && !rate.effective_end_date && <RecordCreateDialog title="Close labor rate" triggerLabel="Close rate" triggerVariant="outline" triggerIcon={null}>
+              {user.canManage && !rate.effective_end_date && <RecordCreateDialog size="sm" title="Close labor rate" triggerLabel="Close rate" triggerVariant="outline" triggerIcon={null}>
                 <p className="mb-4 text-sm text-slate-600">Set the final effective date for {money.format(rate.rate_amount)} per {rate.rate_type === "daily" ? "day" : "hour"}.</p>
                 <CloseLaborRateForm employeeId={id} rate={rate} />
               </RecordCreateDialog>}

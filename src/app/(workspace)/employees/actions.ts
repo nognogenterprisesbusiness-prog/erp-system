@@ -25,6 +25,7 @@ function friendlyWorkforceError(error: { code?: string; message: string }) {
   if (error.code === "42501") return "You do not have permission to manage workforce records.";
   if (error.code === "23505") return "That employee code, linked account, category, or active project assignment is already in use.";
   if (error.code === "23P01" || error.message.includes("overlap")) return "This labor rate overlaps an existing rate of the same type.";
+  if (error.message.includes("reassign or archive active employee records")) return "Move employees to another category before archiving it.";
   if (error.message.includes("category")) return "The selected employee category is unavailable.";
   if (error.message.includes("linked user")) return "The selected user account is inactive or unavailable.";
   if (error.message.includes("project site")) return "Select an active site that belongs to the project.";
@@ -101,14 +102,16 @@ export async function saveEmployeeCategoryAction(_: WorkforceActionState, form: 
   redirect("/employees/categories");
 }
 
-export async function archiveEmployeeCategoryAction(form: FormData) {
-  await requireManager();
-  const id = uuidSchema.parse(value(form, "id"));
+export async function archiveEmployeeCategoryAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
+  try { await requireManager(); } catch { return failure("You do not have permission to archive employee categories."); }
+  const id = uuidSchema.safeParse(value(form, "id"));
+  if (!id.success) return failure("Choose a valid employee category.");
   const supabase = await createClient();
-  const { error } = await supabase.rpc("archive_employee_category", { p_id: id });
-  if (error) throw new Error(friendlyWorkforceError(error));
+  const { error } = await supabase.rpc("archive_employee_category", { p_id: id.data });
+  if (error) return failure(friendlyWorkforceError(error));
   revalidatePath("/employees");
   revalidatePath("/employees/categories");
+  return { ok: true, message: "Employee category archived." };
 }
 
 export async function assignEmployeeAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
