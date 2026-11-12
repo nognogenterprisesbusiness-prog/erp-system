@@ -897,3 +897,7 @@ Replaced the standalone employee Categories screen with Jobs / trades on Employe
 ### Payroll and dialog usability (2026-11-12)
 
 Payroll amounts have separate read-only columns and a single Edit button opening a compact pay-adjustment dialog. Finalize/payment/void use consistent confirmation and pending controls. Fixed employee edit forms opening behind the details drawer and retained their action state across record refreshes; employee creation closes its form before showing the new record. Text inputs use an outlined cursor for contrast. Departments keep existing Add/Rename functionality. No database or payroll-rule change. See [focused verification](docs/payroll-dialog-refinement-20261112.md).
+
+### Notification previews and record actions (2026-11-12)
+
+Notifications open as compact dialogs from the bell or inbox without changing the current page. Explicitly labelled record buttons open the existing destinations. Added contextual panels for QR labels, supplier quotations and purchase approvals; standardized purchasing/QR navigation buttons, quotation View/Use quote menus and supplier payment View actions. Removed duplicate record shortcuts where an existing action already opens the same record. No functions, permissions or SQL rules removed. See [review scope and checks](docs/notification-record-ux-20261112.md).

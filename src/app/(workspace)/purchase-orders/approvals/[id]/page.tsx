@@ -32,8 +32,8 @@ export default async function PurchaseApprovalPage({ params, searchParams }: {
         <strong className="text-lg tabular-nums text-slate-900">{peso(Number(request.order_total))}</strong>
       </div>
       <p className="mt-4 text-sm text-slate-600">Purchases above ₱50,000 need this approval before a purchase order is issued. Submission alone does not update supplier prices or inventory.</p>
-      {context?.material_request_id && <p className="mt-2">Related <Link href={`/requests/${context.material_request_id}`} className="text-cyan-700 hover:underline">material request</Link>.</p>}
-      {context?.supplier_quotation_id && <p className="mt-2">Based on a <Link href={`/purchase-orders/quotations/${context.supplier_quotation_id}`} className="text-cyan-700 hover:underline">saved supplier quotation</Link>.</p>}
+      {context?.material_request_id && <p className="mt-2">Related <Button variant="outline" size="sm" asChild><Link href={`/requests/${context.material_request_id}`}>View request</Link></Button>.</p>}
+      {context?.supplier_quotation_id && <p className="mt-2">Based on a <Button variant="outline" size="sm" asChild><Link href={`/purchase-orders/quotations/${context.supplier_quotation_id}`}>View quotation</Link></Button>.</p>}
       {request.purchase_order_id && <Button variant="outline" asChild className="mt-4"><Link href={`/purchase-orders/${request.purchase_order_id}`}>View issued purchase order</Link></Button>}
       {request.status === "pending" && user.canManage && <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-200 pt-5">
         <RecordCreateDialog title="Approve purchase" triggerLabel="Approve"><p className="mb-4 text-sm text-slate-600">Review the supplier, warehouse, every item and the {peso(Number(request.order_total))} total before issuing the order.</p><PurchaseApprovalForm requestId={request.id} decision="approve" /></RecordCreateDialog>

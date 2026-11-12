@@ -1,5 +1,6 @@
 "use client";
 
+import { NotificationPreview } from "./notification-preview";
 import { useEffect, useRef, useState } from "react";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Cancel01Icon, Notification01Icon } from "@hugeicons/core-free-icons";
@@ -11,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { MarkAllNotificationsUnread } from "./notification-actions";
 
 export function NotificationBell({ userId }: { userId: string }) {
+  const [selected, setSelected] = useState<NotificationRow | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [recent, setRecent] = useState<NotificationRow[]>([]);
   const [loadError, setLoadError] = useState(false);
@@ -65,7 +67,7 @@ export function NotificationBell({ userId }: { userId: string }) {
   }, [userId]);
 
   const closeMenu = (event: React.MouseEvent<HTMLAnchorElement>) => event.currentTarget.closest("details")?.removeAttribute("open");
-  return <details data-header-menu="notifications" className="relative" onToggle={(event) => { menuOpen.current = event.currentTarget.open; if (menuOpen.current) refreshMenu.current(); }}>
+  return <><details data-header-menu="notifications" className="relative" onToggle={(event) => { menuOpen.current = event.currentTarget.open; if (menuOpen.current) refreshMenu.current(); }}>
     <summary aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ""}`} className="relative grid size-10 cursor-pointer list-none place-items-center rounded-full text-slate-600 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600 [&::-webkit-details-marker]:hidden">
       <HugeiconsIcon icon={Notification01Icon} size={20} />
       {unreadCount > 0 && <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-cyan-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">{unreadCount > 99 ? "99+" : unreadCount}</span>}
@@ -79,8 +81,8 @@ export function NotificationBell({ userId }: { userId: string }) {
       {loadError ? <p role="status" className="p-4 text-xs text-amber-700">Updates are temporarily unavailable. Open the notification center to retry.</p>
         : recentLoading ? <p role="status" className="p-4 text-xs text-slate-500">Loading notifications…</p>
         : recent.length === 0 ? <EmptyState kind="notifications" compact title="No notifications yet" />
-          : <ul className="max-h-[calc(100svh-11rem)] divide-y divide-slate-100 overflow-auto sm:max-h-80">{recent.map((item) => <li key={item.id}><Link href={`/notifications/${item.id}`} onClick={closeMenu} className={`block px-4 py-3 hover:bg-slate-50 ${item.read_at ? "" : "bg-cyan-50/50"}`}><span className="block text-sm font-semibold">{item.title}</span><span className="mt-1 block line-clamp-2 text-xs leading-5 text-slate-600">{item.message}</span><NotificationTime value={item.created_at} className="mt-2 block text-xs text-slate-400" /></Link></li>)}</ul>}
+          : <ul className="max-h-[calc(100svh-11rem)] divide-y divide-slate-100 overflow-auto sm:max-h-80">{recent.map((item) => <li key={item.id}><button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setSelected(item); }} className={`block w-full px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-cyan-600 ${item.read_at ? "" : "bg-cyan-50/50"}`}><span className="block text-sm font-semibold">{item.title}</span><span className="mt-1 block line-clamp-2 text-xs leading-5 text-slate-600">{item.message}</span><NotificationTime value={item.created_at} className="mt-2 block text-xs text-slate-400" /></button></li>)}</ul>}
       <Link href="/notifications" onClick={closeMenu} className="block border-t border-slate-100 px-4 py-3 text-xs font-semibold text-cyan-700 hover:bg-slate-50">View all notifications</Link>
     </div>
-  </details>;
+  </details>{selected && <NotificationPreview key={selected.id} notification={selected} hideTrigger initialOpen onClosed={() => setSelected(null)} />}</>;
 }

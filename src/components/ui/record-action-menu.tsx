@@ -18,12 +18,12 @@ function actionIcon(label: string) {
   if (action.startsWith("download")) return Download04Icon;
   if (action.includes("payment") || action.startsWith("reimburse")) return CreditCardIcon;
   if (action.includes("assignment") || action.startsWith("assign role")) return PencilEdit02Icon;
-  if (action.startsWith("edit") || action.startsWith("correct")) return PencilEdit02Icon;
+  if (action.startsWith("edit") || action.startsWith("correct") || action.startsWith("rename")) return PencilEdit02Icon;
   if (action.startsWith("delete")) return Delete02Icon;
   if (action.startsWith("archive")) return Archive01Icon;
   if (action.startsWith("print")) return PrinterIcon;
   if (action.startsWith("request")) return FileAddIcon;
-  if (action.startsWith("purchase")) return ShoppingCart01Icon;
+  if (action.startsWith("purchase") || action.startsWith("use quote")) return ShoppingCart01Icon;
   if (action.startsWith("approve") || action.startsWith("receive") || action.startsWith("record return")) return Tick02Icon;
   if (action.startsWith("reject") || action.startsWith("withdraw") || action.startsWith("cancel")) return Cancel01Icon;
   if (action.startsWith("dispatch") || action.startsWith("check out") || action.startsWith("hand over")) return DeliveryTruck01Icon;

@@ -2,27 +2,9 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
-import type { NotificationRow } from "@/types/database";
 
 const pageSize = 20;
 
-export function notificationHref(notification: Pick<NotificationRow, "entity_type" | "entity_id" | "project_id" | "warehouse_id">): string | null {
-  if (!notification.entity_id && notification.entity_type !== "system") return null;
-  switch (notification.entity_type) {
-    case "material": return `/materials/${notification.entity_id}`;
-    case "material_request": return `/requests/${notification.entity_id}`;
-    case "equipment": return `/equipment/${notification.entity_id}`;
-    case "vehicle": return `/vehicles/${notification.entity_id}`;
-    case "warehouse": return `/warehouses/${notification.entity_id}`;
-    case "project": return `/projects/${notification.entity_id}`;
-    case "project_site": return notification.project_id ? `/projects/${notification.project_id}` : null;
-    case "daily_report": return `/reports/daily/${notification.entity_id}`;
-    case "inventory_transaction": return "/inventory/transactions";
-    case "supplier": return `/suppliers/${notification.entity_id}`;
-    case "qr_code": return `/qr-codes/${notification.entity_id}`;
-    default: return null;
-  }
-}
 
 export async function getNotifications(page: number, unreadOnly: boolean) {
   const supabase = await createClient();
