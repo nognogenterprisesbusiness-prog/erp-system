@@ -1,0 +1,20 @@
+import assert from "node:assert/strict";
+import {randomUUID} from "node:crypto";
+import {withIsolatedPostgres} from "./isolated-postgres-fixture.mjs";
+await withIsolatedPostgres(async({sql,as,result,scalar})=>{
+ await sql(`insert into public.employees select (jsonb_populate_record(null::public.employees,to_jsonb(e)||jsonb_build_object('id',gen_random_uuid(),'code','SCALE-'||g,'profile_id',null,'first_name','Lookup','last_name','Worker '||g))).* from public.employees e cross join generate_series(1,1101) g where e.code='EMP-001'`);
+ const run=result(await as('admin',`select public.create_payroll_run('${randomUUID()}',null,'2026-11-01','2026-11-15','2026-11-15','Scale test')`));
+ const count=Number(scalar(await sql(`select count(*) from public.payroll_lines where run_id='${run}'`)));
+ assert.ok(count>1000);
+ await sql(`update public.payroll_lines set other_earnings=10.25 where run_id='${run}'`);
+ assert.equal(Number(scalar(await as('finance',`select net from public.get_payroll_totals(array['${run}']::uuid[])`))),count*10.25);
+ assert.equal(Number(scalar(await as('finance',`select employee_count from public.get_payroll_totals(array['${run}']::uuid[])`))),count);
+ for(const role of ['foreman','engineer','warehouse_staff']) await assert.rejects(as(role,`select * from public.get_payroll_totals(array['${run}']::uuid[])`),/Payroll access required/);
+ await sql(`insert into public.employee_project_assignments select (jsonb_populate_record(null::public.employee_project_assignments,to_jsonb(a)||jsonb_build_object('id',gen_random_uuid(),'employee_id',e.id,'start_date','2026-01-01','end_date',null,'status','active'))).* from public.employee_project_assignments a cross join public.employees e where a.id=(select id from public.employee_project_assignments limit 1) and e.code like 'SCALE-%'`);
+ const search=JSON.parse(scalar(await as('admin',`select public.search_attendance_overview('2026-11-12',null,'Lookup Worker 1101','unmarked',1)`)));
+ assert.equal(search.count,1);assert.equal(search.rows[0].employee.last_name,'Worker 1101');
+ const all=JSON.parse(scalar(await as('finance',`select public.search_attendance_overview('2026-11-12',null,'Lookup','all',2)`)));
+ assert.equal(all.count,1101);assert.equal(all.rows.length,25);
+ await assert.rejects(as('foreman',`select public.search_attendance_overview('2026-11-12')`),/Attendance access required/);
+ console.log('PASS: >1000 payroll totals, role denial, global attendance search beyond first page and 25-row pagination');
+});

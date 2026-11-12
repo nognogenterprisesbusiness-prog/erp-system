@@ -28,17 +28,19 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const requestedPage = typeof params.page === "string" ? Number(params.page) : 1;
   const page = Number.isSafeInteger(requestedPage) && requestedPage >= 1 ? requestedPage : 1;
   const supabase = await createClient();
-  const resultPromise = getAttendanceOverview(date, projectId, page);
+  const query = typeof params.q === "string" ? params.q.slice(0, 100) : "";
+  const status = typeof params.status === "string" && ["present", "absent", "unmarked"].includes(params.status) ? params.status : "all";
+  const resultPromise = getAttendanceOverview(date, projectId, page, query, status);
   const projects = await readAllPages((from, to) => supabase.from("projects").select("id,code,name").is("archived_at", null).order("name").order("id").range(from, to), "attendance projects");
   return <>
     <PageHeader title="Attendance" description="Reviewed worker attendance, hours and posted labour cost by date. ID scans and photos are supporting evidence." action={user.canManage && projectId && <div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${projectId}/attendance/scans`}>ID scans & face photos</Link></Button><Button asChild><Link href={`/projects/${projectId}/attendance`}>Mark attendance</Link></Button></div>} />
     {user.canManage && !projectId && <p className="mt-4 text-sm text-slate-600">Choose a project below to review ID scans and face photos or mark attendance. A scan alone does not post labour costs.</p>}
-    <ListFilterBar className="mt-6 flex flex-wrap items-center gap-3"><div className="w-full sm:w-48"><DatePicker key={date} label="Attendance date" name="date" defaultValue={date} allowClear={false} required /></div><div className="w-full sm:w-64"><SelectPicker key={projectId ?? "all"} label="Project" name="project" defaultValue={projectId ?? "all"} options={[{ value: "all", label: "All projects" }, ...projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))]} /></div></ListFilterBar>
-    <Suspense key={`${date}:${projectId}:${page}`} fallback={<TableSkeleton columns={user.canManage ? 7 : 6} filters={0} />}><AttendanceResults resultPromise={resultPromise} date={date} projectId={projectId} canManage={user.canManage} /></Suspense>
+    <ListFilterBar className="mt-6 flex flex-wrap items-center gap-3"><input type="hidden" name="q" value={query} /><input type="hidden" name="status" value={status} /><div className="w-full sm:w-48"><DatePicker key={date} label="Attendance date" name="date" defaultValue={date} allowClear={false} required /></div><div className="w-full sm:w-64"><SelectPicker key={projectId ?? "all"} label="Project" name="project" defaultValue={projectId ?? "all"} options={[{ value: "all", label: "All projects" }, ...projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))]} /></div></ListFilterBar>
+    <Suspense key={`${date}:${projectId}:${page}:${query}:${status}`} fallback={<TableSkeleton columns={user.canManage ? 7 : 6} filters={0} />}><AttendanceResults resultPromise={resultPromise} date={date} projectId={projectId} canManage={user.canManage} query={query} status={status} /></Suspense>
   </>;
 }
 
-async function AttendanceResults({ resultPromise, date, projectId, canManage }: { resultPromise: ReturnType<typeof getAttendanceOverview>; date: string; projectId: string | null; canManage: boolean }) {
+async function AttendanceResults({ resultPromise, date, projectId, canManage, query, status }: { resultPromise: ReturnType<typeof getAttendanceOverview>; date: string; projectId: string | null; canManage: boolean; query: string; status: string }) {
   const result = await resultPromise;
-  return <AttendanceOverviewTable rows={result.rows} count={result.count} page={result.page} pageCount={result.pageCount} date={date} projectId={projectId} canManage={canManage} />;
+  return <AttendanceOverviewTable rows={result.rows} count={result.count} page={result.page} pageCount={result.pageCount} date={date} projectId={projectId} canManage={canManage} query={query} status={status} />;
 }

@@ -17,3 +17,22 @@ export function csvAttachment(filename: string, headers: string[], rows: Array<A
     },
   });
 }
+
+export function streamCsvAttachment(filename: string, headers: string[], batches: AsyncIterable<Array<Array<string | number>>>): Response {
+  const encoder = new TextEncoder();
+  const iterator = batches[Symbol.asyncIterator]();
+  let first = true;
+  const stream = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        if (first) { first = false; controller.enqueue(encoder.encode(encodeCsv(headers, []))); return; }
+        const next = await iterator.next();
+        if (next.done) { controller.close(); return; }
+        const chunk = next.value.map(row => encodeCsv([], [row]).slice(1)).join("");
+        controller.enqueue(encoder.encode(chunk));
+      } catch (error) { controller.error(error); }
+    },
+    async cancel() { await iterator.return?.(); },
+  });
+  return new Response(stream, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${filename}"`, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" } });
+}

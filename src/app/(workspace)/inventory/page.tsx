@@ -68,7 +68,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
     <PageHeader title="Inventory" description={selectedLocationName ? `Materials and stock at ${selectedLocationName}` : data.scope === "warehouses" ? "Warehouse materials available to supply projects. Site stock is shown separately." : data.scope === "sites" ? "Materials held at project sites for recorded usage." : "Combined warehouse and site stock across permitted locations."} action={<div className="flex flex-wrap items-center gap-2">
       <InventoryLocationPicker locations={data.locations} value={data.selectedLocationId} scope={data.scope} />
       <Button variant="outline" asChild><a href={`/inventory/export?${exportParams.toString()}`}><HugeiconsIcon icon={Download04Icon} size={17} />Export stocked items</a></Button>
-      {user.canManage && <RecordCreateDialog title="Add material" initialOpen={params.create === "1"} closeHref={`/inventory?${new URLSearchParams(pageFilters)}`}><MaterialForm {...references} /></RecordCreateDialog>}
+      {user.canManage && <RecordCreateDialog confirmDiscard title="Add material" initialOpen={params.create === "1"} closeHref={`/inventory?${new URLSearchParams(pageFilters)}`}><MaterialForm {...references} /></RecordCreateDialog>}
       <RecordActionMenu name="Inventory" triggerLabel="Inventory actions" actions={[
         ...(user.canOperateInventory ? [{ label: "Stock in", href: `/inventory?${exportParams}&action=stock-in` }] : []),
         ...(user.canManage ? [{ label: "Stock out", href: `/inventory?${exportParams}&action=stock-out` }] : []),

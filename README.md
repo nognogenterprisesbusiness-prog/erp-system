@@ -901,3 +901,9 @@ Payroll amounts have separate read-only columns and a single Edit button opening
 ### Notification previews and record actions (2026-11-12)
 
 Notifications open as compact dialogs from the bell or inbox without changing the current page. Explicitly labelled record buttons open the existing destinations. Added contextual panels for QR labels, supplier quotations and purchase approvals; standardized purchasing/QR navigation buttons, quotation View/Use quote menus and supplier payment View actions. Removed duplicate record shortcuts where an existing action already opens the same record. No functions, permissions or SQL rules removed. See [review scope and checks](docs/notification-record-ux-20261112.md).
+
+### Staff workflow simplification and scalable reads (2026-11-12)
+
+Attendance search/status now run across the selected date/project before 25-row pagination. Payroll totals aggregate all rows in PostgreSQL, detail shows 50 employees per page, and CSV streams 500-row batches without a 1,000-employee cutoff. Worker ID-card reads also page through the full dataset. Inventory cards lead with available quantity and remove availability-share meters and duplicate codes. Optional employee contact/account fields are grouped while required contact remains visible; Add employee references load only when opened. Daily-task navigation is ordered by role and Warehouse lands on inventory. Mobile notifications use explicit previews/read actions and PHT timestamps.
+
+Database update: `20261112170000_scalable_staff_reads.sql` (user confirmed staging applied). Applied migration history remains intact; see `supabase/README.md`. Scope and verification: `docs/staff-simplification-20261112.md`.

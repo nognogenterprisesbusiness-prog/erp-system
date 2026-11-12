@@ -3,7 +3,7 @@ import { SelectPicker } from "@/components/ui/select-picker";
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveEmployeeAction, type WorkforceActionState } from "@/app/(workspace)/employees/actions";
+import { loadEmployeeFormReferences, saveEmployeeAction, type WorkforceActionState } from "@/app/(workspace)/employees/actions";
 import { DatePicker } from "@/components/ui/date-picker";
 import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -46,17 +46,11 @@ export function EmployeeForm({ employee, contact, categories, profiles }: {
       <FormField label="First name" htmlFor="firstName" error={error("firstName")}>
         <input className={fieldControlClass} id="firstName" name="firstName" defaultValue={employee?.first_name} autoComplete="given-name" required />
       </FormField>
-      <FormField label="Middle name" htmlFor="middleName" error={error("middleName")}>
-        <input className={fieldControlClass} id="middleName" name="middleName" defaultValue={employee?.middle_name ?? ""} autoComplete="additional-name" />
-      </FormField>
       <FormField label="Last name" htmlFor="lastName" error={error("lastName")}>
         <input className={fieldControlClass} id="lastName" name="lastName" defaultValue={employee?.last_name} autoComplete="family-name" required />
       </FormField>
       <FormField label="Contact number" htmlFor="contactNumber" hint="Private. Only Admin, Finance and this employee can see it." error={error("contactNumber")}>
         <input className={fieldControlClass} id="contactNumber" name="contactNumber" defaultValue={contact?.contact_number} inputMode="tel" autoComplete="tel" required />
-      </FormField>
-      <FormField label="Email address" htmlFor="emailAddress" hint="Optional. Only Admin, Finance and this employee can see it." error={error("emailAddress")}>
-        <input className={fieldControlClass} id="emailAddress" name="emailAddress" type="email" maxLength={320} defaultValue={contact?.email_address ?? ""} autoComplete="email" />
       </FormField>
       <FormField label="Employment type" htmlFor="employmentType" error={error("employmentType")}>
         <input className={fieldControlClass} id="employmentType" name="employmentType" defaultValue={employee?.employment_type} placeholder="Regular, project-based, contractor…" required />
@@ -67,11 +61,31 @@ export function EmployeeForm({ employee, contact, categories, profiles }: {
       <FormField label="Employment status" htmlFor="status" error={error("status")}>
         <SelectPicker id="status" name="status" label="Employment status" defaultValue={employee?.status === "separated" ? "inactive" : employee?.status ?? "active"} options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }, { value: "on_leave", label: "On leave" }]} />
       </FormField>
+    </div>
+    <details className="mt-5 rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer text-sm font-medium">Contact and account details</summary><div className="mt-4 grid gap-5 md:grid-cols-2">      <FormField label="Middle name" htmlFor="middleName" error={error("middleName")}>
+        <input className={fieldControlClass} id="middleName" name="middleName" defaultValue={employee?.middle_name ?? ""} autoComplete="additional-name" />
+      </FormField>
+      <FormField label="Email address" htmlFor="emailAddress" hint="Optional. Only Admin, Finance and this employee can see it." error={error("emailAddress")}>
+        <input className={fieldControlClass} id="emailAddress" name="emailAddress" type="email" maxLength={320} defaultValue={contact?.email_address ?? ""} autoComplete="email" />
+      </FormField>
       <FormField label="Optional user account" htmlFor="profileId" hint="Optional. This does not give project access." error={error("profileId")}>
         <><input type="hidden" name="profileId" value={profileId === "unassigned" ? "" : profileId} /><SelectPicker id="profileId" label="Optional user account" value={profileId} onValueChange={setProfileId} options={[{ value: "unassigned", label: "No user account" }, ...profiles.map((profile) => ({ value: profile.id, label: `${profile.full_name} · ${profile.email}` }))]} /></>
       </FormField>
-    </div>
+</div></details>
     {!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}
     <RecordFormControls busy={pending} />
   </form>;
+}
+
+export function NewEmployeeForm() {
+  const [references, setReferences] = useState<Awaited<ReturnType<typeof loadEmployeeFormReferences>>>();
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    loadEmployeeFormReferences().then(data => { if (active) setReferences(data); }).catch(() => { if (active) setFailed(true); });
+    return () => { active = false; };
+  }, [attempt]);
+  if (failed) return <div role="alert"><p>Employee options could not be loaded.</p><button type="button" className="mt-3 rounded-full border px-4 py-3" onClick={() => {setFailed(false);setAttempt(value=>value+1);}}>Try again</button></div>;
+  return references ? <EmployeeForm categories={references.categories} profiles={references.profiles} /> : <p role="status">Loading employee options…</p>;
 }

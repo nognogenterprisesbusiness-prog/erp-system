@@ -263,6 +263,9 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      get_payroll_totals: { Args: { p_run_ids: string[] }; Returns: { run_id: string; employee_count: number; gross: number; deductions: number; net: number }[] };
+      search_attendance_overview: { Args: { p_date: string; p_project_id: string | null; p_query: string; p_status: string; p_page: number }; Returns: Json };
+
       get_material_request_source_stock: { Args: { p_request_id: string }; Returns: { request_line_id: string; on_hand: number | null; available: number | null }[] };
       list_mobile_warehouse_dispatch: { Args: { p_warehouse_id: string; p_offset?: number; p_limit?: number }; Returns: { id: string; request_number: string; project_name: string; site_name: string; required_date: string; ready_lines: number }[] };
       save_department: { Args: { p_id: string | null; p_name: string }; Returns: string };

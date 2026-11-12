@@ -6,14 +6,14 @@ import { uuidSchema } from "@nognog/domain";
 import { SearchField } from "@/components/ui/search-field";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
-import { EmployeeForm } from "@/components/workforce/employee-form";
+import { NewEmployeeForm } from "@/components/workforce/employee-form";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { EmployeeTable } from "@/components/workforce/employee-table";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { requireUser } from "@/lib/auth";
-import { getEmployees, getWorkforceReferences } from "@/lib/data/workforce";
+import { getEmployees, getEmployeeCategories } from "@/lib/data/workforce";
 import type { EmployeeStatus } from "@/types/database";
 
 const statuses: Array<EmployeeStatus | "all"> = ["all", "active", "inactive", "on_leave", "separated"];
@@ -25,14 +25,19 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const status = typeof params.status === "string" && statuses.includes(params.status as EmployeeStatus | "all") ? params.status as EmployeeStatus | "all" : "all";
   const page = typeof params.page === "string" ? Math.max(1, Number(params.page) || 1) : 1;
   const resultPromise = getEmployees({ query, categoryId, projectId, status, page });
-  const [user, references] = await Promise.all([requireUser(), getWorkforceReferences()]);
+  const [user, categories, projects] = await Promise.all([requireUser(), getEmployeeCategories(), (async()=>{
+    const { createClient } = await import("@/lib/supabase/server");
+    const { readAllPages } = await import("@/lib/data/read-all-pages");
+    const client=await createClient();
+    return readAllPages((from,to)=>client.from("projects").select("id,name").is("archived_at",null).not("status","in","(completed,cancelled)").order("name").order("id").range(from,to),"project filters");
+  })()]);
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (query) next.set("q", query); if (categoryId) next.set("category", categoryId); if (projectId) next.set("project", projectId); if (status !== "all") next.set("status", status); next.set("page", String(target)); return `/employees?${next}`; };
   return <>
-    <PageHeader eyebrow="Labor and workforce" title="Employees" description="Workers, their project assignments and labor rates." action={user.canManage && <div className="flex flex-wrap gap-2"><EmployeeTradesDialog categories={references.categories} initialOpen={params.manageTrades === "1"} editId={typeof params.editTrade === "string" ? params.editTrade : undefined} closeHref={pageHref(page)} /><WorkerIdCardPreview projectId={projectId || undefined} label="Print ID cards" /><RecordCreateDialog title="Add employee" initialOpen={params.create === "1"} closeHref={pageHref(page)}><EmployeeForm categories={references.categories} profiles={references.profiles} /></RecordCreateDialog></div>} />
+    <PageHeader eyebrow="Labor and workforce" title="Employees" description="Workers, their project assignments and labor rates." action={user.canManage && <div className="flex flex-wrap gap-2"><EmployeeTradesDialog categories={categories} initialOpen={params.manageTrades === "1"} editId={typeof params.editTrade === "string" ? params.editTrade : undefined} closeHref={pageHref(page)} /><WorkerIdCardPreview projectId={projectId || undefined} label="Print ID cards" /><RecordCreateDialog confirmDiscard title="Add employee" initialOpen={params.create === "1"} closeHref={pageHref(page)}><NewEmployeeForm /></RecordCreateDialog></div>} />
     <ListFilterBar>
       <SearchField key={query} name="q" label="Search employees" defaultValue={query} placeholder="Search name, code, or employment type" />
-      <SelectPicker name="category" label="Job / trade" defaultValue={categoryId || "all"} options={[{ value: "all", label: "All jobs / trades" }, ...references.categories.map((item) => ({ value: item.id, label: item.name }))]} />
-      <SelectPicker name="project" label="Assigned project" defaultValue={projectId || "all"} options={[{ value: "all", label: "All assigned projects" }, ...references.projects.map((item) => ({ value: item.id, label: item.name }))]} />
+      <SelectPicker name="category" label="Job / trade" defaultValue={categoryId || "all"} options={[{ value: "all", label: "All jobs / trades" }, ...categories.map((item) => ({ value: item.id, label: item.name }))]} />
+      <SelectPicker name="project" label="Assigned project" defaultValue={projectId || "all"} options={[{ value: "all", label: "All assigned projects" }, ...projects.map((item) => ({ value: item.id, label: item.name }))]} />
       <SelectPicker name="status" label="Employment status" defaultValue={status} options={statuses.map((item) => ({ value: item, label: item === "all" ? "All statuses" : item.replace("_", " ") }))} />
     </ListFilterBar>
     <Suspense key={`${query}:${categoryId}:${projectId}:${status}:${page}`} fallback={<TableSkeleton filters={0} />}><EmployeeResults resultPromise={resultPromise} canManage={user.canManage} pageHref={pageHref} /></Suspense>

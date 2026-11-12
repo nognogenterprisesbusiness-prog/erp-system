@@ -1,6 +1,8 @@
+import { readAllPages } from "@/lib/data/read-all-pages";
+import { HistoryPagination } from "@/components/ui/history-pagination";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { notFound } from "next/navigation";
-import { payrollStatusLabels, payrollTotals, philippinesDate, uuidSchema } from "@nognog/domain";
+import { payrollStatusLabels, philippinesDate, uuidSchema } from "@nognog/domain";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { FinalizePayrollForm, MarkPayrollPaidForm, PayrollLineEditor, VoidPayrollForm } from "@/components/payroll/payroll-forms";
 import { Button } from "@/components/ui/button";
@@ -13,24 +15,23 @@ import { createClient } from "@/lib/supabase/server";
 
 const money = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 
-export default async function PayrollDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PayrollDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string }> }) {
   const user = await requireFinanceViewer();
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) notFound();
+  const page = Math.max(1, Math.min(1000000, Math.trunc(Number((await searchParams).page)) || 1));
   const supabase = await createClient();
-  const [run, lines, departments] = await Promise.all([
+  const [run, lines, departments, summary] = await Promise.all([
     supabase.from("payroll_runs").select("*").eq("id", id).maybeSingle(),
-    supabase.from("payroll_lines").select("*").eq("run_id", id).order("employee_name").limit(1000),
-    supabase.from("departments").select("id,name"),
+    supabase.from("payroll_lines").select("*", { count: "exact" }).eq("run_id", id).order("employee_name").order("id").range((page - 1) * 50, page * 50 - 1),
+    readAllPages((from,to)=>supabase.from("departments").select("id,name").order("id").range(from,to),"departments").then(data=>({data,error:null})),
+    supabase.rpc("get_payroll_totals", { p_run_ids: [id] }),
   ]);
-  if (run.error || lines.error || departments.error) throw new Error("Unable to load payroll.");
+  if (run.error || lines.error || departments.error || summary.error) throw new Error("Unable to load payroll.");
   if (!run.data) notFound();
   const payroll = run.data;
   const departmentName = new Map(departments.data.map((item) => [item.id, item.name]));
-  const totals = payrollTotals(lines.data);
-  const byDepartment = [...Map.groupBy(lines.data, (line) => line.department_id ?? "").entries()]
-    .map(([departmentId, rows]) => ({ name: departmentId ? departmentName.get(departmentId) ?? "Department" : "No department", count: rows.length, ...payrollTotals(rows) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const totals = summary.data?.[0] ?? { gross: 0, deductions: 0, net: 0 };
   const draft = payroll.status === "draft";
 
   return <>
@@ -42,10 +43,10 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
 
     <section className="mt-6 grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 sm:grid-cols-3 sm:p-6">
       {[["Gross pay", totals.gross], ["Deductions", totals.deductions], ["Net pay", totals.net]].map(([label, amount]) => <div key={label}><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-xl font-semibold tabular-nums">{money.format(Number(amount))}</p></div>)}
-      {byDepartment.length > 1 && <div className="sm:col-span-3"><p className="text-xs font-medium text-slate-500">By department</p><ul className="mt-2 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">{byDepartment.map((row) => <li key={row.name} className="flex justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"><span>{row.name} · {row.count}</span><span className="font-semibold tabular-nums">{money.format(row.net)}</span></li>)}</ul></div>}
+
     </section>
 
-    <div className="mt-6"><DataTableShell empty={lines.data.length === 0 ? <EmptyState compact title="No employees in this payroll" /> : undefined} footer={<p className="text-xs text-slate-500">{lines.data.length} employee{lines.data.length === 1 ? "" : "s"} · attendance pay comes from posted attendance{draft ? " and is recalculated when Admin finalizes" : ""}</p>}>
+    <div className="mt-6"><DataTableShell empty={lines.data.length === 0 ? <EmptyState compact title="No employees in this payroll" /> : undefined} footer={<p className="text-xs text-slate-500">{lines.count ?? 0} employee{lines.count === 1 ? "" : "s"} · attendance pay comes from posted attendance{draft ? " and is recalculated when Admin finalizes" : ""}</p>}>
       <table className="w-full min-w-[860px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Employee</th><th className="px-4 py-3 text-right">Days</th><th className="px-4 py-3 text-right">Attendance pay</th><th className="px-4 py-3 text-right">Other earnings</th><th className="px-4 py-3 text-right">Deductions</th><th className="px-5 py-3 text-right">Net pay</th>{draft && <th data-record-actions className="bg-slate-50 px-5 py-3 text-right">Action</th>}</tr></thead>
         <tbody className="divide-y divide-slate-100">{lines.data.map((line) => <tr key={line.id} className="align-top">
           <td className="px-5 py-4"><p className="font-medium text-slate-800">{line.employee_name}</p><p className="mt-1 text-xs text-slate-500">{line.employee_code} · {line.department_id ? departmentName.get(line.department_id) ?? "Department" : "No department"}</p>{line.notes && <p className="mt-2 max-w-xs whitespace-normal break-words text-xs text-slate-600">{line.notes}</p>}</td>
@@ -56,7 +57,7 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
           <td className="px-5 py-4 text-right font-semibold tabular-nums">{money.format(line.net_pay)}</td>
           {draft && <td data-record-actions className="bg-white px-5 py-4 text-right"><PayrollLineEditor runId={id} line={line} /></td>}
         </tr>)}</tbody></table>
-    </DataTableShell></div>
+    </DataTableShell><HistoryPagination path={`/payroll/${id}`} page={page} count={lines.count ?? 0} pageSize={50} /></div>
 
     {payroll.status !== "voided" && <section className="mt-6 flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <div><h2 className="text-base font-semibold">{draft ? "Review and finalize" : payroll.status === "finalized" ? "Record payment" : "Payroll complete"}</h2><p className="mt-1 max-w-xl text-sm leading-6 text-slate-500">{draft ? "Check each employee’s pay before finalizing. Attendance pay is recalculated and entries are locked when finalized." : payroll.status === "paid" ? "Payment has been recorded for this payroll." : "Record the payment date and reference after paying employees."}</p></div>

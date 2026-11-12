@@ -19,7 +19,7 @@ import { municipalityDisplay } from "@/lib/locations";
 export default async function WarehousesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams; const query = typeof params.q === "string" ? params.q : ""; const status = params.status === "inactive" ? "inactive" : params.status === "active" ? "active" : "all";
   const user = await requireUser();
-  return <><PageHeader {...warehouseListHeader} action={user.canManage && <RecordCreateDialog title="Add warehouse" initialOpen={params.create === "1"} closeHref={`/warehouses?${new URLSearchParams({ q: query, status })}`}><WarehouseForm /></RecordCreateDialog>} />
+  return <><PageHeader {...warehouseListHeader} action={user.canManage && <RecordCreateDialog confirmDiscard title="Add warehouse" initialOpen={params.create === "1"} closeHref={`/warehouses?${new URLSearchParams({ q: query, status })}`}><WarehouseForm /></RecordCreateDialog>} />
   <WarehouseListControls query={query} status={status} />
   <Suspense key={`${query}:${status}`} fallback={<RecordListSkeleton storageKey="warehouses" columns={6} />}><WarehouseResults query={query} status={status} /></Suspense></>;
 }
