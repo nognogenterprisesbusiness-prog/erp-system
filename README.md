@@ -889,3 +889,7 @@ Employee, supplier, material and employee-category archiving now use confirmatio
 | Date | Refinement | Verification | Scope |
 | --- | --- | --- | --- |
 | 2026-11-12 | Archive confirmation dialogs and employee print route | Reproduced the Print card unavailable-panel bug; 173 unit tests, typecheck, lint, build and focused desktop/phone browser checks | Existing permission, SQL archive and assignment rules retained; no migration or mobile change |
+
+### Employee jobs / trades dialog (2026-11-12)
+
+Replaced the standalone employee Categories screen with Jobs / trades on Employees. Add, Edit and Archive stay in that dialog, and old category bookmarks redirect there. Existing category schema, permissions and archive guards remain unchanged. Verified typecheck, lint, 173 tests, production build, desktop/390px dialog states and legacy redirect; no hosted records were changed during UI checks. No migration or mobile build needed.

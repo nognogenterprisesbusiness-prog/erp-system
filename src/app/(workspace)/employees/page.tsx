@@ -1,3 +1,4 @@
+import { EmployeeTradesDialog } from "@/components/workforce/employee-trades-dialog";
 import { WorkerIdCardPreview } from "@/components/workforce/worker-id-card-preview";
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { Suspense } from "react";
@@ -27,10 +28,10 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   const [user, references] = await Promise.all([requireUser(), getWorkforceReferences()]);
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (query) next.set("q", query); if (categoryId) next.set("category", categoryId); if (projectId) next.set("project", projectId); if (status !== "all") next.set("status", status); next.set("page", String(target)); return `/employees?${next}`; };
   return <>
-    <PageHeader eyebrow="Labor and workforce" title="Employees" description="Workers, their project assignments and labor rates." action={user.canManage && <div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href="/employees/categories">Categories</Link></Button><WorkerIdCardPreview projectId={projectId || undefined} label="Print ID cards" /><RecordCreateDialog title="Add employee" initialOpen={params.create === "1"} closeHref={pageHref(page)}><EmployeeForm categories={references.categories} profiles={references.profiles} /></RecordCreateDialog></div>} />
+    <PageHeader eyebrow="Labor and workforce" title="Employees" description="Workers, their project assignments and labor rates." action={user.canManage && <div className="flex flex-wrap gap-2"><EmployeeTradesDialog categories={references.categories} initialOpen={params.manageTrades === "1"} editId={typeof params.editTrade === "string" ? params.editTrade : undefined} closeHref={pageHref(page)} /><WorkerIdCardPreview projectId={projectId || undefined} label="Print ID cards" /><RecordCreateDialog title="Add employee" initialOpen={params.create === "1"} closeHref={pageHref(page)}><EmployeeForm categories={references.categories} profiles={references.profiles} /></RecordCreateDialog></div>} />
     <ListFilterBar>
       <SearchField key={query} name="q" label="Search employees" defaultValue={query} placeholder="Search name, code, or employment type" />
-      <SelectPicker name="category" label="Employee category" defaultValue={categoryId || "all"} options={[{ value: "all", label: "All categories" }, ...references.categories.map((item) => ({ value: item.id, label: item.name }))]} />
+      <SelectPicker name="category" label="Job / trade" defaultValue={categoryId || "all"} options={[{ value: "all", label: "All jobs / trades" }, ...references.categories.map((item) => ({ value: item.id, label: item.name }))]} />
       <SelectPicker name="project" label="Assigned project" defaultValue={projectId || "all"} options={[{ value: "all", label: "All assigned projects" }, ...references.projects.map((item) => ({ value: item.id, label: item.name }))]} />
       <SelectPicker name="status" label="Employment status" defaultValue={status} options={statuses.map((item) => ({ value: item, label: item === "all" ? "All statuses" : item.replace("_", " ") }))} />
     </ListFilterBar>

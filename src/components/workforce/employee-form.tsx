@@ -37,8 +37,8 @@ export function EmployeeForm({ employee, contact, categories, profiles }: {
       <FormField label="Employee code" htmlFor="code" error={error("code")}>
         <input className={fieldControlClass} id="code" name="code" defaultValue={employee?.code} placeholder="EMP-001" required />
       </FormField>
-      <FormField label="Category / trade" htmlFor="categoryId" error={error("categoryId")}>
-        <SelectPicker id="categoryId" name="categoryId" label="Category / trade" defaultValue={employee?.category_id} required placeholder="Select category" options={categories.map((item) => ({ value: item.id, label: item.name }))} />
+      <FormField label="Job / trade" htmlFor="categoryId" error={error("categoryId")}>
+        <SelectPicker id="categoryId" name="categoryId" label="Job / trade" defaultValue={employee?.category_id} required placeholder="Select job / trade" options={categories.map((item) => ({ value: item.id, label: item.name }))} />
       </FormField>
       <FormField label="First name" htmlFor="firstName" error={error("firstName")}>
         <input className={fieldControlClass} id="firstName" name="firstName" defaultValue={employee?.first_name} autoComplete="given-name" required />

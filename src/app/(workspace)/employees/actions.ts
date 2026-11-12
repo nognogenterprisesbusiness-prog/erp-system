@@ -99,7 +99,7 @@ export async function saveEmployeeCategoryAction(_: WorkforceActionState, form: 
   if (error) return failure(friendlyWorkforceError(error));
   revalidatePath("/employees");
   revalidatePath("/employees/categories");
-  redirect("/employees/categories");
+  return { ok: true, message: "Job / trade saved." };
 }
 
 export async function archiveEmployeeCategoryAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {

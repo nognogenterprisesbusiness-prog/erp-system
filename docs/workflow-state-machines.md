@@ -139,3 +139,7 @@ Driver assignment editing is an in-place dialog in Users and the truck record, n
 ## Archive confirmation and print navigation (2026-11-12)
 
 Employee, supplier, material and employee-category archive commands enter `closed → confirmation → pending → existing archive/redirect` instead of posting immediately or exposing inline reason inputs. Expected category guard failures return to the open form with feedback. Project assignment ending also opens its existing date/reason form in a dialog. Pending state blocks dismissal. Worker ID-card printing enters `closed → loading → preview/error → print or close` in a dialog without navigating. It loads authorized cards lazily; failures offer Retry. The legacy print URL reuses the same loader/layout. No new page or iframe is introduced, and frame protections remain intact. Genuine record missing/access denials still use the guarded unavailable panel. No SQL lifecycle transition changed.
+
+## Employee jobs / trades in place (2026-11-12)
+
+The Employees action now opens a Jobs / trades dialog: list → add/edit/archive → pending → existing command → close and revalidated Employees. Two row actions share one three-dot menu. Save no longer redirects to a category page; the existing SQL category foreign keys and archive guards remain unchanged. The old `/employees/categories` URL redirects to Employees with the dialog open, preserving a validated edit ID for bookmarks. No separate category management screen remains.
