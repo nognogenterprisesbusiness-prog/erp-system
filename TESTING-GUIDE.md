@@ -224,3 +224,7 @@ Also try each account on a project or warehouse it is **not** assigned to: it sh
 ## Web refinement acceptance (2026-11-12)
 
 Open Stock Counts directly and select a location before counting. Open a request-linked transfer through **Open request**. In Vehicles, **View** shows drivers and unit expenses before registry history; project-linked fuel remains separate. Confirm that an unscoped purchase asks for supplier and warehouse, while a request or quotation keeps its explicit context. Change a project field, cancel, choose **Keep editing**, then cancel and discard; nothing should be saved. Check account and assignment confirmation dialogs without submitting against real staff. Attendance search/status applies to the displayed page; use paging for other workers. See [verification details](docs/ux-refinement-20261112.md).
+
+## Audit history checks (2026-11-12)
+
+As Admin, open Administration → Audit history, filter Updated, then View an entry. Check the account, time, record name and previous/new values. Close should return to the filtered list. A direct detail URL should retain Back to audit history; the side panel should show only Close for returning. Expand System details only when checking saved references or supporting snapshots. Check a newly added record and a cleared field; a cleared value must remain visible. Finance and other non-Admin roles must not gain audit access. See [scope and verification](docs/audit-history-ux-20261112.md).

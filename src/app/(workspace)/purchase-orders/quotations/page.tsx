@@ -45,7 +45,7 @@ export default async function SupplierQuotationsPage({ searchParams }: {
   return <>
     <PageHeader eyebrow="Purchasing & suppliers" title="Supplier quotations"
       description="Compare written offers before buying. A quote does not change stock or the supplier's purchase-price history."
-      action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href="/purchase-orders">Back to purchases</Link></Button>{user.canManage && <Button asChild><Link href="/purchase-orders/quotations?create=1">Add quotation</Link></Button>}</div>} />
+      action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link data-detail-back href="/purchase-orders">Back to purchases</Link></Button>{user.canManage && <Button asChild><Link href="/purchase-orders/quotations?create=1">Add quotation</Link></Button>}</div>} />
     {choices && <RecordCreateDialog title="Add supplier quotation" initialOpen hideTrigger closeHref="/purchase-orders/quotations">
       {choices.suppliers.length && choices.materials.length ? <SupplierQuotationForm choices={choices} idempotencyKey={randomUUID()} today={today} /> : <EmptyState title="Supplier or material missing" description="Add an active supplier and material first." />}
     </RecordCreateDialog>}

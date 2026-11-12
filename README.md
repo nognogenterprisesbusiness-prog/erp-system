@@ -849,3 +849,7 @@ Project, warehouse, material, equipment, employee, and account names now open re
 ### Web UX refinement (2026-11-12)
 
 Existing web actions now have clearer location selection, request handoffs, confirmation dialogs, operational expense sections and responsive headers. Posting/approval rules and schema remain unchanged. See [verification and limits](docs/ux-refinement-20261112.md).
+
+### Audit history usability (2026-11-12)
+
+Audit list/detail views now use saved record identities, plain change labels and responsive previous/new values. Duplicate panel return links and the repeated budget-history shortcut were removed. Existing canonical routes, immutable evidence and Admin-only access remain. See [verification](docs/audit-history-ux-20261112.md).

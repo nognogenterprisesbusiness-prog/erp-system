@@ -35,7 +35,7 @@ export default async function PayrollDetailPage({ params }: { params: Promise<{ 
 
   return <>
     <PageHeader eyebrow={payrollStatusLabels[payroll.status]} title={payroll.payroll_number} description={`${payroll.department_id ? departmentName.get(payroll.department_id) ?? "Department" : "All employees"} · ${payroll.period_start} – ${payroll.period_end} · Pay date ${payroll.pay_date}`}
-      action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><a href={`/payroll/${id}/export`}>Export CSV</a></Button><Button variant="outline" asChild><Link href="/payroll">All payroll</Link></Button></div>} />
+      action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><a href={`/payroll/${id}/export`}>Export CSV</a></Button><Button variant="outline" asChild><Link data-detail-back href="/payroll">All payroll</Link></Button></div>} />
     {payroll.status === "voided" && <p role="status" className="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">Voided · {payroll.void_reason}</p>}
     {payroll.status === "paid" && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Paid on {payroll.paid_on} · Reference {payroll.payment_reference}</p>}
     {payroll.notes && <p className="mt-4 text-sm text-slate-600">{payroll.notes}</p>}

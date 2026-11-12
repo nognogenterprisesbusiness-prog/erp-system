@@ -1,3 +1,4 @@
+import { auditRecordLabel, auditActionLabel } from "@/lib/audit/presentation";
 import { RecordViewLink } from "@/components/ui/record-view-link";
 import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,7 +11,7 @@ export type AuditListRow = {
   actorPhoto?: string;
   action: string;
   entity: string;
-  recordId: string;
+  recordName: string;
   detail: string;
   createdAt: string;
 };
@@ -19,13 +20,13 @@ const timestamp = new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeSt
 
 export function AuditLogTable({ rows, total }: { rows: AuditListRow[]; total: number }) {
   return <><DataTableShell empty={rows.length ? undefined : <EmptyState title="No audit entries found" description="Recorded changes will appear here after an authorized action." />}>
-    <table className="w-full min-w-[850px] text-left text-sm"><thead className={tableHeadClass}><tr>
-      <th scope="col" className="px-5 py-3">When</th><th scope="col" className="px-4 py-3">Account</th><th scope="col" className="px-4 py-3">Action</th><th scope="col" className="px-4 py-3">Record</th><th scope="col" className="px-5 py-3">Detail</th><th data-record-actions scope="col" className="px-5 py-3 text-right bg-slate-50">Actions</th>
+    <table className="w-full min-w-[760px] text-left text-sm"><thead className={tableHeadClass}><tr>
+      <th scope="col" className="px-5 py-3">When</th><th scope="col" className="px-4 py-3">Changed by</th><th scope="col" className="px-4 py-3">Change</th><th scope="col" className="px-4 py-3">Record</th><th scope="col" className="px-5 py-3">What changed</th><th data-record-actions scope="col" className="px-5 py-3 text-right bg-slate-50">Actions</th>
     </tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row) => <tr key={row.id} className="hover:bg-slate-50/70">
       <td className="whitespace-nowrap px-5 py-3 text-xs text-slate-600">{timestamp.format(new Date(row.createdAt))}</td>
       <td className="px-4 py-3 font-medium text-slate-800"><div className="flex items-center gap-3"><AccountAvatar name={row.actor} photo={row.actorPhoto} /><span>{row.actor}</span></div></td>
-      <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${row.action === "delete" || row.action === "reject" ? "bg-red-50 text-red-700" : row.action === "create" || row.action === "approve" || row.action === "receipt" ? "bg-emerald-50 text-emerald-700" : "bg-cyan-50 text-cyan-800"}`}>{row.action.replaceAll("_", " ")}</span></td>
-      <td className="px-4 py-3"><span className="block font-medium text-slate-800">{row.entity.replaceAll(/([a-z])([A-Z])/g, "$1 $2").replaceAll("_", " ")}</span><span className="block max-w-40 truncate text-[11px] text-slate-400" title={row.recordId}>{row.recordId}</span></td>
+      <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${row.action === "delete" || row.action === "reject" ? "bg-red-50 text-red-700" : row.action === "insert" || row.action === "approve" || row.action === "receipt" ? "bg-emerald-50 text-emerald-700" : "bg-cyan-50 text-cyan-800"}`}>{auditActionLabel(row.action)}</span></td>
+      <td className="px-4 py-3"><span className="block break-words font-medium text-slate-800">{row.recordName}</span>{row.recordName !== auditRecordLabel(row.entity) && <span className="mt-1 block text-xs text-slate-500">{auditRecordLabel(row.entity)}</span>}</td>
       <td className="max-w-sm px-5 py-3 text-slate-600">{row.detail}</td>
       <td data-record-actions className="px-5 py-3 text-right bg-white"><RecordViewLink href={`/audit-logs/${row.id}`} name={`audit entry ${row.id}`} /></td>
     </tr>)}</tbody></table>

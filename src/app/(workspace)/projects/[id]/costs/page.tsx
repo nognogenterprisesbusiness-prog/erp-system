@@ -43,7 +43,6 @@ export default async function ProjectCostsPage({ params, searchParams }: { param
     {view !== "expenses" && <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-base font-semibold">Approved project budget</h2><p className="mt-1 text-sm text-slate-500">Remaining budget = approved budget minus actual posted costs.</p></div>{user.canManage && <ProjectBudgetAdjustment projectId={id} budget={Number(profit.approved_budget)} cost={Number(profit.total_posted_cost)} initialKey={randomUUID()} />}</div>
       <div className="mt-5"><ProjectBudgetSummary budget={profit.approved_budget} cost={profit.total_posted_cost} /></div>
-      {view === "all" && <Button variant="outline" size="sm" asChild><a href={`/projects/${id}/costs?view=budget`} >View budget change history</a></Button>}
     </section>}
     {view === "all" && user.canManage && <ProjectCostForms projectId={id} assets={data.assets} keys={{ usage: randomUUID(), expense: randomUUID() }} today={today} />}
     {view === "all" && <div className="mt-6"><ProjectCostBreakdown categories={projectCostCategories(id, profit, expenses)} /></div>}

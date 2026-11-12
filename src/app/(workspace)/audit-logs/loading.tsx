@@ -1,3 +1,3 @@
 import { ListPageSkeleton } from "@/components/ui/table-skeleton";
 
-export default function Loading() { return <ListPageSkeleton eyebrow="Account oversight" title="Audit logs" description="Recorded changes to connected ERP records." />; }
+export default function Loading() { return <ListPageSkeleton title="Audit history" description="See who changed a record, when it changed, and the previous and new values." />; }
