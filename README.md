@@ -4,7 +4,7 @@ The company workspace covers project materials, equipment and vehicles, staff at
 
 **Current daily-use guide:** [Staff testing and training](TESTING-GUIDE.md) · [In-app manual topics](src/lib/help/manual.ts) · [Workflow rules](docs/workflow-state-machines.md)
 
-The interface uses one visible action button when a row has one action, and one three-dot menu when it has several. Main work is ordered by role. Stock quantities are shown by their real warehouse; different materials need not exist in the same warehouses. Applied database migration history is retained for safe upgrades.
+The interface uses one visible action button when a row has one action, and one three-dot menu when it has several. Main work is ordered by role. Inventory cards show one available-stock total per material for the selected inventory filter. Warehouse names and per-warehouse quantities are not repeated inside cards. Applied database migration history is retained for safe upgrades.
 
 The dated implementation notes below are historical checkpoints. Current deployment and phone acceptance must be verified separately; source pushes and native bundle exports are not Play Store releases.
 
@@ -14,9 +14,9 @@ These are real application previews, not design mockups. The web images show the
 
 ### Web: inventory
 
-Warehouse quantities stay separate. A material stored in two warehouses shows both locations; a material held in one warehouse shows that location only.
+Each card shows one available-stock total. The page filter controls which stock is included; warehouse breakdowns are not shown inside cards.
 
-![Inventory with stock by warehouse](public/screenshots/inventory.png)
+![Inventory with overall available stock](public/screenshots/inventory.png)
 
 ### Web: project documents
 
