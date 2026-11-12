@@ -1,15 +1,23 @@
-# Approved simple mobile client — 2026-09-28
+# Companion mobile app
 
 **Current audit — 2026-10-10:** [System audit and remaining native release gates](package-3-turnover-audit-2026-10-10.md). SDK 57 compatible patches, 18 mobile tests, types/lint, Expo Doctor 21/21 and Android/iOS bundle exports pass. The current backend passes 42 isolated PostgreSQL workflow checks and 12 project-cost/capacity checks. Installed-device workflows, signed replacement builds, notification/email delivery and operational acceptance remain separate gates. Earlier dated verification notes below are historical.
 
 
 **Historical code verification — 2026-10-07:** repaired the Engineer receipt upload POST route and added [conditional compatibility checks](mobile-compatibility.md), keeping legacy protocol 1 supported. Web checks, 78 web unit tests and the local HTTP smoke suite pass; mobile checks, 17 tests and iOS/Android bundle exports pass. No new APK, store submission or OTA update has been released. Installing the checking feature, authenticated receipt upload and physical-device acceptance remain separate steps.
 
-The approved native client lives beside this repository in `../nognog-mobile`. It serves active, onboarded Foremen and Engineers. Since 2026-11-08 (source, unreleased) Driver accounts also sign in, but only to the My Truck screen; the API limits them to `session`, `driver` and `driver/receipt/{id}`. See [driver asset expenses](driver-asset-expenses-2026-11-08.md). Admin and Admin-plus-Engineer accounts use the web ERP. This scope supersedes earlier web-only/future-mobile notes; it does not expand the mobile release into administration, finances, demo mode or offline writes.
+The native client lives beside this repository in `../nognog-mobile`. It supports active, onboarded Foremen, Engineers, Warehouse Staff and Drivers within their assigned work. Admin and Admin-plus-Engineer accounts use the web ERP. This does not expand mobile access into administration, payroll, demo mode or offline writes. See [driver asset expenses](driver-asset-expenses-2026-11-08.md) for assignment and expense rules.
+
+## Current scope notes — 13 November 2026
+
+Engineer and Foreman accounts use Home, Projects, Requests and Profile. Choose the assigned project/site on Home before starting site work. Warehouse accounts use their assigned warehouse workspace for stock, releases and supplier deliveries. Drivers use My Truck, My expenses and Profile; each driver submits expenses against the current truck assignment.
+
+Attendance scans require worker ID verification followed by a new face photo. The photo is private evidence, not automatic facial recognition. Notification previews use an explicit read action and a named destination button. Mobile source changes need a compatible release build before installed phones receive them. Browser previews cannot verify camera quality, physical QR scanning, Android permissions or release signing.
+
+The older dated implementation notes below describe their original scope. Where they say warehouse release is web-only or describe QR-only attendance, use this current scope and the current API implementation instead.
 
 ## User flow
 
-Login → Home → select an accessible project/site → record site activity. Four tabs: Home, Projects, Requests, Profile. Four Home actions: Request Materials, Request Equipment / Vehicle, Site Inventory, Daily Report. Home is the only project/site selection entry point; work screens do not repeat a project selector. Receive Deliveries is a separate Home tool, and site stock movements are labelled History. Attendance, material consumption, assigned equipment/hours and history are reached inside a project.
+For Engineer and Foreman accounts: Login → Home → select an accessible project/site → record site activity. Four tabs: Home, Projects, Requests, Profile. Four Home actions: Request Materials, Request Equipment / Vehicle, Site Inventory, Daily Report. Home is the only project/site selection entry point; work screens do not repeat a project selector. Receive Deliveries is a separate Home tool, and site stock movements are labelled History. Attendance, material consumption, assigned equipment/hours and history are reached inside a project.
 
 Material requests inherit the Home-selected project/site and retain remarks and line quantities. The server sets the request date; authorized web staff assign the source warehouse before approval. Engineers review another requester's submission; warehouse release remains web-based. Foremen/Engineers confirm partial/full receipts. Foremen post multi-worker attendance and authorized equipment hours. Engineers view operational attendance, independently review daily reports and record progress from an approved report.
 

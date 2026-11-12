@@ -18,6 +18,18 @@ On material requests, select a source warehouse for each quantity you approve. T
 
 Inventory contains one materials list. **Material code** is the existing identifier; it does not represent another stock balance. Old SKU catalog bookmarks open Inventory with their filters retained. Equipment and Vehicles remain separate workspaces with their own unit details and history.
 
+## Daily-use quick check — 13 November 2026
+
+- **View or Edit:** one action appears as a button. Two or more row actions are inside one three-dot menu, including View. Opening Edit should show the editor directly, without a second details panel behind it.
+- **Stock locations:** a material can have stock in several warehouses. Deform Bar has stock in Borbon and Quoit; a different item may have stock only in Borbon. Check the named warehouse and Available quantity before approving a request. Different warehouse lists do not mean duplicate materials.
+- **Documents:** use the compact file row and its action menu. View and Download keep their existing access checks.
+- **Suppliers:** enter supplier name, contact number and address first. Tax identification number is removed from the form. Existing stored values are not erased by an edit.
+- **Attendance:** scan worker ID, verify the worker shown, take a new face photo, then save. Review work hours before posting. A photo is supporting evidence, not automatic face recognition.
+- **Payroll:** totals cover the full payroll. The table is paginated and CSV exports continue beyond 1,000 employees.
+- **Notifications:** opening a notification shows a preview. Use the named record button to open the related work; Mark as read changes its read state explicitly.
+
+For training, start with one role and one complete daily task. Show where to find a record, check its site/warehouse, complete the task, wait for confirmation and find it in history. Do not train every role on every module at once. Physical-device QR/photo and upload checks remain part of staff acceptance testing.
+
 ## Three ways material moves
 
 | # | When | Steps | Who |

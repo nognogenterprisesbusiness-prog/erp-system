@@ -20,7 +20,7 @@ import { assignWarehouseStaffAction, endWarehouseAssignmentAction, linkWarehouse
 
 const inputClass = "h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm";
 
-export default async function WarehousePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }> }) {
+export default async function WarehousePage({ params, searchParams, editOnly = false }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }>; editOnly?: boolean }) {
   const editing = (await searchParams).edit === "1";
   const { id } = await params;
   const [user, data] = await Promise.all([requireUser(), getWarehouse(id)]);
@@ -28,6 +28,7 @@ export default async function WarehousePage({ params, searchParams }: { params: 
   const municipality = warehouse.municipality_code ? findMunicipality(warehouse.municipality_code) : undefined;
   const linkedIds = new Set(projects.map((project) => project.id));
   const availableProjects = allProjects.filter((project) => !linkedIds.has(project.id));
+  if (editOnly && (user.canManage)) return <RecordCreateDialog hideTrigger confirmDiscard key={data.warehouse.id} title="Edit warehouse" triggerLabel="Edit" triggerVariant="outline" initialOpen closeHref="/warehouses"><WarehouseForm warehouse={data.warehouse} municipalityLabel={municipalityDisplay(data.warehouse.municipality_code ?? undefined, "")} /></RecordCreateDialog>;
   return <>
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">{warehouse.code}</p><div className="mt-1.5 flex items-center gap-3"><h1 className="text-3xl font-semibold tracking-[-0.035em]">{warehouse.name}</h1><Badge variant={warehouse.status === "active" ? "active" : "neutral"}>{warehouse.status}</Badge></div><p className="mt-1 text-sm text-slate-500">{warehouse.address}</p></div>

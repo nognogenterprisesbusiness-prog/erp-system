@@ -54,9 +54,9 @@ export const manualGuides: readonly ManualGuide[] = [
     id: "start", title: "Start here: navigation and daily work", description: "Find the right screen and understand a successful save.", href: "/dashboard", roles: everyone,
     before: "Sign in with your own account. Admin must activate it and assign the sites or warehouses you work with.",
     steps: [
-      { title: "Choose your work area", detail: "Use Main work in the sidebar. Expand Project tools, Inventory tools, Purchasing tools or People when needed. Only permitted pages and actions appear." },
+      { title: "Choose your work area", detail: "Start with the first tasks in Main work. The order depends on your role. Warehouse Staff land on Inventory; Finance has Payroll near the top. Open other sidebar groups when needed. Only permitted actions appear." },
       { title: "Find a record", detail: "Use the header project search, or the search and filters above a page's table. Press Enter to search. Use the page controls below the table to reach older records." },
-      { title: "Open details before acting", detail: "Choose View to open the record details. Check the site, warehouse, quantity and current status. Labeled action buttons explain what you can do next; cancellation and corrections ask for a reason in a dialog." },
+      { title: "Open details before acting", detail: "If a row has one action, use its View button. If it has several actions, open the three-dot menu and choose View or Edit. Check the site, warehouse and quantity before acting. Cancellation and corrections ask for a reason." },
       { title: "Wait for confirmation", detail: "Complete the required fields and select Save or the named action. Wait for success before leaving. The screen updates after the server confirms the transaction; a notification alone is not proof of stock posting." },
     ],
     result: "You can find the record and see its confirmed status without using another staff member's account.",
@@ -76,21 +76,21 @@ export const manualGuides: readonly ManualGuide[] = [
     tips: ["Use Audit history to investigate who changed a record and when.", "Never share Admin credentials to work around denied access."],
   },
   {
-    id: "projects", title: "Projects, sites and initial documents", description: "Keep project information and work history together.", href: "/projects", roles: everyone,
+    id: "projects", title: "Projects, sites and documents", description: "Keep project information and work history together.", href: "/projects", roles: everyone,
     before: "Admin creates the project; its first site, stock location and QR record are created automatically. Other staff need the relevant assignment.",
     steps: [
       { title: "Open the project", detail: "Review Overview, Sites, Labour, Materials, Finance and Documents where your account has access. Check that you are working on the correct active site." },
       { title: "Assign the site staff", detail: "Admin opens Sites and chooses the Engineer and Foreman, then selects Save staff. The site uses the project name and address, so there are no separate site-name or site-address inputs." },
       { title: "Prepare the material plan", detail: "Admin or an Engineer with review authority for the site opens Material plan and selects Add material plan. Search the catalog by name or SKU and use Next or Previous to browse more materials. Record planned quantities, source warehouse and needed date. Foremen can read their site's plan. Compare the plan with warehouse availability and actual site usage before ordering more; a plan does not reserve or deduct stock." },
-      { title: "Attach initial documents", detail: "Admin uploads project files on the Documents page and chooses the project and document category. Assigned site staff can view or download permitted files from the project Documents tab." },
+      { title: "Attach initial documents", detail: "Admin uploads project files on the Documents page and chooses the project and document category. Assigned site staff can view or download permitted files from the project Documents tab. Files use compact rows; open the row action menu to View, Download or manage the file where permitted." },
       { title: "Monitor actual progress and expenses", detail: "Use dated daily reports and the project's cost sections. Review posted material use, labour, equipment and other expenses. A request, purchase or delivery does not by itself count as material use." },
     ],
     result: "Project staff share the same assigned site history, documents and actual work records.",
     tips: ["An initial budget is not required for project creation. Contract information and actual expenses serve different purposes.", "For a missing project or file, check assignment and filters before uploading a second copy."],
   },
   {
-    id: "inventory", title: "Inventory: materials, stock and history", description: "Understand total stock, reservations and each location.", href: "/inventory", roles: everyone,
-    before: "A catalog material describes the item and unit. Its stock balance describes how much is held at a specific warehouse or site.",
+    id: "inventory", title: "Inventory: materials, stock and history", description: "Check available quantities and where stock is held.", href: "/inventory", roles: everyone,
+    before: "A material is the item and unit. Stock is its quantity at a warehouse or site. An item may appear at one warehouse or several. For example, Deform Bar can have stock at Borbon and Quoit while another material has stock only at Borbon. This is a location difference, not a duplicate item.",
     steps: [
       { title: "Choose warehouse or site stock", detail: "Inventory opens with All warehouses when your account can read warehouse stock. Site-only staff starts with All sites. Open Stock location to search by warehouse, site, project or address. Warehouses and project sites are grouped separately. Choose a warehouse, a project site, All sites or the combined All locations overview. Warehouse totals exclude materials already held at sites. Check Materials, Equipment or Vehicles for the correct item type. SKU catalog lists the same materials by their unique codes; it is not a separate stock balance." },
       { title: "Read the quantities", detail: "On hand is stock physically recorded at the selected location. Warehouse stock or Site stock totals only that group of permitted locations. Reserved is approved stock awaiting release. Available is what remains after reservations. Choose a specific source warehouse before approving or dispatching; a combined total cannot supply a delivery itself. The web catalog includes zero-stock materials for sourcing. Mobile Site Inventory shows only materials with available quantity greater than zero; use History to inspect earlier receipts or use." },
@@ -180,7 +180,7 @@ export const manualGuides: readonly ManualGuide[] = [
     tips: ["Itemized site material purchases follow receipt review; above ₱50,000 only Admin can approve. On mobile, use Add diesel receipt inside a vehicle’s history, enter the total and attach a receipt photo. Diesel up to ₱50,000 posts one project expense automatically; higher amounts wait for Admin. Diesel does not add material stock.", "If approved stock seems missing, open that specific site in Inventory and check the purchase receipt history before submitting again.", "Use a clear supported receipt photo. Mobile accepts an upload under 3 MB; the app prepares camera/gallery images before submission."],
   },
   {
-    id: "assets", title: "Equipment, vehicles and reusable custody", description: "Request, hand over, monitor and return assets.", href: "/inventory?type=equipment", roles: ["admin", "engineer", "foreman", "warehouse_staff"],
+    id: "assets", title: "Equipment, vehicles and reusable custody", description: "Request, hand over, monitor and return assets.", href: "/equipment", roles: ["admin", "engineer", "foreman", "warehouse_staff"],
     before: "Admin registers the asset. Reusable assets are tracked individually, separately from consumable quantities.",
     steps: [
       { title: "Choose the asset type", detail: "Use Equipment or Vehicles in Inventory. Engineer and Foreman request assets from the matching tab in Requests; Warehouse staff checks inventory rather than approving asset requests. Admin enters a simple free-text type in the asset form; separate equipment category and vehicle type setup pages are not needed." },
@@ -197,7 +197,7 @@ export const manualGuides: readonly ManualGuide[] = [
     id: "reports", title: "Attendance and daily site reports", description: "Record actual people, hours and progress once.", href: "/reports/daily", roles: siteTeam,
     before: "The project/site must be assigned. Admin maintains employees and applicable rate information.",
     steps: [
-      { title: "Record attendance", detail: "Admin or the assigned Foreman opens the project's attendance and selects the work date and workers. Enter actual hours for hourly work or the supported full/half-day entry for daily work. Engineers can review permitted site attendance." },
+      { title: "Record attendance", detail: "Admin or the assigned Foreman opens project attendance. For QR attendance, scan the worker ID, check the worker, take a new face photo, then save. The photo is private supporting evidence, not an automatic face match. Review hours before posting attendance. Admin and Finance can search workers across the selected date and project; Engineers can review permitted site attendance." },
       { title: "Record actual transactions", detail: "Record material use and equipment use in their own actions. These create the stock and cost records that can be reviewed alongside the report." },
       { title: "Prepare the daily report", detail: "Admin or assigned site staff selects the project, site and date, records work, accomplishments, issues and progress, and adds supported evidence. Submit when complete." },
       { title: "Review independently", detail: "An authorized independent Engineer or Admin opens the submitted report. Check actual progress and linked entries, then choose Approve report or Return for correction with a Review note explaining the required changes. The preparer cannot review their own report. Approval locks that revision; it does not itself post material use, attendance or equipment charges." },
@@ -215,6 +215,7 @@ export const manualGuides: readonly ManualGuide[] = [
       { title: "Review project costing", detail: "Open Projects → select the project → Finance. Approved budget, Actual costs and Remaining budget appear first. The detailed cost breakdown separates permit fees, subcontract work, utilities, vehicle fuel and site receipts. Use View entries to read the description, reference, date and original receipt. Material cost comes from actual consumption and is never charged again at purchase or delivery." },
       { title: "Adjust an approved budget", detail: "Admin chooses Adjust approved budget directly beside the budget summary. Choose Increase or Reduce, enter a positive amount, review the new budget and remaining amount, then enter the approval reason and save. The change applies immediately and is kept in Budget change history; it is not a separate approval request. Finance can review the budget but cannot change it." },
       { title: "Check attendance and other expenses", detail: "Admin and Finance open People → Attendance to review attendance costs. Admin records additional project expenses in the project's Finance/cost section with the date, amount, category and reference. Do not enter material, attendance or equipment costs again as another expense." },
+      { title: "Prepare payroll", detail: "In Payroll, choose the department and pay period, then review employees and attendance pay. Enter only the required earnings or deductions and save the line. Admin finalizes payroll after checking the totals; finalizing recalculates attendance pay and locks the lines. Record payment only when it has actually been made." },
       { title: "Export or correct", detail: "Use available report export actions with the right filters. For an incorrect posted financial entry, Admin uses the supported audited reversal with a reason, then records the correct entry." },
     ],
     result: "Client receivables, supplier balances, reimbursements and actual project costs remain distinguishable and reconcilable.",
@@ -280,7 +281,7 @@ export const manualGuides: readonly ManualGuide[] = [
     id: "suppliers", title: "Suppliers and material prices", description: "Maintain hardware-store details and compare current material prices.", href: "/suppliers", roles: financeTeam,
     before: "Admin maintains suppliers. Finance can review their purchasing, prices and payment history.",
     steps: [
-      { title: "Add the supplier", detail: "Admin opens Suppliers → Add supplier. Enter the store name, contact number and address. These are the main fields; More details is optional. Supplier categories are no longer part of setup." },
+      { title: "Add the supplier", detail: "Admin opens Suppliers → Add supplier. Enter the store name, contact number and address. Use More details only when the additional information is needed. Tax identification number is not part of the entry form. Supplier categories are no longer part of setup." },
       { title: "Maintain the supplier's materials", detail: "Open the supplier and review its catalog materials, units and dated prices. Use existing catalog items so purchases from different stores still refer to the same material." },
       { title: "Compare like-for-like prices", detail: "Use Material price comparison under Suppliers. Filter the same material and unit, supplier, availability and dates before comparing offers. A saved formal quotation can be linked to a purchase when used." },
       { title: "Keep historical prices intact", detail: "New supplier purchases update the latest supplier price when issued, including after required owner approval. Posted receipts and past project cost snapshots retain their original prices." },
@@ -293,7 +294,7 @@ export const manualGuides: readonly ManualGuide[] = [
     before: "Use your own account and keep the selected project/site and transaction reference available when investigating an issue.",
     steps: [
       { title: "Update your profile", detail: "Open My profile to change permitted personal details or your photo. Email changes require confirmation. Sign out before another staff member uses the device." },
-      { title: "Review notifications", detail: "Open the bell or Notifications page. Read the date and time in Philippine time, open the linked record and check its current status. Mark reviewed alerts read." },
+      { title: "Review notifications", detail: "Open the bell or Notifications. Select an alert to read it in the preview, then use its named record action when you need the related details. Check the current status before acting. Use Mark as read after reviewing it." },
       { title: "No records or denied action", detail: "Clear search and status filters, verify the location and active project, and ask Admin to check your account and assignment. A hidden button can be a role restriction, not a broken page." },
       { title: "Paid but no stock", detail: "Check the delivery inspection and posted receipt, then view its actual warehouse or site. For Engineer site purchases, check approval and the selected site. Payment alone does not receive inventory." },
       { title: "A save failed", detail: "Check required fields, positive quantities, remaining balance and the receipt date. Keep the form and retry the same submission after resolving the cause. Give support the error reference and time if it continues." },

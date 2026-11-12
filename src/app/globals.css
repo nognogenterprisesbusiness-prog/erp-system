@@ -167,3 +167,8 @@ html:is([data-theme="dark"], [data-theme="blue"]) [class~="text-violet-700"] { c
   cursor: url("/cursors/text.svg") 12 12, text;
   caret-color: currentColor;
 }
+
+/* A focused editor replaces the drawer visually instead of stacking two record views. */
+.record-detail-panel:has(dialog[open]) { visibility: hidden; }
+.record-detail-panel:has(dialog[open])::backdrop { background: transparent; }
+.record-detail-panel dialog[open] { visibility: visible; }

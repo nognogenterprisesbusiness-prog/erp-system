@@ -33,7 +33,7 @@ function snapshotText(value: unknown, field: string) {
   return typeof candidate === "string" ? candidate : "";
 }
 
-export default async function DailyReportDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string; linkedPage?: string; candidatePage?: string }> }) {
+export default async function DailyReportDetailPage({ params, searchParams, editOnly = false }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string; linkedPage?: string; candidatePage?: string }>; editOnly?: boolean }) {
   const { id } = await params;
   const filters = await searchParams;
   const [user, data, progress] = await Promise.all([requireUser(), getDailyReport(id), getReportProgress(id)]);
@@ -44,6 +44,7 @@ export default async function DailyReportDetailPage({ params, searchParams }: { 
   const choices = canEdit ? await getDailyReportChoices() : null;
   const guide = dailyReportGuide(report.status, user.userId === report.prepared_by, canReview);
   const canRecordProgress = report.status === "approved" && !progress && Boolean(capabilities?.[0]?.can_review);
+  if (editOnly && (canEdit && choices)) return <RecordCreateDialog hideTrigger confirmDiscard key={report.id} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen closeHref="/reports/daily"><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>;
   return <>
     <PageHeader eyebrow="Daily report" title={report.report_number} description={`${project.code} · ${projectSiteLabel(project.name, site.name)}`}
       action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link data-detail-back href={`/reports/daily?project=${report.project_id}`}>Back to daily reports</Link></Button>{canEdit && choices && <RecordCreateDialog confirmDiscard key={report.id} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen={filters.edit === "1"} closeHref={`/reports/daily/${id}`}><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}{canCorrect && <DailyReportCorrection reportId={id} />}</div>} />

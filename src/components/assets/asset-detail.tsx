@@ -18,14 +18,15 @@ type AssetDetailData = Awaited<ReturnType<typeof getAsset>>;
 type EquipmentUsageData = Awaited<ReturnType<typeof getEquipmentUsage>>;
 type Props = {
   data: AssetDetailData; kind: AssetKind; canManage: boolean; usage?: EquipmentUsageData;
-  references?: Awaited<ReturnType<typeof getAssetReferences>>; editing?: boolean;
+  editOnly?: boolean; references?: Awaited<ReturnType<typeof getAssetReferences>>; editing?: boolean;
   expenses?: ReactNode; drivers?: ReactNode; projectFuel?: ReactNode; initialSection?: string;
 };
 
-export function AssetDetail({ data, kind, canManage, usage, references, editing = false, expenses, drivers, projectFuel, initialSection }: Props) {
+export function AssetDetail({ data, kind, canManage, usage, references, editing = false, editOnly = false, expenses, drivers, projectFuel, initialSection }: Props) {
   const { asset, events } = data;
   const isEquipment = kind === "equipment";
   const base = isEquipment ? "/equipment" : "/vehicles";
+  if (editOnly && canManage && !asset.archived_at && !["assigned", "in_use"].includes(asset.status) && references) return <RecordCreateDialog hideTrigger initialOpen confirmDiscard title={`Edit ${kind}`} closeHref={base}><AssetForm kind={kind} asset={asset} {...references} /></RecordCreateDialog>;
   const details = <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
     <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-2">
       <div><h2 className="font-semibold">Unit details</h2><dl className="mt-4 space-y-3 text-sm">{[

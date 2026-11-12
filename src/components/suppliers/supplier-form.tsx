@@ -23,26 +23,26 @@ export function SupplierForm({ supplier }: { supplier?: SupplierRow }) {
     if (!state.ok || state.message || completed.current) return;
     completed.current = true;
     if (supplier && dialog) dialog.complete();
-    else if (state.data?.id) startTransition(() => router.replace(`/suppliers/${state.data?.id}`));
+    else if (state.data?.id) { dialog?.complete(); startTransition(() => router.replace(`/suppliers/${state.data?.id}`)); }
   }, [state, dialog, router, supplier]);
 
   const [processingPhoto, setProcessingPhoto] = useState(false);
   const error = (field: string) => state.ok ? undefined : state.fieldErrors?.[field]?.[0];
   return <form action={action} className={dialog ? undefined : "rounded-xl border border-slate-200 bg-white p-5 sm:p-6"}>
+    <input type="hidden" name="taxIdentificationNumber" value={supplier?.tax_identification_number ?? ""} />
     {supplier && <input type="hidden" name="id" value={supplier.id} />}
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="Supplier name" htmlFor="supplierName" error={error("supplierName")}><input className={fieldControlClass} id="supplierName" name="supplierName" defaultValue={supplier?.supplier_name} placeholder="e.g. VIC Hardware" required /></FormField>
       <FormField label="Contact number" htmlFor="contactNumber" error={error("contactNumber")}><input className={fieldControlClass} id="contactNumber" name="contactNumber" defaultValue={supplier?.contact_number} inputMode="tel" autoComplete="tel" required /></FormField>
       <FormField label="Address" htmlFor="businessAddress" className="md:col-span-2" error={error("businessAddress")}><input className={fieldControlClass} id="businessAddress" name="businessAddress" defaultValue={supplier?.business_address} autoComplete="street-address" required /></FormField>
     </div>
-    <details className="mt-5 rounded-xl border border-slate-200 p-4" open={Boolean(supplier && (supplier.business_name || supplier.contact_person || supplier.email_address || supplier.payment_terms || supplier.tax_identification_number || supplier.remarks))}>
+    <details className="mt-5 rounded-xl border border-slate-200 p-4" >
       <summary className="cursor-pointer text-sm font-medium text-slate-700">More details (optional)</summary>
       <div className="mt-4 grid gap-5 md:grid-cols-2">
         <FormField label="Supplier code" htmlFor="code" hint="Leave blank to create one automatically" error={error("code")}><input className={fieldControlClass} id="code" name="code" defaultValue={supplier?.code} placeholder="SUP-0001" /></FormField>
         <FormField label="Registered business name" htmlFor="businessName" error={error("businessName")}><input className={fieldControlClass} id="businessName" name="businessName" defaultValue={supplier?.business_name ?? ""} /></FormField>
         <FormField label="Contact person" htmlFor="contactPerson" error={error("contactPerson")}><input className={fieldControlClass} id="contactPerson" name="contactPerson" defaultValue={supplier?.contact_person ?? ""} autoComplete="name" /></FormField>
         <FormField label="Email address" htmlFor="emailAddress" error={error("emailAddress")}><input className={fieldControlClass} id="emailAddress" name="emailAddress" type="email" defaultValue={supplier?.email_address ?? ""} autoComplete="email" /></FormField>
-        <FormField label="Tax identification number" htmlFor="taxIdentificationNumber" error={error("taxIdentificationNumber")}><input className={fieldControlClass} id="taxIdentificationNumber" name="taxIdentificationNumber" defaultValue={supplier?.tax_identification_number ?? ""} /></FormField>
         <div><LocationPicker initialLabel={supplier?.city ?? ""} />{error("municipalityCode") && <p className="mt-1 text-xs text-red-600">{error("municipalityCode")}</p>}</div>
         <FormField label="Payment terms" htmlFor="paymentTerms" error={error("paymentTerms")}><input className={fieldControlClass} id="paymentTerms" name="paymentTerms" defaultValue={supplier?.payment_terms ?? ""} placeholder="e.g. Cash or postdated check" /></FormField>
         <FormField label="Supplier status" htmlFor="status" error={error("status")}><SelectPicker id="status" name="status" label="Supplier status" defaultValue={supplier?.status ?? "active"} options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }]} /></FormField>

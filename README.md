@@ -1,14 +1,40 @@
 # Nognog Enterprises — Construction ERP
 
-**Record discoverability (2026-11-12):** Cost categories, original receipts and operational record links use visible outlined actions. Finance links directly to expense entries; cost pages expose All cost records, Expense entries and Budget history. Labour and equipment categories provide their attendance/hour and linked-receipt sources without changing totals. Row actions show text, document downloads have labels, and the active sidebar group opens when navigating to its page. Existing permissions, pages and database commands are retained.
+The company workspace covers project materials, equipment and vehicles, staff attendance, purchasing, payroll and project finance. The companion mobile app supports assigned site, warehouse and driver work.
 
-**Readable amounts and visible actions (2026-11-12):** Web money inputs display comma grouping while server payloads and calculations retain plain decimal strings. Cancellation, voiding, correction, stock-count and expense actions open labeled dialogs instead of action accordions. Purchasing commands sit beside View in Actions. Selection controls, history, approval rules and database schemas remain unchanged. No migration or mobile build is required. See the money/action section in the testing guide.
+**Current daily-use guide:** [Staff testing and training](TESTING-GUIDE.md) · [In-app manual topics](src/lib/help/manual.ts) · [Workflow rules](docs/workflow-state-machines.md)
+
+The interface uses one visible action button when a row has one action, and one three-dot menu when it has several. Main work is ordered by role. Stock quantities are shown by their real warehouse; different materials need not exist in the same warehouses. Applied database migration history is retained for safe upgrades.
+
+The dated implementation notes below are historical checkpoints. Current deployment and phone acceptance must be verified separately; source pushes and native bundle exports are not Play Store releases.
+
+## Screenshots
+
+These are real application previews, not design mockups. The web images show the 13 November 2026 refinement pass against staging. Test records and quantities are examples.
+
+### Web: inventory
+
+Warehouse quantities stay separate. A material stored in two warehouses shows both locations; a material held in one warehouse shows that location only.
+
+![Inventory with stock by warehouse](public/screenshots/inventory.png)
+
+### Web: project documents
+
+Compact document rows keep the file name and project readable. Open the three-dot menu for View, Download and permitted management actions.
+
+![Compact project document list](public/screenshots/documents.png)
+
+### Mobile: attendance
+
+React Native web preview captured on 11 November 2026. Attendance follows worker ID → check worker → new face photo → save. This dated preview illustrates the screen; it does not verify camera permissions, a physical phone or the current Play Store release.
+
+<img src="public/screenshots/mobile-attendance.png" alt="Dated mobile attendance preview with the worker ID scanning instructions" width="420" />
 
 > **Testing with the client?** Start with the [testing guide](TESTING-GUIDE.md): what each account can do and a step-by-step full-project test.
 
 **Contextual details and request clarity (2026-11-11):** View opens an existing record in a right-side panel while retaining the source list. Direct URLs still work. Material, Equipment and Vehicle request lists use a Requested item column with their existing reference underneath. Unselected warehouse choice is visible, with explicit source requirements for every approved material quantity and the existing multi-warehouse flow retained. Headers, repeated project/site labels, amount alignment and receipt preview spacing are refined. Canonical server pages, role checks, stock commands and data schemas are reused. No new migration or mobile build is required. See [the panel state and maintenance rules](docs/workflow-state-machines.md#contextual-record-panels).
 
-**Visible record actions (2026-11-11):** Main record lists expose a text View action, with Actions columns added where details previously opened only from the name. Shared record menus keep View outside the menu and label the remaining Actions control. Inventory has one materials list; the duplicate SKU catalog tab is retired, legacy catalog links redirect to Inventory with filters preserved, and material codes remain unchanged. No database migration or mobile build is required for this web-only improvement.
+**Visible record actions (2026-11-11):** Main record lists expose a text View action, with Actions columns added where details previously opened only from the name. Rows with several actions put View and the other actions together in the three-dot menu; a row with only View keeps one View button. Inventory has one materials list; the duplicate SKU catalog tab is retired, legacy catalog links redirect to Inventory with filters preserved, and material codes remain unchanged. No database migration or mobile build is required for this web-only improvement.
 
 **Workflow review (2026-11-11):** [The state-machine map](docs/workflow-state-machines.md) records business transitions, UI recovery states, source ownership and checks for future changes. Requests and daily reports now explain the next permitted step; purchase and equipment actions use visible text. Mobile distinguishes loading/offline/refresh errors from access loss, and driver/warehouse forms retain an exact command after an unconfirmed save. Verified: 144 web/domain tests, 30 mobile tests, TypeScript/lint/production build, and eight isolated PostgreSQL regression suites. Browser fault injection confirmed identical driver/warehouse retries without forwarding either write. No migration was added by this pass. These are local changes; the paired attendance API still needs deployment and printed-QR/camera acceptance on an Android phone before distribution.
 
