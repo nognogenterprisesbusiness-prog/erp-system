@@ -54,7 +54,7 @@ export const manualGuides: readonly ManualGuide[] = [
     id: "start", title: "Start here: navigation and daily work", description: "Find the right screen and understand a successful save.", href: "/dashboard", roles: everyone,
     before: "Sign in with your own account. Admin must activate it and assign the sites or warehouses you work with.",
     steps: [
-      { title: "Choose your work area", detail: "Start with the first tasks in Main work. The order depends on your role. Warehouse Staff land on Inventory; Finance has Payroll near the top. Open other sidebar groups when needed. Only permitted actions appear." },
+      { title: "Choose your work area", detail: "Main work starts with Overview, Projects and Requests, followed by Inventory, Equipment and Vehicles. The order stays consistent; only permitted pages appear. Find employees, attendance and payroll under People, and daily reports and documents under Project tools." },
       { title: "Find a record", detail: "Use the header project search, or the search and filters above a page's table. Press Enter to search. Use the page controls below the table to reach older records." },
       { title: "Open details before acting", detail: "If a row has one action, use its View button. If it has several actions, open the three-dot menu and choose View or Edit. Check the site, warehouse and quantity before acting. Cancellation and corrections ask for a reason." },
       { title: "Wait for confirmation", detail: "Complete the required fields and select Save or the named action. Wait for success before leaving. The screen updates after the server confirms the transaction; a notification alone is not proof of stock posting." },

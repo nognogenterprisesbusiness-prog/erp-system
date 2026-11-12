@@ -4,7 +4,7 @@ The company workspace covers project materials, equipment and vehicles, staff at
 
 **Current daily-use guide:** [Staff testing and training](TESTING-GUIDE.md) · [In-app manual topics](src/lib/help/manual.ts) · [Workflow rules](docs/workflow-state-machines.md)
 
-The interface uses one visible action button when a row has one action, and one three-dot menu when it has several. Main work is ordered by role. Inventory cards show one available-stock total per material for the selected inventory filter. Warehouse names and per-warehouse quantities are not repeated inside cards. Applied database migration history is retained for safe upgrades.
+The interface uses one visible action button when a row has one action, and one three-dot menu when it has several. Main work uses a consistent order: Overview, Projects, Requests, Inventory, Equipment and Vehicles, followed by purchasing and billing pages. Permissions control which entries are visible; Payroll remains under People and Daily reports under Project tools. Inventory cards show one available-stock total per material for the selected inventory filter. Warehouse names and per-warehouse quantities are not repeated inside cards. Applied database migration history is retained for safe upgrades.
 
 The dated implementation notes below are historical checkpoints. Current deployment and phone acceptance must be verified separately; source pushes and native bundle exports are not Play Store releases.
 
