@@ -44,7 +44,6 @@ export async function inviteUserAction(_: UserActionState, form: FormData): Prom
   const supabase = await createClient();
   const { error: roleError } = await supabase.rpc("assign_initial_user_role", { p_user_id: data.user.id, p_role: parsed.data.role });
   revalidatePath("/users");
-  if (parsed.data.role === "driver") revalidatePath("/users/drivers");
   if (roleError) return failure("Invitation was sent, but its role could not be assigned. This user cannot access the ERP yet; assign a role from the Users list.");
   return { ok: true, message: `Invitation sent to ${parsed.data.email}. The user will choose their own password.` };
 }
@@ -58,7 +57,6 @@ export async function assignInitialRoleAction(_: UserActionState, form: FormData
   const { error } = await supabase.rpc("assign_initial_user_role", { p_user_id: parsed.data.userId, p_role: parsed.data.role });
   if (error) return failure(error.code === "23505" ? "This user already has a role." : "The initial role could not be assigned.");
   revalidatePath("/users");
-  if (parsed.data.role === "driver") revalidatePath("/users/drivers");
   return { ok: true, message: "Initial role assigned." };
 }
 

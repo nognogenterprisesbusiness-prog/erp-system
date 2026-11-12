@@ -54,7 +54,20 @@ export async function assignDriverTruck(_: ExpenseActionState, form: FormData): 
     ...(input.data.assetId ? { p_asset_id: input.data.assetId } : {}),
   });
   if (error) return { message: "Could not save the assignment. Check that the account is a driver and the vehicle is active." };
-  revalidatePath("/users/drivers");
+  revalidatePath("/users");
   revalidatePath("/vehicles/[id]", "page");
   return { message: "Assignment saved.", success: true };
+}
+
+export async function searchAssignableTrucks(search: string): Promise<{ options: { id: string; label: string }[]; message?: string }> {
+  await requireManager();
+  const parsed = z.string().trim().max(80).safeParse(search);
+  if (!parsed.success) return { options: [], message: "Use a shorter truck name or code." };
+  const term = parsed.data.normalize("NFKC").replace(/[^\p{L}\p{N} -]/gu, "");
+  const client = await createClient();
+  let query = client.from("assets").select("id,code,name").eq("asset_kind", "vehicle").is("archived_at", null).neq("status", "retired").order("code").order("id").limit(50);
+  if (term) query = query.or(`code.ilike.%${term}%,name.ilike.%${term}%`);
+  const { data, error } = await query;
+  if (error) return { options: [], message: "Could not load trucks. Try the search again." };
+  return { options: data.map(truck => ({ id: truck.id, label: `${truck.code} · ${truck.name}` })) };
 }

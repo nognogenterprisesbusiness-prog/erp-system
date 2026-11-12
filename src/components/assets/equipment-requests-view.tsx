@@ -1,4 +1,3 @@
-import { RecordViewLink } from "@/components/ui/record-view-link";
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import Image from "next/image";
@@ -48,7 +47,7 @@ function HandoverRow({ item, isVehicle, photoPath, project, siteName, canManage,
     <td className="px-4 py-4 text-slate-600">{item.needed_on}<span className={overdue ? "block text-xs font-semibold text-red-700" : "block text-xs text-slate-500"}>{item.expected_return_on ? `Return ${item.expected_return_on}` : "No return deadline"}{overdue ? " · overdue" : ""}</span></td>
     <td className="max-w-[230px] px-4 py-4 text-slate-600">{item.purpose}{item.decision_note && <span className="block text-xs text-slate-500">Decision: {item.decision_note}</span>}{item.return_note && <span className="block text-xs text-slate-500">Return: {item.return_note}</span>}</td>
     <td className="px-4 py-4"><span className={overdue ? "rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"}>{overdue ? "Overdue" : statusLabels[item.status]}</span></td>
-    <td data-record-actions className="px-5 py-4 text-right bg-white"><div className="flex flex-wrap items-center justify-end gap-2">{(canManage || item.status === "checked_out") && <RecordViewLink href={`/${isVehicle ? "vehicles" : "equipment"}/${item.asset_id}`} name={item.asset_name} />}{canManage && <EquipmentRequestActions id={item.id} status={item.status} name={item.asset_name} />}</div></td>
+    <td data-record-actions className="px-5 py-4 text-right bg-white"><EquipmentRequestActions id={item.id} status={item.status} name={item.asset_name} canManage={canManage} viewHref={canManage || item.status === "checked_out" ? `/${isVehicle ? "vehicles" : "equipment"}/${item.asset_id}` : undefined} /></td>
   </tr>;
 }
 

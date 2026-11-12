@@ -1,5 +1,7 @@
 "use client";
 
+import { DriverAssignmentForm, type AssignedTruck } from "@/components/assets/driver-assignment-form";
+import { UserProfileDetails, type UserProfileDetailsProps } from "./user-profile-details";
 import { RecordActionMenu, type RecordAction } from "@/components/ui/record-action-menu";
 import { RecordCreateDialog, RecordFormControls } from "@/components/ui/record-create-dialog";
 import { getFieldPlaceholder } from "@/components/ui/field-placeholder";
@@ -74,20 +76,26 @@ function UserPasswordResetFields({ userId }: { userId: string }) {
   </form>;
 }
 
-export function UserAccountActions({ userId, name, isActive, canReset, roles }: { userId: string; name: string; isActive: boolean; canReset: boolean; roles?: AppRole[] }) {
-  const [mode, setMode] = useState<"role" | "status" | "reset" | null>(null);
-  const actions: RecordAction[] = roles ? [{ label: "Assign role", onSelect: () => setMode("role") }] : [
-    { label: isActive ? "Deactivate" : "Reactivate", destructive: isActive, onSelect: () => setMode("status") },
-    ...(canReset ? [{ label: "Reset password", onSelect: () => setMode("reset") }] : []),
+export function UserRowActions({ userId, profile, isActive, canReset, roles, manageable, driverAssignment }: { userId: string; profile: UserProfileDetailsProps; isActive: boolean; canReset: boolean; roles?: AppRole[]; manageable: boolean; driverAssignment?: { current?: AssignedTruck } }) {
+  const [mode, setMode] = useState<"view" | "assignment" | "role" | "status" | "reset" | null>(null);
+  const actions: RecordAction[] = [
+    { label: "View", onSelect: () => setMode("view") },
+    ...(driverAssignment ? [{ label: "Edit assignment", onSelect: () => setMode("assignment") }] : []),
+    ...(manageable ? roles ? [{ label: "Assign role", onSelect: () => setMode("role") }] : [
+      { label: isActive ? "Deactivate" : "Reactivate", destructive: isActive, onSelect: () => setMode("status") },
+      ...(canReset ? [{ label: "Reset password", onSelect: () => setMode("reset") }] : []),
+    ] : []),
   ];
-  const title = mode === "role" ? "Assign initial role" : mode === "reset" ? "Send password-reset link" : isActive ? "Deactivate account" : "Reactivate account";
+  const title = mode === "view" ? profile.name : mode === "assignment" ? `Edit ${profile.name}’s truck assignment` : mode === "role" ? "Assign initial role" : mode === "reset" ? "Send password-reset link" : isActive ? "Deactivate account" : "Reactivate account";
   return <>
-    <RecordActionMenu name={name} forceMenu actions={actions} />
-    {mode && <RecordCreateDialog title={title} hideTrigger initialOpen onClosed={() => setMode(null)}>
-      <p className="mb-4 font-semibold text-slate-900">{name}</p>
-      {mode === "role" ? <InitialRoleForm userId={userId} roles={roles ?? []} /> : <>
-        <p className="mb-5 text-sm leading-6 text-slate-600">{mode === "reset" ? "Send a reset link to this person’s existing email address. Their password changes only after they complete the reset." : isActive ? "This person will lose ERP access immediately. Their existing records remain in history." : "This person will regain access according to their existing role and assignments."}</p>
-        {mode === "reset" ? <UserPasswordResetFields userId={userId} /> : <UserStatusFields userId={userId} isActive={isActive} />}
+    <RecordActionMenu name={profile.name} actions={actions} />
+    {mode && <RecordCreateDialog title={title} size="sm" hideTrigger initialOpen onClosed={() => setMode(null)}>
+      {mode === "view" ? <UserProfileDetails {...profile} truck={driverAssignment ? driverAssignment.current?.label ?? "No truck assigned" : undefined} /> : mode === "assignment" && driverAssignment ? <DriverAssignmentForm driverId={userId} current={driverAssignment.current} /> : <>
+        <p className="mb-4 font-semibold text-slate-900">{profile.name}</p>
+        {mode === "role" ? <InitialRoleForm userId={userId} roles={roles ?? []} /> : <>
+          <p className="mb-5 text-sm leading-6 text-slate-600">{mode === "reset" ? "Send a reset link to this person’s existing email address. Their password changes only after they complete the reset." : isActive ? "This person will lose ERP access immediately. Their existing records remain in history." : "This person will regain access according to their existing role and assignments."}</p>
+          {mode === "reset" ? <UserPasswordResetFields userId={userId} /> : <UserStatusFields userId={userId} isActive={isActive} />}
+        </>}
       </>}
     </RecordCreateDialog>}
   </>;

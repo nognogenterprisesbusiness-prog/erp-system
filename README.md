@@ -873,3 +873,11 @@ View remains visible and secondary actions use three dots across shared lists, U
 | Date | Refinement | Verification | Scope |
 | --- | --- | --- | --- |
 | 2026-11-12 | Compact actions, readable filters, department dialogs and driver assignment UI | 173 unit tests, typecheck, lint, production build, isolated asset-expense suite and focused desktop/phone browser review | No migration or mobile bundle changes; existing posting and access rules retained |
+
+### Unified actions and driver dialogs (2026-11-12)
+
+The final action rule is one visible button for one action, otherwise one three-dot menu containing every action including View. Driver assignments are edited in compact dialogs on Users or a truck; the duplicate driver pages and shortcuts are removed. Matching command icons replace generic arrows. See [verification](docs/unified-actions-driver-dialogs-20261112.md).
+
+| Date | Refinement | Verification | Scope |
+| --- | --- | --- | --- |
+| 2026-11-12 | Unified menus and in-place driver assignment editing | 173 unit tests, typecheck, lint, build, isolated asset suite and focused desktop/phone browser QA | Existing account and assignment permissions retained; no migration or mobile changes |

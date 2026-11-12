@@ -14,14 +14,16 @@ test("row commands expose visible text alongside their accessible contextual nam
   }
 });
 
-test("View stays visible while two or more actions use an icon-only menu", () => {
+test("one action stays visible and multiple actions share one icon-only menu", () => {
   const viewOnly = renderToStaticMarkup(createElement(RecordActionMenu, { name: "Truck", actions: [{ label: "View", href: "/vehicles/truck" }] }));
   assert.match(viewOnly, /<span>View<\/span>/);
   assert.doesNotMatch(viewOnly, /aria-haspopup|<svg/);
   const withEdit = renderToStaticMarkup(createElement(RecordActionMenu, { name: "Truck", actions: [{ label: "View", href: "/vehicles/truck" }, { label: "Edit", href: "/vehicles/truck?edit=1" }] }));
-  assert.match(withEdit, /<span>View<\/span>/);
+  assert.doesNotMatch(withEdit, /<span>View<\/span>/);
   assert.match(withEdit, /aria-label="Actions for Truck"/);
   assert.match(withEdit, /aria-haspopup="menu"/);
+  assert.equal((withEdit.match(/<button/g) ?? []).length, 1);
+  assert.doesNotMatch(withEdit, /href="\/vehicles\/truck"/);
   assert.doesNotMatch(withEdit, /<span>(Actions|Edit)<\/span>/);
   const secondary = renderToStaticMarkup(createElement(RecordActionMenu, { name: "Document", actions: [{ label: "Edit" }, { label: "Delete" }] }));
   assert.equal((secondary.match(/<button/g) ?? []).length, 1);

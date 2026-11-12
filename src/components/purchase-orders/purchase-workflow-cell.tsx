@@ -18,19 +18,19 @@ export function PurchaseWorkflowAction({ row, canManage, canViewFinance, payment
   const workflow = getPurchaseWorkflow(row, { canManage, canViewFinance }, paymentBalance);
   const href = row.source === "purchase_order" ? `/purchase-orders/${row.purchase_id}` : `/site-purchases/${row.purchase_id}`;
   const context = `${row.purchase_number} · ${row.supplier_name}`;
-  if (workflow.action === "view" || workflow.action === "history") return null;
   let control: React.ReactNode;
+  if (workflow.action === "view" || workflow.action === "history") return <PurchaseRowAction name={context} viewHref={href} />;
   if (workflow.action === "payment" && paymentBalance !== null) {
-    control = <PurchaseRowAction key={`${row.purchase_id}:${paymentBalance}`} name={context} label="Record payment">
+    control = <PurchaseRowAction key={`${row.purchase_id}:${paymentBalance}`} name={context} viewHref={href} label="Record payment">
       <p className="mb-4 text-sm text-slate-600">{context}. This payment covers the whole purchase, across all its items.</p>
       <RecordSupplierPaymentForm orderId={row.purchase_id} balance={paymentBalance} idempotencyKey={randomUUID()} today={today} />
     </PurchaseRowAction>;
   } else if (workflow.action === "receive") {
-    control = <PurchaseRowAction name={context} label="Receive delivery" href={`${href}#delivery-inspection`} />;
+    control = <PurchaseRowAction name={context} viewHref={href} label="Receive delivery" href={`${href}#delivery-inspection`} />;
   } else {
     const target = workflow.action === "reimburse" ? `${href}?action=reimburse` : href;
     const text = workflow.action === "review" ? "Review receipt" : workflow.action === "reimburse" ? "Reimburse" : "View purchase";
-    control = <PurchaseRowAction name={context} label={text} href={target} />;
+    control = <PurchaseRowAction name={context} viewHref={href} label={text} href={target} />;
   }
   return control;
 }

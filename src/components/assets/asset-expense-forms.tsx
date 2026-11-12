@@ -5,7 +5,6 @@ import { SelectPicker } from "@/components/ui/select-picker";
 import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useState } from "react";
 import { assetExpenseLabels } from "@nognog/domain";
-import { Button } from "@/components/ui/button";
 import { fieldControlClass } from "@/components/ui/form-field";
 import { addAssetExpense, assignDriverTruck, reverseAssetExpense, type ExpenseActionState } from "./asset-expense-actions";
 
@@ -49,20 +48,6 @@ export function ReverseAssetExpenseForm({ assetId, expenseId }: { assetId: strin
     <label className={labelClass}>Correction reason<input name="reason" className={fieldControlClass} required minLength={3} maxLength={500} /></label>
     <Feedback state={state} />
     <RecordFormControls busy={pending} success={state.success} label="Remove expense from totals" />
-  </form>;
-}
-
-export function DriverTruckForm({ driverId, current, vehicles }: { driverId: string; current?: string; vehicles: { id: string; label: string }[] }) {
-  const [state, action, pending] = useActionState(assignDriverTruck, initialState);
-  const [selection, setSelection] = useState(current ?? "");
-  return <form action={action} className="grid gap-3">
-    <input type="hidden" name="driverId" value={driverId} />
-    <label className={labelClass}>Assigned truck<select name="assetId" className={fieldControlClass} value={selection} onChange={(event) => setSelection(event.target.value)}>
-      <option value="">No assignment</option>
-      {vehicles.map((vehicle) => <option key={vehicle.id} value={vehicle.id}>{vehicle.label}</option>)}
-    </select></label>
-    <Feedback state={state} />
-    <div><Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save assignment"}</Button></div>
   </form>;
 }
 
