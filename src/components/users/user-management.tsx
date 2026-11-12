@@ -1,7 +1,7 @@
 "use client";
 
-import { ActionDialog } from "@/components/ui/action-dialog";
-import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { RecordActionMenu, type RecordAction } from "@/components/ui/record-action-menu";
+import { RecordCreateDialog, RecordFormControls } from "@/components/ui/record-create-dialog";
 import { getFieldPlaceholder } from "@/components/ui/field-placeholder";
 import { useActionState, useRef, useState } from "react";
 import { PlusSignIcon } from "@hugeicons/core-free-icons";
@@ -45,7 +45,7 @@ export function UserInviteDialog({ roles }: { roles: AppRole[] }) {
   </>;
 }
 
-export function InitialRoleForm({ userId, roles }: { userId: string; roles: AppRole[] }) {
+function InitialRoleForm({ userId, roles }: { userId: string; roles: AppRole[] }) {
   const [state, action, pending] = useActionState(assignInitialRoleAction, initialState);
   return <form action={action} className="flex flex-wrap items-start justify-end gap-2">
     <input type="hidden" name="userId" value={userId} />
@@ -74,10 +74,21 @@ function UserPasswordResetFields({ userId }: { userId: string }) {
   </form>;
 }
 
-export function UserStatusForm(props: Parameters<typeof UserStatusFields>[0]) {
-  return <ActionDialog title={props.isActive ? "Deactivate account" : "Reactivate account"} triggerLabel={props.isActive ? "Deactivate" : "Reactivate"} description={props.isActive ? "This person will lose ERP access immediately. Their existing records remain in history." : "This person will regain access according to their existing role and assignments."}><UserStatusFields {...props} /></ActionDialog>;
-}
-
-export function UserPasswordResetForm(props: Parameters<typeof UserPasswordResetFields>[0]) {
-  return <ActionDialog title="Send password-reset link" triggerLabel="Reset password" description="Send a reset link to this user’s existing email address. Their password changes only after they complete the reset."><UserPasswordResetFields {...props} /></ActionDialog>;
+export function UserAccountActions({ userId, name, isActive, canReset, roles }: { userId: string; name: string; isActive: boolean; canReset: boolean; roles?: AppRole[] }) {
+  const [mode, setMode] = useState<"role" | "status" | "reset" | null>(null);
+  const actions: RecordAction[] = roles ? [{ label: "Assign role", onSelect: () => setMode("role") }] : [
+    { label: isActive ? "Deactivate" : "Reactivate", destructive: isActive, onSelect: () => setMode("status") },
+    ...(canReset ? [{ label: "Reset password", onSelect: () => setMode("reset") }] : []),
+  ];
+  const title = mode === "role" ? "Assign initial role" : mode === "reset" ? "Send password-reset link" : isActive ? "Deactivate account" : "Reactivate account";
+  return <>
+    <RecordActionMenu name={name} forceMenu actions={actions} />
+    {mode && <RecordCreateDialog title={title} hideTrigger initialOpen onClosed={() => setMode(null)}>
+      <p className="mb-4 font-semibold text-slate-900">{name}</p>
+      {mode === "role" ? <InitialRoleForm userId={userId} roles={roles ?? []} /> : <>
+        <p className="mb-5 text-sm leading-6 text-slate-600">{mode === "reset" ? "Send a reset link to this person’s existing email address. Their password changes only after they complete the reset." : isActive ? "This person will lose ERP access immediately. Their existing records remain in history." : "This person will regain access according to their existing role and assignments."}</p>
+        {mode === "reset" ? <UserPasswordResetFields userId={userId} /> : <UserStatusFields userId={userId} isActive={isActive} />}
+      </>}
+    </RecordCreateDialog>}
+  </>;
 }

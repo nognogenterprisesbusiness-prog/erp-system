@@ -3,6 +3,7 @@
 import { getFieldPlaceholder } from "@/components/ui/field-placeholder";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { checkoutEquipmentRequestAction, decideEquipmentRequestAction, returnEquipmentRequestAction, type EquipmentRequestActionState } from "@/app/(workspace)/equipment/requests/actions";
+import { RecordActionMenu } from "@/components/ui/record-action-menu";
 import { Button } from "@/components/ui/button";
 import { DialogHeading } from "@/components/ui/dialog-heading";
 import type { EquipmentRequestStatus } from "@/types/database";
@@ -10,7 +11,7 @@ import type { EquipmentRequestStatus } from "@/types/database";
 const initialState: EquipmentRequestActionState = { ok: false, message: "" };
 type Mode = "approve" | "reject" | "withdraw" | "checkout" | "return";
 
-export function EquipmentRequestActions({ id, status }: { id: string; status: EquipmentRequestStatus }) {
+export function EquipmentRequestActions({ id, status, name }: { id: string; status: EquipmentRequestStatus; name: string }) {
   const [decision, decide, decisionPending] = useActionState(decideEquipmentRequestAction, initialState);
   const [checkout, handover, checkoutPending] = useActionState(checkoutEquipmentRequestAction, initialState);
   const [returned, returnAction, returnPending] = useActionState(returnEquipmentRequestAction, initialState);
@@ -26,11 +27,13 @@ export function EquipmentRequestActions({ id, status }: { id: string; status: Eq
   const activeResult = mode === "return" ? returned : mode === "checkout" ? checkout : decision;
 
   return <>
-    <div className="flex flex-wrap items-center justify-end gap-2">
-      {status === "submitted" && <><Button size="sm" onClick={() => setMode("approve")} disabled={pending}>Approve</Button><Button size="sm" variant="outline" className="text-red-700" onClick={() => setMode("reject")} disabled={pending}>Reject</Button></>}
-      {status === "approved" && <><Button size="sm" onClick={() => setMode("checkout")} disabled={pending}>Hand over to site</Button><Button size="sm" variant="outline" className="text-red-700" onClick={() => setMode("withdraw")} disabled={pending}>Withdraw approval</Button></>}
-      {status === "checked_out" && <Button size="sm" variant="outline" onClick={() => setMode("return")} disabled={pending}>Record return</Button>}
-    </div>
+    <RecordActionMenu name={name} forceMenu disabled={pending} actions={status === "submitted" ? [
+      { label: "Approve", onSelect: () => setMode("approve") },
+      { label: "Reject", destructive: true, onSelect: () => setMode("reject") },
+    ] : status === "approved" ? [
+      { label: "Hand over to site", onSelect: () => setMode("checkout") },
+      { label: "Withdraw approval", destructive: true, onSelect: () => setMode("withdraw") },
+    ] : [{ label: "Record return", onSelect: () => setMode("return") }]} />
     {checkout.message && <p role={checkout.ok ? "status" : "alert"} className={`mt-1 text-xs ${checkout.ok ? "text-emerald-700" : "text-red-600"}`}>{checkout.message}</p>}
     <dialog ref={dialog} onCancel={event => { if (pending) event.preventDefault(); }} onClose={() => setMode(null)} aria-label={title} className="m-auto w-[min(100%-2rem,440px)] rounded-2xl border border-slate-200 bg-white p-6 text-[#07152d] shadow-2xl backdrop:bg-slate-950/45">
       <DialogHeading title={title} onClose={close} disabled={pending} />

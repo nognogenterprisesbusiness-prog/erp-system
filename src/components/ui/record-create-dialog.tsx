@@ -38,7 +38,7 @@ export function RecordCreateDialog({ title, children, initialOpen = false, close
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const completed = useRef(false);
-  useEffect(() => { if (initialOpen && !dialog.current?.open) { setOpened(true); dialog.current?.showModal(); } }, [initialOpen]);
+  useEffect(() => { if (initialOpen && !dialog.current?.open) { setOpened(true); setDraftMounted(true); dialog.current?.showModal(); } }, [initialOpen]);
   const close = () => {
     if (busy) return;
     if (confirmDiscard && dirty && !retainDraft) { discardDialog.current?.showModal(); return; }

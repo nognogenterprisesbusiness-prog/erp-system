@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { randomUUID } from "node:crypto";
 import { assetExpenseLabels, philippinesDate } from "@nognog/domain";
-import { IntentLink as Link } from "@/components/layout/intent-link";
 import { HistoryPagination } from "@/components/ui/history-pagination";
 import { createClient } from "@/lib/supabase/server";
 import { AddAssetExpenseForm, ReverseAssetExpenseForm } from "./asset-expense-forms";
@@ -42,23 +41,5 @@ export async function AssetExpenseHistory({ assetId, kind, page, canManage, canA
       </div></div>
     </li>)}</ul>}
     {((count ?? 0) > pageSize || currentPage > 1) && <div className="border-t border-slate-100 px-5 pb-4"><HistoryPagination replace path={path} page={currentPage} count={count ?? 0} pageSize={pageSize} parameter="assetExpensePage" filters={{ ...filters, section: "expenses" }} /></div>}
-  </section>;
-}
-
-export async function VehicleDrivers({ assetId, assetName }: { assetId: string; assetName: string }) {
-  const client = await createClient();
-  const { data, error } = await client.from("driver_truck_assignments").select("driver_id").eq("asset_id", assetId);
-  if (error) throw new Error("Unable to load assigned drivers.");
-  const ids = data.map(row => row.driver_id);
-  const profiles = ids.length ? await client.from("profiles").select("id,full_name,email,is_active,onboarding_required").in("id", ids).order("full_name") : null;
-  if (profiles?.error) throw new Error("Unable to load driver profiles.");
-  return <section className="mt-4 rounded-xl border border-slate-200 bg-white px-5 py-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-sm font-semibold text-slate-800">Assigned drivers</h2><Button variant="outline" size="sm" asChild><Link href="/users/drivers">Manage assignments</Link></Button></div>
-    {!ids.length ? <p className="mt-3 text-sm text-slate-500">No driver assigned to this vehicle.</p> : <ul className="mt-3 divide-y divide-slate-100">{profiles?.data?.map(driver => <li key={driver.id} className="flex flex-wrap items-center justify-between gap-3 py-2"><div><p className="text-sm font-medium text-slate-900">{driver.full_name}</p>{(driver.onboarding_required || !driver.is_active) && <p className="mt-1 text-xs text-slate-500">{driver.onboarding_required ? "Invitation pending" : "Account disabled"}</p>}</div>
-      <RecordCreateDialog title={driver.full_name} triggerLabel="View driver" triggerIcon={null} triggerVariant="outline" triggerSize="sm" triggerAriaLabel={`View driver ${driver.full_name}`}>
-        <dl className="divide-y divide-slate-100 text-sm">{[["Email", driver.email ?? "Not recorded"], ["Account", driver.onboarding_required ? "Invitation pending" : driver.is_active ? "Active" : "Disabled"], ["Assigned truck", assetName]].map(([label, value]) => <div key={label} className="grid gap-1 py-3 sm:grid-cols-[120px_minmax(0,1fr)]"><dt className="text-slate-500">{label}</dt><dd className="break-words font-medium text-slate-800">{value}</dd></div>)}</dl>
-        <div className="mt-5 flex justify-end"><Button variant="outline" asChild><Link href={`/users/drivers?driver=${driver.id}`}>Manage assignment</Link></Button></div>
-      </RecordCreateDialog>
-    </li>)}</ul>}
   </section>;
 }

@@ -73,10 +73,10 @@ export function VoidPayrollForm({ runId }: { runId: string }) {
 
 export function DepartmentForm({ department }: { department?: Department }) {
   const [state, action, pending] = useActionState(saveDepartmentAction, initial);
-  return <form action={action} className="flex flex-wrap items-end gap-2"><input type="hidden" name="id" value={department?.id ?? ""} />
-    <label className="grid gap-1 text-xs font-medium text-slate-600">{department ? "Rename" : "New department"}<input name="name" defaultValue={department?.name} required minLength={2} maxLength={80} placeholder="e.g. Office staff" className={`${fieldControlClass} h-9 w-48`} /></label>
-    <Button type="submit" size="sm" variant={department ? "outline" : "default"} disabled={pending}>{pending ? "Saving…" : department ? "Rename" : "Add"}</Button>
-    {state.message && <span role={state.ok ? "status" : "alert"} className={`basis-full text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</span>}
+  return <form action={action} className="grid gap-4"><input type="hidden" name="id" value={department?.id ?? ""} />
+    <label className="grid gap-2 text-sm font-medium text-slate-700">Department name<input name="name" defaultValue={department?.name} required minLength={2} maxLength={80} placeholder="e.g. Office staff" className={fieldControlClass} disabled={pending} /></label>
+    {state.message && <p role={state.ok ? "status" : "alert"} className={`text-sm ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}
+    <RecordFormControls busy={pending} success={state.ok} label={department ? "Save name" : "Add department"} />
   </form>;
 }
 

@@ -1,7 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { IntentLink as Link } from "@/components/layout/intent-link";
-import { Button } from "@/components/ui/button";
-import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
+import { PurchaseRowAction } from "./purchase-row-action";
 import { RecordSupplierPaymentForm } from "./purchase-order-forms";
 import { getPurchaseWorkflow } from "@/lib/purchasing/workflow";
 import type { PurchaseOverviewRow } from "@/types/database";
@@ -23,17 +21,16 @@ export function PurchaseWorkflowAction({ row, canManage, canViewFinance, payment
   if (workflow.action === "view" || workflow.action === "history") return null;
   let control: React.ReactNode;
   if (workflow.action === "payment" && paymentBalance !== null) {
-    control = <RecordCreateDialog key={`${row.purchase_id}:${paymentBalance}`} title="Supplier payment" triggerLabel="Record payment" triggerVariant="outline" triggerSize="sm" triggerIcon={null} triggerAriaLabel={`Record supplier payment for ${context}`}>
+    control = <PurchaseRowAction key={`${row.purchase_id}:${paymentBalance}`} name={context} label="Record payment">
       <p className="mb-4 text-sm text-slate-600">{context}. This payment covers the whole purchase, across all its items.</p>
       <RecordSupplierPaymentForm orderId={row.purchase_id} balance={paymentBalance} idempotencyKey={randomUUID()} today={today} />
-    </RecordCreateDialog>;
+    </PurchaseRowAction>;
   } else if (workflow.action === "receive") {
-    control = <Button size="sm" variant="outline" asChild><Link href={`${href}#delivery-inspection`} aria-label={`Inspect delivery for ${context}`}>Receive delivery</Link></Button>;
+    control = <PurchaseRowAction name={context} label="Receive delivery" href={`${href}#delivery-inspection`} />;
   } else {
     const target = workflow.action === "reimburse" ? `${href}?action=reimburse` : href;
-    const label = workflow.action === "review" ? "Review purchase and receipt" : workflow.action === "reimburse" ? "Manage reimbursement" : "View purchase";
     const text = workflow.action === "review" ? "Review receipt" : workflow.action === "reimburse" ? "Reimburse" : "View purchase";
-    control = <Button size="sm" variant="outline" asChild><Link href={target} aria-label={`${label} for ${context}`}>{text}</Link></Button>;
+    control = <PurchaseRowAction name={context} label={text} href={target} />;
   }
   return control;
 }

@@ -1,9 +1,6 @@
-import { Download04Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { IntentLink as Link } from "@/components/layout/intent-link";
-import { Button } from "@/components/ui/button";
 import { ProjectDocumentActions } from "@/components/projects/project-document-actions";
-import { canPreviewProjectDocument, projectDocumentBadge } from "@/lib/project-documents";
+import { projectDocumentBadge } from "@/lib/project-documents";
 import type { ProjectDocumentCategory } from "@/types/database";
 
 export type ProjectDocumentListItem = {
@@ -33,7 +30,7 @@ export function ProjectDocumentList({ documents, showProject = true, canManage =
     return <li key={document.id} className="flex min-w-0 flex-wrap items-center gap-3 rounded-xl border border-slate-200 p-3 sm:gap-4 sm:p-4">
       <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-orange-50 text-[11px] font-semibold tracking-wide text-orange-600">{projectDocumentBadge(document.content_type)}</span>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-semibold text-slate-900" title={document.file_name}>{document.file_name}</h3>
+        <h3 className="break-words text-sm font-semibold text-slate-900" title={document.file_name}>{document.file_name}</h3>
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
           <span className={`rounded-full px-2 py-0.5 font-medium ${chip.className}`}>{chip.label}</span>
           <span aria-hidden="true">·</span><span>{fileSize(document.file_size)}</span>
@@ -43,9 +40,7 @@ export function ProjectDocumentList({ documents, showProject = true, canManage =
         </p>
       </div>
       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-        {canPreviewProjectDocument(document.content_type) && <Button variant="outline" size="sm" asChild><a href={`/project-documents/${document.id}?view=1`} target="_blank" rel="noopener" aria-label={`View ${document.file_name}`}>View</a></Button>}
-        <Button variant="outline" size="sm" asChild><a href={`/project-documents/${document.id}`} aria-label={`Download ${document.file_name}`} title="Download"><HugeiconsIcon icon={Download04Icon} size={18} strokeWidth={1.6} />Download</a></Button>
-        {canManage && <ProjectDocumentActions document={document} />}
+        <ProjectDocumentActions document={document} canManage={canManage} />
       </div>
     </li>;
   })}</ul>;

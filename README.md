@@ -865,3 +865,11 @@ Unit records now use real section tabs, compact expense actions, selected-entry 
 | Date | Refinement | Verification | Scope |
 | --- | --- | --- | --- |
 | 2026-11-12 | Equipment / vehicle record layout and dialogs | 171 unit tests, typecheck, lint, production build; asset expense and fuel database suites; Admin / Finance / Warehouse browser checks and 390px review | Existing permissions, posting rules and mobile bundle unchanged; see linked verification above |
+
+### Compact row actions and readable filters (2026-11-12)
+
+View remains visible and secondary actions use three dots across shared lists, Users, Documents, equipment requests and Purchasing. Filters show full selected values, Departments uses focused dialogs, and trucks expose Add driver with account avatars. Existing assignment, financial and access rules remain. See [verification and limits](docs/row-actions-ux-20261112.md).
+
+| Date | Refinement | Verification | Scope |
+| --- | --- | --- | --- |
+| 2026-11-12 | Compact actions, readable filters, department dialogs and driver assignment UI | 173 unit tests, typecheck, lint, production build, isolated asset-expense suite and focused desktop/phone browser review | No migration or mobile bundle changes; existing posting and access rules retained |

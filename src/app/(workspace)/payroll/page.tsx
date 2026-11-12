@@ -60,13 +60,13 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
         })}</tbody></table>
     </DataTableShell></div>
     <HistoryPagination path="/payroll" page={page} count={runs.count ?? 0} pageSize={pageSize} />
-    <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <h2 className="text-base font-semibold">Departments</h2>
-      <p className="mt-1 text-xs text-slate-500">Group employees for payroll. Set an employee&apos;s department on their employee page.</p>
-      <ul className="mt-4 space-y-3">{departments.data.length === 0 && <li className="text-sm text-slate-500">No departments yet.</li>}
-        {departments.data.map((item) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3"><span className="text-sm font-medium">{item.name}</span>{user.canManage && <DepartmentForm department={item} />}</li>)}
-      </ul>
-      {user.canManage && <div className="mt-5 border-t border-slate-100 pt-4"><DepartmentForm /></div>}
+    <section className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="flex flex-wrap items-start justify-between gap-4 p-5 sm:p-6"><div><h2 className="text-lg font-semibold">Departments <span className="ml-2 text-sm font-normal text-slate-500">{departments.data.length}</span></h2><p className="mt-1 max-w-xl text-sm leading-6 text-slate-500">Group employees for payroll. Choose their department when editing an employee.</p></div>
+        {user.canManage && <RecordCreateDialog title="Add department" triggerLabel="Add department"><DepartmentForm /></RecordCreateDialog>}
+      </div>
+      {departments.data.length === 0 ? <div className="border-t border-slate-100 px-5 py-6 sm:px-6"><p className="text-sm font-medium text-slate-700">No departments yet</p><p className="mt-1 text-sm text-slate-500">{user.canManage ? "Add your first department, such as Office staff or Site crew." : "An Admin can add departments for payroll."}</p></div> : <ul className="divide-y divide-slate-100 border-t border-slate-100">
+        {departments.data.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6"><span className="min-w-0 break-words text-sm font-medium">{item.name}</span>{user.canManage && <RecordCreateDialog title={`Rename ${item.name}`} triggerLabel="Rename" triggerSize="sm" triggerVariant="outline"><DepartmentForm department={item} /></RecordCreateDialog>}</li>)}
+      </ul>}
     </section>
   </>;
 }

@@ -160,6 +160,4 @@ html:is([data-theme="dark"], [data-theme="blue"]) [class~="text-violet-700"] { c
 .record-detail-content :is(input, textarea, select) { max-width: 100%; }
 
 [data-record-actions] { position: sticky; right: 0; z-index: 1; width: 1%; min-width: 5rem; }
-@media (max-width: 639px) {
-  [data-record-actions] > div { max-width: 7rem; flex-direction: column; align-items: stretch; }
-}
+[data-record-actions] > div { display: inline-flex; flex-direction: row; flex-wrap: nowrap; align-items: center; max-width: none; }

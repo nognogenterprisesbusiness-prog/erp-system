@@ -5,13 +5,14 @@ import { useState, type FormEvent } from "react";
 import { deleteProjectDocumentAction, updateProjectDocumentAction } from "@/app/(workspace)/projects/document-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { canPreviewProjectDocument } from "@/lib/project-documents";
 import { RecordActionMenu } from "@/components/ui/record-action-menu";
 import { RecordCreateDialog, RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { projectDocumentCategories } from "@/lib/project-documents";
 import type { ProjectDocumentCategory } from "@/types/database";
 
-type EditableDocument = { id: string; file_name: string; category: ProjectDocumentCategory };
+type EditableDocument = { id: string; file_name: string; category: ProjectDocumentCategory; content_type: string };
 
 function EditDocumentForm({ document }: { document: EditableDocument }) {
   const dialog = useRecordDialog();
@@ -60,13 +61,17 @@ function DeleteDocumentForm({ document }: { document: EditableDocument }) {
   </div>;
 }
 
-// Admin-only menu on a document row.
-export function ProjectDocumentActions({ document }: { document: EditableDocument }) {
+// File actions preserve protected download routes; mutations remain Admin-only.
+export function ProjectDocumentActions({ document, canManage }: { document: EditableDocument; canManage: boolean }) {
   const [mode, setMode] = useState<"edit" | "delete" | null>(null);
   return <>
     <RecordActionMenu name={document.file_name} actions={[
-      { label: "Edit details", onSelect: () => setMode("edit") },
-      { label: "Delete document", destructive: true, onSelect: () => setMode("delete") },
+      ...(canPreviewProjectDocument(document.content_type) ? [{ label: "View", href: `/project-documents/${document.id}?view=1`, native: true, target: "_blank" as const }] : []),
+      { label: "Download", href: `/project-documents/${document.id}`, native: true },
+      ...(canManage ? [
+        { label: "Edit details", onSelect: () => setMode("edit") },
+        { label: "Delete document", destructive: true, onSelect: () => setMode("delete") },
+      ] : []),
     ]} />
     {mode && <RecordCreateDialog title={mode === "edit" ? "Edit document" : "Delete document"} hideTrigger initialOpen onClosed={() => setMode(null)}>
       {mode === "edit" ? <EditDocumentForm document={document} /> : <DeleteDocumentForm document={document} />}

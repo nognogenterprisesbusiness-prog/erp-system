@@ -103,7 +103,7 @@ async function PurchaseResults({ resultPromise, pageHref, canManage, canViewFina
             <td className="px-4 py-4 font-semibold tabular-nums">{peso.format(Number(row.order_total))}</td>
             <td className="px-4 py-4 text-slate-600">{row.location_name ?? "—"}</td>
             <td className="px-5 py-4"><PurchaseWorkflowCell row={row} canManage={canManage} canViewFinance={canViewFinance} paymentBalance={row.paymentBalance} today={today} /></td>
-            <td data-record-actions className="min-w-48 px-5 py-4 text-right bg-white"><div className="flex flex-wrap items-center justify-end gap-2"><PurchaseWorkflowAction row={row} canManage={canManage} canViewFinance={canViewFinance} paymentBalance={row.paymentBalance} today={today} /><RecordViewLink href={href} name={`purchase ${row.purchase_number}`} /></div></td>
+            <td data-record-actions className="min-w-48 px-5 py-4 text-right bg-white"><div className="flex flex-wrap items-center justify-end gap-2"><RecordViewLink href={href} name={`purchase ${row.purchase_number}`} /><PurchaseWorkflowAction row={row} canManage={canManage} canViewFinance={canViewFinance} paymentBalance={row.paymentBalance} today={today} /></div></td>
           </tr>;
         })}</tbody></table>
     </DataTableShell>

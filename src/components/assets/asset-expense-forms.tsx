@@ -1,6 +1,7 @@
 "use client";
 
 import { RecordFormControls } from "@/components/ui/record-create-dialog";
+import { SelectPicker } from "@/components/ui/select-picker";
 import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useState } from "react";
 import { assetExpenseLabels } from "@nognog/domain";
@@ -62,5 +63,18 @@ export function DriverTruckForm({ driverId, current, vehicles }: { driverId: str
     </select></label>
     <Feedback state={state} />
     <div><Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save assignment"}</Button></div>
+  </form>;
+}
+
+export function AddVehicleDriverForm({ assetId, drivers }: { assetId: string; drivers: { id: string; name: string; currentTruck?: string }[] }) {
+  const [state, action, pending] = useActionState(assignDriverTruck, initialState);
+  const [driverId, setDriverId] = useState("");
+  const selected = drivers.find(driver => driver.id === driverId);
+  return <form action={action} className="mt-5 grid gap-4">
+    <input type="hidden" name="assetId" value={assetId} />
+    <label className={labelClass}>Driver<SelectPicker label="Driver" name="driverId" value={driverId} onValueChange={setDriverId} placeholder="Choose a driver" disabled={pending} required options={drivers.map(driver => ({ value: driver.id, label: driver.name }))} /></label>
+    {selected && <p className="rounded-lg bg-slate-50 p-3 text-sm leading-6 text-slate-600">{selected.currentTruck ? `This driver is currently assigned to ${selected.currentTruck}. Saving moves them to this truck.` : "This driver has no truck assigned."} Other drivers assigned here stay on this truck.</p>}
+    <Feedback state={state} />
+    <RecordFormControls busy={pending} success={state.success} disabled={!driverId} label="Assign driver" />
   </form>;
 }
