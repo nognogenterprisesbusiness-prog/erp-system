@@ -857,3 +857,11 @@ Audit list/detail views now use saved record identities, plain change labels and
 ### Client readiness refinements (2026-11-12)
 
 Simplified repeated shortcuts and labels, repaired Daily Report navigation, and aligned missing-progress displays without changing business rules. The page/role/workflow QA and its remaining device checks are recorded in [client readiness](docs/client-readiness-20261112.md).
+
+### Equipment and vehicle detail refinement (2026-11-12)
+
+Unit records now use real section tabs, compact expense actions, selected-entry correction dialogs and explicit driver/QR viewing dialogs. Stale history page links recover without masking database failures. Business posting and access rules remain unchanged. See [verification and limits](docs/asset-detail-ux-20261112.md).
+
+| Date | Refinement | Verification | Scope |
+| --- | --- | --- | --- |
+| 2026-11-12 | Equipment / vehicle record layout and dialogs | 171 unit tests, typecheck, lint, production build; asset expense and fuel database suites; Admin / Finance / Warehouse browser checks and 390px review | Existing permissions, posting rules and mobile bundle unchanged; see linked verification above |

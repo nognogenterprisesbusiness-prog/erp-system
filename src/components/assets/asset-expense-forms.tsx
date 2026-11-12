@@ -47,7 +47,7 @@ export function ReverseAssetExpenseForm({ assetId, expenseId }: { assetId: strin
     <input type="hidden" name="expenseId" value={expenseId} />
     <label className={labelClass}>Correction reason<input name="reason" className={fieldControlClass} required minLength={3} maxLength={500} /></label>
     <Feedback state={state} />
-    <RecordFormControls busy={pending} success={state.success} label="Confirm expense reversal" />
+    <RecordFormControls busy={pending} success={state.success} label="Remove expense from totals" />
   </form>;
 }
 

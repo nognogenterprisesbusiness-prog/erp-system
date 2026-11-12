@@ -3,6 +3,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
+import { readCountedPage } from "./read-counted-page";
 import { safeSearchTerm } from "./search";
 import { readAllPages, readByIds } from "./read-all-pages";
 import type { AssetKind, AssetLocationKind, AssetLocationRow, AssetRow, AssetStatus, EquipmentDetailRow, VehicleDetailRow } from "@/types/database";
@@ -109,21 +110,19 @@ export async function getAsset(id: string, expectedKind: AssetKind, eventPage = 
   const asset = assets[0];
   if (!asset) notFound();
   const supabase = await createClient();
-  const { data: events, count, error } = await supabase.from("asset_events").select("id,asset_id,event_type,previous_status,current_status,previous_location_id,current_location_id,summary,details,actor_id,occurred_at", { count: "exact" }).eq("asset_id", id).order("occurred_at", { ascending: false }).order("id").range((eventPage - 1) * 20, eventPage * 20 - 1);
-  if (error) throw new Error("Unable to load asset history.");
+  const { data: events, count, page: currentPage } = await readCountedPage((from, to) => supabase.from("asset_events").select("id,asset_id,event_type,previous_status,current_status,previous_location_id,current_location_id,summary,details,actor_id,occurred_at", { count: "exact" }).eq("asset_id", id).order("occurred_at", { ascending: false }).order("id").range(from, to), eventPage, "asset history");
   const actorIds = [...new Set((events ?? []).map((event) => event.actor_id))];
   const { data: actors } = actorIds.length ? await supabase.from("profiles").select("id,full_name").in("id", actorIds) : { data: [] };
   const actorMap = new Map((actors ?? []).map((actor) => [actor.id, actor.full_name]));
   const locationMap = new Map((await getAssetLocations(true)).map((location) => [location.id, location]));
-  return { asset, eventCount: count ?? 0, eventPage, events: (events ?? []).map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user", previousLocation: event.previous_location_id ? locationMap.get(event.previous_location_id) : undefined, currentLocation: event.current_location_id ? locationMap.get(event.current_location_id) : undefined })) };
+  return { asset, eventCount: count, eventPage: currentPage, events: (events ?? []).map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user", previousLocation: event.previous_location_id ? locationMap.get(event.previous_location_id) : undefined, currentLocation: event.current_location_id ? locationMap.get(event.current_location_id) : undefined })) };
 }
 
 export async function getEquipmentUsage(assetId: string, page = 1) {
   const supabase = await createClient();
-  const { data: entries, count, error } = await supabase.from("project_equipment_usage")
+  const { data: entries, count, page: currentPage } = await readCountedPage((from, to) => supabase.from("project_equipment_usage")
     .select("id,project_id,use_date,hours_used,hourly_rate_snapshot,cost_total,work_note", { count: "exact" })
-    .eq("asset_id", assetId).order("use_date", { ascending: false }).order("id").range((page - 1) * 20, page * 20 - 1);
-  if (error) throw new Error("Unable to load equipment usage history.");
+    .eq("asset_id", assetId).order("use_date", { ascending: false }).order("id").range(from, to), page, "equipment usage history");
   const usageIds = (entries ?? []).map((entry) => entry.id);
   const projectIds = [...new Set((entries ?? []).map((entry) => entry.project_id))];
   const [reversals, projects] = await Promise.all([
@@ -133,18 +132,17 @@ export async function getEquipmentUsage(assetId: string, page = 1) {
   if (reversals.error || projects.error) throw new Error("Unable to resolve equipment usage history.");
   const reversed = new Map((reversals.data ?? []).map((row) => [row.usage_id, row]));
   const projectNames = new Map((projects.data ?? []).map((row) => [row.id, `${row.code} · ${row.name}`]));
-  return { page, rows: (entries ?? []).map((entry) => ({ ...entry, projectName: projectNames.get(entry.project_id) ?? "Project", reversal: reversed.get(entry.id) })), count: count ?? 0 };
+  return { page: currentPage, rows: (entries ?? []).map((entry) => ({ ...entry, projectName: projectNames.get(entry.project_id) ?? "Project", reversal: reversed.get(entry.id) })), count: count ?? 0 };
 }
 
 export type AssetLocationKindValue = AssetLocationKind;
 
 export async function getVehicleFuelReceipts(assetId: string, page = 1) {
   const supabase = await createClient();
-  const { data, count, error } = await supabase.from("site_purchases")
-    .select("id,purchase_number,project_id,project_site_id,receipt_date,receipt_amount,status,project_expense_id")
+  const { data, count, page: currentPage } = await readCountedPage((from, to) => supabase.from("site_purchases")
+    .select("id,purchase_number,project_id,project_site_id,receipt_date,receipt_amount,status,project_expense_id", { count: "exact" })
     .eq("vehicle_id", assetId).eq("purchase_kind", "fuel")
-    .order("receipt_date", { ascending: false }).order("id").range((page - 1) * 20, page * 20 - 1);
-  if (error) throw new Error("Unable to load vehicle diesel receipts.");
+    .order("receipt_date", { ascending: false }).order("id").range(from, to), page, "vehicle diesel receipts");
   const rows = data ?? [];
   const [projects, reversals] = await Promise.all([
     readByIds(rows.map((x) => x.project_id), (ids, from, to) => supabase.from("projects").select("id,name").in("id", ids).order("id").range(from, to), "diesel projects"),
@@ -152,5 +150,5 @@ export async function getVehicleFuelReceipts(assetId: string, page = 1) {
   ]);
   const names = new Map(projects.map((x) => [x.id, x.name]));
   const reversed = new Map(reversals.map((x) => [x.expense_id, x.reason]));
-  return { page, count: count ?? 0, rows: rows.map((x) => ({ ...x, projectName: names.get(x.project_id) ?? "Project", reversal: x.project_expense_id ? reversed.get(x.project_expense_id) : undefined })) };
+  return { page: currentPage, count: count ?? 0, rows: rows.map((x) => ({ ...x, projectName: names.get(x.project_id) ?? "Project", reversal: x.project_expense_id ? reversed.get(x.project_expense_id) : undefined })) };
 }

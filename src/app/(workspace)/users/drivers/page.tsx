@@ -42,14 +42,14 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
       <section className="mt-6 max-w-xl space-y-4 rounded-xl border border-slate-200 bg-white p-5">
         <div>
           <p className="text-xs text-slate-600">Current truck</p>
-          {currentTruck ? <Link className="mt-1 inline-block font-semibold text-cyan-800 underline" href={`/vehicles/${currentTruck.id}`}>{currentTruck.code} · {currentTruck.name}</Link>
+          {currentTruck ? <div className="mt-2 flex flex-wrap items-center justify-between gap-3"><p className="font-semibold text-slate-900">{currentTruck.code} · {currentTruck.name}</p><Button variant="outline" size="sm" asChild><Link href={`/vehicles/${currentTruck.id}`}>View truck</Link></Button></div>
             : <p className="mt-1 font-semibold">No truck assigned</p>}
           <p className="mt-1 text-xs text-slate-600">A driver has one truck at a time. Several drivers can share a truck for shifts.</p>
         </div>
         <form className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="driver" value={driver} />
           <label className="grid gap-1 text-sm">Find a truck<input className="rounded-md border border-slate-300 px-3 py-2" name="truck" defaultValue={search} maxLength={60} /></label>
-          <button className="rounded-md border border-slate-300 px-3 py-2 text-sm" type="submit">Search</button>
+          <Button type="submit" variant="outline">Search</Button>
         </form>
         <DriverTruckForm key={`${driver}:${current ?? ""}:${search}`} driverId={driver} current={current}
           vehicles={options.map((vehicle) => ({ id: vehicle.id, label: `${vehicle.code} · ${vehicle.name}` }))} />
@@ -74,14 +74,13 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
   const truckById = new Map(trucks?.data?.map((truck) => [truck.id, truck]));
   const truckByDriver = new Map(assignments?.data?.map((row) => [row.driver_id, truckById.get(row.asset_id)]));
   return <>
-    <PageHeader title="Drivers" description="Invite drivers and assign their trucks." action={<UserInviteDialog roles={["driver"]} />} />
-    <Link className="mt-4 inline-block text-sm underline" href="/users">All users</Link>
+    <PageHeader title="Drivers" description="Invite drivers and assign their trucks." action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href="/users">Back to users</Link></Button><UserInviteDialog roles={["driver"]} /></div>} />
     <ul className="mt-4 divide-y rounded-xl border border-slate-200 bg-white">
       {ids.length === 0 && <li className="p-4 text-sm text-slate-600">No drivers on this page.</li>}
       {ids.map((id) => {
         const profile = byId.get(id);
         if (!profile) return null;
-        return <li key={id} className="p-4"><Link className="font-medium text-cyan-800 underline" href={`/users/drivers?driver=${id}`}>{profile.full_name}</Link>
+        return <li key={id} className="p-4"><p className="font-semibold text-slate-900">{profile.full_name}</p>
           <p className="mt-1 text-sm text-slate-600">{profile.email} · {profile.onboarding_required ? "Invitation pending" : profile.is_active ? "Enabled" : "Disabled"}</p>
           <p className="mt-1 text-sm text-slate-700">{truckByDriver.get(id) ? `Truck: ${truckByDriver.get(id)!.code} · ${truckByDriver.get(id)!.name}` : "No truck assigned"}</p><div className="mt-3 flex justify-end"><RecordViewLink href={`/users/drivers?driver=${id}`} name={profile.full_name} /></div></li>;
       })}

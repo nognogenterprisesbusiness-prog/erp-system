@@ -125,3 +125,7 @@ Sidebar expansion follows the most specific authorized path on a navigation chan
 ### UX refinement boundaries (2026-11-12)
 
 Ordinary long-form dialogs may opt into `confirmDiscard`: editing then closing offers Keep editing or Discard changes. Successful completion bypasses this prompt. Pending commands remain guarded. This is separate from `retainDraft`, whose transaction payload and retry key must survive uncertain outcomes. Unscoped record selectors start blank; explicit authorized project/request/quotation context remains prefilled. Request transfer navigation uses a typed request-line foreign key rather than parsing a reference label. No workflow transition or financial rule changed.
+
+## Unit detail presentation (2026-11-12)
+
+`RecordSectionTabs` makes the active unit section explicit: expenses → details → project-use → history, restricted to sections already authorized by the server. These are presentation states, not asset lifecycle transitions. Inactive sections stay mounted to preserve form and retry state; the selected record ID resets the view for another unit. Query pagination selects the relevant section and replaces history inside the existing drawer. Correction remains open → reason → existing audited reversal → refreshed ledger; dismissing an unsubmitted add-expense form retains its draft. Stale counted offsets recover `PGRST103` or a successful empty counted offset to page one; other failures remain errors. See `asset-detail-ux-20261112.md`.
