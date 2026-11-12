@@ -228,3 +228,9 @@ Open Stock Counts directly and select a location before counting. Open a request
 ## Audit history checks (2026-11-12)
 
 As Admin, open Administration → Audit history, filter Updated, then View an entry. Check the account, time, record name and previous/new values. Close should return to the filtered list. A direct detail URL should retain Back to audit history; the side panel should show only Close for returning. Expand System details only when checking saved references or supporting snapshots. Check a newly added record and a cleared field; a cleared value must remain visible. Finance and other non-Admin roles must not gain audit access. See [scope and verification](docs/audit-history-ux-20261112.md).
+
+## Client readiness pass (2026-11-12)
+
+Check Purchasing → View without a duplicate history action; Profile keeps account details and appearance; Documents lists Files. Open a daily report: its number identifies it, Close preserves the list filter, and direct Back opens its project's report list. Missing progress must stay Not recorded in both project list/table and overview; a stored zero must remain 0%. Open Archive and cancel to verify confirmation without changing a real project.
+
+In mobile, verify Engineer/Foreman site lists, Bodegera's assigned warehouse stock and Release tab, and Driver's My Truck / My expenses / Profile tabs. Confirm a different site name stays visible while an identical project/site name is not repeated. Actual QR/camera/photo behavior still requires a physical phone. See [coverage and limits](docs/client-readiness-20261112.md).

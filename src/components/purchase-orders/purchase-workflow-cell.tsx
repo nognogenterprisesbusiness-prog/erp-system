@@ -20,7 +20,7 @@ export function PurchaseWorkflowAction({ row, canManage, canViewFinance, payment
   const workflow = getPurchaseWorkflow(row, { canManage, canViewFinance }, paymentBalance);
   const href = row.source === "purchase_order" ? `/purchase-orders/${row.purchase_id}` : `/site-purchases/${row.purchase_id}`;
   const context = `${row.purchase_number} · ${row.supplier_name}`;
-  if (workflow.action === "view") return null;
+  if (workflow.action === "view" || workflow.action === "history") return null;
   let control: React.ReactNode;
   if (workflow.action === "payment" && paymentBalance !== null) {
     control = <RecordCreateDialog key={`${row.purchase_id}:${paymentBalance}`} title="Supplier payment" triggerLabel="Record payment" triggerVariant="outline" triggerSize="sm" triggerIcon={null} triggerAriaLabel={`Record supplier payment for ${context}`}>
@@ -30,9 +30,9 @@ export function PurchaseWorkflowAction({ row, canManage, canViewFinance, payment
   } else if (workflow.action === "receive") {
     control = <Button size="sm" variant="outline" asChild><Link href={`${href}#delivery-inspection`} aria-label={`Inspect delivery for ${context}`}>Receive delivery</Link></Button>;
   } else {
-    const target = workflow.action === "reimburse" ? `${href}?action=reimburse` : workflow.action === "history" && row.source === "purchase_order" ? `${href}#supplier-payments` : href;
-    const label = workflow.action === "review" ? "Review purchase and receipt" : workflow.action === "reimburse" ? "Manage reimbursement" : workflow.action === "history" ? "Manage Supplier Payment history" : "View purchase";
-    const text = workflow.action === "review" ? "Review receipt" : workflow.action === "reimburse" ? "Reimburse" : workflow.action === "history" ? "View history" : "View purchase";
+    const target = workflow.action === "reimburse" ? `${href}?action=reimburse` : href;
+    const label = workflow.action === "review" ? "Review purchase and receipt" : workflow.action === "reimburse" ? "Manage reimbursement" : "View purchase";
+    const text = workflow.action === "review" ? "Review receipt" : workflow.action === "reimburse" ? "Reimburse" : "View purchase";
     control = <Button size="sm" variant="outline" asChild><Link href={target} aria-label={`${label} for ${context}`}>{text}</Link></Button>;
   }
   return control;

@@ -853,3 +853,7 @@ Existing web actions now have clearer location selection, request handoffs, conf
 ### Audit history usability (2026-11-12)
 
 Audit list/detail views now use saved record identities, plain change labels and responsive previous/new values. Duplicate panel return links and the repeated budget-history shortcut were removed. Existing canonical routes, immutable evidence and Admin-only access remain. See [verification](docs/audit-history-ux-20261112.md).
+
+### Client readiness refinements (2026-11-12)
+
+Simplified repeated shortcuts and labels, repaired Daily Report navigation, and aligned missing-progress displays without changing business rules. The page/role/workflow QA and its remaining device checks are recorded in [client readiness](docs/client-readiness-20261112.md).

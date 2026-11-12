@@ -54,14 +54,14 @@ const filtered = (filters: DocumentFilters) => Boolean(filters.query || filters.
 async function DocumentResults({ filters, canManage }: { filters: DocumentFilters; canManage: boolean }) {
   const result = await getDocumentPage(filters);
   return <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6" aria-label="Document list">
-    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-base font-semibold">Documents</h2><span className="text-xs text-slate-500">{result.count} document{result.count === 1 ? "" : "s"}</span></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-base font-semibold">Files</h2><span className="text-xs text-slate-500">{result.count} document{result.count === 1 ? "" : "s"}</span></div>
     {result.documents.length === 0 ? <EmptyState kind={filtered(filters) ? "results" : "items"} title="No documents found" description={filtered(filters) ? "Try another search or filter." : "Upload a document to start the project file library."} /> : <ProjectDocumentList documents={result.documents} canManage={canManage} />}
     {result.pageCount > 1 && <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4 text-xs text-slate-500"><span>Page {result.page} of {result.pageCount}</span><div className="flex gap-2">{result.page > 1 && <Button variant="outline" size="sm" asChild><Link href={documentsHref(filters, result.page - 1)}>Previous</Link></Button>}{result.page < result.pageCount && <Button variant="outline" size="sm" asChild><Link href={documentsHref(filters, result.page + 1)}>Next</Link></Button>}</div></div>}
   </section>;
 }
 
 function DocumentResultsSkeleton() {
-  return <section role="status" aria-label="Loading documents" className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Documents</h2><div className="mt-4 space-y-3">{Array.from({ length: 4 }, (_, index) => <div key={index} aria-hidden className="h-20 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none" />)}</div></section>;
+  return <section role="status" aria-label="Loading documents" className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Files</h2><div className="mt-4 space-y-3">{Array.from({ length: 4 }, (_, index) => <div key={index} aria-hidden className="h-20 animate-pulse rounded-xl bg-slate-100 motion-reduce:animate-none" />)}</div></section>;
 }
 
 export default async function DocumentsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

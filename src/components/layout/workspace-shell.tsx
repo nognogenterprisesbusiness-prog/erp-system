@@ -39,13 +39,14 @@ const navItems = [
 
 export function WorkspaceShell({ children, userId, name, avatar, roleLabel, canViewProcurement, canViewFinance, canViewDailyReports, canViewRequests, canDispatchRequests, canManage, canSubmitSitePurchases }: { children: React.ReactNode; userId: string; name: string; avatar?: string; roleLabel: string; canViewProcurement: boolean; canViewFinance: boolean; canViewDailyReports: boolean; canViewRequests: boolean; canDispatchRequests: boolean; canManage: boolean; canSubmitSitePurchases: boolean }) {
   const pathname = usePathname();
+  const visibleHrefs = new Set<string>();
   const items = navItems.filter((item) => {
     if ("quickReceiving" in item) return canDispatchRequests && !canManage;
     if ("quickSitePurchase" in item) return canSubmitSitePurchases && !canManage;
     if ("financeSitePurchase" in item) return canViewFinance;
     return (!("procurement" in item) || canViewProcurement) && (!("finance" in item) || canViewFinance) && (!("reports" in item) || canViewDailyReports) && (!("requests" in item) || canViewRequests || canDispatchRequests) && (!("receiving" in item) || (canDispatchRequests && !canManage)) && (!("sitePurchases" in item) || canViewFinance || canSubmitSitePurchases) && (!("manager" in item) || canManage);
-  }).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item);
-  const activeHref = pathname.startsWith("/materials") ? "/inventory" : pathname.startsWith("/purchase-orders/receive") ? "/purchase-orders/receive" : pathname.startsWith("/purchase-orders") ? "/purchase-orders" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
+  }).map((item) => item.href === "/qr-codes" && !canManage ? { ...item, href: "/scan" } : item).filter(item => { if (visibleHrefs.has(item.href)) return false; visibleHrefs.add(item.href); return true; });
+  const activeHref = pathname.startsWith("/materials") ? "/inventory" : pathname.startsWith("/purchase-orders/receive") && items.some(item => item.href === "/purchase-orders/receive") ? "/purchase-orders/receive" : pathname.startsWith("/purchase-orders") ? "/purchase-orders" : pathname.startsWith("/scan") && canManage ? "/qr-codes" : undefined;
   return <><Suspense fallback={null}><LiveRouteRefresh userId={userId} /></Suspense><AppShell name={name} avatar={avatar} roleLabel={roleLabel} items={items} activeHref={activeHref} footerItems={[{ href: "/profile", label: "My profile", icon: UserCircleIcon }, { href: "/notifications", label: "Notifications", icon: Notification01Icon }, { href: "/manual", label: "User manual", icon: HelpCircleIcon, newTab: true }]} homeHref="/dashboard" headerSearch={<HeaderSearch />} headerActions={<>
     <NotificationBell userId={userId} />
   </>} profileActions={<><Link href="/profile" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-normal text-slate-700 hover:bg-slate-50"><HugeiconsIcon icon={UserCircleIcon} size={17} strokeWidth={1.7} />My profile</Link><form action={logoutAction}><Button variant="ghost" className="w-full justify-start gap-2 px-3 text-sm font-normal" type="submit"><HugeiconsIcon icon={Logout01Icon} size={17} strokeWidth={1.7} />Sign out</Button></form></>}>{children}</AppShell></>;
