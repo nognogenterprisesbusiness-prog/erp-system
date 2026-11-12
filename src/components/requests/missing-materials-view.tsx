@@ -1,3 +1,4 @@
+import { RecordFacts } from "@/components/ui/record-facts";
 import { RequestWarehouseAssignment } from "@/components/requests/request-warehouse-assignment";
 import { notFound } from "next/navigation";
 import { DismissMissingMaterialForm, MissingMaterialForm, CreateSourcingSiteRequestForm } from "@/components/requests/missing-material-form";
@@ -59,8 +60,8 @@ export async function MissingMaterialsView({ pageParam }: { pageParam?: string }
         }, 0));
         const linkedMaterial = contexts[0]?.sourcing_material_id ?? links[0]?.material_id;
         return <article key={item.id} className="rounded-xl border border-slate-200 bg-white p-5">
-        <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-semibold">{item.material_name}</h3><p className="mt-1 text-xs text-slate-500">{item.project_name} · {item.site_name} · {item.warehouse_name}</p></div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium">{item.status === "resolved" ? "Site request created" : item.status === "dismissed" ? "Dismissed" : links.some((link) => ["rejected", "partially_approved", "cancelled"].includes(requestsById.get(link.material_request_id)?.status ?? "")) ? "Needs remaining site request" : contexts.length ? "Supplier sourcing / warehouse receipt" : "Admin sourcing / warehouse receipt"}</span></div>
-        <p className="mt-3 text-sm text-slate-700">{item.requested_quantity} {item.unit_name} · Needed {item.needed_on}</p><p className="mt-1 text-sm text-slate-600">{item.reason}</p>
+        <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-semibold">{item.material_name}</h3><RecordFacts className="mt-3" items={[{label:"Project",value:item.project_name},{label:"Site",value:item.site_name},{label:"Warehouse",value:item.warehouse_name}]} /></div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium">{item.status === "resolved" ? "Site request created" : item.status === "dismissed" ? "Dismissed" : links.some((link) => ["rejected", "partially_approved", "cancelled"].includes(requestsById.get(link.material_request_id)?.status ?? "")) ? "Needs remaining site request" : contexts.length ? "Supplier sourcing / warehouse receipt" : "Admin sourcing / warehouse receipt"}</span></div>
+        <RecordFacts className="mt-3" items={[{label:"Requested",value:`${item.requested_quantity} ${item.unit_name}`},{label:"Needed by",value:item.needed_on}]} /><p className="mt-1 text-sm text-slate-600">{item.reason}</p>
         {item.resolution_note && <p className="mt-3 text-sm text-slate-600">Review: {item.resolution_note}</p>}
         {contexts.length > 0 && <div className="mt-3 text-sm text-slate-700"><p className="font-medium">Supplier purchasing</p>{contexts.map((context) => {
           const order = ordersByKey.get(context.idempotency_key);

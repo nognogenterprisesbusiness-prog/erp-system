@@ -1,3 +1,4 @@
+import { RecordFacts } from "@/components/ui/record-facts";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { randomUUID } from "node:crypto";
 import { IntentLink as Link } from "@/components/layout/intent-link";
@@ -23,14 +24,14 @@ export default async function InvoiceDetailPage({ params, searchParams }: { para
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const outstanding = balance?.outstanding_amount ?? 0;
   return <>
-    <PageHeader title={invoice.invoice_number} description={`${invoice.project_code} · ${invoice.project_name} · ${invoice.client_name}`} action={<Button variant="outline" asChild><Link data-detail-back href="/billing">Back to billing</Link></Button>} />
+    <PageHeader title={invoice.invoice_number} facts={[{ label: "Project", value: invoice.project_name }, { label: "Project code", value: invoice.project_code }, { label: "Client", value: invoice.client_name }]} action={<Button variant="outline" asChild><Link data-detail-back href="/billing">Back to billing</Link></Button>} />
     <div className="mt-4 flex flex-wrap items-center gap-3"><p className="text-sm text-slate-600">Project and client names are recorded as they were when this invoice was issued.</p><Button variant="outline" size="sm" asChild><Link href={`/projects/${invoice.project_id}`}>View current project</Link></Button></div>
     {posted && ["payment", "reversal", "void"].includes(posted) && <p role="status" className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{posted === "payment" ? "Payment recorded." : posted === "reversal" ? "Payment reversed with an audit record." : "Invoice voided."}</p>}
     <section className="mt-7 grid gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:grid-cols-3 sm:p-6">
       <div><p className="text-xs text-slate-500">Invoice amount</p><p className="mt-1 text-xl font-semibold text-slate-900">{money(invoice.amount)}</p></div>
       <div><p className="text-xs text-slate-500">Paid</p><p className="mt-1 text-xl font-semibold text-slate-900">{money(balance?.paid_amount ?? 0)}</p></div>
       <div><p className="text-xs text-slate-500">Outstanding</p><p className="mt-1 text-xl font-semibold text-slate-900">{money(outstanding)}</p></div>
-      <div className="sm:col-span-3 border-t border-slate-100 pt-4 text-sm text-slate-600"><span className="font-medium text-slate-800">{invoice.description}</span><span className="ml-3">Issued {invoice.issued_on} · Due {invoice.due_on} · {invoice.status === "void" ? "Void" : outstanding === 0 ? "Paid" : "Open"}</span></div>
+      <div className="sm:col-span-3 border-t border-slate-100 pt-4 text-sm text-slate-600"><span className="font-medium text-slate-800">{invoice.description}</span><RecordFacts className="mt-3" items={[{label:"Issued on",value:invoice.issued_on},{label:"Due date",value:invoice.due_on},{label:"Status",value:invoice.status === "void" ? "Void" : outstanding === 0 ? "Paid" : "Open"}]} /></div>
       {invoice.status === "void" && <p className="sm:col-span-3 text-xs text-slate-600">Void reason: {invoice.void_reason}</p>}
     </section>
     {invoice.status === "issued" && outstanding > 0 && <div className="mt-5"><RecordPaymentForm invoiceId={id} idempotencyKey={randomUUID()} today={today} outstanding={outstanding} /></div>}

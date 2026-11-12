@@ -907,3 +907,7 @@ Notifications open as compact dialogs from the bell or inbox without changing th
 Attendance search/status now run across the selected date/project before 25-row pagination. Payroll totals aggregate all rows in PostgreSQL, detail shows 50 employees per page, and CSV streams 500-row batches without a 1,000-employee cutoff. Worker ID-card reads also page through the full dataset. Inventory cards lead with available quantity and remove availability-share meters and duplicate codes. Optional employee contact/account fields are grouped while required contact remains visible; Add employee references load only when opened. Daily-task navigation is ordered by role and Warehouse lands on inventory. Mobile notifications use explicit previews/read actions and PHT timestamps.
 
 Database update: `20261112170000_scalable_staff_reads.sql` (user confirmed staging applied). Applied migration history remains intact; see `supabase/README.md`. Scope and verification: `docs/staff-simplification-20261112.md`.
+
+### Readable record metadata (2026-11-12)
+
+Replaced crowded dot-separated metadata with reusable labeled facts across inventory warehouse balances, requests, employee/workforce details, payroll, billing, purchases, quotations and documents. Mobile delivery and attendance summaries now separate each value. Existing actions, quantities, routes and authorization are unchanged. Desktop and 390px web checks covered stock cards and payroll header facts; inventory had no horizontal page overflow. Web/mobile typecheck, lint and 176/31 tests passed. No migration required.

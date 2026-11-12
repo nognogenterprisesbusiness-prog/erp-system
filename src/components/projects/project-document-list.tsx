@@ -1,3 +1,4 @@
+import { RecordFacts } from "@/components/ui/record-facts";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { ProjectDocumentActions } from "@/components/projects/project-document-actions";
 import { projectDocumentBadge } from "@/lib/project-documents";
@@ -31,13 +32,7 @@ export function ProjectDocumentList({ documents, showProject = true, canManage =
       <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-orange-50 text-[11px] font-semibold tracking-wide text-orange-600">{projectDocumentBadge(document.content_type)}</span>
       <div className="min-w-0 flex-1">
         <h3 className="break-words text-sm font-semibold text-slate-900" title={document.file_name}>{document.file_name}</h3>
-        <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
-          <span className={`rounded-full px-2 py-0.5 font-medium ${chip.className}`}>{chip.label}</span>
-          <span aria-hidden="true">·</span><span>{fileSize(document.file_size)}</span>
-          {showProject && <><span aria-hidden="true">·</span>{document.project ? <Link href={`/projects/${document.project_id}?tab=documents`} className="font-medium text-cyan-700 hover:underline">{document.project.code} · {document.project.name}</Link> : <span>Project unavailable</span>}</>}
-          {document.uploaderName && <><span aria-hidden="true">·</span><span>{document.uploaderName}</span></>}
-          <span aria-hidden="true">·</span><time dateTime={document.created_at}>{date.format(new Date(document.created_at))}</time>
-        </p>
+        <div className="mt-2"><span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${chip.className}`}>{chip.label}</span><RecordFacts className="mt-2" items={[{label:"File size",value:fileSize(document.file_size)},...(showProject ? [{label:"Project",value:document.project ? <Link href={`/projects/${document.project_id}?tab=documents`} className="hover:text-cyan-700">{document.project.name}</Link> : "Project unavailable"}] : []),...(document.uploaderName ? [{label:"Uploaded by",value:document.uploaderName}] : []),{label:"Uploaded on",value:<time dateTime={document.created_at}>{date.format(new Date(document.created_at))}</time>}]} /></div>
       </div>
       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         <ProjectDocumentActions document={document} canManage={canManage} />

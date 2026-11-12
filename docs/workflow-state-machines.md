@@ -155,3 +155,7 @@ Notifications enter list/bell → preview → close or related record. Opening t
 ## Scalable staff reads and simplified forms (2026-11-12)
 
 Attendance filters run before pagination on the server; links preserve date/project/search/status. Payroll display pagination is independent from complete numeric SQL totals and batched CSV export. These are read-state changes, not payroll lifecycle transitions. Long edits use stable record identities and dirty-draft guards. New employee reference loading is open → loading → ready/error → existing save command. Inventory removes redundant presentation while preserving balances and reservations. Mobile notifications enter list → preview → explicit mark read or record navigation; errors remain visible and pending actions lock dismissal.
+
+## Readable record labels (2026-11-12)
+
+RecordFacts separates typed labels and values for detail headers and contextual metadata. Warehouse rows expose location, total stock and available quantities in aligned fields, including units. No string splitting is used to infer fields or change data. Record links, stock scopes, permissions and workflow commands remain the same. Mobile delivery and scan summaries use named fields/lines rather than concatenated status sentences.

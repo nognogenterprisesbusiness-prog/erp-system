@@ -1,3 +1,4 @@
+import { displayDate } from "@/lib/ui/display";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Button } from "@/components/ui/button";
 import { DataTableShell } from "@/components/ui/data-table-shell";
@@ -25,7 +26,7 @@ export default async function SupplierQuotationDetailPage({ params }: { params: 
   const today = todayInManila();
   const usable = user.canManage && quote.quoted_on <= today && (!quote.valid_until || quote.valid_until >= today);
   return <>
-    <PageHeader eyebrow="Supplier quotations" title={quote.reference} description={`${supplier.data.supplier_name} · quoted ${quote.quoted_on}${quote.valid_until ? ` · valid until ${quote.valid_until}` : ""}`}
+    <PageHeader eyebrow="Supplier quotations" title={quote.reference} facts={[{ label: "Supplier", value: supplier.data.supplier_name }, { label: "Quoted on", value: displayDate(quote.quoted_on) }, { label: "Valid until", value: quote.valid_until ? displayDate(quote.valid_until) : "No expiry" }]}
       action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href="/purchase-orders/quotations">All quotations</Link></Button>{usable && <Button asChild><Link href={`/purchase-orders?create=1&quotation=${quote.id}`}>Use for purchase</Link></Button>}</div>} />
     {quote.notes && <p className="mt-5 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">{quote.notes}</p>}
     <DataTableShell footer={<span className="text-sm font-semibold">Quoted total {money.format(Number(quote.total))}</span>}>
