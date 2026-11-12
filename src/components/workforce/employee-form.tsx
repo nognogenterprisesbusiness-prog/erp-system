@@ -26,7 +26,10 @@ export function EmployeeForm({ employee, contact, categories, profiles }: {
     if (!state.ok || state.message || completed.current) return;
     completed.current = true;
     if (employee && dialog) dialog.complete();
-    else if (state.data?.id) startTransition(() => router.replace(`/employees/${state.data?.id}`));
+    else if (state.data?.id) {
+      dialog?.complete();
+      startTransition(() => router.replace(`/employees/${state.data?.id}`));
+    }
   }, [state, dialog, router, employee]);
 
   const [profileId, setProfileId] = useState(employee?.profile_id ?? "unassigned");

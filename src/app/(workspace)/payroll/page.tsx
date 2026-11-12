@@ -32,17 +32,18 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
   const supabase = await createClient();
   const [runs, departments] = await Promise.all([
     supabase.from("payroll_runs").select("*", { count: "exact" }).order("period_start", { ascending: false }).order("created_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1),
-    supabase.from("departments").select("id,name").is("archived_at", null).order("name"),
+    supabase.from("departments").select("id,name,archived_at").order("name"),
   ]);
   if (runs.error || departments.error) throw new Error("Unable to load payroll.");
   const runIds = runs.data.map((run) => run.id);
   const lines = runIds.length ? await supabase.from("payroll_lines").select("run_id,attendance_pay,other_earnings,deductions").in("run_id", runIds) : null;
   if (lines?.error) throw new Error("Unable to load payroll totals.");
+  const activeDepartments = departments.data.filter((item) => !item.archived_at);
   const departmentName = new Map(departments.data.map((item) => [item.id, item.name]));
   const linesByRun = Map.groupBy(lines?.data ?? [], (line) => line.run_id);
 
   return <>
-    <PageHeader title="Payroll" description="Pay employees from posted attendance, plus salaries, allowances and deductions you enter." action={<RecordCreateDialog title="New payroll" triggerLabel="New payroll"><NewPayrollForm departments={departments.data} idempotencyKey={randomUUID()} defaults={defaultPeriod(philippinesDate())} /></RecordCreateDialog>} />
+    <PageHeader title="Payroll" description="Pay employees from posted attendance, plus salaries, allowances and deductions you enter." action={<RecordCreateDialog title="New payroll" triggerLabel="New payroll"><NewPayrollForm departments={activeDepartments} idempotencyKey={randomUUID()} defaults={defaultPeriod(philippinesDate())} /></RecordCreateDialog>} />
     <p className="mt-4 max-w-3xl text-xs leading-5 text-slate-500">Steps: create a payroll → enter other earnings and deductions → Admin finalizes → mark as paid. Payroll does not add project costs; project labour cost already comes from attendance. Government deductions (SSS, PhilHealth, Pag-IBIG, tax) are entered manually.</p>
     <div className="mt-6"><DataTableShell empty={runs.data.length === 0 ? <EmptyState title="No payroll yet" description="Use New payroll to pay a period." /> : undefined}>
       <table className="w-full min-w-[760px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Payroll</th><th className="px-4 py-3">Department</th><th className="px-4 py-3">Period / pay date</th><th className="px-4 py-3 text-right">Employees</th><th className="px-4 py-3 text-right">Net pay</th><th className="px-5 py-3">Status</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th></tr></thead>
@@ -61,11 +62,11 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
     </DataTableShell></div>
     <HistoryPagination path="/payroll" page={page} count={runs.count ?? 0} pageSize={pageSize} />
     <section className="mt-8 overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <div className="flex flex-wrap items-start justify-between gap-4 p-5 sm:p-6"><div><h2 className="text-lg font-semibold">Departments <span className="ml-2 text-sm font-normal text-slate-500">{departments.data.length}</span></h2><p className="mt-1 max-w-xl text-sm leading-6 text-slate-500">Group employees for payroll. Choose their department when editing an employee.</p></div>
-        {user.canManage && <RecordCreateDialog title="Add department" triggerLabel="Add department"><DepartmentForm /></RecordCreateDialog>}
+      <div className="flex flex-wrap items-start justify-between gap-4 p-5 sm:p-6"><div><h2 className="text-lg font-semibold">Departments <span className="ml-2 text-sm font-normal text-slate-500">{activeDepartments.length}</span></h2><p className="mt-1 max-w-xl text-sm leading-6 text-slate-500">Group employees for payroll. Choose their department when editing an employee.</p></div>
+        {user.canManage && <RecordCreateDialog size="sm" title="Add department" triggerLabel="Add department"><DepartmentForm /></RecordCreateDialog>}
       </div>
-      {departments.data.length === 0 ? <div className="border-t border-slate-100 px-5 py-6 sm:px-6"><p className="text-sm font-medium text-slate-700">No departments yet</p><p className="mt-1 text-sm text-slate-500">{user.canManage ? "Add your first department, such as Office staff or Site crew." : "An Admin can add departments for payroll."}</p></div> : <ul className="divide-y divide-slate-100 border-t border-slate-100">
-        {departments.data.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6"><span className="min-w-0 break-words text-sm font-medium">{item.name}</span>{user.canManage && <RecordCreateDialog title={`Rename ${item.name}`} triggerLabel="Rename" triggerSize="sm" triggerVariant="outline"><DepartmentForm department={item} /></RecordCreateDialog>}</li>)}
+      {activeDepartments.length === 0 ? <div className="border-t border-slate-100 px-5 py-6 sm:px-6"><p className="text-sm font-medium text-slate-700">No departments yet</p><p className="mt-1 text-sm text-slate-500">{user.canManage ? "Add your first department, such as Office staff or Site crew." : "An Admin can add departments for payroll."}</p></div> : <ul className="divide-y divide-slate-100 border-t border-slate-100">
+        {activeDepartments.map((item) => <li key={item.id} className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6"><span className="min-w-0 break-words text-sm font-medium">{item.name}</span>{user.canManage && <RecordCreateDialog size="sm" title={`Rename ${item.name}`} triggerLabel="Rename" triggerSize="sm" triggerVariant="outline" triggerIcon={null}><DepartmentForm department={item} /></RecordCreateDialog>}</li>)}
       </ul>}
     </section>
   </>;

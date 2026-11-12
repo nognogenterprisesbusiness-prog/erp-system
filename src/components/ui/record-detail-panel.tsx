@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./button";
 import { lockBodyScroll } from "@/lib/ui/body-scroll-lock";
@@ -11,11 +11,11 @@ export function RecordDetailPanel({ title, children }: { title: string; children
   const titleId = useId();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
     const unlockScroll = lockBodyScroll(document.body);
-    dialog.showModal();
+    if (!dialog.open) dialog.showModal();
     const update = () => setBusy(!!dialog.querySelector('[aria-busy="true"]'));
     const observer = new MutationObserver(update);
     observer.observe(dialog, { subtree: true, childList: true, attributes: true, attributeFilter: ["aria-busy"] });

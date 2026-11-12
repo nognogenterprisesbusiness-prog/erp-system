@@ -893,3 +893,7 @@ Employee, supplier, material and employee-category archiving now use confirmatio
 ### Employee jobs / trades dialog (2026-11-12)
 
 Replaced the standalone employee Categories screen with Jobs / trades on Employees. Add, Edit and Archive stay in that dialog, and old category bookmarks redirect there. Existing category schema, permissions and archive guards remain unchanged. Verified typecheck, lint, 173 tests, production build, desktop/390px dialog states and legacy redirect; no hosted records were changed during UI checks. No migration or mobile build needed.
+
+### Payroll and dialog usability (2026-11-12)
+
+Payroll amounts have separate read-only columns and a single Edit button opening a compact pay-adjustment dialog. Finalize/payment/void use consistent confirmation and pending controls. Fixed employee edit forms opening behind the details drawer and retained their action state across record refreshes; employee creation closes its form before showing the new record. Text inputs use an outlined cursor for contrast. Departments keep existing Add/Rename functionality. No database or payroll-rule change. See [focused verification](docs/payroll-dialog-refinement-20261112.md).

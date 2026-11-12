@@ -1,5 +1,6 @@
 "use client";
 
+import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { MoneyInput } from "@/components/ui/money-input";
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -36,15 +37,19 @@ export function NewPayrollForm({ departments, idempotencyKey, defaults }: { depa
   </form>;
 }
 
-export function PayrollLineForm({ runId, line }: { runId: string; line: { id: string; other_earnings: number; deductions: number; notes: string } }) {
+export function PayrollLineEditor({ runId, line }: { runId: string; line: { id: string; employee_name: string; other_earnings: number; deductions: number; notes: string } }) {
+  return <RecordCreateDialog size="sm" title={`Adjust pay · ${line.employee_name}`} triggerLabel="Edit" triggerVariant="outline" triggerIcon={null}><PayrollLineForm runId={runId} line={line} /></RecordCreateDialog>;
+}
+
+function PayrollLineForm({ runId, line }: { runId: string; line: { id: string; other_earnings: number; deductions: number; notes: string } }) {
   const [state, action, pending] = useActionState(updatePayrollLineAction, initial);
-  return <form action={action} className="flex flex-wrap items-end gap-2">
+  return <form action={action} className="grid gap-4">
     <input type="hidden" name="runId" value={runId} /><input type="hidden" name="lineId" value={line.id} />
-    <label className="grid gap-1 text-[11px] font-medium text-slate-500">Other earnings<MoneyInput name="otherEarnings" defaultValue={Number(line.other_earnings).toFixed(2)} inputMode="decimal" maxLength={10} className={`${fieldControlClass} h-9 w-28 text-right`} /></label>
-    <label className="grid gap-1 text-[11px] font-medium text-slate-500">Deductions<MoneyInput name="deductions" defaultValue={Number(line.deductions).toFixed(2)} inputMode="decimal" maxLength={10} className={`${fieldControlClass} h-9 w-28 text-right`} /></label>
-    <label className="grid gap-1 text-[11px] font-medium text-slate-500">Note<input name="notes" defaultValue={line.notes} maxLength={300} placeholder="e.g. Salary; SSS" className={`${fieldControlClass} h-9 w-40`} /></label>
-    <Button type="submit" size="sm" variant="outline" disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
-    {state.message && <span role={state.ok ? "status" : "alert"} className={`basis-full text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</span>}
+    <p className="text-sm leading-6 text-slate-600">Attendance pay is calculated from posted attendance. Enter only additional earnings and deductions here.</p>
+    <label className="grid gap-2 text-sm font-medium">Other earnings (PHP)<MoneyInput name="otherEarnings" defaultValue={Number(line.other_earnings).toFixed(2)} inputMode="decimal" className={`${fieldControlClass} text-right tabular-nums`} disabled={pending} /></label>
+    <label className="grid gap-2 text-sm font-medium">Deductions (PHP)<MoneyInput name="deductions" defaultValue={Number(line.deductions).toFixed(2)} inputMode="decimal" className={`${fieldControlClass} text-right tabular-nums`} disabled={pending} /></label>
+    <label className="grid gap-2 text-sm font-medium">Note (optional)<input name="notes" defaultValue={line.notes} maxLength={300} placeholder="e.g. Salary; SSS" className={fieldControlClass} disabled={pending} /></label>
+    <Message state={state} /><RecordFormControls busy={pending} success={state.ok} label="Save changes" />
   </form>;
 }
 
@@ -52,15 +57,15 @@ export function FinalizePayrollForm({ runId }: { runId: string }) {
   const [state, action, pending] = useActionState(finalizePayrollAction, initial);
   return <form action={action} className="space-y-2"><input type="hidden" name="runId" value={runId} />
     <p className="text-xs text-slate-500">Finalizing recalculates attendance pay and locks every line.</p>
-    <Button type="submit" disabled={pending}>{pending ? "Finalizing…" : "Finalize payroll"}</Button><Message state={state} /></form>;
+    <RecordFormControls busy={pending} success={state.ok} label="Confirm finalize" /><Message state={state} /></form>;
 }
 
 export function MarkPayrollPaidForm({ runId, today }: { runId: string; today: string }) {
   const [state, action, pending] = useActionState(markPayrollPaidAction, initial);
-  return <form action={action} className="flex flex-wrap items-end gap-3"><input type="hidden" name="runId" value={runId} />
+  return <form action={action} className="grid gap-4"><input type="hidden" name="runId" value={runId} />
     <FormField label="Paid on" htmlFor="paidOn"><DatePicker id="paidOn" name="paidOn" label="Paid on" defaultValue={today} maxDate={today} allowClear={false} required /></FormField>
     <FormField label="Payment reference" htmlFor="paymentReference" error={state.fieldErrors?.reference?.[0]}><input id="paymentReference" name="reference" required minLength={2} maxLength={120} placeholder="e.g. Bank batch 1102" className={fieldControlClass} /></FormField>
-    <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Mark as paid"}</Button>
+    <RecordFormControls busy={pending} success={state.ok} label="Confirm payment" />
     <div className="basis-full"><Message state={state} /></div></form>;
 }
 
@@ -68,7 +73,7 @@ export function VoidPayrollForm({ runId }: { runId: string }) {
   const [state, action, pending] = useActionState(voidPayrollAction, initial);
   return <form action={action} className="grid gap-2"><input type="hidden" name="runId" value={runId} />
     <FormField label="Reason" htmlFor="voidReason" error={state.fieldErrors?.reason?.[0]}><input id="voidReason" name="reason" required minLength={3} maxLength={500} className={fieldControlClass} /></FormField>
-    <RecordFormControls busy={pending} label="Confirm void payroll" /><Message state={state} /></form>;
+    <RecordFormControls busy={pending} success={state.ok} label="Confirm void payroll" /><Message state={state} /></form>;
 }
 
 export function DepartmentForm({ department }: { department?: Department }) {

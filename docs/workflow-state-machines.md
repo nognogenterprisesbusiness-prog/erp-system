@@ -143,3 +143,7 @@ Employee, supplier, material and employee-category archive commands enter `close
 ## Employee jobs / trades in place (2026-11-12)
 
 The Employees action now opens a Jobs / trades dialog: list → add/edit/archive → pending → existing command → close and revalidated Employees. Two row actions share one three-dot menu. Save no longer redirects to a category page; the existing SQL category foreign keys and archive guards remain unchanged. The old `/employees/categories` URL redirects to Employees with the dialog open, preserving a validated edit ID for bookmarks. No separate category management screen remains.
+
+## Payroll presentation and dialog ordering (2026-11-12)
+
+Payroll draft rows show saved amounts, with one Edit action opening the existing earnings/deductions form in a compact dialog. Save closes on success; errors stay visible. Finalize, payment and void commands use the same guarded dialog controls. Existing SQL commands, totals and role gates are unchanged. Record drawers now enter the browser top layer during layout, before auto-opened child forms run their passive effects, preventing the details drawer from covering Edit. Employee edit dialogs are keyed by employee ID rather than updated timestamp, preserving action state across revalidation; successful employee creation closes its form before navigating to the new record. Departments retain Add and Rename; no removal command or migration is included.

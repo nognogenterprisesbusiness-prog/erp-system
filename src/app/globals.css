@@ -161,3 +161,9 @@ html:is([data-theme="dark"], [data-theme="blue"]) [class~="text-violet-700"] { c
 
 [data-record-actions] { position: sticky; right: 0; z-index: 1; width: 1%; min-width: 5rem; }
 [data-record-actions] > div { display: inline-flex; flex-direction: row; flex-wrap: nowrap; align-items: center; max-width: none; }
+
+/* Keep the text pointer visible against both light and dark fields. */
+:is(input:not([type]), input[type="text"], input[type="search"], input[type="email"], input[type="url"], input[type="tel"], input[type="password"], input[type="number"], textarea, [contenteditable="true"]) {
+  cursor: url("/cursors/text.svg") 12 12, text;
+  caret-color: currentColor;
+}
