@@ -1,32 +1,32 @@
 "use client";
 
-import { useActionState, useState, type ComponentProps, type ReactNode } from "react";
+import { useActionState, useState, type ComponentProps } from "react";
 import { decideMaterialRequestAction, type RequestActionState } from "@/app/(workspace)/requests/actions";
 import { MaterialRequestItems } from "./material-request-items";
 import { MaterialRequestCancellation } from "./material-request-cancellation";
-import { RecordActionMenu } from "@/components/ui/record-action-menu";
 import { RecordCreateDialog, RecordFormControls } from "@/components/ui/record-create-dialog";
 import { Button } from "@/components/ui/button";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 
-export function MaterialRequestReview({ items, canDecide, canCancel, warehouseForm, initialMode }: {
+export function MaterialRequestReview({ items, canDecide, canCancel, initialMode }: {
   items: ComponentProps<typeof MaterialRequestItems>; canDecide: boolean; canCancel: boolean;
-  warehouseForm: ReactNode; initialMode: string | undefined;
+  initialMode: string | undefined;
 }) {
   const [mode, setMode] = useState(canDecide && initialMode === "approve" ? "approve" : "view");
+  const [pending, setPending] = useState(false);
   const [dialog, setDialog] = useState<"reject" | "cancel" | null>(canDecide && initialMode === "reject" ? "reject" : null);
   return <>
-    {(canDecide || canCancel) && <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+    {(canDecide || canCancel) && <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
       <p className="text-sm font-semibold">{mode === "approve" ? "Approve request" : "Request actions"}</p>
-      <div className="flex items-center gap-2">{mode === "approve" && <Button variant="outline" size="sm" onClick={() => setMode("view")}>Back to view</Button>}
-        <RecordActionMenu name="material request" actions={[
-          ...(canDecide ? [{ label: "Approve", onSelect: () => setMode("approve") }, { label: "Reject", destructive: true, onSelect: () => setDialog("reject") }] : []),
-          ...(canCancel ? [{ label: "Cancel request", destructive: true, onSelect: () => setDialog("cancel") }] : []),
-        ]} />
+      <div className="flex flex-wrap items-center gap-2">
+        {canDecide && <>
+          {mode === "approve" ? <Button variant="outline" size="sm" disabled={pending} onClick={() => setMode("view")}>View</Button> : <Button size="sm" onClick={() => setMode("approve")}>Approve</Button>}
+          <Button variant="outline" size="sm" disabled={pending} className="text-red-700 hover:bg-red-50" onClick={() => setDialog("reject")}>Reject</Button>
+        </>}
+        {canCancel && <Button variant="outline" size="sm" disabled={pending} onClick={() => setDialog("cancel")}>Cancel request</Button>}
       </div>
     </div>}
-    {mode === "approve" && canDecide && warehouseForm}
-    <MaterialRequestItems key={`${items.requestId}:${items.defaultWarehouseId}:${mode}`} {...items} canDecide={canDecide && mode === "approve"} onReject={() => setDialog("reject")} />
+    <MaterialRequestItems key={`${items.requestId}:${items.defaultWarehouseId}:${mode}`} {...items} canDecide={canDecide && mode === "approve"} onReject={() => setDialog("reject")} onPendingChange={setPending} />
     {dialog && <RecordCreateDialog key={dialog} title={dialog === "reject" ? "Reject request" : "Cancel request"} initialOpen hideTrigger onClosed={() => setDialog(null)}>
       {dialog === "reject" ? <RequestRejection requestId={items.requestId} lineIds={items.lines.map(line => line.id)} /> : <MaterialRequestCancellation requestId={items.requestId} />}
     </RecordCreateDialog>}

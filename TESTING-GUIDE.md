@@ -2,7 +2,7 @@
 
 ## Material request review
 
-For a request awaiting approval, open its three-dot menu. **View** opens details without approval fields. **Approve** opens quantities and warehouse sources in the same panel. Choose one warehouse or split quantities between warehouses, then approve. Reductions require a reason. **Reject** asks for confirmation and a reason; it reserves no stock. Setting all quantities to zero also opens rejection confirmation. **Cancel request** is in the request's action menu and requires a reason; it is available only before dispatch. Only authorized reviewers see approval actions.
+For a request awaiting approval, open its three-dot menu. **View** opens details without approval fields. **Approve** opens quantities and warehouse sources in the same panel. Use Choose warehouses in each material row to select one warehouse or split its quantity between warehouses, then approve. There is no separate Save warehouse step in the approval panel. Reductions require a reason. **Reject** asks for confirmation and a reason; it reserves no stock. Setting all quantities to zero also opens rejection confirmation. **Approve**, **Reject** and **Cancel request** are visible buttons inside the request panel. Cancellation requires a reason; it is available only before dispatch. Only authorized reviewers see approval actions.
 
 This guide shows what each account can do and walks through one complete project, from buying materials to billing the client. Use test projects and test stock during this round, not real company records.
 

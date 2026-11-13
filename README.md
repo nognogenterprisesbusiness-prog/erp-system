@@ -8,6 +8,8 @@ The interface uses one visible action button when a row has one action, and one 
 
 The dated implementation notes below are historical checkpoints. Current deployment and phone acceptance must be verified separately; source pushes and native bundle exports are not Play Store releases.
 
+**Material request details:** Approve, Reject and Cancel request are visible buttons. Materials include their existing item photo; reviewers choose warehouse quantities in each row and submit them with approval. List action menus, authorization, reservation and dispatch rules stay consistent with the existing workflow.
+
 **Project Finance:** budget, a visual cost breakdown, expense entries, equipment hours and budget history share one tab. Legacy cost-page links return to Finance with their category and pagination preserved.
 
 **Printing and record access:** QR Print label opens the browser print dialog from the current screen. Record titles and references open existing authorized details; Cards/Table choices remain saved locally per list. Warehouse and asset names appear before their smaller reference codes.
