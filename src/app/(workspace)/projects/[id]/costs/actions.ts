@@ -38,7 +38,7 @@ export async function setEquipmentRateAction(_: ProjectCostActionState, form: Fo
   const { error } = await supabase.rpc("set_equipment_hour_rate", { p_asset_id: parsed.data.assetId, p_hourly_rate: parsed.data.hourlyRate, p_effective_start_date: parsed.data.effectiveOn });
   if (error) return fail(costError(error));
   update(projectId.data);
-  redirect(`/projects/${projectId.data}/costs?posted=rate`);
+  redirect(`/projects/${projectId.data}?tab=finance&posted=rate`);
 }
 
 export async function postEquipmentUsageAction(_: ProjectCostActionState, form: FormData): Promise<ProjectCostActionState> {
@@ -86,7 +86,7 @@ export async function postAdditionalExpenseAction(_: ProjectCostActionState, for
   const { error } = await supabase.rpc("post_project_additional_expense", { p_idempotency_key: input.idempotencyKey, p_project_id: input.projectId, p_expense_date: input.expenseDate, p_category: input.category, p_description: input.description, p_external_reference: input.externalReference, p_amount: input.amount });
   if (error) return fail(costError(error));
   update(input.projectId);
-  redirect(`/projects/${input.projectId}/costs?posted=expense`);
+  redirect(`/projects/${input.projectId}?tab=finance&posted=expense`);
 }
 
 export async function adjustBudgetAction(_: ProjectCostActionState, form: FormData): Promise<ProjectCostActionState> {
@@ -99,8 +99,8 @@ export async function adjustBudgetAction(_: ProjectCostActionState, form: FormDa
   if (error) return fail(costError(error));
   update(input.projectId);
   if (value(form, "returnTo") === "finance") redirect(`/projects/${input.projectId}?tab=finance&posted=budget`);
-  if (value(form, "returnTo") === "budget") redirect(`/projects/${input.projectId}/costs?view=budget&posted=budget`);
-  redirect(`/projects/${input.projectId}/costs?posted=budget`);
+  if (value(form, "returnTo") === "budget") redirect(`/projects/${input.projectId}?tab=finance&posted=budget#budget-history`);
+  redirect(`/projects/${input.projectId}?tab=finance&posted=budget`);
 }
 
 export async function reverseProjectCostAction(_: ProjectCostActionState, form: FormData): Promise<ProjectCostActionState> {
@@ -115,5 +115,5 @@ export async function reverseProjectCostAction(_: ProjectCostActionState, form: 
   const { error } = await supabase.rpc("reverse_project_cost_entry", { p_idempotency_key: input.idempotencyKey, p_kind: input.kind, p_entry_id: input.entryId, p_reason: input.reason });
   if (error) return fail(costError(error));
   update(input.projectId);
-  redirect(`/projects/${input.projectId}/costs?posted=reversal`);
+  redirect(`/projects/${input.projectId}?tab=finance&posted=reversal`);
 }

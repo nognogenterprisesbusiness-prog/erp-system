@@ -1,6 +1,7 @@
 "use client";
 
 import { displayMoney } from "@/lib/ui/display";
+import { RecordActionMenu } from "@/components/ui/record-action-menu";
 import { Button } from "@/components/ui/button";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -64,4 +65,19 @@ export function ReverseCostForm({ projectId, kind, entryId, idempotencyKey }: { 
   const [state, action, pending] = useActionState(reverseProjectCostAction, initialState);
   const [reason, setReason] = useState("");
   return <form action={action} className="space-y-3"><input type="hidden" name="idempotencyKey" value={idempotencyKey} /><input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="kind" value={kind} /><input type="hidden" name="entryId" value={entryId} /><FormField label="Correction reason" htmlFor={`reverse-${entryId}`} error={state.fieldErrors?.reason?.[0]}><input id={`reverse-${entryId}`} name="reason" value={reason} onChange={(event) => setReason(event.target.value)} className={fieldControlClass} minLength={3} maxLength={500} disabled={pending} required /></FormField>{state.message && <p role="alert" className="text-xs text-red-700">{state.message}</p>}<RecordFormControls busy={pending} label="Reverse this entry" /></form>;
+}
+
+export function ProjectExpenseActions({ projectId, entryId, receiptId, canCorrect, reversalReason, idempotencyKey }: { projectId: string; entryId: string; receiptId: string | null; canCorrect: boolean; reversalReason?: string; idempotencyKey: string }) {
+  const [correcting, setCorrecting] = useState(false);
+  return <>
+    <RecordActionMenu name="expense entry" actions={[
+      ...(receiptId ? [{ label: "View original receipt", href: `/site-purchases/${receiptId}` }] : []),
+      ...(canCorrect && reversalReason === undefined ? [{ label: "Correct entry", onSelect: () => setCorrecting(true) }] : []),
+    ]} />
+    {reversalReason !== undefined ? <p className="mt-2 max-w-64 text-xs text-slate-500">Reversed: {reversalReason}</p> : !canCorrect && !receiptId ? <span className="text-xs text-slate-500">Posted</span> : null}
+    {correcting && <RecordCreateDialog title="Correct project expense" hideTrigger initialOpen onClosed={() => setCorrecting(false)}>
+      <p className="mb-4 text-sm leading-6 text-slate-600">Reverse this expense with a reason. It will be excluded from actual costs and kept in history. Record a new expense if a replacement is needed.</p>
+      <ReverseCostForm projectId={projectId} kind="expense" entryId={entryId} idempotencyKey={idempotencyKey} />
+    </RecordCreateDialog>}
+  </>;
 }

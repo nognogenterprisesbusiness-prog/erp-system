@@ -1,3 +1,4 @@
+import { ProjectCostRecords, type ProjectCostFilters } from "@/components/projects/project-cost-records";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { PendingFormControls } from "@/components/ui/pending-form-controls";
 import { IntentLink as Link } from "@/components/layout/intent-link";
@@ -44,7 +45,7 @@ const tabs = [
 
 export default async function ProjectDetailPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string; edit?: string; page?: string; posted?: string }>;
+  searchParams: Promise<ProjectCostFilters & { tab?: string; edit?: string; page?: string }>;
 }) {
   const [{ id }, filters, user] = await Promise.all([params, searchParams, requireUser()]);
   const data = await getProject(id);
@@ -119,10 +120,10 @@ export default async function ProjectDetailPage({ params, searchParams }: {
         <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-base font-semibold">Project budget</h2><p className="mt-1 text-sm text-slate-500">Remaining budget = approved budget minus actual posted costs.</p></div>{user.canManage && <ProjectBudgetAdjustment projectId={id} budget={Number(profitability.approved_budget)} cost={Number(profitability.total_posted_cost)} initialKey={randomUUID()} returnTo="finance" />}</div>
           <div className="mt-5"><ProjectBudgetSummary budget={Number(profitability.approved_budget)} cost={Number(profitability.total_posted_cost)} /></div>
-          <div className="mt-5 flex flex-wrap gap-3 border-t border-slate-100 pt-4"><Button variant="outline" asChild><Link href={`/projects/${id}/costs?view=expenses`}>View expense entries</Link></Button><Button variant="outline" asChild><Link href={`/projects/${id}/costs`}>{user.canManage ? "Record costs & view history" : "View cost history"}</Link></Button><Button variant="outline" asChild><Link href={`/projects/${id}/costs?view=budget`}>Budget change history</Link></Button></div>
         </section>
         {costBreakdown}
         {materialCostSection}
+        <ProjectCostRecords projectId={id} filters={filters} />
         <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6"><h2 className="text-base font-semibold">Billing and estimated profit</h2><dl className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[["Contract value", profitability.contract_value], ["Estimated gross profit", profitability.estimated_gross_profit], ["Issued invoices", profitability.invoiced_amount], ["Payments received", profitability.cash_received], ["Outstanding invoices", profitability.receivables]].map(([label, amount]) => <div key={String(label)}><dt className="text-xs text-slate-500">{label}</dt><dd className="mt-1 text-lg font-semibold tabular-nums">{money.format(Number(amount))}</dd></div>)}</dl><p className="mt-5 text-sm leading-6 text-slate-500">Estimated profit uses the contract value minus actual costs. Payments do not change the approved budget.</p><Button variant="outline" className="mt-4" asChild><Link href="/billing">Client invoices & payments</Link></Button></section>
       </div>}
     </div>

@@ -159,3 +159,9 @@ Attendance filters run before pagination on the server; links preserve date/proj
 ## Readable record labels (2026-11-12)
 
 RecordFacts separates typed labels and values for detail headers and contextual metadata. Warehouse rows expose location, total stock and available quantities in aligned fields, including units. No string splitting is used to infer fields or change data. Record links, stock scopes, permissions and workflow commands remain the same. Mobile delivery and scan summaries use named fields/lines rather than concatenated status sentences.
+
+## Project Finance navigation
+
+Project Finance owns the budget summary, compact category breakdown, cost-entry dialogs, expense records, equipment-hour history and budget-change history. There is no separate cost-management screen. Legacy `/projects/:id/costs` bookmarks redirect to the project's Finance tab, preserving expense filters, pagination and posted-result messages. Expense and equipment category actions target the corresponding Finance section. The existing protected export/evidence routes and attendance workflow remain unchanged.
+
+The read layer keeps histories paginated. Corrections still call the existing server-validated reversal command; moving a form does not change its authorization, reference or idempotency key. Single row actions remain visible; multiple expense actions share the three-dot menu. Budget changes and successful cost commands return to Finance.

@@ -8,6 +8,8 @@ The interface uses one visible action button when a row has one action, and one 
 
 The dated implementation notes below are historical checkpoints. Current deployment and phone acceptance must be verified separately; source pushes and native bundle exports are not Play Store releases.
 
+**Project Finance:** budget, a compact cost breakdown, expense entries, equipment hours and budget history share one tab. Legacy cost-page links return to Finance with their category and pagination preserved.
+
 ## Screenshots
 
 These are real application previews, not design mockups. The web images show the 13 November 2026 refinement pass against staging. Test records and quantities are examples.
