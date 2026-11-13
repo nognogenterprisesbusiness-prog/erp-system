@@ -16,7 +16,7 @@ Names are the primary label; codes are secondary text on their own line. The sha
 
 ## Database rollout
 
-Apply `supabase/migrations/20261113100000_scalable_registry_and_chart_reads.sql` to staging before deploying dependent web code. It adds two read functions and a partial consumption-date index. It does not delete tables or records or rewrite prior migrations. The staging application is awaiting user confirmation at the time this note was written.
+Apply `supabase/migrations/20261113100000_scalable_registry_and_chart_reads.sql` to staging before deploying dependent web code. It adds two read functions and a partial consumption-date index. It does not delete tables or records or rewrite prior migrations. The user confirmed staging application. The location search and monthly consumption functions were then verified against staging for Admin, Finance, Engineer, Foreman and Warehouse. Each chart result reconciles with that role’s visible unreversed ledger. The local production dashboard loads the chart against staging successfully.
 
 ## Verification
 
@@ -25,6 +25,7 @@ Apply `supabase/migrations/20261113100000_scalable_registry_and_chart_reads.sql`
 - 42 isolated PostgreSQL workflow checks passed, covering request approval/retry, competing dispatch, partial receipt/correction, cost reconciliation, billing, purchasing and denied-role access.
 - Attendance evidence suite passed: QR verification before a fresh photo, cancellation, expiry/old-photo rejection, correct worker/private evidence, concurrent retries and replaced-card denial.
 - Driver/asset expense suite passed: one truck per driver/shared shifts, reassignment races, own-history access, retries, receipt isolation and audited reversals without project double-counting.
+- With `ERP_TEST_REGISTRY_SQL_APPLIED=1`, the HTTP suite also verifies location searches, selected-ID resolution and chart/ledger reconciliation for all five roles against staging.
 - Reference HTTP checks against the local web server and authorized staging accounts passed for Admin, Finance, Engineer, Foreman and Warehouse: bounded results, multiword employee-name search, invalid inputs, role denial and no-store responses.
 - Browser checks confirmed real employee attendance, retained detail context while editing, discard handling, query-only cancel without a false discard prompt, and name/code project search.
 - The aggregation query plan in the isolated fixture uses the new partial date index and existing reversal index. This is not a hosted throughput benchmark.
@@ -32,7 +33,7 @@ Apply `supabase/migrations/20261113100000_scalable_registry_and_chart_reads.sql`
 
 ## Remaining release evidence
 
-Staging migration and live location/chart checks must be confirmed before deployment. Not every historical ERP screen has been visually accepted for every role. Remaining whole-company project-management/filter reference lists and project-wide workforce summaries still need separately measured scaling work; this change does not certify that all screens can render 100,000 rows at once. Keep database paging and bounded UI lists rather than removing safe page sizes. No company data, migration history, or stored optional field values were deleted as cleanup.
+Staging migration and live location/chart checks passed on 13 November 2026. Not every historical ERP screen has been visually accepted for every role. Remaining whole-company project-management/filter reference lists and project-wide workforce summaries still need separately measured scaling work; this change does not certify that all screens can render 100,000 rows at once. Keep database paging and bounded UI lists rather than removing safe page sizes. No company data, migration history, or stored optional field values were deleted as cleanup.
 
 ## Review screenshots
 

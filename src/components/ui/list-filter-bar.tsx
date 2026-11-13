@@ -50,7 +50,7 @@ export function ListFilterBar({ className, children, viewKey, viewTitle, ...prop
           || (target instanceof HTMLInputElement && ["search", "hidden"].includes(target.type))) return;
         navigate(false);
       }}
-      className={cn("[&>[data-searchable-select]]:w-full sm:[&>[data-searchable-select]]:min-w-56 sm:[&>[data-searchable-select]]:flex-1 sm:[&>[data-searchable-select]]:max-w-sm mt-7 flex flex-wrap items-center gap-3 [&>button[role=combobox]]:w-full sm:[&>button[role=combobox]]:min-w-56 sm:[&>button[role=combobox]]:w-auto sm:[&>button[role=combobox]]:flex-1 sm:[&>button[role=combobox]]:max-w-sm", className)}
+      className={cn("[&>:is([data-searchable-select],[data-reference-select])]:w-full sm:[&>:is([data-searchable-select],[data-reference-select])]:min-w-56 sm:[&>:is([data-searchable-select],[data-reference-select])]:flex-1 sm:[&>:is([data-searchable-select],[data-reference-select])]:max-w-sm mt-7 flex flex-wrap items-center gap-3 [&>button[role=combobox]]:w-full sm:[&>button[role=combobox]]:min-w-56 sm:[&>button[role=combobox]]:w-auto sm:[&>button[role=combobox]]:flex-1 sm:[&>button[role=combobox]]:max-w-sm", className)}
     >
       {children}
       {viewKey && <RecordListViewToggle storageKey={viewKey} title={viewTitle ?? viewKey} />}

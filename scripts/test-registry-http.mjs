@@ -32,6 +32,46 @@ for (const role of ['admin','finance','engineer','foreman','warehouse']) {
       if(employees.choices.length){const first=employees.choices[0];const found=await (await read({kind:'employee',q:first.label})).json();assert.ok(found.choices.some(row=>row.value===first.value),'full employee names remain searchable');}
       if(process.env.ERP_TEST_REGISTRY_SQL_APPLIED==='1') { const response=await read({kind:'asset_location'});assert.equal(response.status,200);assert.ok((await response.json()).choices.length<=20); }
     }
+    if(process.env.ERP_TEST_REGISTRY_SQL_APPLIED==='1') {
+      const locations = await read({kind:'asset_location'});
+      assert.equal(locations.status,200,`${role} location search`);
+      const choices=await locations.json();
+      assert.ok(choices.choices.length<=20);
+      if(choices.choices.length) {
+        const first=choices.choices[0];
+        const selected=await (await read({kind:'asset_location',selected:first.value})).json();
+        assert.equal(selected.choices[0]?.value,first.value);
+      }
+      const now=new Date();
+      const start=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-5,1)).toISOString().slice(0,10);
+      const end=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,1)).toISOString().slice(0,10);
+      const actual=new Map();
+      for(let from=0;;from+=500) {
+        const rows=await client.rpc('get_monthly_material_consumption',{p_from:start,p_to:end}).order('month').order('material_id').order('unit_id').range(from,from+499);
+        assert.equal(rows.error,null,`${role} monthly consumption read`);
+        for(const row of rows.data) actual.set(`${row.month}:${row.material_id}:${row.unit_id}`,Number(row.quantity));
+        if(rows.data.length<500) break;
+      }
+      const expected=new Map();
+      for(let from=0;;from+=500) {
+        const rows=await client.from('inventory_transactions').select('id,material_id,unit_of_measure_id,transaction_date,quantity').eq('transaction_type','MATERIAL_CONSUMPTION').gte('transaction_date',start).lt('transaction_date',end).order('id').range(from,from+499);
+        assert.equal(rows.error,null);
+        const reversed=new Set();
+        for(let i=0;i<rows.data.length;i+=100) {
+          const corrections=await client.from('inventory_transactions').select('reversal_of').in('reversal_of',rows.data.slice(i,i+100).map(row=>row.id));
+          assert.equal(corrections.error,null);
+          corrections.data.forEach(row=>reversed.add(row.reversal_of));
+        }
+        for(const row of rows.data) if(!reversed.has(row.id)) {
+          const id=`${row.transaction_date.slice(0,7)}:${row.material_id}:${row.unit_of_measure_id}`;
+          expected.set(id,(expected.get(id)??0)+Math.abs(Number(row.quantity)));
+        }
+        if(rows.data.length<500) break;
+      }
+      assert.equal(actual.size,expected.size);
+      for(const [id,value] of expected) assert.ok(Math.abs(actual.get(id)-value)<0.0001,`${role} chart reconciles with visible ledger`);
+      console.log(`PASS staging migration: ${role} location lookup and chart/ledger reconciliation.`);
+    }
     console.log(`PASS read-only reference HTTP: ${role} authorization, bounded results and private cache policy.`);
   } finally { await client.auth.signOut({scope:'local'}); }
 }
