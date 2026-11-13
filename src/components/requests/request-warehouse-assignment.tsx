@@ -19,11 +19,11 @@ export function RequestWarehouseAssignment({ id, kind, choices, current }: {
   }, { ok: false, message: "" });
   return <form id={kind === "request" ? "source-warehouse" : `source-warehouse-${id}`} aria-busy={pending} action={action} className="mt-5 scroll-mt-24 rounded-xl border border-slate-200 bg-white p-5">
     <input type="hidden" name="key" value={key} /><input type="hidden" name="id" value={id} /><input type="hidden" name="kind" value={kind} />
-    <h2 className="text-base font-semibold">Choose the source warehouse</h2>
-    <p className="mt-1 text-sm text-slate-500">{kind === "request" ? "A warehouse is required for every approved material. Choose one here for all items, or choose different warehouses on the material lines. Stock leaves the warehouse when it is released." : "Choose the warehouse that will supply this material. This choice does not move stock."}</p>
+    <h2 className="text-base font-semibold">Source warehouse</h2>
+    <p className="mt-1 text-sm text-slate-500">{kind === "request" ? "Choose one warehouse for all items, or split quantities between warehouses below." : "Choose the warehouse that will supply this material. This choice does not move stock."}</p>
     <div className="mt-3 flex flex-wrap items-center gap-3">
       <div className="w-full sm:max-w-sm"><SelectPicker label="Source warehouse" name="warehouseId" value={warehouse} onValueChange={setWarehouse} placeholder={choices.length ? "Choose warehouse" : "No warehouses available"} disabled={pending || state.ok || !choices.length} options={choices.map((item) => ({ value: item.id, label: item.name, secondary: item.code }))} required /></div>
-      <RecordFormControls busy={pending} success={state.ok} disabled={!warehouse || state.ok || warehouse === current} label="Save warehouse" />
+      <RecordFormControls inline busy={pending} success={state.ok} disabled={!warehouse || state.ok || warehouse === current} label="Save warehouse" />
     </div>
     {choices.length === 0 && <p role="status" className="mt-3 text-sm text-amber-700">No active warehouse is available for your account, or this project is inactive. Ask Admin to check warehouse access and project status.</p>}
     {state.message && <p role="status" className={`mt-3 text-sm ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}

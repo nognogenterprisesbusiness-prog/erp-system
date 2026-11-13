@@ -42,7 +42,7 @@ export async function getMaterialRequestChoices(materialId?: string) {
 }
 
 export async function getMaterialRequests(filters: { search?: string; status?: MaterialRequestStatus | "all"; page?: number } = {}) {
-  await requireUser();
+  const user = await requireUser();
   const supabase = await createClient();
   const page = Math.min(10_000, Math.max(1, Number.isSafeInteger(filters.page) ? filters.page! : 1));
   let query = supabase.from("material_requests").select("*", { count: "exact" });
@@ -53,12 +53,20 @@ export async function getMaterialRequests(filters: { search?: string; status?: M
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   if (error) throw new Error("Unable to load material requests.");
   const rows = data ?? [];
+  const reviewSites = new Map(rows.filter(row => row.status === "submitted" && (user.canManage || user.roles.includes("engineer") && row.requested_by !== user.userId)).map(row => [row.project_site_id, row.project_id]));
+  const reviewAccessPromise = Promise.all([...reviewSites].map(async ([siteId, projectId]) => {
+    const result = await supabase.rpc("get_project_site_capabilities", { p_project_id: projectId, p_site_id: siteId });
+    if (result.error) throw new Error("Unable to verify request review access.");
+    return [siteId, Boolean(result.data?.[0]?.can_review)] as const;
+  }));
   const requestIds = rows.map((row) => row.id);
-  const [contexts, lines, tracking] = await Promise.all([
+  const [contexts, lines, tracking, reviewEntries] = await Promise.all([
     requestIds.length ? supabase.rpc("get_material_request_context", { p_request_ids: requestIds }) : Promise.resolve({ data: [], error: null }),
     requestIds.length ? supabase.from("material_request_lines").select("id,request_id,material_id").in("request_id", requestIds).order("id") : Promise.resolve({ data: [], error: null }),
     requestIds.length ? supabase.rpc("get_material_request_tracking", { p_request_ids: requestIds }) : Promise.resolve({ data: [], error: null }),
+    reviewAccessPromise,
   ]);
+  const reviewAccess = new Map(reviewEntries);
   if (contexts.error || lines.error || tracking.error || contexts.data?.length !== rows.length) throw new Error("Unable to resolve request locations and progress.");
   const trackingByRequest = new Map<string, NonNullable<typeof tracking.data>[number][]>();
   for (const line of tracking.data ?? []) {
@@ -84,6 +92,7 @@ export async function getMaterialRequests(filters: { search?: string; status?: M
       const material = preview ? materialMap.get(preview.materialId) : null;
       return {
         ...row,
+        canDecide: row.status === "submitted" && Boolean(reviewAccess.get(row.project_site_id)) && (user.canManage || row.requested_by !== user.userId),
         deliveryStage: requestDeliveryStage(row.status, trackingByRequest.get(row.id) ?? []),
         project: { id: context.project_id, code: context.project_code, name: context.project_name },
         siteName: context.site_name,

@@ -55,5 +55,17 @@ await withIsolatedPostgres(async({sql,as,result,scalar,users})=>{
  await as('foreman',`select public.receive_request_transfer_with_inspection('${randomUUID()}','${item}',4,current_date,null,'accepted',null)`);
  assert.equal(scalar(await as('admin',`select received from public.get_material_request_tracking(array['${request}'::uuid])`)),'6.0000');
  assert.equal(await value(`select count(*) from public.material_request_dispatches where request_line_id='${line}'`),'1');
- console.log('PASS: one request, two warehouses, one approval on concurrent retry, allocation-scoped operators, legacy guard, one concurrent release, partial receipts and safe closure; balances reconcile.');
+ const rejected=result(await as('engineer',`select public.submit_mobile_material_request('${randomUUID()}','${project}','${site}','Foundation materials','[{"materialId":"${material}","quantity":"5"}]')`));
+ const rejectedLine=await value(`select id from public.material_request_lines where request_id='${rejected}'`);
+ const rejectKey=randomUUID(),emptySources=JSON.stringify({[rejectedLine]:[]});
+ const reject=`select public.decide_material_request_sources('${rejectKey}','${rejected}','${emptySources}','Materials no longer needed')`;
+ const balancesBefore=await value(`select jsonb_agg(to_jsonb(b) order by b.id) from public.inventory_balances b`);
+ await assert.rejects(as('engineer',reject),/own requests/);
+ await assert.rejects(as('foreman',reject),/approval required/);
+ await assert.rejects(as('admin',reject.replace('Materials no longer needed','')),/reason/i);
+ for(const out of await Promise.all([as('admin',reject),as('admin',reject)])) assert.equal(result(out),rejected);
+ assert.equal(await value(`select status from public.material_requests where id='${rejected}'`),'rejected');
+ assert.equal(await value(`select count(*) from public.material_request_reservations where request_line_id='${rejectedLine}'`),'0');
+ assert.equal(await value(`select jsonb_agg(to_jsonb(b) order by b.id) from public.inventory_balances b`),balancesBefore);
+ console.log('PASS: multi-warehouse approval, release, receipt and closure; rejection without a warehouse requires a reason, denies self-review/unauthorized roles, handles concurrent retries once and leaves stock unchanged.');
 });

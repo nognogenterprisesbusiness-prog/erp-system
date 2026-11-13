@@ -64,7 +64,7 @@ export function RecordCreateDialog({ title, children, initialOpen = false, close
   </>;
 }
 
-export function RecordFormControls({ busy, disabled = false, label = "Save", success = false }: { busy: boolean; disabled?: boolean; label?: string; success?: boolean }) {
+export function RecordFormControls({ busy, disabled = false, label = "Save", success = false, inline = false }: { busy: boolean; disabled?: boolean; label?: string; success?: boolean; inline?: boolean }) {
   const dialog = useContext(FormDialogContext);
   const setBusy = dialog?.setBusy;
   const complete = dialog?.complete;
@@ -80,5 +80,5 @@ export function RecordFormControls({ busy, disabled = false, label = "Save", suc
     if (wasBusy.current && !busy && !success) controls.current?.closest("form")?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
     wasBusy.current = busy;
   }, [busy, success]);
-  return <div ref={controls} aria-busy={busy} className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{dialog && <Button type="button" variant="outline" onClick={dialog.close} disabled={busy}>{dialog.cancelLabel}</Button>}<Button type="submit" disabled={busy || disabled} aria-busy={busy}>{busy ? <><span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" />{label.endsWith("ing") ? label : `${label}…`}</> : label}</Button></div>;
+  return <div ref={controls} aria-busy={busy} className={`${inline ? "" : "mt-6 "}flex flex-col-reverse gap-2 sm:flex-row sm:justify-end`}>{dialog && <Button type="button" variant="outline" onClick={dialog.close} disabled={busy}>{dialog.cancelLabel}</Button>}<Button type="submit" disabled={busy || disabled} aria-busy={busy}>{busy ? <><span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" />{label.endsWith("ing") ? label : `${label}…`}</> : label}</Button></div>;
 }

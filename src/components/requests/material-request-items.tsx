@@ -30,9 +30,10 @@ type RequestLine = {
 const initialState: RequestActionState = { ok: false, message: "" };
 const quantity = new Intl.NumberFormat("en-PH", { maximumFractionDigits: 4 });
 
-export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, sourceName, siteName, submitted, defaultWarehouseId, stockSources }: {
+export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, sourceName, siteName, submitted, defaultWarehouseId, stockSources, onReject }: {
   requestId: string; lines: RequestLine[]; canDecide: boolean; hasSource: boolean;
   sourceName: string; siteName: string; submitted: boolean; defaultWarehouseId: string | null; stockSources: StockSource[];
+  onReject?: () => void;
 }) {
   const [state, action, pending] = useActionState(decideMaterialRequestAction, initialState);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
@@ -45,6 +46,7 @@ export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, s
   const missingSource = lines.some((line) => Number(quantities[line.id])>0 && !defaultWarehouseId && !allocations[line.id]);
   const invalid = !decideMaterialRequestSchema.shape.decisions.safeParse(quantities).success || lines.some((line) => Number(quantities[line.id]) > line.requested);
   const isReduced = lines.some((line) => Number(quantities[line.id]) < line.requested);
+  const allRejected = lines.every((line) => Number(quantities[line.id]) === 0);
   const showWarehouse = submitted && (canDecide || lines.some((line) => line.sourceAvailable !== null));
   const display = (value: number | null, unit: string) => value === null ? "Not visible to your account" : `${quantity.format(value)} ${unit}`;
   const content = <>
@@ -108,7 +110,7 @@ export function MaterialRequestItems({ requestId, lines, canDecide, hasSource, s
       {!state.ok && state.message && <p role="alert" className="mt-3 text-sm font-medium text-red-600">{state.message}</p>}
       {exceedsStock && <p role="alert" className="mt-3 text-sm text-amber-800">Reduce the highlighted quantities to available stock, or change the source warehouse.</p>}
       {missingSource && <p className="mt-3 text-sm text-slate-600">Choose the warehouse quantities for each material before approving.</p>}
-      <div className="mt-4 flex justify-end"><Button type="submit" disabled={pending || exceedsStock || invalid || missingSource}>{pending ? "Saving…" : lines.every((line) => Number(quantities[line.id]) === 0) ? "Reject request" : "Approve quantities"}</Button></div>
+      <div className="mt-4 flex justify-end"><Button type={allRejected ? "button" : "submit"} onClick={allRejected ? onReject : undefined} disabled={pending || exceedsStock || invalid || missingSource || allRejected && !onReject}>{pending ? "Saving…" : allRejected ? "Review rejection" : "Approve quantities"}</Button></div>
     </div>}
   </>;
   const className = "mt-5 scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white";

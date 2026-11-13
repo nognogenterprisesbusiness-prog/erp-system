@@ -1,5 +1,6 @@
 import { displayDate } from "@/lib/ui/display";
 import { RecordIdentity } from "@/components/ui/record-identity";
+import { RecordActionMenu } from "@/components/ui/record-action-menu";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { z } from "zod";
 import { requestDeliveryLabels } from "@/lib/requests/delivery-stage";
@@ -36,7 +37,7 @@ export async function MaterialRequestsList({ params, canRequest }: { params: Rec
         <td className="px-4 py-4"><RecordIdentity name={request.project?.name ?? "Unavailable project"} code={request.project?.code} />{request.siteName !== request.project?.name && <p className="mt-1 text-xs text-slate-500">{request.siteName}</p>}</td>
         <td className="px-4 py-4 text-slate-600">{request.warehouseName === "Awaiting warehouse" && ["cancelled", "rejected"].includes(request.status) ? "Not assigned" : request.warehouseName}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{displayDate(request.required_date)}</td>
         <td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${request.status === "rejected" ? "bg-red-50 text-red-700" : request.status === "submitted" ? "bg-amber-50 text-amber-800" : "bg-cyan-50 text-cyan-800"}`}>{request.deliveryStage ? requestDeliveryLabels[request.deliveryStage] : statusLabels[request.status]}</span>{request.deliveryStage && <p className="mt-1 text-xs text-slate-500">{statusLabels[request.status]}</p>}</td>
-        <td className="whitespace-nowrap px-5 py-4 text-right text-xs text-slate-500">{displayDate(request.requested_at)}</td><td data-record-actions className="px-5 py-4 text-right bg-white"><Button asChild variant="outline" size="sm"><Link href={`/requests/${request.id}`} aria-label={`View request ${request.request_number}`}>View</Link></Button></td>
+        <td className="whitespace-nowrap px-5 py-4 text-right text-xs text-slate-500">{displayDate(request.requested_at)}</td><td data-record-actions className="px-5 py-4 text-right bg-white"><RecordActionMenu name={request.request_number} actions={[{label:"View",href:`/requests/${request.id}`}, ...(request.canDecide ? [{label:"Approve",href:`/requests/${request.id}?action=approve`},{label:"Reject",href:`/requests/${request.id}?action=reject`,destructive:true}] : [])]} /></td>
       </tr>)}</tbody></table>
     </DataTableShell>
     {result.pageCount > 1 && <nav className="mt-4 flex items-center justify-end gap-2" aria-label="Request pages">
