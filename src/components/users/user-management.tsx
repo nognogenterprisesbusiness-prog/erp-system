@@ -100,3 +100,11 @@ export function UserRowActions({ userId, profile, isActive, canReset, roles, man
     </RecordCreateDialog>}
   </>;
 }
+
+export function UserProfileName({ profile }: { profile: UserProfileDetailsProps }) {
+  const [opened, setOpened] = useState(false);
+  return <>
+    <button type="button" onClick={() => setOpened(true)} className="block rounded text-left font-semibold text-slate-900 hover:text-cyan-700 focus-visible:outline-2 focus-visible:outline-cyan-600">{profile.name}</button>
+    {opened && <RecordCreateDialog title={profile.name} size="sm" hideTrigger initialOpen onClosed={() => setOpened(false)}><UserProfileDetails {...profile} /></RecordCreateDialog>}
+  </>;
+}

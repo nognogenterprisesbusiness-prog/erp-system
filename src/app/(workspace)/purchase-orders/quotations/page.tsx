@@ -60,7 +60,7 @@ export default async function SupplierQuotationsPage({ searchParams }: {
         <th className="px-5 py-3">Material</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Reference</th>
         <th className="px-4 py-3">Quoted / valid until</th><th className="px-4 py-3">Quantity</th><th className="px-4 py-3">Unit price</th><th data-record-actions className="bg-slate-50 px-5 py-3 text-right">Actions</th>
       </tr></thead><tbody className="divide-y divide-slate-100">{result.rows.map((row) => <tr key={`${row.quotation_id}:${row.material_id}`}>
-        <td className="px-5 py-4 font-medium text-slate-900">{row.material_name}</td><td className="px-4 py-4">{row.supplier_name}</td><td className="px-4 py-4"><span>{row.reference}</span></td>
+        <td className="px-5 py-4 font-medium text-slate-900"><Link href={`/purchase-orders/quotations/${row.quotation_id}`} className="hover:text-cyan-700">{row.material_name}</Link></td><td className="px-4 py-4">{row.supplier_name}</td><td className="px-4 py-4"><span>{row.reference}</span></td>
         <td className="px-4 py-4">{row.quoted_on}{row.valid_until ? ` · ${row.valid_until}` : " · no expiry"}</td>
         <td className="px-4 py-4 tabular-nums">{row.quantity} {row.unit_symbol}</td><td className="px-4 py-4 tabular-nums">{money.format(Number(row.unit_price))}</td>
         <td data-record-actions className="bg-white px-5 py-4 text-right"><RecordActionMenu name={row.reference} actions={[{ label: "View", href: `/purchase-orders/quotations/${row.quotation_id}` }, ...(user.canManage && (!row.valid_until || row.valid_until >= today) && row.quoted_on <= today ? [{ label: "Use quote", href: `/purchase-orders?create=1&quotation=${row.quotation_id}` }] : [])]} /></td>

@@ -1,3 +1,4 @@
+import { canPreviewProjectDocument } from "@/lib/project-documents";
 import { ProjectDocumentActions } from "@/components/projects/project-document-actions";
 import { projectDocumentBadge } from "@/lib/project-documents";
 import type { ProjectDocumentCategory } from "@/types/database";
@@ -29,7 +30,7 @@ export function ProjectDocumentList({ documents, showProject = true, canManage =
     return <li key={document.id} className="flex min-w-0 flex-wrap items-center gap-3 rounded-xl border border-slate-200 p-3 sm:gap-3 sm:px-4 sm:py-3">
       <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-orange-50 text-[11px] font-semibold tracking-wide text-orange-600">{projectDocumentBadge(document.content_type)}</span>
       <div className="min-w-0 flex-1">
-        <h3 className="break-words text-sm font-semibold text-slate-900" title={document.file_name}>{document.file_name}</h3>
+        <h3 className="break-words text-sm font-semibold text-slate-900" title={document.file_name}><a href={`/project-documents/${document.id}${canPreviewProjectDocument(document.content_type) ? "?view=1" : ""}`} className="rounded hover:text-cyan-700 focus-visible:outline-cyan-600">{document.file_name}</a></h3>
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs leading-5 text-slate-600"><span className={`rounded-full px-2 font-medium ${chip.className}`}>{chip.label}</span><span>{fileSize(document.file_size)}</span>{showProject && <span>Project: {document.project?.name ?? "Unavailable"}</span>}<time dateTime={document.created_at}>Uploaded {date.format(new Date(document.created_at))}</time></div>
       </div>
       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">

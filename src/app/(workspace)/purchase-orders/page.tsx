@@ -95,7 +95,7 @@ async function PurchaseResults({ resultPromise, pageHref, canManage, canViewFina
       <table className="w-full min-w-[1160px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Purchase</th><th className="px-4 py-3">Items</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3">Total</th><th className="px-4 py-3">Location</th><th className="px-5 py-3">Status</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th></tr></thead>
         <tbody className="divide-y divide-slate-100">{result.rows.map((row) => {
           return <tr key={`${row.source}:${row.purchase_id}`} className="hover:bg-slate-50/70">
-            <td className="px-5 py-4"><span className="font-semibold text-slate-900">{row.purchase_number}</span><p className="text-xs text-slate-500">{row.purchase_date}</p></td>
+            <td className="px-5 py-4"><Link href={`/${row.source === "site_purchase" ? "site-purchases" : "purchase-orders"}/${row.purchase_id}`} className="font-semibold text-slate-900 hover:text-cyan-700 focus-visible:outline-cyan-600">{row.purchase_number}</Link><p className="text-xs text-slate-500">{row.purchase_date}</p></td>
             <td className="max-w-sm px-4 py-4"><p>{row.item_count} item{row.item_count === 1 ? "" : "s"}</p><p className="line-clamp-2 text-sm text-slate-500" title={row.item_names}>{row.item_names}</p></td>
             <td className="px-4 py-4"><p className="font-medium">{row.supplier_name}</p><p className="text-xs text-slate-500">{[row.supplier_contact, row.payment_term].filter(Boolean).join(" · ")}</p></td>
             <td className="px-4 py-4 font-semibold tabular-nums">{peso.format(Number(row.order_total))}</td>

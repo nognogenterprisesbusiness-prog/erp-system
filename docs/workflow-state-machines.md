@@ -162,6 +162,6 @@ RecordFacts separates typed labels and values for detail headers and contextual 
 
 ## Project Finance navigation
 
-Project Finance owns the budget summary, compact category breakdown, cost-entry dialogs, expense records, equipment-hour history and budget-change history. There is no separate cost-management screen. Legacy `/projects/:id/costs` bookmarks redirect to the project's Finance tab, preserving expense filters, pagination and posted-result messages. Expense and equipment category actions target the corresponding Finance section. The existing protected export/evidence routes and attendance workflow remain unchanged.
+Project Finance owns the budget summary, visual category breakdown, cost-entry dialogs, expense records, equipment-hour history and budget-change history. There is no separate cost-management screen. Legacy `/projects/:id/costs` bookmarks redirect to the project's Finance tab, preserving expense filters, pagination and posted-result messages. Expense and equipment records remain directly below the chart; the chart has no duplicate navigation buttons. The existing protected export/evidence routes and attendance workflow remain unchanged.
 
 The read layer keeps histories paginated. Corrections still call the existing server-validated reversal command; moving a form does not change its authorization, reference or idempotency key. Single row actions remain visible; multiple expense actions share the three-dot menu. Budget changes and successful cost commands return to Finance.

@@ -8,7 +8,9 @@ The interface uses one visible action button when a row has one action, and one 
 
 The dated implementation notes below are historical checkpoints. Current deployment and phone acceptance must be verified separately; source pushes and native bundle exports are not Play Store releases.
 
-**Project Finance:** budget, a compact cost breakdown, expense entries, equipment hours and budget history share one tab. Legacy cost-page links return to Finance with their category and pagination preserved.
+**Project Finance:** budget, a visual cost breakdown, expense entries, equipment hours and budget history share one tab. Legacy cost-page links return to Finance with their category and pagination preserved.
+
+**Printing and record access:** QR Print label opens the browser print dialog from the current screen. Record titles and references open existing authorized details; Cards/Table choices remain saved locally per list. Warehouse and asset names appear before their smaller reference codes.
 
 ## Screenshots
 
@@ -25,6 +27,12 @@ Each card shows one available-stock total. The page filter controls which stock 
 Compact document rows keep the file name and project readable. Open the three-dot menu for View, Download and permitted management actions.
 
 ![Compact project document list](public/screenshots/documents.png)
+
+### Web: project Finance
+
+The chart visualizes cost shares, with expense records on the same Finance tab and no extra chart-navigation buttons.
+
+![Project Finance cost visualization](public/screenshots/finance.png)
 
 ### Mobile: attendance
 
