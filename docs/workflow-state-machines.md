@@ -165,3 +165,9 @@ RecordFacts separates typed labels and values for detail headers and contextual 
 Project Finance owns the budget summary, visual category breakdown, cost-entry dialogs, expense records, equipment-hour history and budget-change history. There is no separate cost-management screen. Legacy `/projects/:id/costs` bookmarks redirect to the project's Finance tab, preserving expense filters, pagination and posted-result messages. Expense and equipment records remain directly below the chart; the chart has no duplicate navigation buttons. The existing protected export/evidence routes and attendance workflow remain unchanged.
 
 The read layer keeps histories paginated. Corrections still call the existing server-validated reversal command; moving a form does not change its authorization, reference or idempotency key. Single row actions remain visible; multiple expense actions share the three-dot menu. Budget changes and successful cost commands return to Finance.
+
+## Selector and dialog presentation
+
+Direct list edit routes render a single editor (and form skeleton while loading). An action opened inside a record panel keeps the parent record visible; cancel returns to that same record and its existing state. Dialog visibility must not be changed globally when a child dialog opens.
+
+The shared selector uses text search for long lists, limits rendered matches to 50, and keeps the selected identifier in the form separately from search text. Unmatched search text never becomes a selection. Required selections still use native form validation. Existing paged reference searches keep their server-side pagination and stale-result guards. Search suggestions do not change authorization; server commands still validate selected records.

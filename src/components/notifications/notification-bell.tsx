@@ -8,6 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { createClient } from "@/lib/supabase/browser";
 import type { NotificationRow } from "@/types/database";
 import { NotificationTime } from "./notification-time";
+import { LoadingSpinner } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MarkAllNotificationsUnread } from "./notification-actions";
 
@@ -79,7 +80,7 @@ export function NotificationBell({ userId }: { userId: string }) {
         {recent.some((item) => item.read_at) && <div className="col-span-2 mt-1"><MarkAllNotificationsUnread compact /></div>}
       </div>
       {loadError ? <p role="status" className="p-4 text-xs text-amber-700">Updates are temporarily unavailable. Open the notification center to retry.</p>
-        : recentLoading ? <p role="status" className="p-4 text-xs text-slate-500">Loading notifications…</p>
+        : recentLoading ? <LoadingSpinner label="Loading notifications" className="w-full p-4" />
         : recent.length === 0 ? <EmptyState kind="notifications" compact title="No notifications yet" />
           : <ul className="max-h-[calc(100svh-11rem)] divide-y divide-slate-100 overflow-auto sm:max-h-80">{recent.map((item) => <li key={item.id}><button type="button" onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setSelected(item); }} className={`block w-full px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-cyan-600 ${item.read_at ? "" : "bg-cyan-50/50"}`}><span className="block text-sm font-semibold">{item.title}</span><span className="mt-1 block line-clamp-2 text-xs leading-5 text-slate-600">{item.message}</span><NotificationTime value={item.created_at} className="mt-2 block text-xs text-slate-400" /></button></li>)}</ul>}
       <Link href="/notifications" onClick={closeMenu} className="block border-t border-slate-100 px-4 py-3 text-xs font-semibold text-cyan-700 hover:bg-slate-50">View all notifications</Link>

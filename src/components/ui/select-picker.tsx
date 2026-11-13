@@ -5,12 +5,14 @@ import { useCallback, useContext, useState, type AriaAttributes } from "react";
 import { CheckmarkCircle02Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
+import { SearchableSelectPicker } from "./searchable-select-picker";
 import { cn } from "@/lib/utils";
 import { FilterBarContext } from "./filter-bar-context";
 
 export type SelectOption = { value: string; label: string; disabled?: boolean };
 
-type SelectPickerProps = Pick<AriaAttributes, "aria-describedby" | "aria-invalid" | "aria-required"> & {
+export type SelectPickerProps = Pick<AriaAttributes, "aria-describedby" | "aria-invalid" | "aria-required"> & {
+  searchable?: boolean;
   id?: string;
   options: readonly SelectOption[];
   label: string;
@@ -24,7 +26,7 @@ type SelectPickerProps = Pick<AriaAttributes, "aria-describedby" | "aria-invalid
   className?: string;
 };
 
-export function SelectPicker({ id, options, label, name, value, defaultValue, onValueChange, placeholder = `Choose ${label.toLowerCase()}`, disabled, required, className, "aria-describedby": describedBy, "aria-invalid": invalid, "aria-required": ariaRequired }: SelectPickerProps) {
+function StandardSelectPicker({ id, options, label, name, value, defaultValue, onValueChange, placeholder = `Choose ${label.toLowerCase()}`, disabled, required, className, "aria-describedby": describedBy, "aria-invalid": invalid, "aria-required": ariaRequired }: SelectPickerProps) {
   const [portalContainer, setPortalContainer] = useState<HTMLElement>();
   const filterChange = useContext(FilterBarContext);
   const attachTrigger = useCallback((node: HTMLButtonElement | null) => setPortalContainer(node?.closest("dialog") ?? undefined), []);
@@ -44,4 +46,8 @@ export function SelectPicker({ id, options, label, name, value, defaultValue, on
       </Select.Content>
     </Select.Portal>
   </Select.Root>;
+}
+
+export function SelectPicker(props: SelectPickerProps) {
+  return (props.searchable ?? props.options.length >= 8) ? <SearchableSelectPicker {...props} /> : <StandardSelectPicker {...props} />;
 }

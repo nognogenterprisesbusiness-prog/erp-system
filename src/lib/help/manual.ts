@@ -56,7 +56,7 @@ export const manualGuides: readonly ManualGuide[] = [
     steps: [
       { title: "Choose your work area", detail: "Main work starts with Overview, Projects and Requests, followed by Inventory, Equipment and Vehicles. The order stays consistent; only permitted pages appear. Find employees, attendance and payroll under People, and daily reports and documents under Project tools." },
       { title: "Find a record", detail: "Use the header project search, or the search and filters above a page's table. Press Enter to search. Use the page controls below the table to reach older records." },
-      { title: "Open details before acting", detail: "If a row has one action, use its View button. If it has several actions, open the three-dot menu and choose View or Edit. Check the site, warehouse and quantity before acting. Cancellation and corrections ask for a reason." },
+      { title: "Open details before acting", detail: "Select the record name or View to inspect details. If a row has several actions, use its three-dot menu. Edit directly from the list opens only the editor; an action opened from record details keeps those details visible behind it. Type a name into long selectors to narrow the choices. Check the site, warehouse and quantity before acting. Cancellation and corrections ask for a reason." },
       { title: "Wait for confirmation", detail: "Complete the required fields and select Save or the named action. Wait for success before leaving. The screen updates after the server confirms the transaction; a notification alone is not proof of stock posting." },
     ],
     result: "You can find the record and see its confirmed status without using another staff member's account.",

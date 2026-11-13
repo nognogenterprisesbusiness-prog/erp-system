@@ -12,6 +12,8 @@ The dated implementation notes below are historical checkpoints. Current deploym
 
 **Printing and record access:** QR Print label opens the browser print dialog from the current screen. Record titles and references open existing authorized details; Cards/Table choices remain saved locally per list. Warehouse and asset names appear before their smaller reference codes.
 
+**Selectors and dialogs:** long option lists are searchable, with at most 50 matches rendered at once and a visible prompt to narrow large searches. Existing server-paged employee/truck searches remain paginated. Edit from a list opens only an editor; actions opened from record details keep the details visible behind the dialog. Loading areas use skeletons or accessible spinners.
+
 ## Screenshots
 
 These are real application previews, not design mockups. The web images show the 13 November 2026 refinement pass against staging. Test records and quantities are examples.

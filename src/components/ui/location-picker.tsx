@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Cancel01Icon, Location01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { LoadingSpinner } from "./loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 
 type Option = { code: string; displayName: string; province: string; region: string; zipCode: string };
@@ -85,7 +86,7 @@ export function LocationPicker({ name = "municipalityCode", displayNameName, lab
     <input type="hidden" name={name} value={code} />
     {displayNameName && <input type="hidden" name={displayNameName} value={query} />}
     {open && <div id={listId} role="listbox" aria-label={label} className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
-      {loading ? <p className="px-3 py-3 text-xs text-slate-500">Searching locations…</p> : error ? <p role="alert" className="px-3 py-3 text-xs text-red-700">{error}</p> : options.length === 0 ? <EmptyState kind={query.trim() ? "results" : "data"} compact title={query.trim() ? "No matching city or municipality" : "Search for a city or municipality"} /> : options.map((option, index) => <button key={option.code} id={`${listId}-option-${index}`} type="button" role="option" aria-selected={activeIndex === index} onMouseEnter={() => setActiveIndex(index)} onClick={() => selectOption(option)} className={`flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-cyan-50 focus-visible:bg-cyan-50 focus-visible:outline-none ${activeIndex === index ? "bg-cyan-50" : ""}`}><HugeiconsIcon icon={Location01Icon} size={16} className="mt-0.5 shrink-0 text-cyan-700" /><span><span className="block font-medium text-slate-800">{option.displayName}</span><span className="text-xs text-slate-500">{option.province} · {option.region}{option.zipCode ? ` · ${option.zipCode}` : ""}</span></span></button>)}
+      {loading ? <LoadingSpinner label="Searching locations" className="w-full py-4" /> : error ? <p role="alert" className="px-3 py-3 text-xs text-red-700">{error}</p> : options.length === 0 ? <EmptyState kind={query.trim() ? "results" : "data"} compact title={query.trim() ? "No matching city or municipality" : "Search for a city or municipality"} /> : options.map((option, index) => <button key={option.code} id={`${listId}-option-${index}`} type="button" role="option" aria-selected={activeIndex === index} onMouseEnter={() => setActiveIndex(index)} onClick={() => selectOption(option)} className={`flex w-full items-start gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-cyan-50 focus-visible:bg-cyan-50 focus-visible:outline-none ${activeIndex === index ? "bg-cyan-50" : ""}`}><HugeiconsIcon icon={Location01Icon} size={16} className="mt-0.5 shrink-0 text-cyan-700" /><span><span className="block font-medium text-slate-800">{option.displayName}</span><span className="text-xs text-slate-500">{option.province} · {option.region}{option.zipCode ? ` · ${option.zipCode}` : ""}</span></span></button>)}
     </div>}
   </div>;
 }

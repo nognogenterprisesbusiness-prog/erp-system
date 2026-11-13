@@ -1,4 +1,5 @@
 "use client";
+import { FieldsSkeleton } from "@/components/ui/loading-state";
 import { SelectPicker } from "@/components/ui/select-picker";
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
@@ -87,5 +88,5 @@ export function NewEmployeeForm() {
     return () => { active = false; };
   }, [attempt]);
   if (failed) return <div role="alert"><p>Employee options could not be loaded.</p><button type="button" className="mt-3 rounded-full border px-4 py-3" onClick={() => {setFailed(false);setAttempt(value=>value+1);}}>Try again</button></div>;
-  return references ? <EmployeeForm categories={references.categories} profiles={references.profiles} /> : <p role="status">Loading employee options…</p>;
+  return references ? <EmployeeForm categories={references.categories} profiles={references.profiles} /> : <FieldsSkeleton label="Loading employee options" />;
 }

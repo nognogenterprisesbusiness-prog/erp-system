@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { searchReferenceChoices, type ReferenceChoice, type ReferenceKind } from "@/app/(workspace)/references/actions";
+import { LoadingSpinner } from "./loading-state";
 import { SelectPicker } from "./select-picker";
 import { Button } from "./button";
 import { fieldControlClass } from "./form-field";
@@ -35,13 +36,13 @@ function ReferenceSearch({ disabled = false, kind, projectId = "", label, value,
   if (current && !options.some((item) => item.value === current.value)) options.unshift(current);
   return <div className="space-y-2">
     <input className={fieldControlClass} type="search" disabled={disabled} aria-label={`Search ${label}`} placeholder={`Search ${label.toLowerCase()}`} value={search} maxLength={100} onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
-    <SelectPicker label={label} value={value} disabled={pending || disabled} onValueChange={(id) => {
+    <SelectPicker searchable={false} label={label} value={value} disabled={pending || disabled} onValueChange={(id) => {
       const item = options.find((option) => option.value === id);
       if (!item) return;
       setSelected(item); onPick?.(item); onValueChange(id);
     }} options={options.map((option) => ({ ...option, disabled: disabledValues.includes(option.value) }))} />
     <div className="flex items-center gap-2 text-xs text-slate-500">
-      {pending ? <span role="status">Loading choices…</span> : <span>{result.count} matches</span>}
+      {pending ? <LoadingSpinner label="Loading choices" /> : <span>{result.count} matches</span>}
       {page > 1 && <Button type="button" size="sm" variant="outline" disabled={pending || disabled} onClick={() => setPage((previous) => previous - 1)}>Previous</Button>}
       {!pending && page * 20 < result.count && <Button type="button" size="sm" variant="outline" disabled={disabled} onClick={() => setPage((previous) => previous + 1)}>Next</Button>}
     </div>

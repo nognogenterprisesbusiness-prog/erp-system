@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FieldsSkeleton } from "@/components/ui/loading-state";
 import { Button } from "@/components/ui/button";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { loadWorkerIdCardPreview } from "./id-card-actions";
@@ -25,7 +26,7 @@ function Preview({ employeeId, projectId }: { employeeId?: string; projectId?: s
     return () => { active = false; };
   }, [employeeId, projectId, attempt]);
   if (message) return <div className="grid gap-4"><p role="alert" className="text-sm text-red-700">{message}</p><Button variant="outline" onClick={() => { setMessage(""); setAttempt((value) => value + 1); }}>Try again</Button></div>;
-  if (!data) return <p role="status" className="text-sm text-slate-600">Loading ID cards…</p>;
+  if (!data) return <FieldsSkeleton fields={2} label="Loading ID cards" />;
   if (!data.rows.length) return <p role="status" className="text-sm text-slate-600">No active employee cards to print.</p>;
   return <div className="grid gap-5"><div className="flex flex-wrap items-center justify-between gap-3 print:hidden"><p className="text-sm text-slate-600">{data.rows.length} card{data.rows.length === 1 ? "" : "s"}{data.projectName ? ` · ${data.projectName}` : ""}. Print, cut and laminate.</p><PrintCardsButton label="Print" /></div><WorkerIdCardSheet data={data} /></div>;
 }
