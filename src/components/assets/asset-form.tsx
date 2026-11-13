@@ -1,5 +1,6 @@
 "use client";
 import { VehicleForm } from "./vehicle-form";
+import { RemoteSelectPicker } from "@/components/ui/remote-select-picker";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PesoAmountInput } from "@/components/ui/peso-amount-input";
@@ -10,16 +11,16 @@ import { recordPhotoUrl } from "@/lib/media/record-photo-url";
 import { saveAssetAction, type AssetActionState } from "@/app/(workspace)/equipment/actions";
 import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
-import type { AssetLocationView, AssetView } from "@/lib/data/assets";
+import type { AssetView } from "@/lib/data/assets";
 import type { AssetKind } from "@/types/database";
 
 const initialState: AssetActionState = { ok: false, message: "" };
-type AssetFormProps = { kind: AssetKind; asset?: AssetView; locations: AssetLocationView[] };
+type AssetFormProps = { kind: AssetKind; asset?: AssetView };
 export function AssetForm({ kind, ...props }: AssetFormProps) {
-  return kind === "vehicle" ? <VehicleForm asset={props.asset} locations={props.locations} /> : <EquipmentForm {...props} />;
+  return kind === "vehicle" ? <VehicleForm asset={props.asset} /> : <EquipmentForm {...props} />;
 }
 
-function EquipmentForm({ asset, locations }: Omit<AssetFormProps, "kind">) {
+function EquipmentForm({ asset }: Omit<AssetFormProps, "kind">) {
   const [state, action, pending] = useActionState(saveAssetAction, initialState);
   const dialog = useRecordDialog();
   const router = useRouter();
@@ -55,7 +56,7 @@ function EquipmentForm({ asset, locations }: Omit<AssetFormProps, "kind">) {
       <div><PesoAmountInput label="Acquisition cost" name="acquisitionCost" defaultValue={String(asset?.equipment?.acquisition_cost ?? "")} required />{error("acquisitionCost") && <p role="alert" className="mt-1 text-xs text-red-600">{error("acquisitionCost")}</p>}</div>
       <FormField label="Ownership" htmlFor="ownershipType" error={error("ownershipType")}><SelectPicker id="ownershipType" name="ownershipType" label="Ownership" defaultValue={asset?.ownership_type ?? "company_owned"} options={[{ value: "company_owned", label: "Company owned" }, { value: "rented", label: "Rented" }, { value: "leased", label: "Leased" }]} /></FormField>
       <FormField label="Operational status" htmlFor="status" error={error("status")}><SelectPicker id="status" name="status" label="Operational status" defaultValue={asset?.status ?? "available"} options={[{ value: "available", label: "Available" }, { value: "under_maintenance", label: "Under maintenance" }, { value: "out_of_service", label: "Out of service" }]} /></FormField>
-      <FormField label="Current location" htmlFor="currentLocationId" error={error("currentLocationId")}><SelectPicker searchable id="currentLocationId" name="currentLocationId" label="Current location" defaultValue={asset?.current_location_id} placeholder="Select authorized location" required options={locations.map((item) => ({ value: item.id, label: `${item.displayName} · ${item.location_kind.replaceAll("_", " ")}` }))} /></FormField>
+      <FormField label="Current location" htmlFor="currentLocationId" error={error("currentLocationId")}><RemoteSelectPicker kind="asset_location" id="currentLocationId" name="currentLocationId" label="Current location" defaultValue={asset?.current_location_id} initialOption={asset?.location ? { value: asset.current_location_id, label: asset.location.displayName, secondary: asset.location.location_kind.replaceAll("_", " ") } : undefined} placeholder="Choose location" required /></FormField>
       <FormField label="Description" htmlFor="description" className="md:col-span-2" error={error("description")}><textarea className={`${fieldControlClass} h-auto py-3`} id="description" name="description" rows={3} defaultValue={asset?.description ?? ""} /></FormField>
       <FormField label="Condition notes" htmlFor="conditionNotes" className="md:col-span-2" error={error("conditionNotes")}><textarea className={`${fieldControlClass} h-auto py-3`} id="conditionNotes" name="conditionNotes" rows={3} defaultValue={asset?.condition_notes ?? ""} /></FormField>
     </div>

@@ -6,13 +6,14 @@ import { saveAssetAction, type AssetActionState } from "@/app/(workspace)/equipm
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
 import { RecordFormControls, useRecordDialog } from "@/components/ui/record-create-dialog";
 import { RecordPhotoInput } from "@/components/ui/record-photo-input";
+import { RemoteSelectPicker } from "@/components/ui/remote-select-picker";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
-import type { AssetLocationView, AssetView } from "@/lib/data/assets";
+import type { AssetView } from "@/lib/data/assets";
 
 const initialState: AssetActionState = { ok: false, message: "" };
 
-export function VehicleForm({ asset, locations }: { asset?: AssetView; locations: AssetLocationView[] }) {
+export function VehicleForm({ asset }: { asset?: AssetView }) {
   const [state, action, pending] = useActionState(saveAssetAction, initialState);
   const dialog = useRecordDialog();
   const router = useRouter();
@@ -40,7 +41,7 @@ export function VehicleForm({ asset, locations }: { asset?: AssetView; locations
       <FormField label="Vehicle name" htmlFor="name" error={error("name")}><input className={fieldControlClass} id="name" name="name" defaultValue={asset?.name} placeholder="e.g. Delivery truck 1" maxLength={160} required /></FormField>
       <FormField label="Vehicle type" htmlFor="vehicleType" error={error("vehicleType")}><input className={fieldControlClass} id="vehicleType" name="vehicleType" defaultValue={asset?.vehicle?.vehicle_type} placeholder="e.g. Dump truck, pickup or van" maxLength={120} required /></FormField>
       <FormField label="Plate number" htmlFor="plateNumber" error={error("plateNumber")}><input className={fieldControlClass} id="plateNumber" name="plateNumber" defaultValue={asset?.vehicle?.plate_number} maxLength={20} required /></FormField>
-      <FormField label="Current location" htmlFor="currentLocationId" error={error("currentLocationId")}><SelectPicker searchable id="currentLocationId" name="currentLocationId" label="Current location" defaultValue={asset?.current_location_id} placeholder="Select location" required options={locations.map((item) => ({ value: item.id, label: item.displayName }))} /></FormField>
+      <FormField label="Current location" htmlFor="currentLocationId" error={error("currentLocationId")}><RemoteSelectPicker kind="asset_location" id="currentLocationId" name="currentLocationId" label="Current location" defaultValue={asset?.current_location_id} initialOption={asset?.location ? { value: asset.current_location_id, label: asset.location.displayName, secondary: asset.location.location_kind.replaceAll("_", " ") } : undefined} placeholder="Choose location" required /></FormField>
     </div>
     <details className="mt-5 rounded-xl border border-slate-200 p-4">
       <summary className="cursor-pointer text-sm font-medium text-slate-700">More details (optional)</summary>

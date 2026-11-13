@@ -56,7 +56,7 @@ export function CreateSourcingSiteRequestForm({ id, materials, remaining }: { id
     <input type="hidden" name="id" value={id} />
     <input ref={keyInput} type="hidden" name="key" defaultValue={key} />
     <input type="hidden" name="materialId" value={materialId} />
-    <FormField label="Material" htmlFor={`catalog-${id}`}><PagedReferencePicker kind="material" label="Material" value={materialId} onValueChange={setMaterialId} initialOptions={materials.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))} /></FormField>
+    <FormField label="Material" htmlFor={`catalog-${id}`}><PagedReferencePicker kind="material" label="Material" value={materialId} onValueChange={setMaterialId} initialOptions={materials.map((item) => ({ value: item.id, label: item.name, secondary: item.code }))} /></FormField>
     <FormField label={`Quantity for site (up to ${remaining})`} htmlFor={`quantity-${id}`}><input id={`quantity-${id}`} name="quantity" type="number" min="0.0001" max={remaining} step="0.0001" defaultValue={remaining} className={fieldControlClass} required /></FormField>
     <FormField label="Site request note" htmlFor={`note-${id}`} className="sm:col-span-2"><input id={`note-${id}`} name="note" className={fieldControlClass} maxLength={500} minLength={3} required /></FormField>
     <p className="text-xs text-slate-500 sm:col-span-2">Receive stock in the source warehouse first. The Engineer must approve this request before delivery to the site.</p>

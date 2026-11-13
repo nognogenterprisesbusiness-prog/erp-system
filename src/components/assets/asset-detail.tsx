@@ -11,22 +11,22 @@ import { ArchiveAssetForm } from "./archive-asset-form";
 import { AssetStatusBadge } from "./asset-status-badge";
 import { Button } from "@/components/ui/button";
 import { EntityQrSection } from "@/components/qr/entity-qr-section";
-import type { getAsset, getEquipmentUsage, getAssetReferences } from "@/lib/data/assets";
+import type { getAsset, getEquipmentUsage } from "@/lib/data/assets";
 import type { AssetKind } from "@/types/database";
 
 type AssetDetailData = Awaited<ReturnType<typeof getAsset>>;
 type EquipmentUsageData = Awaited<ReturnType<typeof getEquipmentUsage>>;
 type Props = {
   data: AssetDetailData; kind: AssetKind; canManage: boolean; usage?: EquipmentUsageData;
-  editOnly?: boolean; references?: Awaited<ReturnType<typeof getAssetReferences>>; editing?: boolean;
+  editOnly?: boolean; editing?: boolean;
   expenses?: ReactNode; drivers?: ReactNode; projectFuel?: ReactNode; initialSection?: string;
 };
 
-export function AssetDetail({ data, kind, canManage, usage, references, editing = false, editOnly = false, expenses, drivers, projectFuel, initialSection }: Props) {
+export function AssetDetail({ data, kind, canManage, usage, editing = false, editOnly = false, expenses, drivers, projectFuel, initialSection }: Props) {
   const { asset, events } = data;
   const isEquipment = kind === "equipment";
   const base = isEquipment ? "/equipment" : "/vehicles";
-  if (editOnly && canManage && !asset.archived_at && !["assigned", "in_use"].includes(asset.status) && references) return <RecordCreateDialog hideTrigger initialOpen confirmDiscard title={`Edit ${kind}`} closeHref={base}><AssetForm kind={kind} asset={asset} {...references} /></RecordCreateDialog>;
+  if (editOnly && canManage && !asset.archived_at && !["assigned", "in_use"].includes(asset.status)) return <RecordCreateDialog hideTrigger initialOpen confirmDiscard title={`Edit ${kind}`} closeHref={base}><AssetForm kind={kind} asset={asset} /></RecordCreateDialog>;
   const details = <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
     <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-2">
       <div><h2 className="font-semibold">Unit details</h2><dl className="mt-4 space-y-3 text-sm">{[
@@ -61,7 +61,7 @@ export function AssetDetail({ data, kind, canManage, usage, references, editing 
       <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex min-w-0 flex-1 basis-72 items-center gap-4">
         {asset.photo_path && <div className="size-20 shrink-0 overflow-hidden rounded-xl sm:size-24"><PhotoViewer src={recordPhotoUrl("assets", asset.id, asset.updated_at)} alt={`${asset.name} photo`} sizes="96px" /></div>}
         <div className="min-w-0"><p className="text-sm text-slate-500">{isEquipment ? "Equipment" : "Vehicle"} · {asset.code}</p><div className="mt-1 flex flex-wrap items-center gap-2"><h1 className="break-words text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">{asset.name}</h1><AssetStatusBadge status={asset.status} /></div></div>
-      </div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" asChild><Link data-detail-back href={base}>Back</Link></Button>{canManage && !asset.archived_at && !["assigned", "in_use"].includes(asset.status) && references && <RecordCreateDialog confirmDiscard title={`Edit ${kind}`} triggerLabel="Edit details" triggerVariant="outline" triggerSize="sm" initialOpen={editing} closeHref={`${base}/${asset.id}`}><AssetForm kind={kind} asset={asset} {...references} /></RecordCreateDialog>}</div></div>
+      </div><div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" asChild><Link data-detail-back href={base}>Back</Link></Button>{canManage && !asset.archived_at && !["assigned", "in_use"].includes(asset.status) && <RecordCreateDialog confirmDiscard title={`Edit ${kind}`} triggerLabel="Edit details" triggerVariant="outline" triggerSize="sm" initialOpen={editing} closeHref={`${base}/${asset.id}`}><AssetForm kind={kind} asset={asset} /></RecordCreateDialog>}</div></div>
       <dl className="mt-5 grid gap-4 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2"><div><dt className="text-xs text-slate-500">Current location</dt><dd className="mt-1 font-medium text-slate-800">{asset.location?.displayName ?? "Location unavailable"}</dd></div>{asset.vehicle?.plate_number && <div><dt className="text-xs text-slate-500">Plate number</dt><dd className="mt-1 font-medium text-slate-800">{asset.vehicle.plate_number}</dd></div>}</dl>
     </header>
     {drivers}

@@ -1,3 +1,4 @@
+import { RecordIdentity } from "@/components/ui/record-identity";
 import { ListFilterBar } from "@/components/ui/list-filter-bar";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import Image from "next/image";
@@ -43,7 +44,7 @@ function HandoverRow({ item, isVehicle, photoPath, project, siteName, canManage,
         </div>
       </div>
     </td>
-    <td className="px-4 py-4 text-slate-600">{project.code} · {project.name}{siteName !== project.name && <span className="block text-xs text-slate-500">{siteName}</span>}</td>
+    <td className="px-4 py-4 text-slate-600"><RecordIdentity name={project.name} code={project.code} />{siteName !== project.name && <span className="block text-xs text-slate-500">{siteName}</span>}</td>
     <td className="px-4 py-4 text-slate-600">{item.needed_on}<span className={overdue ? "block text-xs font-semibold text-red-700" : "block text-xs text-slate-500"}>{item.expected_return_on ? `Return ${item.expected_return_on}` : "No return deadline"}{overdue ? " · overdue" : ""}</span></td>
     <td className="max-w-[230px] px-4 py-4 text-slate-600">{item.purpose}{item.decision_note && <span className="block text-xs text-slate-500">Decision: {item.decision_note}</span>}{item.return_note && <span className="block text-xs text-slate-500">Return: {item.return_note}</span>}</td>
     <td className="px-4 py-4"><span className={overdue ? "rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700"}>{overdue ? "Overdue" : statusLabels[item.status]}</span></td>
@@ -101,7 +102,7 @@ export async function EquipmentRequestsView({ params, kind, canManage, canReques
       <input type="hidden" name="type" value={kind} />
       {requestedAsset.success && <input type="hidden" name="asset" value={requestedAsset.data} />}
       <SearchField name="q" label={`Search ${kind}`} defaultValue={search} placeholder={`Search ${kind}`} />
-      <div className="min-w-[220px]"><SelectPicker name="project" label="Project" defaultValue={projectId || "all"} options={[{ value: "all", label: "All projects" }, ...activeProjects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))]} /></div>
+      <div className="min-w-[220px]"><SelectPicker name="project" label="Project" defaultValue={projectId || "all"} options={[{ value: "all", label: "All projects" }, ...activeProjects.map((item) => ({ value: item.id, label: item.name, secondary: item.code }))]} /></div>
       {canRequest && projectId && <div className="min-w-[180px]"><SelectPicker name="site" label="Site" defaultValue={siteId || "all"} options={[{ value: "all", label: "Select site" }, ...activeSites.map((item) => ({ value: item.id, label: item.name }))]} /></div>}
       <div className="min-w-[180px]"><SelectPicker name="status" label="Status" defaultValue={currentStatus} options={statuses.map((value) => ({ value, label: statusLabels[value] }))} /></div>
     </ListFilterBar>

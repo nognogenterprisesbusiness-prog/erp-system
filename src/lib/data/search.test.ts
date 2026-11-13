@@ -9,3 +9,11 @@ test("search terms cannot inject PostgREST filter grammar", () => {
   assert.equal(safeSearchTerm("%_,().\"\\"), "");
   assert.ok(safeSearchTerm("a".repeat(200)).length <= 80);
 });
+
+import { safeAccountSearchTerm } from "./search";
+test("account search preserves email punctuation without filter operators", () => {
+  assert.equal(safeAccountSearchTerm(" admin@nognog.local "), "admin@nognog.local");
+  assert.equal(safeAccountSearchTerm("worker_name@example.com"), "worker_name@example.com");
+  assert.equal(safeAccountSearchTerm("x),is_active.eq.false"), "xis_active.eq.false");
+  assert.equal(safeAccountSearchTerm("a".repeat(1000)).length, 80);
+});

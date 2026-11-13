@@ -1,3 +1,5 @@
+import { displayDate } from "@/lib/ui/display";
+import { RecordIdentity } from "@/components/ui/record-identity";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { z } from "zod";
 import { requestDeliveryLabels } from "@/lib/requests/delivery-stage";
@@ -31,10 +33,10 @@ export async function MaterialRequestsList({ params, canRequest }: { params: Rec
         <th className="px-5 py-3">Requested item</th><th className="px-4 py-3">Project / site</th><th className="px-4 py-3">Source warehouse</th><th className="px-4 py-3">Needed by</th><th className="px-4 py-3">Status</th><th className="px-5 py-3 text-right">Requested on</th><th data-record-actions className="px-5 py-3 text-right bg-slate-50">Actions</th>
       </tr></thead><tbody className="divide-y divide-slate-100">{result.requests.map((request) => <tr key={request.id} className="hover:bg-slate-50/70">
         <td className="px-5 py-4"><Link href={`/requests/${request.id}`} className="flex items-center gap-3 hover:text-cyan-700"><MaterialThumbnail name={request.materialPreview?.name ?? "Material"} photo={request.materialPreview?.photo_path ? recordPhotoUrl("materials", request.materialPreview.materialId) : null} /><span className="min-w-0"><span className="block font-medium text-slate-800">{request.materialPreview?.name ?? "Material"}</span><span className="mt-1 block text-xs text-slate-500">{request.request_number}</span>{(request.materialPreview?.count ?? 0) > 1 && <span className="mt-0.5 block text-xs text-slate-500">+{(request.materialPreview?.count ?? 0) - 1} more materials</span>}</span></Link></td>
-        <td className="px-4 py-4"><p className="font-medium text-slate-800">{request.project?.code ?? "—"} · {request.project?.name ?? "Unavailable project"}</p>{request.siteName !== request.project?.name && <p className="mt-1 text-xs text-slate-500">{request.siteName}</p>}</td>
-        <td className="px-4 py-4 text-slate-600">{request.warehouseName}</td><td className="px-4 py-4 text-slate-600">{request.required_date}</td>
+        <td className="px-4 py-4"><RecordIdentity name={request.project?.name ?? "Unavailable project"} code={request.project?.code} />{request.siteName !== request.project?.name && <p className="mt-1 text-xs text-slate-500">{request.siteName}</p>}</td>
+        <td className="px-4 py-4 text-slate-600">{request.warehouseName === "Awaiting warehouse" && ["cancelled", "rejected"].includes(request.status) ? "Not assigned" : request.warehouseName}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{displayDate(request.required_date)}</td>
         <td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${request.status === "rejected" ? "bg-red-50 text-red-700" : request.status === "submitted" ? "bg-amber-50 text-amber-800" : "bg-cyan-50 text-cyan-800"}`}>{request.deliveryStage ? requestDeliveryLabels[request.deliveryStage] : statusLabels[request.status]}</span>{request.deliveryStage && <p className="mt-1 text-xs text-slate-500">{statusLabels[request.status]}</p>}</td>
-        <td className="px-5 py-4 text-right text-xs text-slate-500">{new Date(request.requested_at).toLocaleDateString("en-PH")}</td><td data-record-actions className="px-5 py-4 text-right bg-white"><Button asChild variant="outline" size="sm"><Link href={`/requests/${request.id}`} aria-label={`View request ${request.request_number}`}>View</Link></Button></td>
+        <td className="whitespace-nowrap px-5 py-4 text-right text-xs text-slate-500">{displayDate(request.requested_at)}</td><td data-record-actions className="px-5 py-4 text-right bg-white"><Button asChild variant="outline" size="sm"><Link href={`/requests/${request.id}`} aria-label={`View request ${request.request_number}`}>View</Link></Button></td>
       </tr>)}</tbody></table>
     </DataTableShell>
     {result.pageCount > 1 && <nav className="mt-4 flex items-center justify-end gap-2" aria-label="Request pages">

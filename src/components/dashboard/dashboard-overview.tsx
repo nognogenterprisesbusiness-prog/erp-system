@@ -1,3 +1,4 @@
+import { RecordIdentity } from "@/components/ui/record-identity";
 import { auditActivityLabel } from "@/lib/ui/display";
 import Image from "next/image";
 import { IntentLink as Link } from "@/components/layout/intent-link";
@@ -62,7 +63,7 @@ export function DashboardOverview({ name, canManage, canViewRequests, canViewCon
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><h2 id="recent-requests-heading" className="text-base font-semibold text-slate-900">Recent requests</h2><Button variant="outline" size="sm" asChild><Link href="/requests">View all</Link></Button></div>
         {recentRequests.length === 0 ? <EmptyState title="No material requests yet" /> : <div className="divide-y divide-slate-100">{recentRequests.map((request) => <Link key={request.id} href={`/requests/${request.id}`} className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50">
           <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-cyan-50 text-cyan-700"><HugeiconsIcon icon={AssignmentsIcon} size={20} strokeWidth={1.6} /></div>
-          <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-900">{request.request_number}</p><p className="mt-1 truncate text-xs text-slate-500">{request.project?.code ?? "Project"} · {request.project?.name ?? "Unavailable project"}</p><p className="mt-1 text-xs text-slate-500">Needed {request.required_date}</p></div>
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-900">{request.request_number}</p><p className="mt-1 truncate text-xs text-slate-500"><RecordIdentity name={request.project?.name ?? "Unavailable project"} code={request.project?.code} /></p><p className="mt-1 text-xs text-slate-500">Needed {request.required_date}</p></div>
           <Badge variant={request.status === "submitted" ? "review" : request.status === "rejected" ? "neutral" : "info"}>{requestLabels[request.status]}</Badge>
         </Link>)}</div>}
       </section>}

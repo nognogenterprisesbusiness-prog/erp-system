@@ -1,3 +1,6 @@
+import { RecordFacts } from "@/components/ui/record-facts";
+import { HistoryPagination } from "@/components/ui/history-pagination";
+import { pageNumber } from "@/lib/data/pagination";
 import { WorkerIdCardPreview } from "@/components/workforce/worker-id-card-preview";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Badge } from "@/components/ui/badge";
@@ -16,11 +19,12 @@ const date = (value: string | null) => value ? new Intl.DateTimeFormat("en-PH", 
 const dateTime = (value: string) => new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 const money = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 2 });
 
-export default async function EmployeeDetailPage({ params, searchParams, editOnly = false }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }>; editOnly?: boolean }) {
-  const editing = (await searchParams).edit === "1";
+export default async function EmployeeDetailPage({ params, searchParams, editOnly = false }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string; assignmentsPage?: string; ratesPage?: string; eventsPage?: string; attendancePage?: string }>; editOnly?: boolean }) {
+  const filters = await searchParams;
+  const editing = filters.edit === "1";
   const { id } = await params;
-  const [user, data] = await Promise.all([requireUser(), getEmployee(id)]);
-  const { employee, category, contact, linkedProfile, assignments, rates, events, references } = data;
+  const [user, data] = await Promise.all([requireUser(), getEmployee(id, { assignments: pageNumber(filters.assignmentsPage), rates: pageNumber(filters.ratesPage), events: pageNumber(filters.eventsPage), attendance: pageNumber(filters.attendancePage) })]);
+  const { employee, category, contact, linkedProfile, assignments, rates, events, attendance } = data;
   // Departments group employees for payroll; only Admin and Finance see them here.
   const showDepartment = user.canManage || user.canViewLaborRates;
   const supabase = await createClient();
@@ -28,6 +32,7 @@ export default async function EmployeeDetailPage({ params, searchParams, editOnl
     supabase.from("employees").select("department_id").eq("id", id).maybeSingle(),
     supabase.from("departments").select("id,name").is("archived_at", null).order("name"),
   ]) : [null, null];
+  const pager = (section: keyof typeof data.history) => data.history[section].count > 20 ? <div className="px-6 pb-4"><HistoryPagination path={`/employees/${id}`} page={data.history[section].page} count={data.history[section].count} parameter={`${section}Page`} filters={{ assignmentsPage: String(data.history.assignments.page), ratesPage: String(data.history.rates.page), eventsPage: String(data.history.events.page), attendancePage: String(data.history.attendance.page) }} /></div> : null;
   const departmentId = departmentRow?.data?.department_id ?? null;
   const departments = departmentList?.data ?? [];
   if (editOnly && (user.canManage && employee.status !== "separated")) return <RecordCreateDialog hideTrigger confirmDiscard key={employee.id} title="Edit employee" triggerLabel="Edit employee" triggerVariant="outline" initialOpen closeHref="/employees"><EmployeeForm employee={data.employee} contact={data.contact} categories={data.references.categories} profiles={data.references.profiles} /></RecordCreateDialog>;
@@ -46,7 +51,7 @@ export default async function EmployeeDetailPage({ params, searchParams, editOnl
     <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
         <div><h2 className="font-semibold">Project assignments</h2><p className="mt-1 text-xs text-slate-500">Current and past workers by site.</p></div>
-        {user.canManage && employee.status === "active" && <RecordCreateDialog title="Assign employee" triggerLabel="Assign to project"><WorkforceAssignmentForm fixedEmployeeId={id} employees={[{ id, fullName: employee.fullName }]} projects={references.projects} sites={references.sites} /></RecordCreateDialog>}
+        {user.canManage && employee.status === "active" && <RecordCreateDialog title="Assign employee" triggerLabel="Assign to project"><WorkforceAssignmentForm fixedEmployeeId={id} /></RecordCreateDialog>}
       </div>
       {assignments.length === 0 ? <EmptyState compact kind="items" title="No project assignments" /> : (
         <div className="divide-y divide-slate-100">
@@ -54,15 +59,14 @@ export default async function EmployeeDetailPage({ params, searchParams, editOnl
             <article key={assignment.id} className="flex flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2"><Link href={`/projects/${assignment.project_id}`} className="text-sm font-semibold hover:text-cyan-700">{assignment.projectName}</Link><Badge variant={assignment.status === "active" ? "active" : "neutral"}>{assignment.status}</Badge></div>
-                <p className="mt-1 text-sm text-slate-600">{assignment.position_title} · {assignment.siteName}</p>
-                <p className="mt-1 text-xs text-slate-400">{date(assignment.start_date)} – {date(assignment.end_date)} · Assigned by {assignment.assignedByName}</p>
+                <RecordFacts className="mt-3" items={[{ label: "Position", value: assignment.position_title }, { label: "Site", value: assignment.siteName }, { label: "Dates", value: `${date(assignment.start_date)} – ${date(assignment.end_date)}` }, { label: "Assigned by", value: assignment.assignedByName }]} />
                 {assignment.remarks && <p className="mt-2 text-xs text-slate-500">{assignment.remarks}</p>}
               </div>
               {user.canManage && assignment.status === "active" && (
                 <div className="flex flex-wrap gap-2">
                   <RecordCreateDialog title="Transfer employee" triggerLabel="Transfer" triggerVariant="outline" triggerIcon={null}>
                     <p className="mb-4 text-sm text-slate-600">Move {employee.fullName} from {assignment.siteName} to another project site.</p>
-                    <TransferAssignmentForm assignment={assignment} projects={references.projects} sites={references.sites} />
+                    <TransferAssignmentForm assignment={assignment} />
                   </RecordCreateDialog>
                   <RecordCreateDialog size="sm" title="End assignment" triggerVariant="outline" triggerIcon={null}>
                     <p className="mb-4 text-sm text-slate-600">End the {assignment.position_title} assignment at {assignment.siteName}.</p>
@@ -74,6 +78,7 @@ export default async function EmployeeDetailPage({ params, searchParams, editOnl
           ))}
         </div>
       )}
+      {pager("assignments")}
     </section>
 
     <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -90,7 +95,7 @@ export default async function EmployeeDetailPage({ params, searchParams, editOnl
             <div key={rate.id} className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
               <div>
                 <p className="text-sm font-semibold">{money.format(rate.rate_amount)} / {rate.rate_type === "daily" ? "day" : "hour"}</p>
-                <p className="mt-1 text-xs text-slate-500">Effective {date(rate.effective_start_date)} – {date(rate.effective_end_date)} · Approved by {rate.approvedByName}</p>
+                <p className="mt-1 text-xs text-slate-500">Effective {date(rate.effective_start_date)} – {date(rate.effective_end_date)}</p><p className="mt-1 text-xs text-slate-500">Approved by {rate.approvedByName}</p>
               </div>
               {user.canManage && !rate.effective_end_date && <RecordCreateDialog size="sm" title="Close labor rate" triggerLabel="Close rate" triggerVariant="outline" triggerIcon={null}>
                 <p className="mb-4 text-sm text-slate-600">Set the final effective date for {money.format(rate.rate_amount)} per {rate.rate_type === "daily" ? "day" : "hour"}.</p>
@@ -100,8 +105,16 @@ export default async function EmployeeDetailPage({ params, searchParams, editOnl
           ))}
         </div>
       )}
+      {pager("rates")}
     </section>
 
-    <section className="mt-5 grid gap-5 xl:grid-cols-2"><article className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 px-6 py-5"><h2 className="font-semibold">Attendance history</h2><p className="mt-1 text-xs text-slate-500">Recorded attendance and work hours</p></div><EmptyState compact kind="items" title="No attendance records" /></article><article className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 px-6 py-5"><h2 className="font-semibold">Record history</h2><p className="mt-1 text-xs text-slate-500">A history of changes to this employee&apos;s record.</p></div>{events.length === 0 ? <EmptyState compact kind="items" title="No history available" /> : <div className="max-h-[360px] divide-y divide-slate-100 overflow-y-auto">{events.map((event) => <div key={event.id} className="px-6 py-4"><p className="text-sm font-medium">{event.summary}</p><p className="mt-1 text-xs text-slate-400">{event.actorName} · {dateTime(event.occurred_at)}</p></div>)}</div>}</article></section>
+    <section className={`mt-5 grid gap-5 ${user.canViewLaborRates ? "xl:grid-cols-2" : ""}`}>
+      {user.canViewLaborRates && <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-6 py-5"><h2 className="font-semibold">Project attendance history</h2><p className="mt-1 text-xs text-slate-500">Posted attendance and work hours</p></div>
+        {attendance.length === 0 ? <EmptyState compact kind="items" title="No posted project attendance" /> : <div className="divide-y divide-slate-100">{attendance.map(entry => <div key={entry.id} className="px-6 py-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-semibold">{date(entry.work_date)}</p><Badge variant={entry.reversal ? "neutral" : entry.attendance_status === "present" ? "active" : "review"}>{entry.reversal ? "Reversed" : entry.attendance_status === "present" ? "Present" : "Absent"}</Badge></div><p className="mt-2 text-sm">{entry.projectName}</p><p className="mt-1 text-sm text-slate-600">{entry.hours_worked} hours</p>{entry.note && <p className="mt-1 text-xs text-slate-500">{entry.note}</p>}{entry.reversal && <p className="mt-1 text-xs text-slate-500">Correction: {entry.reversal}</p>}</div>)}</div>}
+        {pager("attendance")}
+      </article>}
+      <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 px-6 py-5"><h2 className="font-semibold">Record history</h2><p className="mt-1 text-xs text-slate-500">Changes to this employee’s record</p></div>{events.length === 0 ? <EmptyState compact kind="items" title="No history available" /> : <div className="divide-y divide-slate-100">{events.map(event => <div key={event.id} className="px-6 py-4"><p className="text-sm font-medium">{event.summary}</p><p className="mt-1 text-xs text-slate-500">{event.actorName}</p><p className="mt-1 text-xs text-slate-500">{dateTime(event.occurred_at)}</p></div>)}</div>}{pager("events")}</article>
+    </section>
   </>;
 }

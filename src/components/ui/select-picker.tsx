@@ -9,10 +9,16 @@ import { SearchableSelectPicker } from "./searchable-select-picker";
 import { cn } from "@/lib/utils";
 import { FilterBarContext } from "./filter-bar-context";
 
-export type SelectOption = { value: string; label: string; disabled?: boolean };
+export type SelectOption = { value: string; label: string; secondary?: string; disabled?: boolean };
 
 export type SelectPickerProps = Pick<AriaAttributes, "aria-describedby" | "aria-invalid" | "aria-required"> & {
   searchable?: boolean;
+  selectedOption?: SelectOption;
+  onSearchChange?: (query: string) => void;
+  loading?: boolean;
+  resultCount?: number;
+  page?: number;
+  onPageChange?: (page: number) => void;
   id?: string;
   options: readonly SelectOption[];
   label: string;
@@ -39,7 +45,7 @@ function StandardSelectPicker({ id, options, label, name, value, defaultValue, o
       <Select.Content position="popper" sideOffset={5} collisionPadding={8} className="z-[100] max-h-[min(18rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)] min-w-[min(20rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-slate-200 bg-white p-1 text-slate-800 shadow-xl">
         <Select.Viewport data-erp-select-viewport="" className="max-h-[min(18rem,calc(var(--radix-select-content-available-height)-0.75rem))] overflow-y-auto overscroll-contain">
           {options.map((option) => <Select.Item key={option.value} value={option.value} disabled={option.disabled} className="relative flex min-h-9 cursor-pointer select-none items-center rounded-md py-2 pl-3 pr-9 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-cyan-50 data-[highlighted]:text-cyan-900">
-            <Select.ItemText className="min-w-0 whitespace-normal break-words">{option.label}</Select.ItemText>
+            <span className="min-w-0"><Select.ItemText className="whitespace-normal break-words">{option.label}</Select.ItemText>{option.secondary && <span className="mt-0.5 block text-xs text-slate-500">{option.secondary}</span>}</span>
             <Select.ItemIndicator className="absolute right-2 text-cyan-700"><HugeiconsIcon icon={CheckmarkCircle02Icon} size={16} /></Select.ItemIndicator>
           </Select.Item>)}
         </Select.Viewport>

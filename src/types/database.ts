@@ -263,6 +263,8 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      search_registry_choices: { Args: { p_kind: string; p_search?: string; p_offset?: number; p_limit?: number; p_selected?: string | null }; Returns: { id: string; name: string; code: string; total_count: number }[] };
+      get_monthly_material_consumption: { Args: { p_from: string; p_to: string }; Returns: { month: string; material_id: string; unit_id: string; quantity: number }[] };
       get_payroll_totals: { Args: { p_run_ids: string[] }; Returns: { run_id: string; employee_count: number; gross: number; deductions: number; net: number }[] };
       search_attendance_overview: { Args: { p_date: string; p_project_id: string | null; p_query: string; p_status: string; p_page: number }; Returns: Json };
 

@@ -1,6 +1,6 @@
 import { RecordFacts, type RecordFact } from "./record-facts";
 
-export function PageHeader({ eyebrow, title, description, facts, action }: { eyebrow?: string; title: string; description?: string; facts?: readonly RecordFact[]; action?: React.ReactNode }) {
+export function PageHeader({ eyebrow, title, description, facts, action }: { eyebrow?: string; title: string; description?: React.ReactNode; facts?: readonly RecordFact[]; action?: React.ReactNode }) {
   return <div className="flex flex-wrap items-start justify-between gap-4">
     <div className="min-w-0 flex-1 basis-64">
       {eyebrow && <p className="text-xs font-semibold tracking-wide text-cyan-700">{eyebrow}</p>}

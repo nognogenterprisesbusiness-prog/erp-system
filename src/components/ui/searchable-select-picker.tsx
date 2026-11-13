@@ -3,11 +3,12 @@
 import { useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { searchSelectOptions } from "@/lib/ui/select-search";
+import { LoadingSpinner } from "./loading-state";
 import { cn } from "@/lib/utils";
 import { FilterBarContext } from "./filter-bar-context";
 import type { SelectPickerProps } from "./select-picker";
 
-export function SearchableSelectPicker({ id, options, label, name, value, defaultValue, onValueChange, placeholder, disabled, required, className, "aria-describedby": describedBy, "aria-invalid": invalid, "aria-required": ariaRequired }: SelectPickerProps) {
+export function SearchableSelectPicker({ id, options, label, name, value, defaultValue, onValueChange, placeholder, disabled, required, className, selectedOption, onSearchChange, loading, resultCount, page = 1, onPageChange, "aria-describedby": describedBy, "aria-invalid": invalid, "aria-required": ariaRequired }: SelectPickerProps) {
   const generatedId = useId();
   const listId = `${generatedId}-options`;
   const input = useRef<HTMLInputElement>(null);
@@ -22,9 +23,11 @@ export function SearchableSelectPicker({ id, options, label, name, value, defaul
   const [position, setPosition] = useState<{ top: number; left: number; width: number; height: number; container: HTMLElement }>();
   const filterChange = useContext(FilterBarContext);
   const selection = value ?? localValue;
-  const selected = options.find(option => option.value === selection);
-  const { visible, count } = useMemo(() => searchSelectOptions(options, query), [options, query]);
-  const locked = disabled || options.length === 0;
+  const selected = options.find(option => option.value === selection) ?? (selectedOption?.value === selection ? selectedOption : undefined);
+  const matches = useMemo(() => searchSelectOptions(options, onSearchChange ? "" : query), [options, query, onSearchChange]);
+  const visible = loading ? [] : matches.visible;
+  const count = resultCount ?? matches.count;
+  const locked = disabled || (!onSearchChange && options.length === 0);
   useEffect(() => {
     if (!open) return;
     const place = () => {
@@ -44,7 +47,7 @@ export function SearchableSelectPicker({ id, options, label, name, value, defaul
   useEffect(() => { if (open) popup.current?.querySelector('[data-active="true"]')?.scrollIntoView({ block: "nearest" }); }, [active, query, open]);
   function choose(index: number) {
     const option = visible[index];
-    if (!option || option.disabled || locked) return;
+    if (!option || option.disabled || locked || loading) return;
     if (option.value !== selection) formSelection.current?.dispatchEvent(new Event("input", { bubbles: true }));
     setLocalValue(option.value); setValidation(false); setOpen(false); setQuery("");
     onValueChange?.(option.value);
@@ -52,11 +55,11 @@ export function SearchableSelectPicker({ id, options, label, name, value, defaul
   }
   return <div ref={root} data-searchable-select className={cn("relative min-w-0 w-full", className)}>
     <div className="relative">
-      <input data-select-search-input ref={input} id={id} role="combobox" aria-label={label} aria-expanded={open} aria-controls={open ? listId : undefined} aria-autocomplete="list" aria-activedescendant={open && visible[active] ? `${listId}-${active}` : undefined} aria-describedby={describedBy} aria-invalid={invalid || validation || undefined} aria-required={ariaRequired ?? required} type="text" autoComplete="off" disabled={locked} value={open ? query : selected?.label ?? ""} placeholder={open ? `Search ${label.toLowerCase()}…` : placeholder ?? `Choose ${label.toLowerCase()}`} onFocus={() => { setActive(0); setOpen(true); }} onClick={() => setOpen(true)} onChange={event => { setQuery(event.target.value); setActive(0); setOpen(true); }} onBlur={event => { if (!popup.current?.contains(event.relatedTarget)) { setOpen(false); setQuery(""); } }} onKeyDown={event => {
+      <input data-select-search-input ref={input} id={id} role="combobox" aria-label={label} aria-expanded={open} aria-controls={open ? listId : undefined} aria-autocomplete="list" aria-activedescendant={open && visible[active] ? `${listId}-${active}` : undefined} aria-describedby={describedBy} aria-invalid={invalid || validation || undefined} aria-required={ariaRequired ?? required} type="text" maxLength={100} autoComplete="off" disabled={locked} value={open ? query : selected?.label ?? ""} placeholder={open ? `Search ${label.toLowerCase()}…` : placeholder ?? `Choose ${label.toLowerCase()}`} onFocus={() => { setActive(0); setOpen(true); onSearchChange?.(""); }} onClick={() => { setOpen(true); if (!open) onSearchChange?.(""); }} onChange={event => { setQuery(event.target.value); onSearchChange?.(event.target.value); setActive(0); setOpen(true); }} onBlur={event => { if (!popup.current?.contains(event.relatedTarget)) { setOpen(false); setQuery(""); } }} onKeyDown={event => {
         if (event.key === "Escape" && open) { event.preventDefault(); event.stopPropagation(); setOpen(false); setQuery(""); return; }
         if (event.key === "Tab") { setOpen(false); setQuery(""); return; }
         if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-          event.preventDefault(); setOpen(true);
+          event.preventDefault(); if (!open) onSearchChange?.(""); setOpen(true);
           const enabled = visible.map((option, index) => option.disabled ? -1 : index).filter(index => index >= 0);
           const at = enabled.indexOf(active);
           setActive(enabled[(at + (event.key === "ArrowDown" ? 1 : -1) + enabled.length) % enabled.length] ?? 0);
@@ -69,9 +72,10 @@ export function SearchableSelectPicker({ id, options, label, name, value, defaul
     {validation && <p role="alert" className="mt-1 text-xs text-red-700">Choose {label.toLowerCase()} from the list.</p>}
     {open && position && createPortal(<div ref={popup} style={{ position: "fixed", top: position.top, left: position.left, width: position.width, maxHeight: position.height }} className="z-[100] flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white p-1 text-slate-800 shadow-xl">
       <div id={listId} role="listbox" aria-label={label} className="min-h-0 overflow-y-auto overscroll-contain">
-        {visible.length ? visible.map((option, index) => <button id={`${listId}-${index}`} key={option.value} type="button" role="option" tabIndex={-1} aria-selected={option.value === selection} disabled={option.disabled} data-active={index === active} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActive(index)} onClick={() => choose(index)} className={cn("block min-h-9 w-full rounded-md px-3 py-2 text-left text-sm disabled:opacity-50", index === active && "bg-cyan-50 text-cyan-900", option.value === selection && "font-semibold")}><span className="block whitespace-normal break-words">{option.label}</span></button>) : <p className="px-3 py-4 text-sm text-slate-500">No matches. Try another name.</p>}
+        {loading ? <LoadingSpinner className="w-full py-4" label={`Searching ${label}`} /> : visible.length ? visible.map((option, index) => <button id={`${listId}-${index}`} key={option.value} type="button" role="option" tabIndex={-1} aria-selected={option.value === selection} disabled={option.disabled} data-active={index === active} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActive(index)} onClick={() => choose(index)} className={cn("block min-h-9 w-full rounded-md px-3 py-2 text-left text-sm disabled:opacity-50", index === active && "bg-cyan-50 text-cyan-900", option.value === selection && "font-semibold")}><span className="block whitespace-normal break-words">{option.label}</span>{option.secondary && <span className="mt-0.5 block text-xs font-normal text-slate-500">{option.secondary}</span>}</button>) : <p className="px-3 py-4 text-sm text-slate-500">No matches. Try another name.</p>}
       </div>
-      {count > 50 && <p className="border-t border-slate-100 px-3 py-2 text-xs text-slate-500">Showing 50 of {count.toLocaleString()}. Type to narrow the list.</p>}
+      {!onPageChange && count > 50 && <p className="border-t border-slate-100 px-3 py-2 text-xs text-slate-500">Showing 50 of {count.toLocaleString()}. Type to narrow the list.</p>}
+      {onPageChange && count > 20 && <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-2 py-2 text-xs"><button type="button" disabled={page <= 1 || loading} onMouseDown={event => event.preventDefault()} onClick={() => { setActive(0); onPageChange(page - 1); }} className="rounded px-2 py-1 hover:bg-slate-100 disabled:opacity-40">Previous</button><span>{page.toLocaleString()} / {Math.ceil(count / 20).toLocaleString()}</span><button type="button" disabled={page * 20 >= count || loading} onMouseDown={event => event.preventDefault()} onClick={() => { setActive(0); onPageChange(page + 1); }} className="rounded px-2 py-1 hover:bg-slate-100 disabled:opacity-40">Next</button></div>}
     </div>, position.container)}
   </div>;
 }

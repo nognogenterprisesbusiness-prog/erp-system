@@ -1,3 +1,4 @@
+import { RecordIdentity } from "@/components/ui/record-identity";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -44,7 +45,7 @@ export default async function AttendanceScansPage({ params, searchParams }: {
   const photoIds = new Set(photos.data?.map(p => p.scan_id));
   const siteNames = new Map(sites.data?.map(s => [s.id, s.name]));
   return <>
-    <PageHeader title="ID scans & face photos" description={`${project.data.code} · ${project.data.name}`} action={<Button asChild variant="outline"><Link href={`/projects/${id}/attendance`}>Back to attendance</Link></Button>} />
+    <PageHeader title="ID scans & face photos" description={<RecordIdentity name={project.data.name} code={project.data.code} />} action={<Button asChild variant="outline"><Link href={`/projects/${id}/attendance`}>Back to attendance</Link></Button>} />
     <p className="mt-4 text-sm text-slate-600">Each saved time-in or time-out shows the worker ID and its face photo. Scans are evidence; reviewed attendance posts work hours separately.</p>
     <form className="my-6 flex flex-wrap items-end gap-3"><label className="grid gap-2 text-sm font-medium">Scan date<input type="date" name="date" defaultValue={date} required className="rounded-lg border border-slate-200 bg-white px-3 py-2" /></label><Button type="submit">Show scans</Button></form>
     {!items.length ? <EmptyState title="No ID scans for this date" description="Saved time-in and time-out scans will appear here. Cancelled QR verifications do not record attendance." /> : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{items.map(s => {

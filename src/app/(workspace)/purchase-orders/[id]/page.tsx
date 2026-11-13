@@ -1,3 +1,4 @@
+import { RecordIdentity } from "@/components/ui/record-identity";
 import { displayDate } from "@/lib/ui/display";
 import { RecordFacts } from "@/components/ui/record-facts";
 import { ActionDialog } from "@/components/ui/action-dialog";
@@ -46,7 +47,7 @@ export default async function PurchaseOrderPage({ params, searchParams }: { para
         const remaining = Number(line.ordered_quantity) - Number(line.received_quantity);
         const open = inspections.filter((entry) => entry.purchase_order_line_id === line.id);
         return <div key={line.id} className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm"><span className="font-semibold">{line.material_code} · {line.material_name}</span> · {remaining} {line.unit_symbol} still expected</p>
+          <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm"><span className="font-semibold"><RecordIdentity name={line.material_name} code={line.material_code} /></span> · {remaining} {line.unit_symbol} still expected</p>
             {order.inspection_required ? <RecordCreateDialog title="Inspect supplier delivery" triggerLabel="Inspect delivery" triggerVariant="outline"><PurchaseDeliveryInspectionForm orderId={id} lineId={line.id} remaining={remaining} unitSymbol={line.unit_symbol} idempotencyKey={randomUUID()} today={today} /></RecordCreateDialog> : <RecordCreateDialog title="Record legacy delivery" triggerLabel="Receive" triggerVariant="outline"><ReceivePurchaseLineForm orderId={id} lineId={line.id} remaining={remaining} unitPrice={Number(line.unit_price)} unitSymbol={line.unit_symbol} idempotencyKey={randomUUID()} today={today} /></RecordCreateDialog>}
           </div>
           {open.map((inspection) => <div key={inspection.id} className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 text-sm">

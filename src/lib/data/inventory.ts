@@ -112,9 +112,9 @@ export async function getInventoryBalances(params: { query?: string; locationId?
 
 // Warehouse totals by default; site and company summaries remain location-scoped.
 // Unstocked catalog materials remain visible as zero.
-export async function getInventoryMaterials(params: { query?: string; locationId?: string; scope?: InventoryScope; status?: "active" | "inactive" | "all"; lowStock?: boolean; page?: number; pageSize?: number; includeValues?: boolean } = {}) {
+export async function getInventoryMaterials(params: { query?: string; locationId?: string; scope?: InventoryScope; status?: "active" | "inactive" | "all"; lowStock?: boolean; page?: number; pageSize?: number; includeValues?: boolean } = {}, resolvedLocations?: LocationView[]) {
   const supabase = await createClient();
-  const locations = await getLocationViews();
+  const locations = resolvedLocations ?? await getLocationViews();
   const selectedLocationId = params.locationId || "";
   if (selectedLocationId && !locations.some((item) => item.id === selectedLocationId)) notFound();
   const scope = resolveInventoryScope(params.scope, locations);
@@ -122,7 +122,7 @@ export async function getInventoryMaterials(params: { query?: string; locationId
   const scopedLocationIds = locations.filter((location) => selectedLocationId
     ? location.id === selectedLocationId : locationKind === "all" || location.location_type === locationKind).map((location) => location.id);
   const pageSize = Math.min(500, Math.max(1, params.pageSize ?? 24));
-  let page = Number.isSafeInteger(params.page) && params.page! > 0 ? Math.min(params.page!, 10000) : 1;
+  let page = Number.isSafeInteger(params.page) && params.page! > 0 ? params.page! : 1;
   const args = { p_query: safeSearchTerm(params.query), p_location_id: selectedLocationId || null,
     p_status: params.status ?? "active",
     p_low: params.lowStock ?? false, p_limit: pageSize, p_location_kind: locationKind };
@@ -180,7 +180,7 @@ export async function getInventoryMaterials(params: { query?: string; locationId
 export async function getInventoryTransactions(params: { type?: InventoryTransactionType | "all"; locationId?: string; transactionId?: string; page?: number; includeCosts?: boolean } = {}) {
   const supabase = await createClient();
   const requestedPage = params.page ?? 1;
-  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? Math.min(requestedPage, 10000) : 1;
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const pageSize = 50;
   let request = supabase.from("inventory_transactions").select("id,material_id,quantity,unit_of_measure_id,source_location_id,destination_location_id,transaction_type,transfer_id,transfer_item_id,transfer_phase,reference_document,project_id,responsible_user_id,transaction_date,remarks,reversal_of,created_at", { count: "exact" }).order("created_at", { ascending: false }).order("id");
   if (params.transactionId) { if (!uuidSchema.safeParse(params.transactionId).success) notFound(); request = request.eq("id", params.transactionId); }

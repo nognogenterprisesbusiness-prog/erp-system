@@ -19,3 +19,19 @@ test("streamed exports preserve all rows beyond 1000 and escape formulas", async
   assert.equal(value.split("\r\n").length,1501);
   assert.ok(value.includes('"1499","\'=formula"'));
 });
+
+test("streamed exports cover 100,000 rows without a record ceiling", async () => {
+  async function* batches() { for (let i = 0; i < 200; i++) yield Array.from({ length: 500 }, (_, j) => [i * 500 + j]); }
+  const reader = streamCsvAttachment("large.csv", ["ID"], batches()).body!.getReader();
+  const decoder = new TextDecoder(); let lines = 0; let last = "";
+  for (;;) { const result = await reader.read(); if (result.done) break; const chunk = decoder.decode(result.value); lines += chunk.split("\r\n").length - 1; last = chunk; }
+  assert.equal(lines, 100000); assert.ok(last.endsWith('"99999"'));
+});
+
+test("cancelling a download closes its batch iterator", async () => {
+  let closed = false;
+  async function* batches() { try { while (true) yield [[1]]; } finally { closed = true; } }
+  const reader = streamCsvAttachment("cancel.csv", ["ID"], batches()).body!.getReader();
+  await reader.read(); await reader.read(); await reader.cancel();
+  assert.equal(closed, true);
+});

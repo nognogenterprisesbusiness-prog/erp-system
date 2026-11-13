@@ -59,7 +59,7 @@ export async function assignDriverTruck(_: ExpenseActionState, form: FormData): 
   return { message: "Assignment saved.", success: true };
 }
 
-export async function searchAssignableTrucks(search: string): Promise<{ options: { id: string; label: string }[]; message?: string }> {
+export async function searchAssignableTrucks(search: string): Promise<{ options: { id: string; label: string; secondary?: string }[]; message?: string }> {
   await requireManager();
   const parsed = z.string().trim().max(80).safeParse(search);
   if (!parsed.success) return { options: [], message: "Use a shorter truck name or code." };
@@ -69,5 +69,5 @@ export async function searchAssignableTrucks(search: string): Promise<{ options:
   if (term) query = query.or(`code.ilike.%${term}%,name.ilike.%${term}%`);
   const { data, error } = await query;
   if (error) return { options: [], message: "Could not load trucks. Try the search again." };
-  return { options: data.map(truck => ({ id: truck.id, label: `${truck.code} · ${truck.name}` })) };
+  return { options: data.map(truck => ({ id: truck.id, label: truck.name, secondary: truck.code })) };
 }

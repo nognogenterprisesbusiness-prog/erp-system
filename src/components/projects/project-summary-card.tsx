@@ -34,8 +34,8 @@ export function ProjectSummaryCard({ href, navigation = "app", code, name, locat
       <span className={`pointer-events-none absolute right-3 top-3 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm ${statusStyles[statusTone]}`}>{status}</span>
     </div>
     <div className="flex flex-1 flex-col p-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-cyan-700">{code}</p>
-      <h2 className="mt-1 text-lg font-semibold leading-snug text-slate-900"><NavigationLink href={href} className="rounded-sm hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">{name}</NavigationLink></h2>
+      <h2 className="text-lg font-semibold leading-snug text-slate-900"><NavigationLink href={href} className="rounded-sm hover:text-cyan-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-600">{name}</NavigationLink></h2>
+      <p className="mt-1 text-xs text-slate-500">{code}</p>
       <p className="mt-1 min-h-5 text-sm text-slate-500">{location}</p>
       {showProgress && <div className="mt-5">
         <div className="flex items-center justify-between text-sm"><span className="text-slate-500">Progress</span><span className="font-semibold tabular-nums text-slate-800">{progress === undefined ? "No approved update yet" : `${progress}%`}</span></div>

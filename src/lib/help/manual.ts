@@ -55,7 +55,7 @@ export const manualGuides: readonly ManualGuide[] = [
     before: "Sign in with your own account. Admin must activate it and assign the sites or warehouses you work with.",
     steps: [
       { title: "Choose your work area", detail: "Main work starts with Overview, Projects and Requests, followed by Inventory, Equipment and Vehicles. The order stays consistent; only permitted pages appear. Find employees, attendance and payroll under People, and daily reports and documents under Project tools." },
-      { title: "Find a record", detail: "Use the header project search, or the search and filters above a page's table. Press Enter to search. Use the page controls below the table to reach older records." },
+      { title: "Find a record", detail: "Search by name or code. Names appear first, with codes underneath. Use the page controls below lists and histories to reach older records. In large selection fields, type a name or code and choose a result; typing alone does not select a record." },
       { title: "Open details before acting", detail: "Select the record name or View to inspect details. If a row has several actions, use its three-dot menu. Edit directly from the list opens only the editor; an action opened from record details keeps those details visible behind it. Type a name into long selectors to narrow the choices. Check the site, warehouse and quantity before acting. Cancellation and corrections ask for a reason." },
       { title: "Wait for confirmation", detail: "Complete the required fields and select Save or the named action. Wait for success before leaving. The screen updates after the server confirms the transaction; a notification alone is not proof of stock posting." },
     ],
@@ -269,9 +269,10 @@ export const manualGuides: readonly ManualGuide[] = [
     id: "people", title: "Employees and attendance setup", description: "Maintain the workers used in attendance and project labour records.", href: "/employees", roles: everyone,
     before: "An employee record represents a worker. A staff login is a separate user account with a role and assignments.",
     steps: [
-      { title: "Register the employee", detail: "Admin opens Employees → Add employee. Enter a unique code, category/trade and name. Complete contact, employment and hire-date fields. Use the Categories button on Employees when a trade needs setup." },
+      { title: "Register the employee", detail: "Admin opens Employees → Add employee. Enter a unique employee code, job / trade and name. Complete contact, employment and hire-date fields. Use Jobs / trades on Employees when a trade needs setup." },
       { title: "Keep private details private", detail: "Personal contact details and wage information are shown only where your role permits. An optional linked user account does not automatically grant project access." },
       { title: "Prepare the project's workforce", detail: "Admin maintains worker assignments and the applicable labour costing basis/rates before the Foreman records attendance. Rates are historical snapshots when attendance posts." },
+      { title: "Review one employee", detail: "Select the employee name or View. Admin and Finance can review posted work and any reversal under Project attendance history. Assignments, rates and history have their own page controls. Edit from this panel to keep the employee details visible, or choose Edit from the list to open only the form." },
       { title: "Record actual work", detail: "Admin or the assigned Foreman records supported daily full/half-day attendance or actual hourly work. Finance reviews attendance costs; Engineer reviews permitted site attendance." },
     ],
     result: "Attendance refers to the correct worker and actual work date, with the configured cost basis.",

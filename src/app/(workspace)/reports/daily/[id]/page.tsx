@@ -1,3 +1,4 @@
+import { RecordIdentity } from "@/components/ui/record-identity";
 import { projectSiteLabel } from "@/lib/ui/display";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { ReportResourceSection } from "@/components/reports/report-resource-section";
@@ -46,7 +47,7 @@ export default async function DailyReportDetailPage({ params, searchParams, edit
   const canRecordProgress = report.status === "approved" && !progress && Boolean(capabilities?.[0]?.can_review);
   if (editOnly && (canEdit && choices)) return <RecordCreateDialog hideTrigger confirmDiscard key={report.id} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen closeHref="/reports/daily"><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>;
   return <>
-    <PageHeader eyebrow="Daily report" title={report.report_number} description={`${project.code} · ${projectSiteLabel(project.name, site.name)}`}
+    <PageHeader eyebrow="Daily report" title={report.report_number} description={<RecordIdentity name={projectSiteLabel(project.name, site.name)} code={project.code} />}
       action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link data-detail-back href={`/reports/daily?project=${report.project_id}`}>Back to daily reports</Link></Button>{canEdit && choices && <RecordCreateDialog confirmDiscard key={report.id} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen={filters.edit === "1"} closeHref={`/reports/daily/${id}`}><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}{canCorrect && <DailyReportCorrection reportId={id} />}</div>} />
     <div className="mt-5 rounded-xl border border-cyan-100 bg-cyan-50 p-4"><h2 className="font-semibold">{guide.title}</h2><p className="mt-1 text-sm text-slate-700">{guide.detail}</p></div>
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">

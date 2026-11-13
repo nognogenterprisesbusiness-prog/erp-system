@@ -1,3 +1,4 @@
+import { RecordIdentity } from "@/components/ui/record-identity";
 import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -34,7 +35,7 @@ export async function ProjectSiteAttendance({ projectId, page, canRecord }: { pr
   const attendanceAssignments = assignments.map((assignment) => ({ ...assignment, employee: employeeById.get(assignment.employee_id) }));
 
   return <>
-    <PageHeader title="Project attendance" description={`${project.data.code} · ${project.data.name}`} action={canRecord ? <div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link href={`/projects/${projectId}/attendance/scans`}>ID scans & face photos</Link></Button>{attendanceAssignments.length > 0 && <AttendancePostDialog projectId={projectId} assignments={attendanceAssignments} idempotencyKey={randomUUID()} today={today} />}</div> : undefined} />
+    <PageHeader title="Project attendance" description={<RecordIdentity name={project.data.name} code={project.data.code} />} action={canRecord ? <div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link href={`/projects/${projectId}/attendance/scans`}>ID scans & face photos</Link></Button>{attendanceAssignments.length > 0 && <AttendancePostDialog projectId={projectId} assignments={attendanceAssignments} idempotencyKey={randomUUID()} today={today} />}</div> : undefined} />
     <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <table className="w-full text-left text-sm">
         <thead><tr>{["Employee", "Date", "Attendance", "Hours", "Record"].map((label) => <th className="px-4 py-3" key={label}>{label}</th>)}</tr></thead>

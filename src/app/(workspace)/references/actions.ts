@@ -1,9 +1,10 @@
 "use server";
 import { uuidSchema } from "@nognog/domain";
+import { separateReferenceCode } from "@/lib/ui/reference-identity";
 import { requireUser } from "@/lib/auth";
 import { pageNumber } from "@/lib/data/pagination";
 import { createClient } from "@/lib/supabase/server";
-export type ReferenceChoice = { value: string; label: string; unitId?: string | null; availableQuantity?: number };
+export type ReferenceChoice = { value: string; label: string; secondary?: string; unitId?: string | null; availableQuantity?: number };
 export type ReferenceKind = "material" | "attendance" | "site_material" | "billable_project" | "delivery_vehicle";
 export async function searchReferenceChoices(kind: ReferenceKind, projectId: string, search: string, requestedPage: number): Promise<{ choices: ReferenceChoice[]; count: number }> {
   const user = await requireUser();
@@ -15,7 +16,7 @@ export async function searchReferenceChoices(kind: ReferenceKind, projectId: str
     if (!user.canViewLaborRates) throw new Error("Not authorized for billing.");
     const { data, error } = await db.rpc("get_billable_projects", args);
     if (error) throw new Error("Unable to search billable projects.");
-    return { choices: data.map((r) => ({ value: r.id, label: `${r.code} · ${r.name} · ${r.client_name}` })), count: data[0]?.total_count ?? 0 };
+    return { choices: data.map((r) => ({ value: r.id, label: r.name, secondary: `${r.code} — ${r.client_name}` })), count: data[0]?.total_count ?? 0 };
   }
   if (kind === "delivery_vehicle") {
     if (!user.canOperateInventory) throw new Error("Not authorized for delivery vehicles.");
@@ -27,9 +28,9 @@ export async function searchReferenceChoices(kind: ReferenceKind, projectId: str
     if (!uuidSchema.safeParse(projectId).success) return { choices: [], count: 0 };
     const { data, error } = await db.rpc("search_site_material_choices", { ...args, p_location_id: projectId });
     if (error) throw new Error("Unable to search site stock.");
-    return { choices: data.map((r) => ({ value: r.id, label: r.label, unitId: r.unit_id, availableQuantity: r.available_quantity })), count: data[0]?.total_count ?? 0 };
+    return { choices: data.map((r) => ({ value: r.id, ...separateReferenceCode(r.label), unitId: r.unit_id, availableQuantity: r.available_quantity })), count: data[0]?.total_count ?? 0 };
   }
   const result = kind === "material" ? await db.rpc("search_material_choices", args) : await db.rpc("search_attendance_assignment_choices", { ...args, p_project_id: projectId });
   if (result.error) throw new Error("Unable to search permitted records.");
-  return { choices: result.data.map((r) => ({ value: r.id, label: r.label, unitId: r.unit_id })), count: result.data[0]?.total_count ?? 0 };
+  return { choices: result.data.map((r) => ({ value: r.id, ...separateReferenceCode(r.label), unitId: r.unit_id })), count: result.data[0]?.total_count ?? 0 };
 }

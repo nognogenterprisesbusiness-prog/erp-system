@@ -949,3 +949,10 @@ Database update: `20261112170000_scalable_staff_reads.sql` (user confirmed stagi
 ### Readable record metadata (2026-11-12)
 
 Replaced crowded dot-separated metadata with reusable labeled facts across inventory warehouse balances, requests, employee/workforce details, payroll, billing, purchases, quotations and documents. Mobile delivery and attendance summaries now separate each value. Existing actions, quantities, routes and authorization are unchanged. Desktop and 390px web checks covered stock cards and payroll header facts; inventory had no horizontal page overflow. Web/mobile typecheck, lint and 176/31 tests passed. No migration required.
+
+
+### Record identities and bounded data loading (2026-11-13)
+
+Project/material names appear first with codes underneath, including Compostela Gym / 26HI0024. Related selectors search both fields. Asset location selection now searches server-side pages; asset record views no longer preload all locations. Users search, streamed inventory/equipment/QR exports, complete batched request reads and database chart aggregation remove confirmed data cutoffs and repeated work. Stock, costing, attendance and authorization rules are preserved. See [checks and rollout status](docs/scalability-and-identities-20261113.md). The new read migration requires staging confirmation before dependent web deployment; this is not a blanket production-readiness certificate.
+
+Review captures: [web project table](docs/screenshots/web-projects-20261113.png) and [Engineer mobile project list](docs/screenshots/mobile-projects-20261113.png).

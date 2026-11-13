@@ -42,13 +42,13 @@ export function SiteConsumptionForm({ projects, materials, units, sites, balance
     <input type="hidden" name="unitId" value={unit?.id ?? ""} />
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="Project" htmlFor="projectId" error={error("projectId")}>
-        <SelectPicker id="projectId" name="projectId" label="Project" value={projectId} onValueChange={(next) => { setProjectId(next); setSiteId(""); setMaterialId(""); setPicked(undefined); }} options={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))} required disabled={pending} />
+        <SelectPicker id="projectId" name="projectId" label="Project" value={projectId} onValueChange={(next) => { setProjectId(next); setSiteId(""); setMaterialId(""); setPicked(undefined); }} options={projects.map((project) => ({ value: project.id, label: project.name, secondary: project.code }))} required disabled={pending} />
       </FormField>
       <FormField label="Project site" htmlFor="siteLocationId" error={error("siteLocationId")}>
         <SelectPicker id="siteLocationId" name="siteLocationId" label="Project site" value={siteId} onValueChange={(nextSite) => { setSiteId(nextSite); setPicked(undefined); setMaterialId(balances.some((balance) => balance.inventory_location_id === nextSite && balance.material_id === initialMaterialId && balance.available_quantity > 0) ? initialMaterialId : ""); }} options={projectSites.map((site) => ({ value: site.id, label: site.name }))} required disabled={pending} />
       </FormField>
       <FormField label="Material" htmlFor="materialId" error={error("materialId")}>
-        <input type="hidden" name="materialId" value={materialId} /><PagedReferencePicker key={siteId} kind="site_material" projectId={siteId} label="Site material" value={materialId} onValueChange={setMaterialId} onPick={setPicked} initialOptions={options.map((m) => ({ value: m.id, label: `${m.code} · ${m.name}`, unitId: m.base_unit_id, availableQuantity: siteBalances.find((b) => b.material_id === m.id)?.available_quantity }))} />
+        <input type="hidden" name="materialId" value={materialId} /><PagedReferencePicker key={siteId} kind="site_material" projectId={siteId} label="Site material" value={materialId} onValueChange={setMaterialId} onPick={setPicked} initialOptions={options.map((m) => ({ value: m.id, label: m.name, secondary: m.code, unitId: m.base_unit_id, availableQuantity: siteBalances.find((b) => b.material_id === m.id)?.available_quantity }))} />
       </FormField>
       <FormField label={unit ? "Quantity (" + unit.symbol + ", " + available + " available)" : "Quantity"} htmlFor="quantity" error={error("quantity")}>
         <input id="quantity" name="quantity" value={quantity} onChange={(event) => setQuantity(event.target.value)} disabled={pending} type="number" min="0.0001" max={available || undefined} step="0.0001" inputMode="decimal" className={fieldControlClass} required />

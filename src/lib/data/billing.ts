@@ -9,7 +9,7 @@ const PAGE_SIZE = 20;
 
 export async function getInvoices({ page = 1, query = "" }: { page?: number; query?: string } = {}) {
   const supabase = await createClient();
-  const currentPage = Math.max(1, Math.min(10000, page));
+  const currentPage = Math.max(1, Number.isSafeInteger(page) ? page : 1);
   const from = (currentPage - 1) * PAGE_SIZE;
   let request = supabase.from("client_invoices").select("id,invoice_number,project_id,project_code,project_name,client_name,description,issued_on,due_on,amount,status,created_at", { count: "exact" });
   const search = safeSearchTerm(query);

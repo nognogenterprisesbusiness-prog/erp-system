@@ -57,7 +57,9 @@
     "test:planning-shortage": "node scripts/test-planning-shortage-follow-through.mjs",
     "test:close-remainder": "node scripts/test-close-request-remainder.mjs",
     "test:multi-warehouse": "node scripts/test-multi-warehouse-requests.mjs",
-    "test:native-warehouse": "node scripts/test-native-warehouse-operations.mjs"
+    "test:native-warehouse": "node scripts/test-native-warehouse-operations.mjs",
+    "test:registry-reads": "node scripts/test-scalable-registry-reads.mjs",
+    "test:registry-http": "node scripts/test-registry-http.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

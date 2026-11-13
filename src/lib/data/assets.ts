@@ -16,10 +16,12 @@ export type AssetView = AssetRow & {
   vehicle: VehicleDetailRow | undefined;
 };
 
-export const getAssetLocations = cache(async function getAssetLocations(includeArchived = false): Promise<AssetLocationView[]> {
+export const getAssetLocations = cache(async function getAssetLocations(includeArchived: boolean, ids: string[]): Promise<AssetLocationView[]> {
+  if (!ids.length) return [];
   const supabase = await createClient();
-  const assetLocations = await readAllPages((from, to) => {
+  const assetLocations = await readByIds([...new Set(ids)], (batch, from, to) => {
     let query = supabase.from("asset_locations").select("id,location_kind,inventory_location_id,name,address,created_by,updated_by,archived_at,archived_by,created_at,updated_at").order("location_kind").order("name").order("id");
+    query = query.in("id", batch);
     if (!includeArchived) query = query.is("archived_at", null);
     return query.range(from, to);
   }, "asset locations");
@@ -41,10 +43,6 @@ export const getAssetLocations = cache(async function getAssetLocations(includeA
     return { ...location, displayName: location.name ?? warehouse?.name ?? site?.name ?? "Unavailable location", displayAddress: location.address ?? warehouse?.address ?? site?.address ?? "" };
   });
 });
-
-export async function getAssetReferences() {
-  return { locations: await getAssetLocations(false) };
-}
 
 /** Wage/rate-free equipment choices at this project's active sites. The posting RPC rechecks custody. */
 export async function getProjectEquipmentChoices(projectId: string) {
@@ -90,7 +88,7 @@ export async function getAssets(params: { id?: string; kind: AssetKind; query?: 
   if (error) throw new Error(`Unable to load ${params.kind} records.`);
   const ids = (assets ?? []).map((item) => item.id);
   const [locations, detailResult] = await Promise.all([
-    getAssetLocations(params.includeArchived ?? false),
+    getAssetLocations(true, [...new Set((assets ?? []).map(item => item.current_location_id))]),
     ids.length
       ? params.kind === "equipment"
         ? supabase.from("equipment_details").select("asset_id,equipment_type,serial_number,acquisition_cost,sku").in("asset_id", ids)
@@ -114,7 +112,7 @@ export async function getAsset(id: string, expectedKind: AssetKind, eventPage = 
   const actorIds = [...new Set((events ?? []).map((event) => event.actor_id))];
   const { data: actors } = actorIds.length ? await supabase.from("profiles").select("id,full_name").in("id", actorIds) : { data: [] };
   const actorMap = new Map((actors ?? []).map((actor) => [actor.id, actor.full_name]));
-  const locationMap = new Map((await getAssetLocations(true)).map((location) => [location.id, location]));
+  const locationMap = new Map((await getAssetLocations(true, [...new Set((events ?? []).flatMap(event => [event.previous_location_id, event.current_location_id].filter((id): id is string => Boolean(id))))])).map((location) => [location.id, location]));
   return { asset, eventCount: count, eventPage: currentPage, events: (events ?? []).map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user", previousLocation: event.previous_location_id ? locationMap.get(event.previous_location_id) : undefined, currentLocation: event.current_location_id ? locationMap.get(event.current_location_id) : undefined })) };
 }
 
@@ -131,7 +129,7 @@ export async function getEquipmentUsage(assetId: string, page = 1) {
   ]);
   if (reversals.error || projects.error) throw new Error("Unable to resolve equipment usage history.");
   const reversed = new Map((reversals.data ?? []).map((row) => [row.usage_id, row]));
-  const projectNames = new Map((projects.data ?? []).map((row) => [row.id, `${row.code} · ${row.name}`]));
+  const projectNames = new Map((projects.data ?? []).map((row) => [row.id, row.name]));
   return { page: currentPage, rows: (entries ?? []).map((entry) => ({ ...entry, projectName: projectNames.get(entry.project_id) ?? "Project", reversal: reversed.get(entry.id) })), count: count ?? 0 };
 }
 

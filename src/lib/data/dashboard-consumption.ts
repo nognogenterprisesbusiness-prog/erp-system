@@ -11,22 +11,15 @@ export async function getDashboardConsumption() {
   const end = new Date(Date.UTC(year, month + 1, 1)).toISOString().slice(0, 10);
   const totals = new Map<string, { materialId: string; unitId: string; values: number[] }>();
   for (let offset = 0; ; offset += 500) {
-    const { data, error } = await client.from("inventory_transactions").select("id,material_id,unit_of_measure_id,transaction_date,quantity").eq("transaction_type", "MATERIAL_CONSUMPTION").gte("transaction_date", months[0]).lt("transaction_date", end).order("id").range(offset, offset + 499);
+    const { data, error } = await client.rpc("get_monthly_material_consumption", { p_from: months[0], p_to: end }).order("month").order("material_id").order("unit_id").range(offset, offset + 499);
     if (error) throw new Error("Unable to load monthly material consumption.");
     const rows = data ?? [];
-    const reversedIds = new Set<string>();
-    const reversalBatches = await Promise.all(Array.from({ length: Math.ceil(rows.length / 100) }, (_, index) => client.from("inventory_transactions").select("reversal_of").in("reversal_of", rows.slice(index * 100, index * 100 + 100).map((row) => row.id))));
-    for (const result of reversalBatches) {
-      if (result.error) throw new Error("Unable to reconcile monthly material consumption.");
-      for (const row of result.data ?? []) if (row.reversal_of) reversedIds.add(row.reversal_of);
-    }
     for (const row of rows) {
-      if (reversedIds.has(row.id)) continue;
-      const index = months.findIndex((value) => value.slice(0, 7) === row.transaction_date.slice(0, 7));
+      const index = months.findIndex(value => value.slice(0, 7) === row.month);
       if (index < 0) continue;
-      const key = `${row.material_id}:${row.unit_of_measure_id}`;
-      const total = totals.get(key) ?? { materialId: row.material_id, unitId: row.unit_of_measure_id, values: months.map(() => 0) };
-      total.values[index] += Math.abs(Number(row.quantity));
+      const key = `${row.material_id}:${row.unit_id}`;
+      const total = totals.get(key) ?? { materialId: row.material_id, unitId: row.unit_id, values: months.map(() => 0) };
+      total.values[index] += Number(row.quantity);
       totals.set(key, total);
     }
     if (rows.length < 500) break;
@@ -38,7 +31,7 @@ export async function getDashboardConsumption() {
   for (let start = 0; start < materialIds.length; start += 100) {
     const { data, error } = await client.from("materials").select("id,name,code").in("id", materialIds.slice(start, start + 100));
     if (error) throw new Error("Unable to resolve chart materials.");
-    for (const row of data ?? []) materialNames.set(row.id, `${row.name} · ${row.code}`);
+    for (const row of data ?? []) materialNames.set(row.id, row.name);
   }
   for (let start = 0; start < unitIds.length; start += 100) {
     const { data, error } = await client.from("units_of_measure").select("id,symbol").in("id", unitIds.slice(start, start + 100));

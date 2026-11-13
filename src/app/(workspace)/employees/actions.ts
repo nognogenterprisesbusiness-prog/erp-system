@@ -198,8 +198,5 @@ export async function setAttendanceBasisAction(_: WorkforceActionState, form: Fo
 export async function loadEmployeeFormReferences() {
   await requireManager();
   const { getEmployeeCategories } = await import("@/lib/data/workforce");
-  const { readAllPages } = await import("@/lib/data/read-all-pages");
-  const client = await createClient();
-  const [categories, profiles] = await Promise.all([getEmployeeCategories(), readAllPages((from,to)=>client.from("profiles").select("id,full_name,email").eq("is_active",true).order("full_name").order("id").range(from,to),"employee account options")]);
-  return { categories, profiles };
+  return { categories: await getEmployeeCategories(), profiles: [] };
 }

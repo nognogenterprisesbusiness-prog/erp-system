@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { getInventoryMaterials } from "@/lib/data/inventory";
-import { csvAttachment } from "@/lib/export/csv";
+import { streamCsvAttachment } from "@/lib/export/csv";
 import { inventoryScopeLabel, parseInventoryScope } from "@/lib/inventory/scope";
 
 export async function GET(request: Request): Promise<Response> {
@@ -12,18 +12,17 @@ export async function GET(request: Request): Promise<Response> {
     lowStock: params.get("low") === "true", includeValues: user.canViewLaborRates, pageSize: 500,
   };
   const first = await getInventoryMaterials(filters);
-  const materials = [...first.rows];
-  for (let page = 2; (page - 1) * 500 < first.count; page++) {
-    materials.push(...(await getInventoryMaterials({ ...filters, page })).rows);
-  }
   const location = first.locations.find((item) => item.id === first.selectedLocationId)?.name ?? inventoryScopeLabel(first.scope);
-  return csvAttachment(`nognog-inventory-${new Date().toISOString().slice(0, 10)}.csv`, [
+  async function* batches() {
+    for (let page = 1; ; page++) {
+      const result = page === 1 ? first : await getInventoryMaterials({ ...filters, page }, first.locations);
+      if (result.page !== page) return;
+      yield result.rows.filter(item => Number(item.quantity_on_hand) > 0).map(item => [item.code, item.name, location, item.quantity_on_hand, item.reserved_quantity, item.available_quantity, item.unit_symbol, Number(item.available_quantity) <= Number(item.minimum_stock_level) ? "Low" : "Available", item.stockLocations.map(stock => `${stock.name}: ${stock.onHand} ${item.unit_symbol} on hand, ${stock.available} available`).join("; "), ...(user.canViewLaborRates ? [item.stockValue ?? ""] : [])]);
+      if (page * 500 >= first.count || !result.rows.length) return;
+    }
+  }
+  return streamCsvAttachment(`nognog-inventory-${new Date().toISOString().slice(0, 10)}.csv`, [
     "SKU", "Material", "Location", "On hand", "Reserved", "Available", "Unit", "Level", "Stock by location",
     ...(user.canViewLaborRates ? ["Stock value (PHP)"] : []),
-  ], materials.filter((item) => Number(item.quantity_on_hand) > 0).map((item) => [
-    item.code, item.name, location, item.quantity_on_hand, item.reserved_quantity, item.available_quantity,
-    item.unit_symbol, Number(item.available_quantity) <= Number(item.minimum_stock_level) ? "Low" : "Available",
-    item.stockLocations.map((stock) => `${stock.name}: ${stock.onHand} ${item.unit_symbol} on hand, ${stock.available} available`).join("; "),
-    ...(user.canViewLaborRates ? [item.stockValue ?? ""] : []),
-  ]));
+  ], batches());
 }

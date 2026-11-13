@@ -43,7 +43,7 @@ export default async function DailyReportsPage({ searchParams }: { searchParams:
       <input type="hidden" name="from" value={filters.reportDateFrom} />
       <input type="hidden" name="to" value={filters.reportDateTo} />
       <SearchField key={search} name="q" label="Search report number or work" defaultValue={search} placeholder="Search reports" />
-      <SelectPicker name="project" label="Project" defaultValue={filters.projectId || "all"} options={[{ value: "all", label: "All projects" }, ...filterChoices.projects.map((item) => ({ value: item.id, label: `${item.code} · ${item.name}` }))]} />
+      <SelectPicker name="project" label="Project" defaultValue={filters.projectId || "all"} options={[{ value: "all", label: "All projects" }, ...filterChoices.projects.map((item) => ({ value: item.id, label: item.name, secondary: item.code }))]} />
       <SelectPicker name="site" label="Site" defaultValue={filters.siteId || "all"} options={[{ value: "all", label: "All sites" }, ...filterChoices.sites.map((item) => ({ value: item.id, label: item.name }))]} />
       <SelectPicker name="status" label="Status" defaultValue={filters.status} options={[{ value: "all", label: "All statuses" }, ...dailyReportStatuses.map((item) => ({ value: item, label: reportStatusLabels[item] }))]} />
     </ListFilterBar>

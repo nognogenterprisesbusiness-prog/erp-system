@@ -21,7 +21,7 @@ export function IssueInvoiceForm({ projects, idempotencyKey, today }: { projects
     <div className="grid gap-5 md:grid-cols-2">
       <FormField label="Project" htmlFor="projectId" error={error("projectId")}
         hint="Invoices for a project cannot exceed its contract value.">
-        <input type="hidden" name="projectId" value={projectId} /><PagedReferencePicker kind="billable_project" label="Project" value={projectId} onValueChange={setProjectId} initialOptions={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name} · ${project.client_name}` }))} />
+        <input type="hidden" name="projectId" value={projectId} /><PagedReferencePicker kind="billable_project" label="Project" value={projectId} onValueChange={setProjectId} initialOptions={projects.map((project) => ({ value: project.id, label: project.name, secondary: `${project.code} — ${project.client_name}` }))} />
       </FormField>
       <FormField label="Amount (PHP)" htmlFor="amount" error={error("amount")}>
         <MoneyInput id="amount" name="amount" inputMode="decimal" className={fieldControlClass} placeholder="0.00" required />

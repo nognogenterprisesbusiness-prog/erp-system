@@ -67,7 +67,7 @@ export function DailyReportForm({ report, initialId, initialProjectId, initialDa
       <p className="mt-1 text-xs text-slate-500">One report covers one site and one reporting date. Multiple reports may share a date.</p>
       <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <FormField label="Project" htmlFor="projectId" error={error("projectId")}>
-          <SelectPicker id="projectId" name="projectId" label="Project" value={projectId} onValueChange={setProjectId} disabled={Boolean(report) || pending} required placeholder="Select project" options={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))} />
+          <SelectPicker id="projectId" name="projectId" label="Project" value={projectId} onValueChange={setProjectId} disabled={Boolean(report) || pending} required placeholder="Select project" options={projects.map((project) => ({ value: project.id, label: project.name, secondary: project.code }))} />
           {report && <input type="hidden" name="projectId" value={projectId} />}
         </FormField>
         <FormField label="Project site" htmlFor="projectSiteId" error={error("projectSiteId")}>

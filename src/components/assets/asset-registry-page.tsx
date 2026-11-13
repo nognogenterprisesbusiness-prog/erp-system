@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AssetForm } from "@/components/assets/asset-form";
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { SearchField } from "@/components/ui/search-field";
+import { RemoteSelectPicker } from "@/components/ui/remote-select-picker";
 import { SelectPicker } from "@/components/ui/select-picker";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { Download04Icon } from "@hugeicons/core-free-icons";
@@ -13,25 +14,25 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { RecordListSkeleton } from "@/components/ui/record-list-view";
 import { requireUser } from "@/lib/auth";
-import { getAssetReferences, getAssets } from "@/lib/data/assets";
+import { getAssetLocations, getAssets } from "@/lib/data/assets";
 import type { AssetKind, AssetStatus } from "@/types/database";
 
 const statuses: Array<AssetStatus | "all"> = ["all", ...assetStatuses];
-export async function AssetRegistryPage({ kind, searchParams }: { kind: AssetKind; searchParams: Promise<Record<string, string | string[] | undefined>> }) { const params = await searchParams; const query = typeof params.q === "string" ? params.q : ""; const parsedLocation = uuidSchema.safeParse(params.location); const locationId = parsedLocation.success ? parsedLocation.data : ""; const status = typeof params.status === "string" && statuses.includes(params.status as typeof statuses[number]) ? params.status as typeof statuses[number] : "all"; const rawPage = Number(params.page); const page = Number.isInteger(rawPage) ? Math.max(1, Math.min(1000, rawPage)) : 1; const assetsPromise = getAssets({ kind, query, locationId, status, includeArchived: status === "retired", page, pageSize: 24 }); const [user, references] = await Promise.all([requireUser(), getAssetReferences()]); const isEquipment = kind === "equipment"; const originalBase = isEquipment ? "/equipment" : "/vehicles"; const base = originalBase; const exportParams = new URLSearchParams(); if (query) exportParams.set("q", query); if (locationId) exportParams.set("location", locationId); if (status !== "all") exportParams.set("status", status); const exportHref = `${originalBase}/export?${exportParams.toString()}`; return <>
-  <PageHeader eyebrow="Asset management" title={isEquipment ? "Equipment" : "Vehicles"} description={isEquipment ? "Equipment availability, location and condition." : "Vehicles, their availability and current location."} action={<div className="flex flex-wrap gap-2">{isEquipment && <Button variant="outline" asChild><a href={exportHref}><HugeiconsIcon icon={Download04Icon} size={17} />Export CSV</a></Button>}{user.canManage && <RecordCreateDialog title={isEquipment ? "Add equipment" : "Add vehicle"} initialOpen={params.create === "1"} closeHref={`${base}?${exportParams}`}><AssetForm kind={kind} {...references} /></RecordCreateDialog>}</div>} />
+export async function AssetRegistryPage({ kind, searchParams }: { kind: AssetKind; searchParams: Promise<Record<string, string | string[] | undefined>> }) { const params = await searchParams; const query = typeof params.q === "string" ? params.q : ""; const parsedLocation = uuidSchema.safeParse(params.location); const locationId = parsedLocation.success ? parsedLocation.data : ""; const status = typeof params.status === "string" && statuses.includes(params.status as typeof statuses[number]) ? params.status as typeof statuses[number] : "all"; const rawPage = Number(params.page); const page = Number.isInteger(rawPage) ? Math.max(1, rawPage) : 1; const assetsPromise = getAssets({ kind, query, locationId, status, includeArchived: status === "retired", page, pageSize: 24 }); const [user, locations] = await Promise.all([requireUser(), getAssetLocations(false, locationId ? [locationId] : [])]); const isEquipment = kind === "equipment"; const originalBase = isEquipment ? "/equipment" : "/vehicles"; const base = originalBase; const exportParams = new URLSearchParams(); if (query) exportParams.set("q", query); if (locationId) exportParams.set("location", locationId); if (status !== "all") exportParams.set("status", status); const exportHref = `${originalBase}/export?${exportParams.toString()}`; return <>
+  <PageHeader eyebrow="Asset management" title={isEquipment ? "Equipment" : "Vehicles"} description={isEquipment ? "Equipment availability, location and condition." : "Vehicles, their availability and current location."} action={<div className="flex flex-wrap gap-2">{isEquipment && <Button variant="outline" asChild><a href={exportHref}><HugeiconsIcon icon={Download04Icon} size={17} />Export CSV</a></Button>}{user.canManage && <RecordCreateDialog title={isEquipment ? "Add equipment" : "Add vehicle"} initialOpen={params.create === "1"} closeHref={`${base}?${exportParams}`}><AssetForm kind={kind} /></RecordCreateDialog>}</div>} />
   <div className="mt-4 flex flex-wrap gap-2">{(user.canManage || user.roles.some((role) => role === "engineer" || role === "foreman")) && <Button variant="outline" asChild><Link href={`/requests?type=${kind}`}>View requests</Link></Button>}</div>
   <ListFilterBar viewKey={isEquipment ? "equipment" : "vehicles"} viewTitle={isEquipment ? "Equipment" : "Vehicles"}>
     <SearchField key={query} name="q" label={`Search ${kind}`} defaultValue={query} placeholder={isEquipment ? "Search equipment, code, brand, or model" : "Search vehicle name or code"} />
-    <SelectPicker name="location" label="Current location" defaultValue={locationId || "all"} options={[{ value: "all", label: "All locations" }, ...references.locations.map((item) => ({ value: item.id, label: item.displayName }))]} />
+    <RemoteSelectPicker kind="asset_location" name="location" label="Current location" defaultValue={locationId || "all"} emptyOption={{ value: "all", label: "All locations" }} initialOption={locations[0] ? { value: locations[0].id, label: locations[0].displayName } : undefined} />
     <SelectPicker name="status" label="Operational status" defaultValue={status} options={statuses.map((item) => ({ value: item, label: item === "all" ? "All statuses" : item.replaceAll("_", " ") }))} />
   </ListFilterBar>
   <Suspense key={`${kind}:${query}:${locationId}:${status}:${page}`} fallback={<RecordListSkeleton storageKey={kind === "equipment" ? "equipment" : "vehicles"} columns={isEquipment ? 7 : 6} />}>
-    <AssetRegistryResults assetsPromise={assetsPromise} kind={kind} canManage={user.canManage} references={references} page={page} base={base} exportParams={exportParams.toString()} />
+    <AssetRegistryResults assetsPromise={assetsPromise} kind={kind} canManage={user.canManage} page={page} base={base} exportParams={exportParams.toString()} />
   </Suspense>
   </>; }
 
-async function AssetRegistryResults({ assetsPromise, kind, canManage, references, page, base, exportParams }: { assetsPromise: ReturnType<typeof getAssets>; kind: AssetKind; canManage: boolean; references: Awaited<ReturnType<typeof getAssetReferences>>; page: number; base: string; exportParams: string }) {
+async function AssetRegistryResults({ assetsPromise, kind, canManage, page, base, exportParams }: { assetsPromise: ReturnType<typeof getAssets>; kind: AssetKind; canManage: boolean; page: number; base: string; exportParams: string }) {
   const assets = await assetsPromise;
-  return <><AssetCards assets={assets.slice(0, 24)} kind={kind} canManage={canManage} {...references} />
+  return <><AssetCards assets={assets.slice(0, 24)} kind={kind} canManage={canManage} />
   {(page > 1 || assets.length > 24) && <nav aria-label={`${kind} pages`} className="mt-4 flex items-center justify-end gap-3"><span className="text-xs text-slate-500">Page {page}</span>{page > 1 && <Button variant="outline" size="sm" asChild><Link href={`${base}?${exportParams}&page=${page - 1}`}>Previous</Link></Button>}{assets.length > 24 && <Button variant="outline" size="sm" asChild><Link href={`${base}?${exportParams}&page=${page + 1}`}>Next</Link></Button>}</nav>}</>;
 }

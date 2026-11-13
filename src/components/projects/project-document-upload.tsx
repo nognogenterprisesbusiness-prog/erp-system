@@ -144,7 +144,7 @@ export function ProjectDocumentUpload({ projects, initialProjectId = "" }: { pro
   return <form onSubmit={submit} className="space-y-5">
     <div>
       <label htmlFor="documentProject" className="mb-2 block text-sm font-medium text-slate-700">Project</label>
-      <SelectPicker id="documentProject" label="Project" value={projectId} onValueChange={setProjectId} options={projects.map((project) => ({ value: project.id, label: `${project.code} · ${project.name}` }))} placeholder="Choose a project" disabled={uploading} required />
+      <SelectPicker id="documentProject" label="Project" value={projectId} onValueChange={setProjectId} options={projects.map((project) => ({ value: project.id, label: project.name, secondary: project.code }))} placeholder="Choose a project" disabled={uploading} required />
 
     </div>
     <div className="grid gap-4 sm:grid-cols-2">

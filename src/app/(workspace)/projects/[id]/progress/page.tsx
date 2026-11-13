@@ -1,3 +1,4 @@
+import { RecordIdentity } from "@/components/ui/record-identity";
 import { IntentLink as Link } from "@/components/layout/intent-link";
 import { notFound } from "next/navigation";
 import { requireDailyReportViewer } from "@/lib/auth";
@@ -18,7 +19,7 @@ export default async function ProjectProgressPage({ params, searchParams }: { pa
   const [data, history] = await Promise.all([getProject(id), getProjectProgressPage(id, page)]);
   const entries = history.entries;
   const sites = new Map(data.sites.map((site) => [site.id, site.name]));
-  return <><PageHeader title="Project progress" description={`${data.project.code} · ${data.project.name}`} action={<Button variant="outline" asChild><Link href={`/projects/${id}`}>Back to project</Link></Button>} />
+  return <><PageHeader title="Project progress" description={<RecordIdentity name={data.project.name} code={data.project.code} />} action={<Button variant="outline" asChild><Link href={`/projects/${id}`}>Back to project</Link></Button>} />
     <section className="mt-7 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
       {entries.length === 0 ? <EmptyState title="No progress recorded" description="Progress is recorded from an approved daily report." /> :
         <div className="divide-y divide-slate-100">{entries.map((entry) => <article key={entry.id} className="flex flex-wrap items-start gap-4 py-4 first:pt-0 last:pb-0"><div className="min-w-[110px] text-sm font-medium text-slate-500">{entry.progress_date}</div><div className="min-w-0 flex-1"><h2 className="text-sm font-semibold">{entry.completion_percent}% complete · {sites.get(entry.project_site_id) ?? "Project site"}</h2><p className="mt-1 text-sm text-slate-600">{entry.summary}</p><Button variant="outline" size="sm" asChild><Link  href={`/reports/daily/${entry.daily_report_id}`}>View approved daily report</Link></Button></div></article>)}</div>}

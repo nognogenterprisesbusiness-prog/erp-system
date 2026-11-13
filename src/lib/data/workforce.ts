@@ -4,17 +4,14 @@ import { notFound } from "next/navigation";
 import { uuidSchema } from "@nognog/domain";
 import { createClient } from "@/lib/supabase/server";
 import { safeSearchTerm } from "./search";
+import { readCountedPage } from "./read-counted-page";
 import { readAllPages, readByIds } from "./read-all-pages";
 import type {
   EmployeeCategoryRow,
-  EmployeeEventRow,
   EmployeeProjectAssignmentRow,
   EmployeeRow,
   EmployeeStatus,
   LaborRateRow,
-  ProfileRow,
-  ProjectRow,
-  ProjectSiteRow,
 } from "@/types/database";
 
 const PAGE_SIZE = 25;
@@ -88,43 +85,42 @@ export async function getEmployees(params: { query?: string; categoryId?: string
   };
 }
 
-export const getWorkforceReferences = cache(async function getWorkforceReferences() {
-  const supabase = await createClient();
-  const [categories, profiles, projects, sites] = await Promise.all([
-    getEmployeeCategories(false),
-    readAllPages((from, to) => supabase.from("profiles").select("id,full_name,email,phone,is_active,onboarding_required,created_at,updated_at").eq("is_active", true).order("full_name").order("id").range(from, to), "workforce profiles"),
-    readAllPages((from, to) => supabase.from("projects").select("*").is("archived_at", null).not("status", "in", "(completed,cancelled)").order("name").order("id").range(from, to), "workforce projects"),
-    readAllPages((from, to) => supabase.from("project_sites").select("*").eq("status", "active").order("name").order("id").range(from, to), "workforce sites"),
-  ]);
-  return { categories, profiles, projects, sites };
-});
-
-export async function getEmployee(id: string) {
+export async function getEmployee(id: string, pages: { assignments?: number; rates?: number; events?: number; attendance?: number } = {}) {
   if (!uuidSchema.safeParse(id).success) notFound();
   const supabase = await createClient();
   const { data: employee, error } = await supabase.from("employees").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(`Unable to load employee: ${error.message}`, { cause: error });
   if (!employee) notFound();
-  const [categoryResult, contactResult, assignmentResult, rateResult, eventResult, references] = await Promise.all([
+  const [categoryResult, contactResult, assignmentResult, rateResult, eventResult, attendanceResult, categories, linkedProfileResult] = await Promise.all([
     supabase.from("employee_categories").select("*").eq("id", employee.category_id).single(),
     supabase.from("employee_private_contacts").select("employee_id,contact_number,email_address,updated_by,updated_at").eq("employee_id", id).maybeSingle(),
-    readAllPages((from, to) => supabase.from("employee_project_assignments").select("*").eq("employee_id", id).order("start_date", { ascending: false }).order("id").range(from, to), "employee assignments"),
-    readAllPages((from, to) => supabase.from("labor_rates").select("*").eq("employee_id", id).order("effective_start_date", { ascending: false }).order("id").range(from, to), "labor rate history"),
-    readAllPages((from, to) => supabase.from("employee_events").select("*").eq("employee_id", id).order("occurred_at", { ascending: false }).order("id").range(from, to), "employee history"),
-    getWorkforceReferences(),
+    readCountedPage((from, to) => supabase.from("employee_project_assignments").select("*", { count: "exact" }).eq("employee_id", id).order("start_date", { ascending: false }).order("id").range(from, to), pages.assignments ?? 1, "employee assignments"),
+    readCountedPage((from, to) => supabase.from("labor_rates").select("*", { count: "exact" }).eq("employee_id", id).order("effective_start_date", { ascending: false }).order("id").range(from, to), pages.rates ?? 1, "labor rate history"),
+    readCountedPage((from, to) => supabase.from("employee_events").select("*", { count: "exact" }).eq("employee_id", id).order("occurred_at", { ascending: false }).order("id").range(from, to), pages.events ?? 1, "employee history"),
+    readCountedPage((from, to) => supabase.from("project_attendance").select("id,project_id,work_date,attendance_status,hours_worked,note", { count: "exact" }).eq("employee_id", id).order("work_date", { ascending: false }).order("id").range(from, to), pages.attendance ?? 1, "employee attendance"),
+    getEmployeeCategories(),
+    employee.profile_id ? supabase.from("profiles").select("id,full_name,email").eq("id", employee.profile_id).maybeSingle() : { data: null, error: null },
   ]);
-  if (categoryResult.error || contactResult.error) throw new Error("Unable to load the employee record.");
-  const assignments = assignmentResult;
+  if (categoryResult.error || contactResult.error || linkedProfileResult.error) throw new Error("Unable to load the employee record.");
+  const assignments = assignmentResult.data;
+  const rateRows = rateResult.data;
+  const eventRows = eventResult.data;
+  const [projects, sites, attendanceReversals] = await Promise.all([
+    readByIds([...new Set([...assignments.map(row => row.project_id), ...attendanceResult.data.map(row => row.project_id)])], (ids, from, to) => supabase.from("projects").select("id,name").in("id", ids).order("id").range(from, to), "employee project names"),
+    readByIds([...new Set(assignments.map(row => row.project_site_id))], (ids, from, to) => supabase.from("project_sites").select("id,name").in("id", ids).order("id").range(from, to), "employee site names"),
+    readByIds(attendanceResult.data.map(row => row.id), (ids, from, to) => supabase.from("project_attendance_reversals").select("attendance_id,reason").in("attendance_id", ids).order("attendance_id").range(from, to), "employee attendance corrections"),
+  ]);
   const actorIds = [...new Set([
     ...(assignments ?? []).flatMap((item) => [item.assigned_by, item.ended_by].filter((value): value is string => Boolean(value))),
-    ...eventResult.map((item) => item.actor_id),
-    ...rateResult.map((item) => item.approved_by),
+    ...eventRows.map((item) => item.actor_id),
+    ...rateRows.map((item) => item.approved_by),
   ])];
   const actors = await readByIds(actorIds, (ids, from, to) => supabase.from("profiles").select("id,full_name").in("id", ids).order("id").range(from, to), "workforce actors");
   const actorMap = new Map(actors.map((item) => [item.id, item.full_name]));
-  const projectMap = new Map(references.projects.map((item) => [item.id, item.name]));
-  const siteMap = new Map(references.sites.map((item) => [item.id, item.name]));
-  const linkedProfile = employee.profile_id ? references.profiles.find((profile) => profile.id === employee.profile_id) : undefined;
+  const projectMap = new Map(projects.map((item) => [item.id, item.name]));
+  const siteMap = new Map(sites.map((item) => [item.id, item.name]));
+  const linkedProfile = linkedProfileResult.data ?? undefined;
+  const reversedAttendance = new Map(attendanceReversals.map(row => [row.attendance_id, row.reason]));
   return {
     employee: { ...employee, fullName: employeeFullName(employee) },
     category: categoryResult.data as EmployeeCategoryRow,
@@ -136,9 +132,11 @@ export async function getEmployee(id: string) {
       siteName: siteMap.get(assignment.project_site_id) ?? "Unavailable site",
       assignedByName: actorMap.get(assignment.assigned_by) ?? "Authorized user",
     })),
-    rates: rateResult.map((rate) => ({ ...rate, approvedByName: actorMap.get(rate.approved_by) ?? "Authorized user" })),
-    events: eventResult.map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user" })),
-    references,
+    rates: rateRows.map((rate) => ({ ...rate, approvedByName: actorMap.get(rate.approved_by) ?? "Authorized user" })),
+    events: eventRows.map((event) => ({ ...event, actorName: actorMap.get(event.actor_id) ?? "Authorized user" })),
+    attendance: attendanceResult.data.map(row => ({ ...row, projectName: projectMap.get(row.project_id) ?? "Unavailable project", reversal: reversedAttendance.get(row.id) })),
+    history: { assignments: { count: assignmentResult.count, page: assignmentResult.page }, rates: { count: rateResult.count, page: rateResult.page }, events: { count: eventResult.count, page: eventResult.page }, attendance: { count: attendanceResult.count, page: attendanceResult.page } },
+    references: { categories, profiles: linkedProfile ? [linkedProfile] : [] },
   };
 }
 
@@ -149,9 +147,8 @@ export async function getProjectWorkforce(projectId: string, canViewRates: boole
     readAllPages((from, to) => supabase.from("project_sites").select("*").eq("project_id", projectId).eq("status", "active").order("name").order("id").range(from, to), "project sites"),
   ]);
   const employeeIds = [...new Set(assignments.map((item) => item.employee_id))];
-  const [assignedEmployees, availableEmployees, categories] = await Promise.all([
+  const [assignedEmployees, categories] = await Promise.all([
     readByIds(employeeIds, (ids, from, to) => supabase.from("employees").select("*").in("id", ids).order("id").range(from, to), "assigned employees"),
-    readAllPages((from, to) => supabase.from("employees").select("*").eq("status", "active").is("archived_at", null).order("last_name").order("first_name").order("id").range(from, to), "available employees"),
     getEmployeeCategories(false),
   ]);
   const ratesResult: LaborRateRow[] = canViewRates
@@ -178,7 +175,6 @@ export async function getProjectWorkforce(projectId: string, canViewRates: boole
         currentRates: ratesByEmployee.get(assignment.employee_id) ?? [],
       };
     }),
-    availableEmployees: availableEmployees.map((employee) => ({ ...employee, fullName: employeeFullName(employee) })),
     sites,
   };
 }
@@ -191,8 +187,4 @@ export async function getProjectWorkerCount(projectId: string) {
 }
 
 export type EmployeeCategory = EmployeeCategoryRow;
-export type EmployeeProfile = ProfileRow;
-export type EmployeeProject = ProjectRow;
-export type EmployeeProjectSite = ProjectSiteRow;
 export type EmployeeRate = LaborRateRow;
-export type EmployeeEvent = EmployeeEventRow;

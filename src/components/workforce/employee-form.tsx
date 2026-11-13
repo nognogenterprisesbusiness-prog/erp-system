@@ -1,5 +1,6 @@
 "use client";
 import { FieldsSkeleton } from "@/components/ui/loading-state";
+import { RemoteSelectPicker } from "@/components/ui/remote-select-picker";
 import { SelectPicker } from "@/components/ui/select-picker";
 
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
@@ -70,7 +71,7 @@ export function EmployeeForm({ employee, contact, categories, profiles }: {
         <input className={fieldControlClass} id="emailAddress" name="emailAddress" type="email" maxLength={320} defaultValue={contact?.email_address ?? ""} autoComplete="email" />
       </FormField>
       <FormField label="Optional user account" htmlFor="profileId" hint="Optional. This does not give project access." error={error("profileId")}>
-        <><input type="hidden" name="profileId" value={profileId === "unassigned" ? "" : profileId} /><SelectPicker id="profileId" label="Optional user account" value={profileId} onValueChange={setProfileId} options={[{ value: "unassigned", label: "No user account" }, ...profiles.map((profile) => ({ value: profile.id, label: `${profile.full_name} · ${profile.email}` }))]} /></>
+        <><input type="hidden" name="profileId" value={profileId === "unassigned" ? "" : profileId} /><RemoteSelectPicker kind="profile" id="profileId" label="User account" value={profileId} onValueChange={setProfileId} emptyOption={{ value: "unassigned", label: "No user account" }} initialOption={profiles[0] ? { value: profiles[0].id, label: profiles[0].full_name, secondary: profiles[0].email } : undefined} /></>
       </FormField>
 </div></details>
     {!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}

@@ -102,88 +102,79 @@ export async function getMaterialRequest(id: string) {
   const { data: request, error } = await supabase.from("material_requests").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(`Unable to load material request: ${error.message}`, { cause: error });
   if (!request) notFound();
-  const [linesResult, eventsResult, contextResult] = await Promise.all([
-    supabase.from("material_request_lines").select("*").eq("request_id", id).order("id"),
-    supabase.from("material_request_events").select("*").eq("request_id", id).order("occurred_at", { ascending: false }),
+  const [lines, events, contextResult, tracking, sourceStockRows, allocations, stockSources] = await Promise.all([
+    readAllPages((from, to) => supabase.from("material_request_lines").select("*").eq("request_id", id).order("id").range(from, to), "request lines"),
+    readAllPages((from, to) => supabase.from("material_request_events").select("*").eq("request_id", id).order("occurred_at", { ascending: false }).order("id").range(from, to), "request history"),
     supabase.rpc("get_material_request_context", { p_request_ids: [id] }),
+    readAllPages((from, to) => supabase.rpc("get_material_request_tracking", { p_request_ids: [id] }).order("request_line_id").range(from, to), "request tracking"),
+    readAllPages((from, to) => supabase.rpc("get_material_request_source_stock", { p_request_id: id }).order("request_line_id").range(from, to), "source stock"),
+    readAllPages((from, to) => supabase.rpc("get_request_allocations", { p_request_id: id }).order("id").range(from, to), "request allocations"),
+    request.status === "submitted" ? readAllPages((from, to) => supabase.rpc("get_request_stock_sources", { p_request_id: id }).order("request_line_id").order("warehouse_id").range(from, to), "stock sources") : [],
   ]);
-  if (linesResult.error || eventsResult.error || contextResult.error || contextResult.data?.length !== 1)
-    throw new Error("Unable to load the material request details.");
+  if (contextResult.error || contextResult.data?.length !== 1) throw new Error("Unable to load the material request details.");
   const context = contextResult.data[0];
-  const tracking = await supabase.rpc("get_material_request_tracking", { p_request_ids: [id] });
-  if (tracking.error) throw new Error("Unable to load current site stock.");
-  const stock = new Map((tracking.data ?? []).map((row) => [row.request_line_id, row]));
-  const sourceStockResult = await supabase.rpc("get_material_request_source_stock", { p_request_id: id });
-  if (sourceStockResult.error) throw new Error("Unable to load selected warehouse stock.");
-  const sourceStock = new Map(sourceStockResult.data.map((row) => [row.request_line_id, row]));
-  const [allocationsResult, stockSourcesResult] = await Promise.all([
-    supabase.rpc("get_request_allocations", { p_request_id: id }),
-    request.status === "submitted" ? supabase.rpc("get_request_stock_sources", { p_request_id: id }) : Promise.resolve({data: [], error: null}),
+  const stock = new Map(tracking.map(row => [row.request_line_id, row]));
+  const sourceStock = new Map(sourceStockRows.map(row => [row.request_line_id, row]));
+  const lineIds = lines.map(row => row.id);
+  const lineById = new Map(lines.map(row => [row.id, row]));
+  const [requestDispatches, fulfillment, requestReservations] = await Promise.all([
+    readByIds(lineIds, (ids, from, to) => supabase.from("material_request_dispatches").select("*").in("request_line_id", ids).order("id").range(from, to), "request dispatches"),
+    readByIds(lineIds, (ids, from, to) => supabase.from("material_request_fulfillment_events").select("*").in("request_line_id", ids).order("occurred_at", { ascending: false }).order("id").range(from, to), "fulfillment history"),
+    readByIds(lineIds, (ids, from, to) => supabase.from("material_request_reservations").select("*").in("request_line_id", ids).order("id").range(from, to), "reservations"),
   ]);
-  if (allocationsResult.error || stockSourcesResult.error) throw new Error("The request allocation database update is required.");
-
-  const lineIds = (linesResult.data ?? []).map((row) => row.id);
-  const [dispatchesResult, fulfillmentResult, reservationsResult] = await Promise.all([
-    lineIds.length ? supabase.from("material_request_dispatches").select("*").in("request_line_id", lineIds) : Promise.resolve({ data: [], error: null }),
-    lineIds.length ? supabase.from("material_request_fulfillment_events").select("*").in("request_line_id", lineIds).order("occurred_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
-    lineIds.length ? supabase.from("material_request_reservations").select("*").in("request_line_id", lineIds) : Promise.resolve({ data: [], error: null }),
+  const reservationHistory = await readByIds(requestReservations.map(row => row.id), (ids, from, to) => supabase.from("material_request_reservation_events").select("*").in("reservation_id", ids).order("occurred_at", { ascending: false }).order("id").range(from, to), "reservation history");
+  const itemIds = [...new Set(requestDispatches.map(row => row.transfer_item_id))];
+  const [items, variances] = await Promise.all([
+    readByIds(itemIds, (ids, from, to) => supabase.from("inventory_transfer_items").select("id,transfer_id,dispatched_quantity,received_quantity,variance_quantity").in("id", ids).order("id").range(from, to), "transfer quantities"),
+    readByIds(itemIds, (ids, from, to) => supabase.from("inventory_transfer_variances").select("id,transfer_item_id,quantity,reason,approved_by,approved_at").in("transfer_item_id", ids).order("id").range(from, to), "transfer variances"),
   ]);
-  if (dispatchesResult.error || fulfillmentResult.error || reservationsResult.error) throw new Error("Unable to load request fulfillment history.");
-  const reservationIds = (reservationsResult.data ?? []).map((row) => row.id);
-  const reservationEventsResult = reservationIds.length
-    ? await supabase.from("material_request_reservation_events").select("*").in("reservation_id", reservationIds).order("occurred_at", { ascending: false })
-    : { data: [], error: null };
-  if (reservationEventsResult.error) throw new Error("Unable to load reservation history.");
-  const itemIds = (dispatchesResult.data ?? []).map((row) => row.transfer_item_id);
-  const itemsResult = itemIds.length
-    ? await supabase.from("inventory_transfer_items").select("id,transfer_id,dispatched_quantity,received_quantity,variance_quantity").in("id", itemIds)
-    : { data: [], error: null };
-  const varianceResult = itemIds.length
-    ? await supabase.from("inventory_transfer_variances").select("id,transfer_item_id,quantity,reason,approved_by,approved_at").in("transfer_item_id", itemIds)
-    : { data: [], error: null };
-  if (itemsResult.error || varianceResult.error) throw new Error("Unable to load transfer quantities and variances.");
-  const transferIds = [...new Set((itemsResult.data ?? []).map((row) => row.transfer_id))];
-  const transfersResult = transferIds.length
-    ? await supabase.from("inventory_transfers").select("id,transfer_number,status,dispatched_at").in("id", transferIds)
-    : { data: [], error: null };
-  if (transfersResult.error) throw new Error("Unable to load request transfers.");
-  const [manifestsResult, acceptancesResult] = await Promise.all([
-    transferIds.length ? supabase.from("material_delivery_manifests").select("transfer_id,vehicle_label,driver_name,delivery_reference,dispatched_by,created_at").in("transfer_id", transferIds) : Promise.resolve({ data: [], error: null }),
-    itemIds.length ? supabase.from("material_delivery_acceptances").select("inventory_transaction_id,transfer_item_id,received_quantity,condition,quality_note,received_by,created_at").in("transfer_item_id", itemIds).order("created_at", { ascending: false }) : Promise.resolve({ data: [], error: null }),
+  const transferIds = [...new Set(items.map(row => row.transfer_id))];
+  const [transfers, manifests, acceptances] = await Promise.all([
+    readByIds(transferIds, (ids, from, to) => supabase.from("inventory_transfers").select("id,transfer_number,status,dispatched_at").in("id", ids).order("id").range(from, to), "request transfers"),
+    readByIds(transferIds, (ids, from, to) => supabase.from("material_delivery_manifests").select("transfer_id,vehicle_label,driver_name,delivery_reference,dispatched_by,created_at").in("transfer_id", ids).order("transfer_id").range(from, to), "delivery manifests"),
+    readByIds(itemIds, (ids, from, to) => supabase.from("material_delivery_acceptances").select("inventory_transaction_id,transfer_item_id,received_quantity,condition,quality_note,received_by,created_at").in("transfer_item_id", ids).order("created_at", { ascending: false }).order("inventory_transaction_id").range(from, to), "delivery checks"),
   ]);
-  if (manifestsResult.error || acceptancesResult.error) throw new Error("Unable to load delivery checks.");
-  const itemMap = new Map((itemsResult.data ?? []).map((row) => [row.id, row]));
-  const transferMap = new Map((transfersResult.data ?? []).map((row) => [row.id, row]));
-  const corrections = await readByIds((acceptancesResult.data ?? []).map((r) => r.inventory_transaction_id), (ids, from, to) => supabase.from("inventory_corrections").select("original_transaction_id,reason,actor_id,created_at").in("original_transaction_id", ids).order("original_transaction_id").range(from, to), "receipt corrections");
+  fulfillment.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at) || a.id.localeCompare(b.id));
+  reservationHistory.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at) || a.id.localeCompare(b.id));
+  acceptances.sort((a, b) => b.created_at.localeCompare(a.created_at) || a.inventory_transaction_id.localeCompare(b.inventory_transaction_id));
+  const itemMap = new Map(items.map((row) => [row.id, row]));
+  const transferMap = new Map(transfers.map((row) => [row.id, row]));
+  const corrections = await readByIds(acceptances.map((r) => r.inventory_transaction_id), (ids, from, to) => supabase.from("inventory_corrections").select("original_transaction_id,reason,actor_id,created_at").in("original_transaction_id", ids).order("original_transaction_id").range(from, to), "receipt corrections");
   const correctionMap = new Map(corrections.map((c) => [c.original_transaction_id, c]));
-  const manifestMap = new Map((manifestsResult.data ?? []).map((row) => [row.transfer_id, row]));
-  const dispatches = (dispatchesResult.data ?? []).flatMap((row) => {
+  const manifestMap = new Map(manifests.map((row) => [row.transfer_id, row]));
+  const acceptancesByItem = new Map<string, typeof acceptances>();
+  for (const entry of acceptances) {
+    const group = acceptancesByItem.get(entry.transfer_item_id) ?? [];
+    group.push(entry);
+    acceptancesByItem.set(entry.transfer_item_id, group);
+  }
+  const materialByTransferItem = new Map(requestDispatches.map(row => [row.transfer_item_id, lineById.get(row.request_line_id)?.material_id]));
+  const dispatches = requestDispatches.flatMap((row) => {
     const item = itemMap.get(row.transfer_item_id);
     const transfer = item ? transferMap.get(item.transfer_id) : null;
-    return item && transfer ? [{ ...row, item, transfer, manifest: manifestMap.get(transfer.id), acceptances: (acceptancesResult.data ?? []).filter((entry) => entry.transfer_item_id === item.id), remainingQuantity: item.dispatched_quantity - item.received_quantity - item.variance_quantity }] : [];
+    return item && transfer ? [{ ...row, item, transfer, manifest: manifestMap.get(transfer.id), acceptances: acceptancesByItem.get(item.id) ?? [], remainingQuantity: item.dispatched_quantity - item.received_quantity - item.variance_quantity }] : [];
   });
-  const materialIds = [...new Set((linesResult.data ?? []).map((row) => row.material_id))];
-  const actorIds = [...new Set([request.requested_by, request.decided_by, ...(eventsResult.data ?? []).map((row) => row.actor_id), ...(fulfillmentResult.data ?? []).map((row) => row.actor_id), ...(varianceResult.data ?? []).map((row) => row.approved_by), ...(acceptancesResult.data ?? []).map((row) => row.received_by), ...corrections.map((c) => c.actor_id)].filter((id): id is string => Boolean(id)))];
-  const [materialsResult, actorsResult, units] = await Promise.all([
-    materialIds.length ? supabase.from("materials").select("id,code,name,photo_path").in("id", materialIds) : Promise.resolve({ data: [], error: null }),
-    actorIds.length ? supabase.from("profiles").select("id,full_name").in("id", actorIds) : Promise.resolve({ data: [], error: null }),
-    readAllPages((from, to) => supabase.from("units_of_measure").select("id,symbol").order("id").range(from, to), "request units"),
+  const materialIds = [...new Set(lines.map((row) => row.material_id))];
+  const actorIds = [...new Set([request.requested_by, request.decided_by, ...events.map((row) => row.actor_id), ...fulfillment.map((row) => row.actor_id), ...reservationHistory.map(row => row.actor_id), ...variances.map((row) => row.approved_by), ...acceptances.map((row) => row.received_by), ...corrections.map((c) => c.actor_id)].filter((id): id is string => Boolean(id)))];
+  const [materialRows, actorRows, units] = await Promise.all([
+    readByIds(materialIds, (ids, from, to) => supabase.from("materials").select("id,code,name,photo_path").in("id", ids).order("id").range(from, to), "request materials"),
+    readByIds(actorIds, (ids, from, to) => supabase.from("profiles").select("id,full_name").in("id", ids).order("id").range(from, to), "request actors"),
+    readByIds([...new Set(lines.map(row => row.unit_of_measure_id))], (ids, from, to) => supabase.from("units_of_measure").select("id,symbol").in("id", ids).order("id").range(from, to), "request units"),
   ]);
-  if (materialsResult.error || actorsResult.error) throw new Error("Unable to load material request references.");
-  const materials = new Map((materialsResult.data ?? []).map((row) => [row.id, row]));
-  const actors = new Map((actorsResult.data ?? []).map((row) => [row.id, row.full_name]));
+  const materials = new Map(materialRows.map((row) => [row.id, row]));
+  const actors = new Map(actorRows.map((row) => [row.id, row.full_name]));
   const unitMap = new Map(units.map((row) => [row.id, row.symbol]));
   const reservations = new Map<string, number>();
-  for (const row of reservationsResult.data ?? []) reservations.set(row.request_line_id, (reservations.get(row.request_line_id) ?? 0) + Number(row.remaining_quantity));
-  const reservationLines = new Map((reservationsResult.data ?? []).map((row) => [row.id, (linesResult.data ?? []).find((line) => line.id === row.request_line_id)]));
+  for (const row of requestReservations) reservations.set(row.request_line_id, (reservations.get(row.request_line_id) ?? 0) + Number(row.remaining_quantity));
+  const reservationLines = new Map(requestReservations.map((row) => [row.id, lineById.get(row.request_line_id)]));
   return {
-    allocations: allocationsResult.data, stockSources: stockSourcesResult.data ?? [],
+    allocations, stockSources,
     request, project: { id: context.project_id, code: context.project_code, name: context.project_name }, site: { id: context.site_id, name: context.site_name }, warehouse: { id: request.source_warehouse_id, name: request.source_warehouse_name },
-    lines: (linesResult.data ?? []).map((row) => ({ ...row, sourceOnHand: sourceStock.get(row.id)?.on_hand ?? null, sourceAvailable: sourceStock.get(row.id)?.available ?? null, siteOnHand: stock.get(row.id)?.site_on_hand ?? null, siteAvailable: stock.get(row.id)?.site_available ?? null, material: materials.get(row.material_id), unitSymbol: unitMap.get(row.unit_of_measure_id) ?? "", reservedQuantity: reservations.get(row.id) ?? 0 })),
-    events: (eventsResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user" })),
-    fulfillmentEvents: (fulfillmentResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get((linesResult.data ?? []).find((line) => line.id === row.request_line_id)?.material_id ?? "")?.name ?? "Material" })),
-    reservationEvents: (reservationEventsResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get(reservationLines.get(row.reservation_id)?.material_id ?? "")?.name ?? "Material" })),
-    varianceEvents: (varianceResult.data ?? []).map((row) => ({ ...row, actorName: actors.get(row.approved_by) ?? "Administrator", materialName: materials.get((linesResult.data ?? []).find((line) => (dispatchesResult.data ?? []).some((dispatch) => dispatch.request_line_id === line.id && dispatch.transfer_item_id === row.transfer_item_id))?.material_id ?? "")?.name ?? "Material" })),
+    lines: lines.map((row) => ({ ...row, sourceOnHand: sourceStock.get(row.id)?.on_hand ?? null, sourceAvailable: sourceStock.get(row.id)?.available ?? null, siteOnHand: stock.get(row.id)?.site_on_hand ?? null, siteAvailable: stock.get(row.id)?.site_available ?? null, material: materials.get(row.material_id), unitSymbol: unitMap.get(row.unit_of_measure_id) ?? "", reservedQuantity: reservations.get(row.id) ?? 0 })),
+    events: events.map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user" })),
+    fulfillmentEvents: fulfillment.map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get(lineById.get(row.request_line_id)?.material_id ?? "")?.name ?? "Material" })),
+    reservationEvents: reservationHistory.map((row) => ({ ...row, actorName: actors.get(row.actor_id) ?? "Authorized user", materialName: materials.get(reservationLines.get(row.reservation_id)?.material_id ?? "")?.name ?? "Material" })),
+    varianceEvents: variances.map((row) => ({ ...row, actorName: actors.get(row.approved_by) ?? "Administrator", materialName: materials.get(materialByTransferItem.get(row.transfer_item_id) ?? "")?.name ?? "Material" })),
     correctionEvents: corrections.map((c) => ({ ...c, actorName: actors.get(c.actor_id) ?? "Administrator" })),
     dispatches: dispatches.map((dispatch) => ({ ...dispatch, acceptances: dispatch.acceptances.map((entry) => ({ ...entry, receiverName: actors.get(entry.received_by) ?? "Authorized recipient", correctionReason: correctionMap.get(entry.inventory_transaction_id)?.reason })) })),
     requesterName: actors.get(request.requested_by) ?? "Authorized user",

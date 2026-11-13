@@ -67,7 +67,7 @@ export async function getQrReplacement(id: string) {
 export async function listQrCodes(page: number, entityType?: QrEntityType, search = "", batchSize = 25) {
   const supabase = await createClient();
   const pageSize = Math.min(500, Math.max(1, Number.isSafeInteger(batchSize) ? batchSize : 25));
-  const safePage = Math.min(10000, Math.max(1, Number.isSafeInteger(page) ? page : 1));
+  const safePage = Math.max(1, Number.isSafeInteger(page) ? page : 1);
   let query = supabase.from("qr_codes").select("*", { count: "exact" }).order("generated_at", { ascending: false }).order("id").range((safePage - 1) * pageSize, safePage * pageSize - 1);
   if (entityType) query = query.eq("entity_type", entityType);
   const term = safeSearchTerm(search);
