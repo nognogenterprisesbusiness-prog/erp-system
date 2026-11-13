@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { ActionDialog } from "@/components/ui/action-dialog";
 import { PendingFormControls } from "@/components/ui/pending-form-controls";
 import { todayInManila } from "@/lib/date";
@@ -28,7 +29,8 @@ export default async function WarehousePage({ params, searchParams, editOnly = f
   const municipality = warehouse.municipality_code ? findMunicipality(warehouse.municipality_code) : undefined;
   const linkedIds = new Set(projects.map((project) => project.id));
   const availableProjects = allProjects.filter((project) => !linkedIds.has(project.id));
-  if (editOnly && (user.canManage)) return <RecordCreateDialog hideTrigger confirmDiscard key={data.warehouse.id} title="Edit warehouse" triggerLabel="Edit" triggerVariant="outline" initialOpen closeHref="/warehouses"><WarehouseForm warehouse={data.warehouse} municipalityLabel={municipalityDisplay(data.warehouse.municipality_code ?? undefined, "")} /></RecordCreateDialog>;
+  if (editing && !(user.canManage)) redirect(`/warehouses/${id}`);
+  if ((editOnly || editing) && (user.canManage)) return <RecordCreateDialog hideTrigger confirmDiscard key={data.warehouse.id} title="Edit warehouse" triggerLabel="Edit" triggerVariant="outline" initialOpen closeHref="/warehouses"><WarehouseForm warehouse={data.warehouse} municipalityLabel={municipalityDisplay(data.warehouse.municipality_code ?? undefined, "")} /></RecordCreateDialog>;
   return <>
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">{warehouse.code}</p><div className="mt-1.5 flex items-center gap-3"><h1 className="text-3xl font-semibold tracking-[-0.035em]">{warehouse.name}</h1><Badge variant={warehouse.status === "active" ? "active" : "neutral"}>{warehouse.status}</Badge></div><p className="mt-1 text-sm text-slate-500">{warehouse.address}</p></div>

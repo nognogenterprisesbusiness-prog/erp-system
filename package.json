@@ -59,7 +59,8 @@
     "test:multi-warehouse": "node scripts/test-multi-warehouse-requests.mjs",
     "test:native-warehouse": "node scripts/test-native-warehouse-operations.mjs",
     "test:registry-reads": "node scripts/test-scalable-registry-reads.mjs",
-    "test:registry-http": "node scripts/test-registry-http.mjs"
+    "test:registry-http": "node scripts/test-registry-http.mjs",
+    "test:record-panels": "node scripts/test-record-panels-http.mjs"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^4.3.5",

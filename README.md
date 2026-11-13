@@ -8,6 +8,8 @@ The interface uses one visible action button when a row has one action, and one 
 
 The dated implementation notes below are historical checkpoints. Current deployment and phone acceptance must be verified separately; source pushes and native bundle exports are not Play Store releases.
 
+**Record panels:** Refresh and direct links preserve the same right-side panel for the 16 existing detail families. Close returns to an authorized parent list. Record content, permission checks and posting commands are shared with the intercepted view; direct editors remain editor-only.
+
 **Material request details:** Approve, Reject and Cancel request are visible buttons. Materials include their existing item photo; reviewers choose warehouse quantities in each row and submit them with approval. List action menus, authorization, reservation and dispatch rules stay consistent with the existing workflow.
 
 **Project Finance:** budget, a visual cost breakdown, expense entries, equipment hours and budget history share one tab. Legacy cost-page links return to Finance with their category and pagination preserved.

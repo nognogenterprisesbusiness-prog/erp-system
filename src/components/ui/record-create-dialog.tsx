@@ -49,7 +49,7 @@ export function RecordCreateDialog({ title, children, initialOpen = false, close
     completed.current = true;
     dialog.current?.close();
     window.dispatchEvent(new Event("erp:records-saved"));
-    if (initialOpen && closeHref) window.history.replaceState(null, "", closeHref);
+    if (initialOpen && closeHref) router.replace(closeHref, { scroll: false });
   };
   return <>
     {!hideTrigger && <Button type="button" variant={triggerVariant} size={triggerSize} aria-label={triggerAriaLabel} title={triggerAriaLabel} onClick={() => { completed.current = false; setOpened(true); if (!retainDraft || !draftMounted) setFormKey((key) => key + 1); setDraftMounted(true); dialog.current?.showModal(); }}>{triggerIcon === undefined ? <HugeiconsIcon icon={title.startsWith("Edit") ? PencilEdit02Icon : PlusSignIcon} size={17} strokeWidth={1.5} /> : triggerIcon}{triggerLabel ?? title}</Button>}

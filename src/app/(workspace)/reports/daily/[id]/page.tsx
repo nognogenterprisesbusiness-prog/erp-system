@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { RecordIdentity } from "@/components/ui/record-identity";
 import { projectSiteLabel } from "@/lib/ui/display";
 import { IntentLink as Link } from "@/components/layout/intent-link";
@@ -45,7 +46,8 @@ export default async function DailyReportDetailPage({ params, searchParams, edit
   const choices = canEdit ? await getDailyReportChoices() : null;
   const guide = dailyReportGuide(report.status, user.userId === report.prepared_by, canReview);
   const canRecordProgress = report.status === "approved" && !progress && Boolean(capabilities?.[0]?.can_review);
-  if (editOnly && (canEdit && choices)) return <RecordCreateDialog hideTrigger confirmDiscard key={report.id} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen closeHref="/reports/daily"><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>;
+  if (filters.edit === "1" && !(canEdit && choices)) redirect(`/reports/daily/${id}`);
+  if ((editOnly || filters.edit === "1") && (canEdit && choices)) return <RecordCreateDialog hideTrigger confirmDiscard key={report.id} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen closeHref="/reports/daily"><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>;
   return <>
     <PageHeader eyebrow="Daily report" title={report.report_number} description={<RecordIdentity name={projectSiteLabel(project.name, site.name)} code={project.code} />}
       action={<div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link data-detail-back href={`/reports/daily?project=${report.project_id}`}>Back to daily reports</Link></Button>{canEdit && choices && <RecordCreateDialog confirmDiscard key={report.id} title="Edit daily report draft" triggerLabel="Edit draft" initialOpen={filters.edit === "1"} closeHref={`/reports/daily/${id}`}><DailyReportForm report={report} initialId={id} initialDate={todayInManila()} projects={choices.projects} sites={choices.sites} /></RecordCreateDialog>}{canCorrect && <DailyReportCorrection reportId={id} />}</div>} />

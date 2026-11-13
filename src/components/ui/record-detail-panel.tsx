@@ -6,7 +6,7 @@ import { Button } from "./button";
 import { lockBodyScroll } from "@/lib/ui/body-scroll-lock";
 
 /** The canonical server page supplies the content and all of its access checks. */
-export function RecordDetailPanel({ title, children }: { title: string; children: ReactNode }) {
+export function RecordDetailPanel({ title, children, closeHref }: { title: string; children: ReactNode; closeHref?: string }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const router = useRouter();
@@ -23,7 +23,10 @@ export function RecordDetailPanel({ title, children }: { title: string; children
     return () => { observer.disconnect(); dialog.close(); unlockScroll(); };
   }, []);
   function close() {
-    if (!ref.current?.querySelector('[aria-busy="true"]')) router.back();
+    if (!ref.current?.querySelector('[aria-busy="true"]')) {
+      if (closeHref) router.replace(closeHref, { scroll: false });
+      else router.back();
+    }
   }
   return <dialog ref={ref} aria-labelledby={titleId} data-record-detail-panel
     onCancel={event => { if (event.target === ref.current) { event.preventDefault(); close(); } }}

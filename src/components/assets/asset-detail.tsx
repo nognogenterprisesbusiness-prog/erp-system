@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { displayDate, displayMoney, displayQuantity, displayStatus } from "@/lib/ui/display";
 import { HistoryPagination } from "@/components/ui/history-pagination";
@@ -26,7 +27,8 @@ export function AssetDetail({ data, kind, canManage, usage, editing = false, edi
   const { asset, events } = data;
   const isEquipment = kind === "equipment";
   const base = isEquipment ? "/equipment" : "/vehicles";
-  if (editOnly && canManage && !asset.archived_at && !["assigned", "in_use"].includes(asset.status)) return <RecordCreateDialog hideTrigger initialOpen confirmDiscard title={`Edit ${kind}`} closeHref={base}><AssetForm kind={kind} asset={asset} /></RecordCreateDialog>;
+  if (editing && !(canManage && !asset.archived_at && !["assigned", "in_use"].includes(asset.status))) redirect(`${base}/${asset.id}`);
+  if ((editOnly || editing) && canManage && !asset.archived_at && !["assigned", "in_use"].includes(asset.status)) return <RecordCreateDialog hideTrigger initialOpen confirmDiscard title={`Edit ${kind}`} closeHref={base}><AssetForm kind={kind} asset={asset} /></RecordCreateDialog>;
   const details = <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
     <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-2">
       <div><h2 className="font-semibold">Unit details</h2><dl className="mt-4 space-y-3 text-sm">{[

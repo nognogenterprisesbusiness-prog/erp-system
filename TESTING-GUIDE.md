@@ -1,5 +1,9 @@
 # Nognog ERP — Testing Guide
 
+## Viewing records
+
+View opens a right-side panel. Refreshing or opening the same link directly keeps that presentation. Close returns to the relevant list; normal browser Back/Forward still work. A direct Edit link opens only the editor. Editing from details keeps those details behind the editor.
+
 ## Material request review
 
 For a request awaiting approval, open its three-dot menu. **View** opens details without approval fields. **Approve** opens quantities and warehouse sources in the same panel. Use Choose warehouses in each material row to select one warehouse or split its quantity between warehouses, then approve. There is no separate Save warehouse step in the approval panel. Reductions require a reason. **Reject** asks for confirmation and a reason; it reserves no stock. Setting all quantities to zero also opens rejection confirmation. **Approve**, **Reject** and **Cancel request** are visible buttons inside the request panel. Cancellation requires a reason; it is available only before dispatch. Only authorized reviewers see approval actions.
