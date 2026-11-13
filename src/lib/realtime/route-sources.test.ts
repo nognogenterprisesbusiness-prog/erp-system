@@ -14,7 +14,7 @@ test("operational routes subscribe only to their related data", () => {
   assert.ok(liveTablesForPath("/projects/record-id").includes("project_attendance"));
   assert.ok(liveTablesForPath("/projects/record-id").includes("project_equipment_usage"));
   assert.ok(liveTablesForPath("/projects/record-id").includes("daily_report_resource_links"));
-  assert.deepEqual(liveTablesForPath("/attendance"), ["project_attendance", "project_attendance_reversals"]);
+  assert.deepEqual(liveTablesForPath("/attendance"), ["project_attendance", "project_attendance_reversals", "attendance_scans"]);
   assert.deepEqual(liveTablesForPath("/notifications"), ["notifications"]);
 });
 
@@ -26,4 +26,17 @@ test("reference pages do not keep operational subscriptions open", () => {
   assert.equal(refreshIntervalForPath("/dashboard"), 120_000);
   assert.equal(refreshIntervalForPath("/inventory"), 90_000);
   assert.equal(refreshIntervalForPath("/projects/record-id"), 90_000);
+});
+
+test("driver assignment hints, expenses and scan evidence refresh their operational screens", () => {
+  assert.deepEqual(liveTablesForPath("/users"), ["live_refresh_signals"]);
+  for (const path of ["/equipment/unit", "/vehicles/unit"]) {
+    assert.ok(liveTablesForPath(path).includes("asset_expenses"));
+    assert.ok(liveTablesForPath(path).includes("live_refresh_signals"));
+    assert.ok(liveTablesForPath(path).includes("site_purchases"));
+  }
+  assert.ok(liveTablesForPath("/attendance").includes("attendance_scans"));
+  assert.ok(liveTablesForPath("/projects/site-project/attendance/scans").includes("attendance_scans"));
+  assert.ok(!liveTablesForPath("/projects/site-project/attendance/scans").includes("client_invoices"));
+  assert.ok(!liveTablesForPath("/vehicles/unit").some(table => String(table) === "driver_truck_assignments"));
 });

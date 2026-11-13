@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {withIsolatedPostgres} from './isolated-postgres-fixture.mjs';
+
+await withIsolatedPostgres(async({sql,as,users,scalar})=>{
+ const value=async q=>scalar(await sql(q));
+ const drivers=[randomUUID(),randomUUID()];
+ for(const [index,id] of drivers.entries())await sql(`insert into auth.users(id,email,raw_user_meta_data) values('${id}','live-driver-${index}@test.local','{"full_name":"Live Driver"}'); insert into public.user_roles(user_id,role) values('${id}','driver'); update public.profiles set onboarding_required=false where id='${id}';`);
+ const asDriver=(index,q)=>sql(`begin;set local role authenticated;select set_config('request.jwt.claim.sub','${drivers[index]}',true);${q};commit;`);
+ const location=await value('select id from public.asset_locations order by id limit 1');
+ const truck=randomUUID(),other=randomUUID();
+ for(const [id,code] of [[truck,'LIVE-TRUCK-1'],[other,'LIVE-TRUCK-2']])await sql(`begin; insert into public.assets(id,asset_kind,code,name,ownership_type,status,current_location_id,created_by,updated_by) values('${id}','vehicle','${code}','Delivery Truck','company_owned','available','${location}','${users.admin}','${users.admin}'); insert into public.vehicle_details(asset_id,vehicle_type,plate_number) values('${id}','Truck','${code}'); commit;`);
+ const assign=(driver,asset)=>as('admin',`select public.set_driver_truck('${drivers[driver]}',${asset?`'${asset}'`:'null'})`);
+ await assign(0,truck);
+ assert.equal(scalar(await asDriver(0,'select count(*) from public.live_refresh_signals')),'1');
+ assert.equal(scalar(await asDriver(1,'select count(*) from public.live_refresh_signals')),'0');
+ assert.equal(scalar(await as('admin','select count(*) from public.live_refresh_signals')),'1','Admin sees only their own refresh signal');
+ for(const role of ['finance','foreman','engineer','warehouse_staff'])assert.equal(scalar(await as(role,'select count(*) from public.live_refresh_signals')),'0');
+ await assert.rejects(asDriver(0,`insert into public.live_refresh_signals(recipient_id,topic) values('${drivers[1]}','driver_assignment')`),/permission denied/);
+ await assert.rejects(asDriver(0,`update public.live_refresh_signals set changed_at=now()`),/permission denied/);
+ await assert.rejects(asDriver(0,`delete from public.live_refresh_signals`),/permission denied/);
+ const revision=()=>value(`select revision from public.live_refresh_signals where recipient_id='${drivers[0]}'`);
+ let prior=await revision();
+ await assign(0,truck);assert.equal(await revision(),prior,'unchanged assignments do not emit updates');
+ await assign(0,other);assert.notEqual(await revision(),prior);prior=await revision();
+ await sql(`update public.assets set name='Updated delivery truck' where id='${other}'`);assert.notEqual(await revision(),prior);prior=await revision();
+ await sql(`update public.vehicle_details set plate_number='LIVE-002' where asset_id='${other}'`);assert.notEqual(await revision(),prior);prior=await revision();
+ await assign(0,null);assert.notEqual(await revision(),prior,'removal invalidates the former driver without publishing deleted assignment rows');
+ assert.equal(scalar(await asDriver(0,'select count(*) from public.get_my_truck()')),'0');
+ assert.equal(await value(`select count(*) from public.live_refresh_signals where recipient_id='${drivers[0]}'`),'1','signals are bounded per recipient/topic, not an event history');
+ assert.equal(await value(`select count(*) from pg_publication_tables where pubname='supabase_realtime' and tablename='driver_truck_assignments'`),'0');
+ for(const table of ['live_refresh_signals','asset_expenses','asset_events','attendance_scans'])assert.equal(await value(`select count(*) from pg_publication_tables where pubname='supabase_realtime' and tablename='${table}'`),'1');
+ await sql(`update public.profiles set is_active=false where id='${drivers[0]}'`);
+ assert.equal(scalar(await asDriver(0,'select count(*) from public.live_refresh_signals')),'0');
+ console.log('PASS: assignment/add/change/remove and vehicle edits send private bounded refresh signals; unchanged assignments are quiet; other drivers, inactive accounts and denied roles cannot read or write signals; required RLS sources are published.');
+});

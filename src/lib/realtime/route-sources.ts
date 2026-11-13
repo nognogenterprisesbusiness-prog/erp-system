@@ -9,6 +9,10 @@ export type LiveTable =
   | "inventory_stock_counts"
   | "equipment_requests"
   | "assets"
+  | "asset_expenses"
+  | "asset_events"
+  | "attendance_scans"
+  | "live_refresh_signals"
   | "daily_reports"
   | "project_progress_entries"
   | "projects"
@@ -38,10 +42,13 @@ export function liveTablesForPath(pathname: string, requestType?: string | null)
   if (pathname === "/inventory/transfers") return ["inventory_transfers", "inventory_transfer_items"];
   if (pathname === "/inventory/counts") return ["inventory_stock_counts", "inventory_balances"];
   if (pathname === "/inventory" || pathname.startsWith("/inventory/") || pathname.startsWith("/materials/") || pathname === "/warehouses" || pathname.startsWith("/warehouses/")) return ["inventory_balances"];
-  if (pathname === "/equipment" || pathname.startsWith("/equipment/")) return ["assets"];
-  if (pathname === "/vehicles" || pathname.startsWith("/vehicles/")) return ["assets"];
+  if (pathname === "/users" || pathname.startsWith("/users/")) return ["live_refresh_signals"];
+  if (pathname.startsWith("/equipment/") || pathname.startsWith("/vehicles/")) return ["assets", "asset_expenses", "asset_events", "live_refresh_signals", "project_equipment_usage", "project_equipment_usage_reversals", "site_purchases"];
+  if (pathname === "/equipment") return ["assets"];
+  if (pathname === "/vehicles") return ["assets"];
+  if (pathname.startsWith("/projects/") && /\/attendance(?:\/|$)/.test(pathname)) return ["projects", "project_sites", "project_assignments", "project_attendance", "project_attendance_reversals", "attendance_scans"];
   if (pathname === "/projects" || pathname.startsWith("/projects/")) return projectTables;
-  if (pathname === "/attendance") return ["project_attendance", "project_attendance_reversals"];
+  if (pathname === "/attendance") return ["project_attendance", "project_attendance_reversals", "attendance_scans"];
   if (pathname === "/billing" || pathname.startsWith("/billing/")) return ["client_invoices", "client_payments", "client_payment_reversals"];
   if (pathname === "/reports/daily" || pathname.startsWith("/reports/daily/")) return ["daily_reports", "project_progress_entries", "daily_report_resource_links", "project_attendance", "project_equipment_usage", "inventory_transactions"];
   if (pathname === "/notifications" || pathname.startsWith("/notifications/")) return ["notifications"];

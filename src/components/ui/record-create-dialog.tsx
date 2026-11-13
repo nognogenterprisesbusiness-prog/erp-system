@@ -74,7 +74,11 @@ export function RecordFormControls({ busy, disabled = false, label = "Save", suc
   useEffect(() => { setBusy?.(busy); }, [busy, setBusy]);
   useEffect(() => {
     if (busy) { handled.current = false; return; }
-    if (success && !handled.current && complete) { handled.current = true; complete(); }
+    if (success && !handled.current) {
+      handled.current = true;
+      controls.current?.closest("form")?.dispatchEvent(new CustomEvent("erp:form-saved", { bubbles: true }));
+      complete?.();
+    }
   }, [busy, success, complete]);
   useEffect(() => {
     if (wasBusy.current && !busy && !success) controls.current?.closest("form")?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();

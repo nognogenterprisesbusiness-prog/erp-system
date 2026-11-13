@@ -8,6 +8,8 @@ The interface uses one visible action button when a row has one action, and one 
 
 The dated implementation notes below are historical checkpoints. Current deployment and phone acceptance must be verified separately; source pushes and native bundle exports are not Play Store releases.
 
+**Operational live updates:** Requests, available stock, assignment changes, asset expenses and attendance evidence refresh authorized views without a manual reload. Unsaved web forms defer background refresh; mobile sync targets the current role and account. Staging migration `20261114090000_operational_realtime_gaps.sql` was applied and verified with separate Admin, Driver and Finance sessions. See [verification and rollout](docs/operational-live-sync-20261114.md).
+
 **Record panels:** Refresh and direct links preserve the same right-side panel for the 16 existing detail families. Close returns to an authorized parent list. Record content, permission checks and posting commands are shared with the intercepted view; direct editors remain editor-only.
 
 **Material request details:** Approve, Reject and Cancel request are visible buttons. Materials include their existing item photo; reviewers choose warehouse quantities in each row and submit them with approval. List action menus, authorization, reservation and dispatch rules stay consistent with the existing workflow.

@@ -1,5 +1,9 @@
 # Nognog ERP — Testing Guide
 
+## Live updates
+
+Use two staff accounts to check changes between users. Request decisions, stock, driver assignments, expenses and attendance update permitted screens automatically. Updates wait while a web form has unsaved changes; finish or close that form to apply them. Mobile refreshes the active screen after reconnecting. A live update does not save a draft or replace server confirmation.
+
 ## Viewing records
 
 View opens a right-side panel. Refreshing or opening the same link directly keeps that presentation. Close returns to the relevant list; normal browser Back/Forward still work. A direct Edit link opens only the editor. Editing from details keeps those details behind the editor.

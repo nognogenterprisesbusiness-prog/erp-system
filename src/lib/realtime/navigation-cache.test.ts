@@ -12,6 +12,13 @@ test("background pages, nested editing dialogs and pending panel saves defer ref
   assert.equal(shouldDeferRouteRefresh({ visible: true, editingDialogOpen: false, submissionPending: true }), true);
 });
 
+test("offline screens and unsaved inline drafts defer refresh without freezing read-only panels", () => {
+  const ready = { visible: true, editingDialogOpen: false, submissionPending: false };
+  assert.equal(shouldDeferRouteRefresh({ ...ready, unsavedChanges: true }), true);
+  assert.equal(shouldDeferRouteRefresh({ ...ready, online: false }), true);
+  assert.equal(shouldDeferRouteRefresh({ ...ready, online: true, unsavedChanges: false }), false);
+});
+
 test("cold and expired destinations do not duplicate their navigation fetch", () => {
   assert.equal(shouldRefreshCachedRoute(undefined, ROUTE_CACHE_MS), false);
   assert.equal(shouldRefreshCachedRoute(0, ROUTE_CACHE_MS), false);

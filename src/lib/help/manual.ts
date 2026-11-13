@@ -60,7 +60,7 @@ export const manualGuides: readonly ManualGuide[] = [
       { title: "Wait for confirmation", detail: "Complete the required fields and select Save or the named action. Wait for success before leaving. The screen updates after the server confirms the transaction; a notification alone is not proof of stock posting." },
     ],
     result: "You can find the record and see its confirmed status without using another staff member's account.",
-    tips: ["Keep the form open if a save fails. Check the message and retry the same submission after correcting the cause.", "Account & help contains My profile, Notifications and this User manual."],
+    tips: ["Operational screens update automatically. Finish or close an unsaved form to apply waiting updates; refreshing does not save your edits.", "Keep the form open if a save fails. Check the message and retry the same submission after correcting the cause.", "Account & help contains My profile, Notifications and this User manual."],
   },
   {
     id: "access", title: "Admin setup and staff access", description: "Set up records and assignments before staff start work.", href: "/users", roles: ["admin"],

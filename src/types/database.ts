@@ -212,6 +212,7 @@ export type Database = {
       payroll_runs: Table<PayrollRunRow, never>;
       payroll_lines: Table<PayrollLineRow, never>;
       driver_truck_assignments: Table<DriverAssignmentRow, never>;
+      live_refresh_signals: Table<{ id: string; recipient_id: string; topic: "driver_assignment"; revision: string; changed_at: string }, never>;
       equipment_details: Table<EquipmentDetailRow, never>;
       vehicle_details: Table<VehicleDetailRow, never>;
       asset_events: Table<AssetEventRow, never>;
