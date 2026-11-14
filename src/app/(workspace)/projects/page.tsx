@@ -11,7 +11,7 @@ import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { requireUser } from "@/lib/auth";
+import { requireOperationalViewer } from "@/lib/auth";
 import { getAssignableProfiles, getProjects } from "@/lib/data/projects";
 import type { ProjectListParams } from "@/lib/data/projects";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
@@ -45,7 +45,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   const sort: Filters["sort"] = params.sort === "name" || params.sort === "target" || params.sort === "code" || params.sort === "client" || params.sort === "status" ? params.sort : "newest";
   const direction: Filters["direction"] = params.direction === "asc" ? "asc" : "desc";
   const page = typeof params.page === "string" ? Math.max(1, Number.parseInt(params.page, 10) || 1) : 1;
-  const user = await requireUser();
+  const user = await requireOperationalViewer();
   const filters: Filters = { query, status, sort, direction, page };
   const creating = user.canManage && params.create === "1";
   return <>

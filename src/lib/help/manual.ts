@@ -12,11 +12,17 @@ export type ManualGuide = {
   result: string; tips: string[]; figure?: ManualFigure;
 };
 const everyone: readonly AppRole[] = ["admin", "finance", "engineer", "foreman", "warehouse_staff"];
+const webStaff: readonly AppRole[] = [...everyone, "hr"];
 const siteTeam: readonly AppRole[] = ["admin", "engineer", "foreman"];
 const inventoryTeam: readonly AppRole[] = ["admin", "warehouse_staff"];
 const financeTeam: readonly AppRole[] = ["admin", "finance"];
 
 export const roleResponsibilities: Record<AppRole, { summary: string; tasks: string[]; boundary: string }> = {
+  hr: {
+    summary: "Maintain employee records and prepare payroll in the web ERP.",
+    tasks: ["Maintain employee details, departments, project assignments and worker ID cards.", "Review posted attendance and its supporting ID scans and face photos.", "Prepare draft payroll earnings and deductions, then ask Admin to finalize."],
+    boundary: "Admin changes pay rates, links employee accounts, finalizes payroll and makes corrections. Finance or Admin records payment. HR does not manage stock, purchasing, billing or user access. Departments group payroll; they do not grant permissions.",
+  },
   admin: {
     summary: "Set up the company and oversee approvals, stock and finances.",
     tasks: ["Maintain projects, sites, warehouses, materials, suppliers, employees and assets.", "Create staff accounts and assign site or warehouse access.", "Approve purchases above ₱50,000 as the owner; oversee requests and site purchases.", "Review reports, billing, costs and audit history; make reasoned corrections to posted records."],
@@ -51,7 +57,7 @@ export const roleResponsibilities: Record<AppRole, { summary: string; tasks: str
 
 export const manualGuides: readonly ManualGuide[] = [
   {
-    id: "start", title: "Start here: navigation and daily work", description: "Find the right screen and understand a successful save.", href: "/dashboard", roles: everyone,
+    id: "start", title: "Start here: navigation and daily work", description: "Find the right screen and understand a successful save.", href: "/dashboard", roles: webStaff,
     before: "Sign in with your own account. Admin must activate it and assign the sites or warehouses you work with.",
     steps: [
       { title: "Choose your work area", detail: "Main work starts with Overview, Projects and Requests, followed by Inventory, Equipment and Vehicles. The order stays consistent; only permitted pages appear. Find employees, attendance and payroll under People, and daily reports and documents under Project tools." },
@@ -67,7 +73,7 @@ export const manualGuides: readonly ManualGuide[] = [
     before: "Have the project, site, warehouse and staff details ready. Give each person their own account.",
     steps: [
       { title: "Create the basic records", detail: "Add the project and its sites, warehouses and catalog materials. Choose an existing unit when adding a material; material categories are no longer part of setup. Add suppliers and employees as needed. Short examples inside inputs show the expected format; use your own actual details." },
-      { title: "Give staff the correct role", detail: "Open User access and create or manage Engineer, Foreman, Warehouse staff and Finance accounts. Check that the account is active." },
+      { title: "Give staff the correct role", detail: "Open User access and invite a personal Engineer, Foreman, Warehouse staff, Finance, Driver or HR account. Check that the account is active. HR manages employee records and prepares payroll without Admin or project-finance permissions." },
       { title: "Assign site personnel", detail: "Open Projects → project → Sites. Set the site's Engineer and Foreman, or maintain the permitted project assignments. A role by itself does not grant access to every site." },
       { title: "Assign warehouse access", detail: "Open Warehouses to assign warehouse staff. On a submitted material request, Admin chooses an active source warehouse on each submitted material request. The selection applies only to that request and does not create a permanent project link. Warehouse Staff can select an assigned active warehouse for a request they can access." },
       { title: "Verify as the staff member", detail: "Have staff sign in and open the assigned project. If a site is missing, check assignments and active status before changing stock or creating duplicate records." },
@@ -92,7 +98,7 @@ export const manualGuides: readonly ManualGuide[] = [
     id: "inventory", title: "Inventory: materials, stock and history", description: "Check available quantities and where stock is held.", href: "/inventory", roles: everyone,
     before: "A material is the item and unit. Stock is its quantity at a warehouse or site. An item may appear at one warehouse or several. For example, Deform Bar can have stock at Borbon and Quoit while another material has stock only at Borbon. This is a location difference, not a duplicate item.",
     steps: [
-      { title: "Choose warehouse or site stock", detail: "Inventory opens with All warehouses when your account can read warehouse stock. Site-only staff starts with All sites. Open Stock location to search by warehouse, site, project or address. Warehouses and project sites are grouped separately. Choose a warehouse, a project site, All sites or the combined All locations overview. Warehouse totals exclude materials already held at sites. Check Materials, Equipment or Vehicles for the correct item type. SKU catalog lists the same materials by their unique codes; it is not a separate stock balance." },
+      { title: "Choose warehouse or site stock", detail: "Inventory opens with All warehouses when your account can read warehouse stock. Site-only staff starts with All sites. Open Stock location to search by warehouse, site, project or address. Warehouses and project sites are grouped separately. Choose a warehouse, a project site, All sites or the combined All locations overview. Warehouse totals exclude materials already held at sites. Materials, Equipment and Vehicles have separate screens." },
       { title: "Read the quantities", detail: "On hand is stock physically recorded at the selected location. Warehouse stock or Site stock totals only that group of permitted locations. Reserved is approved stock awaiting release. Available is what remains after reservations. Choose a specific source warehouse before approving or dispatching; a combined total cannot supply a delivery itself. The web catalog includes zero-stock materials for sourcing. Mobile Site Inventory shows only materials with available quantity greater than zero; use History to inspect earlier receipts or use." },
       { title: "Maintain catalog items", detail: "Admin selects Add material in Inventory and enters a unique code, clear name, unit and minimum stock level. Adding a material creates its catalog entry; it does not create stock." },
       { title: "Trace a quantity", detail: "Choose the location and open History or stock details. Mobile History shows In/Out, quantity, date, reference and known warehouse/supplier sources. Request links open the delivery; purchase links open site purchases. Older stock with no supplier evidence is labelled Opening stock or Source unavailable. Prices remain restricted to authorized roles." },
@@ -247,11 +253,11 @@ export const manualGuides: readonly ManualGuide[] = [
     tips: ["A web deployment does not install a new native app build on a phone.", "If the app reports a failure, give support the action, date/time and error reference. Do not send your password."],
   },
   {
-    id: "roles", title: "Roles and access", description: "Know who requests, approves, receives, records and pays.", href: "/dashboard", roles: everyone,
+    id: "roles", title: "Roles and access", description: "Know who requests, approves, receives, records and pays.", href: "/dashboard", roles: webStaff,
     before: "Your account role and active site or warehouse assignments work together. The manual shows the tasks relevant to your account.",
-    steps: everyone.map((role) => ({ title: ({ admin: "Admin", finance: "Finance", engineer: "Engineer", foreman: "Foreman", warehouse_staff: "Warehouse staff", driver: "Driver" } satisfies Record<AppRole, string>)[role], detail: [roleResponsibilities[role].summary, ...roleResponsibilities[role].tasks, roleResponsibilities[role].boundary].join(" ") })),
+    steps: webStaff.map((role) => ({ title: ({ admin: "Admin", finance: "Finance", engineer: "Engineer", foreman: "Foreman", warehouse_staff: "Warehouse staff", driver: "Driver", hr: "HR" } satisfies Record<AppRole, string>)[role], detail: [roleResponsibilities[role].summary, ...roleResponsibilities[role].tasks, roleResponsibilities[role].boundary].join(" ") })),
     result: "You know which colleague handles the next stage without sharing accounts or bypassing approval.",
-    tips: ["If the expected button is missing, check your role, assignment and the record's status with Admin.", "The web app supports all five staff roles. The mobile companion is for Engineer and Foreman accounts, and Driver accounts use its My Truck screen only."],
+    tips: ["If the expected button is missing, check your role, assignment and the record's status with Admin.", "HR works in the web ERP. The mobile companion supports Engineer, Foreman, Warehouse staff and Driver workspaces."],
   },
   {
     id: "warehouses", title: "Warehouses and stock locations", description: "Know where stock is stored and where it must be delivered.", href: "/warehouses", roles: everyone,
@@ -266,17 +272,30 @@ export const manualGuides: readonly ManualGuide[] = [
     tips: ["A project site and a warehouse are different locations. An approved site purchase will not appear as warehouse stock.", "Changing the selected location changes the view; it does not transfer stock."],
   },
   {
-    id: "people", title: "Employees and attendance setup", description: "Maintain the workers used in attendance and project labour records.", href: "/employees", roles: everyone,
+    id: "people", title: "Employees and attendance setup", description: "Maintain the workers used in attendance and project labour records.", href: "/employees", roles: webStaff,
     before: "An employee record represents a worker. A staff login is a separate user account with a role and assignments.",
     steps: [
-      { title: "Register the employee", detail: "Admin opens Employees → Add employee. Enter a unique employee code, job / trade and name. Complete contact, employment and hire-date fields. Use Jobs / trades on Employees when a trade needs setup." },
+      { title: "Register the employee", detail: "Admin or HR opens Employees → Add employee. Enter a unique employee code, job / trade and name. Complete contact, employment and hire-date fields. Use Jobs / trades on Employees when a trade needs setup." },
       { title: "Keep private details private", detail: "Personal contact details and wage information are shown only where your role permits. An optional linked user account does not automatically grant project access." },
-      { title: "Prepare the project's workforce", detail: "Admin maintains worker assignments and the applicable labour costing basis/rates before the Foreman records attendance. Rates are historical snapshots when attendance posts." },
-      { title: "Review one employee", detail: "Select the employee name or View. Admin and Finance can review posted work and any reversal under Project attendance history. Assignments, rates and history have their own page controls. Edit from this panel to keep the employee details visible, or choose Edit from the list to open only the form." },
+      { title: "Prepare the project's workforce", detail: "Admin or HR maintains worker assignments. Admin sets labour costing basis/rates before the Foreman records attendance. Rates are historical snapshots when attendance posts. Only Admin links an employee to a user account." },
+      { title: "Review one employee", detail: "Select the employee name or View. Admin, HR and Finance can review posted work and any reversal under Project attendance history. Assignments, rates and history have their own page controls. Edit from this panel to keep the employee details visible, or choose Edit from the list to open only the form." },
       { title: "Record actual work", detail: "Admin or the assigned Foreman records supported daily full/half-day attendance or actual hourly work. Finance reviews attendance costs; Engineer reviews permitted site attendance." },
     ],
     result: "Attendance refers to the correct worker and actual work date, with the configured cost basis.",
     tips: ["Employees do not need a login merely to be included in attendance.", "Do not create a second employee to correct an attendance entry; use the supported Admin correction action."],
+  },
+  {
+    id: "payroll", title: "Prepare payroll and review attendance", description: "HR prepares the records; Admin finalizes and Finance records payment.", href: "/payroll", roles: ["admin", "finance", "hr"],
+    before: "Use a personal staff account. A department groups employees for payroll; it does not grant system access.",
+    steps: [
+      { title: "Review attendance", detail: "Open Attendance, choose the date and project, and check recorded hours. HR and Admin can open ID scans & face photos for supporting evidence. Contact Admin for corrections; a QR scan alone does not post attendance pay." },
+      { title: "Maintain departments", detail: "Admin or HR adds or renames departments in Payroll and sets each employee's payroll department from their details panel." },
+      { title: "Prepare a draft", detail: "Create payroll for the department and pay period. Review each employee, enter other earnings or deductions, and save. Payroll uses posted attendance pay and does not charge the project again." },
+      { title: "Review and finalize", detail: "Ask Admin to finalize after checking the totals. Finalizing recalculates attendance pay and locks the entries. HR cannot finalize or void payroll, change pay rates, or mark a payment." },
+      { title: "Record payment", detail: "Finance or Admin marks a finalized payroll as paid only after payment, with its date and reference. HR can view the confirmed status and export the records." },
+    ],
+    result: "Employee records, attendance evidence, payroll preparation, approval and payment have clear owners.",
+    tips: ["HR uses the web ERP, not the field mobile app.", "HR access does not include supplier purchases, stock adjustments, billing or full project finances."],
   },
   {
     id: "suppliers", title: "Suppliers and material prices", description: "Maintain hardware-store details and compare current material prices.", href: "/suppliers", roles: financeTeam,
@@ -291,7 +310,7 @@ export const manualGuides: readonly ManualGuide[] = [
     tips: ["A price comparison does not create stock. Create the purchase, inspect delivery and post accepted receipt.", "Do not rename a supplier or material to hide an incorrect purchase; retain the original history and use supported corrections."],
   },
   {
-    id: "account", title: "Your profile, notifications and common problems", description: "Resolve common issues without duplicating records.", href: "/notifications", roles: everyone,
+    id: "account", title: "Your profile, notifications and common problems", description: "Resolve common issues without duplicating records.", href: "/notifications", roles: webStaff,
     before: "Use your own account and keep the selected project/site and transaction reference available when investigating an issue.",
     steps: [
       { title: "Update your profile", detail: "Open My profile to change permitted personal details or your photo. Email changes require confirmation. Sign out before another staff member uses the device." },

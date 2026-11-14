@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { requireManager } from "@/lib/auth";
+import { requireManagerPage } from "@/lib/auth";
 
 export default async function NewSupplierPage() {
-  await requireManager();
+  await requireManagerPage();
   redirect("/suppliers?create=1");
 }

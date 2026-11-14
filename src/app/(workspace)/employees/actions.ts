@@ -12,7 +12,7 @@ import {
   uuidSchema,
   workforceAssignmentInputSchema,
 } from "@nognog/domain";
-import { requireManager } from "@/lib/auth";
+import { requireManager, requireWorkforceManager } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export type WorkforceActionState =
@@ -41,7 +41,7 @@ function revalidateWorkforce(employeeId?: string, projectId?: string) {
 }
 
 export async function saveEmployeeAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to manage employees."); }
+  try { await requireWorkforceManager(); } catch { return failure("You do not have permission to manage employees."); }
   const parsed = employeeInputSchema.safeParse({
     id: value(form, "id") || undefined,
     code: value(form, "code").toUpperCase(),
@@ -79,7 +79,7 @@ export async function saveEmployeeAction(_: WorkforceActionState, form: FormData
 }
 
 export async function archiveEmployeeAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to archive employees."); }
+  try { await requireWorkforceManager(); } catch { return failure("You do not have permission to archive employees."); }
   const id = uuidSchema.safeParse(value(form, "id"));
   const reason = value(form, "reason").trim();
   if (!id.success || reason.length < 3 || reason.length > 500) return failure("Enter an archive reason of 3 to 500 characters.");
@@ -91,7 +91,7 @@ export async function archiveEmployeeAction(_: WorkforceActionState, form: FormD
 }
 
 export async function saveEmployeeCategoryAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to manage employee categories."); }
+  try { await requireWorkforceManager(); } catch { return failure("You do not have permission to manage employee categories."); }
   const parsed = employeeCategoryInputSchema.safeParse({ id: value(form, "id") || undefined, name: value(form, "name"), description: value(form, "description") });
   if (!parsed.success) return failure("Review the category details.", parsed.error.flatten().fieldErrors);
   const supabase = await createClient();
@@ -103,7 +103,7 @@ export async function saveEmployeeCategoryAction(_: WorkforceActionState, form: 
 }
 
 export async function archiveEmployeeCategoryAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to archive employee categories."); }
+  try { await requireWorkforceManager(); } catch { return failure("You do not have permission to archive employee categories."); }
   const id = uuidSchema.safeParse(value(form, "id"));
   if (!id.success) return failure("Choose a valid employee category.");
   const supabase = await createClient();
@@ -115,7 +115,7 @@ export async function archiveEmployeeCategoryAction(_: WorkforceActionState, for
 }
 
 export async function assignEmployeeAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to assign employees."); }
+  try { await requireWorkforceManager(); } catch { return failure("You do not have permission to assign employees."); }
   const parsed = workforceAssignmentInputSchema.safeParse({
     employeeId: value(form, "employeeId"), projectId: value(form, "projectId"), projectSiteId: value(form, "projectSiteId"),
     positionTitle: value(form, "positionTitle"), startDate: value(form, "startDate"), remarks: value(form, "remarks"),
@@ -133,7 +133,7 @@ export async function assignEmployeeAction(_: WorkforceActionState, form: FormDa
 }
 
 export async function endEmployeeAssignmentAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to end assignments."); }
+  try { await requireWorkforceManager(); } catch { return failure("You do not have permission to end assignments."); }
   const parsed = endWorkforceAssignmentInputSchema.safeParse({ assignmentId: value(form, "assignmentId"), endDate: value(form, "endDate"), remarks: value(form, "remarks") });
   if (!parsed.success) return failure("Review the assignment end details.", parsed.error.flatten().fieldErrors);
   const supabase = await createClient();
@@ -144,7 +144,7 @@ export async function endEmployeeAssignmentAction(_: WorkforceActionState, form:
 }
 
 export async function transferEmployeeAssignmentAction(_: WorkforceActionState, form: FormData): Promise<WorkforceActionState> {
-  try { await requireManager(); } catch { return failure("You do not have permission to transfer employees."); }
+  try { await requireWorkforceManager(); } catch { return failure("You do not have permission to transfer employees."); }
   const parsed = transferWorkforceAssignmentInputSchema.safeParse({
     assignmentId: value(form, "assignmentId"), projectId: value(form, "projectId"), projectSiteId: value(form, "projectSiteId"),
     positionTitle: value(form, "positionTitle"), currentEndDate: value(form, "currentEndDate"), newStartDate: value(form, "newStartDate"), remarks: value(form, "remarks"),
@@ -196,7 +196,7 @@ export async function setAttendanceBasisAction(_: WorkforceActionState, form: Fo
 }
 
 export async function loadEmployeeFormReferences() {
-  await requireManager();
+  const actor = await requireWorkforceManager();
   const { getEmployeeCategories } = await import("@/lib/data/workforce");
-  return { categories: await getEmployeeCategories(), profiles: [] };
+  return { categories: await getEmployeeCategories(), profiles: [], canLinkAccount: actor.canManage };
 }

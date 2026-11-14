@@ -3,8 +3,9 @@ import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { AppRole, ProfileRow } from "@/types/database";
+import { workforceAccess } from "@/lib/users/access";
 
-export type UserContext = { userId: string; profile: ProfileRow; roles: AppRole[]; canManage: boolean; canOperateInventory: boolean; canViewLaborRates: boolean; canViewProcurement: boolean; canViewDailyReports: boolean };
+export type UserContext = { userId: string; profile: ProfileRow; roles: AppRole[]; canManage: boolean; canManageEmployees: boolean; canViewPayroll: boolean; workforceOnly: boolean; canOperateInventory: boolean; canViewLaborRates: boolean; canViewProcurement: boolean; canViewDailyReports: boolean };
 
 export const requireUser = cache(async function requireUser(): Promise<UserContext> {
   const supabase = await createClient();
@@ -23,12 +24,42 @@ export const requireUser = cache(async function requireUser(): Promise<UserConte
   const canManage = roles.includes("admin");
   const canViewFinance = canManage || roles.includes("finance");
   // Finance reads purchasing; every purchasing change stays Admin-only.
-  return { userId, profile, roles, canManage, canOperateInventory: canManage || roles.includes("warehouse_staff"), canViewLaborRates: canViewFinance, canViewProcurement: canViewFinance, canViewDailyReports: canManage || roles.some((role) => role === "engineer" || role === "foreman") };
+  return { userId, profile, roles, canManage, ...workforceAccess(roles), canOperateInventory: canManage || roles.includes("warehouse_staff"), canViewLaborRates: canViewFinance, canViewProcurement: canViewFinance, canViewDailyReports: canManage || roles.some((role) => role === "engineer" || role === "foreman") };
 });
 
 export async function requireManager() {
   const context = await requireUser();
   if (!context.canManage) throw new Error("You do not have permission to perform this action.");
+  return context;
+}
+
+export async function requireManagerPage() {
+  const context = await requireUser();
+  if (!context.canManage) notFound();
+  return context;
+}
+
+export async function requireWorkforceManager() {
+  const context = await requireUser();
+  if (!context.canManageEmployees) throw new Error("Employee management access is required.");
+  return context;
+}
+
+export async function requireWorkforceManagerPage() {
+  const context = await requireUser();
+  if (!context.canManageEmployees) notFound();
+  return context;
+}
+
+export async function requireOperationalViewer() {
+  const context = await requireUser();
+  if (context.workforceOnly) notFound();
+  return context;
+}
+
+export async function requirePayrollViewer() {
+  const context = await requireUser();
+  if (!context.canViewPayroll) notFound();
   return context;
 }
 

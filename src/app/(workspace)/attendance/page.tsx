@@ -8,10 +8,11 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { PageHeader } from "@/components/ui/page-header";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { SelectPicker } from "@/components/ui/select-picker";
-import { requireFinanceViewer } from "@/lib/auth";
+import { requirePayrollViewer } from "@/lib/auth";
 import { getAttendanceOverview } from "@/lib/data/attendance-overview";
 import { readAllPages } from "@/lib/data/read-all-pages";
 import { createClient } from "@/lib/supabase/server";
+import { getHrReferences } from "@/lib/data/hr-references";
 
 function validDate(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -20,7 +21,7 @@ function validDate(value: unknown): value is string {
 }
 
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const user = await requireFinanceViewer();
+  const user = await requirePayrollViewer();
   const params = await searchParams;
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const date = validDate(params.date) ? params.date : today;
@@ -31,11 +32,11 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const query = typeof params.q === "string" ? params.q.slice(0, 100) : "";
   const status = typeof params.status === "string" && ["present", "absent", "unmarked"].includes(params.status) ? params.status : "all";
   const resultPromise = getAttendanceOverview(date, projectId, page, query, status);
-  const projects = await readAllPages((from, to) => supabase.from("projects").select("id,code,name").is("archived_at", null).order("name").order("id").range(from, to), "attendance projects");
+  const projects = user.roles.includes("hr") ? await getHrReferences("project") : await readAllPages((from, to) => supabase.from("projects").select("id,code,name").is("archived_at", null).order("name").order("id").range(from, to), "attendance projects");
   return <>
-    <PageHeader title="Attendance" description="Reviewed worker attendance, hours and posted labour cost by date. ID scans and photos are supporting evidence." action={user.canManage && projectId && <div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${projectId}/attendance/scans`}>ID scans & face photos</Link></Button><Button asChild><Link href={`/projects/${projectId}/attendance`}>Mark attendance</Link></Button></div>} />
-    {user.canManage && !projectId && <p className="mt-4 text-sm text-slate-600">Choose a project below to review ID scans and face photos or mark attendance. A scan alone does not post labour costs.</p>}
-    <ListFilterBar className="mt-6 flex flex-wrap items-center gap-3"><input type="hidden" name="q" value={query} /><input type="hidden" name="status" value={status} /><div className="w-full sm:w-48"><DatePicker key={date} label="Attendance date" name="date" defaultValue={date} allowClear={false} required /></div><div className="w-full sm:w-64"><SelectPicker key={projectId ?? "all"} label="Project" name="project" defaultValue={projectId ?? "all"} options={[{ value: "all", label: "All projects" }, ...projects.map((project) => ({ value: project.id, label: project.name, secondary: project.code }))]} /></div></ListFilterBar>
+    <PageHeader title="Attendance" description="Reviewed worker attendance, hours and posted labour cost by date. ID scans and photos are supporting evidence." action={(user.canManage || user.roles.includes("hr")) && projectId && <div className="flex flex-wrap gap-2"><Button variant="outline" asChild><Link href={`/projects/${projectId}/attendance/scans`}>ID scans & face photos</Link></Button>{user.canManage && <Button asChild><Link href={`/projects/${projectId}/attendance`}>Mark attendance</Link></Button>}</div>} />
+    {(user.canManage || user.roles.includes("hr")) && !projectId && <p className="mt-4 text-sm text-slate-600">Choose a project below to review ID scans and face photos (Admin can also mark attendance). A scan alone does not post labour costs.</p>}
+    <ListFilterBar className="mt-6 flex flex-wrap items-center gap-3"><input type="hidden" name="q" value={query} /><input type="hidden" name="status" value={status} /><div className="w-full sm:w-48"><DatePicker key={date} label="Attendance date" name="date" defaultValue={date} allowClear={false} required /></div><div className="w-full sm:w-64"><SelectPicker key={projectId ?? "all"} label="Project" name="project" defaultValue={projectId ?? "all"} options={[{ value: "all", label: "All projects" }, ...projects.map((project) => ({ value: project.id, label: project.name, secondary: project.code ?? undefined }))]} /></div></ListFilterBar>
     <Suspense key={`${date}:${projectId}:${page}:${query}:${status}`} fallback={<TableSkeleton columns={user.canManage ? 7 : 6} filters={0} />}><AttendanceResults resultPromise={resultPromise} date={date} projectId={projectId} canManage={user.canManage} query={query} status={status} /></Suspense>
   </>;
 }

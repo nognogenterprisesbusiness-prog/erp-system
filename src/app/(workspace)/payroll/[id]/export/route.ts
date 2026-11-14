@@ -1,11 +1,11 @@
 import { readAllPages } from "@/lib/data/read-all-pages";
 import { uuidSchema } from "@nognog/domain";
-import { requireFinanceViewer } from "@/lib/auth";
+import { requirePayrollViewer } from "@/lib/auth";
 import { streamCsvAttachment } from "@/lib/export/csv";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
-  await requireFinanceViewer();
+  await requirePayrollViewer();
   const id = uuidSchema.safeParse((await context.params).id);
   if (!id.success) return new Response(null, { status: 404 });
   const supabase = await createClient();

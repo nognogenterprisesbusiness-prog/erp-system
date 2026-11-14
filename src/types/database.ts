@@ -1,13 +1,13 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-type Table<Row, Insert, Update = Partial<Insert>> = {
+type Table<Row, Insert, Update = Partial<Insert>, Relationships extends { foreignKeyName: string; columns: string[]; isOneToOne: boolean; referencedRelation: string; referencedColumns: string[] }[] = []> = {
   Row: Row;
   Insert: Insert;
   Update: Update;
-  Relationships: [];
+  Relationships: Relationships;
 };
 
-export type AppRole = "admin" | "engineer" | "foreman" | "warehouse_staff" | "finance" | "driver";
+export type AppRole = "admin" | "engineer" | "foreman" | "warehouse_staff" | "finance" | "driver" | "hr";
 export type DriverAssignmentRow = { driver_id: string; id: string; asset_id: string; assigned_by: string; assigned_at: string };
 export type AssetExpenseRow = {
   id: string; asset_id: string; submitted_by: string; request_id: string; assignment_id: string | null;
@@ -220,7 +220,7 @@ export type Database = {
       employee_categories: Table<EmployeeCategoryRow, never>;
       employees: Table<EmployeeRow, never>;
       employee_private_contacts: Table<EmployeePrivateContactRow, never>;
-      employee_project_assignments: Table<EmployeeProjectAssignmentRow, never>;
+      employee_project_assignments: Table<EmployeeProjectAssignmentRow, never, never, [{ foreignKeyName: "employee_project_assignments_employee_id_fkey"; columns: ["employee_id"]; isOneToOne: false; referencedRelation: "employees"; referencedColumns: ["id"] }]>;
       labor_rates: Table<LaborRateRow, never>;
       employee_events: Table<EmployeeEventRow, never>;
       suppliers: Table<SupplierRow, never>;
@@ -264,6 +264,7 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      get_hr_workforce_references: { Args: { p_kind: string; p_ids?: string[] | null; p_query?: string; p_project_id?: string | null; p_offset?: number; p_limit?: number }; Returns: { id: string; name: string; code: string | null; project_id: string | null; total_count: number }[] };
       search_registry_choices: { Args: { p_kind: string; p_search?: string; p_offset?: number; p_limit?: number; p_selected?: string | null }; Returns: { id: string; name: string; code: string; total_count: number }[] };
       get_monthly_material_consumption: { Args: { p_from: string; p_to: string }; Returns: { month: string; material_id: string; unit_id: string; quantity: number }[] };
       get_payroll_totals: { Args: { p_run_ids: string[] }; Returns: { run_id: string; employee_count: number; gross: number; deductions: number; net: number }[] };

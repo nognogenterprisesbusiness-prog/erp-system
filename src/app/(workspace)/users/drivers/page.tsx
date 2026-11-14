@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { requireManager } from "@/lib/auth";
+import { requireManagerPage } from "@/lib/auth";
 
 // Preserve old bookmarks without maintaining a separate driver-management screen.
 export default async function DriversPage() {
-  await requireManager();
+  await requireManagerPage();
   redirect("/users");
 }

@@ -55,7 +55,7 @@ export function DashboardOverview({ name, canManage, canViewRequests, canViewCon
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><h2 id="ongoing-projects-heading" className="text-base font-semibold text-slate-900">Ongoing projects</h2><Button variant="outline" size="sm" asChild><Link href="/projects">View all</Link></Button></div>
         {recentProjects.length === 0 ? <EmptyState title="No ongoing projects" description={canManage ? "Create a project to start tracking work." : undefined} /> : <div className="divide-y divide-slate-100">{recentProjects.map((project) => <Link key={project.id} href={`/projects/${project.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50">
           <div className="relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-slate-100 text-slate-400">{project.photo_path ? <Image src={recordPhotoUrl("projects", project.id, project.updated_at)} alt="" fill sizes="56px" unoptimized className="object-cover" /> : <HugeiconsIcon icon={Building03Icon} size={22} />}</div>
-          <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-900">{project.name}</p><p className="mt-1 truncate text-xs text-slate-500">{project.code} · {project.city_province}</p></div>
+          <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-900">{project.name}</p><p className="mt-1 truncate text-xs text-slate-500">{project.code}</p><p className="mt-1 truncate text-xs text-slate-500">{project.city_province}</p></div>
           <Badge variant="active">Active</Badge>
         </Link>)}</div>}
       </section>

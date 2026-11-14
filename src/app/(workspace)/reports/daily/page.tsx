@@ -15,8 +15,10 @@ import { SelectPicker } from "@/components/ui/select-picker";
 import { DailyReportList } from "@/components/reports/daily-report-list";
 import { ReportDateRangeFilter } from "@/components/reports/report-date-range-filter";
 import { getDailyReportChoices, getDailyReportFilterChoices, getDailyReports } from "@/lib/data/daily-reports";
+import { requireDailyReportViewer } from "@/lib/auth";
 
 export default async function DailyReportsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  await requireDailyReportViewer();
   const params = await searchParams;
   const search = typeof params.q === "string" ? params.q.slice(0, 80) : "";
   const project = uuidSchema.safeParse(params.project);

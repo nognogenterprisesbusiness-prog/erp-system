@@ -1,5 +1,7 @@
 # Nognog Enterprises — Construction ERP
 
+**HR and staff access (2026-11-14):** HR has a dedicated web overview, employee/department/assignment and ID-card management, attendance evidence review and draft-payroll preparation. Admin retains rates, account linking, finalization and corrections; Finance/Admin retains payroll payment. Admin-only page errors, staff home navigation, login return paths and role-specific instructions are refined without changing stock or financial posting rules. See [role boundaries, verification and tutorial plan](docs/role-access-and-training-20261114.md).
+
 The company workspace covers project materials, equipment and vehicles, staff attendance, purchasing, payroll and project finance. The companion mobile app supports assigned site, warehouse and driver work.
 
 **Current daily-use guide:** [Staff testing and training](TESTING-GUIDE.md) · [In-app manual topics](src/lib/help/manual.ts) · [Workflow rules](docs/workflow-state-machines.md)

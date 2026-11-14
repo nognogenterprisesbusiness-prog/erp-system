@@ -10,7 +10,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { requireUser } from "@/lib/auth";
+import { requireOperationalViewer } from "@/lib/auth";
 
 const descriptions: Record<RequestType, string> = {
   material: "Review material demand, manager decisions, and delivery progress.",
@@ -19,7 +19,7 @@ const descriptions: Record<RequestType, string> = {
 };
 
 export default async function RequestsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [params, user] = await Promise.all([searchParams, requireUser()]);
+  const [params, user] = await Promise.all([searchParams, requireOperationalViewer()]);
   const type: RequestType = params.type === "equipment" || params.type === "vehicle" ? params.type : "material";
   const missing = type === "material" && params.view === "missing";
   const canRequest = !user.canManage && user.roles.some((role) => ["engineer", "foreman"].includes(role));

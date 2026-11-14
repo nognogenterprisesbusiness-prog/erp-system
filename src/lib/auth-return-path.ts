@@ -1,4 +1,4 @@
-const workspacePrefixes = ["/dashboard", "/projects", "/warehouses", "/inventory", "/requests", "/purchase-orders/receive", "/scan"];
+const workspacePrefixes = ["/dashboard", "/projects", "/warehouses", "/inventory", "/requests", "/purchase-orders", "/scan", "/employees", "/attendance", "/payroll", "/users", "/equipment", "/vehicles", "/materials", "/suppliers", "/site-purchases", "/documents", "/reports/daily", "/billing", "/profile", "/notifications", "/audit-logs", "/qr-codes"];
 
 export function workspaceReturnPath(value: unknown) {
   if (typeof value !== "string" || value.length > 1024 || !/^\/[a-z0-9/-]+(?:\?[^#\s\\]*)?$/i.test(value) || value.startsWith("//"))

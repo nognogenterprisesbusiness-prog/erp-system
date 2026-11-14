@@ -19,8 +19,14 @@ export async function GET(request: Request) {
   const project = params.get("project");
   if (!["asset_location", "profile", "project", "employee", "site"].includes(kind) || query.length > 100 || (selected && !uuidSchema.safeParse(selected).success) || (project && !uuidSchema.safeParse(project).success)) return privateJson({ message: "Invalid search." }, { status: 400 });
   const client = await createClient();
+  if (user.roles.includes("hr") && !user.canManage && (kind === "project" || kind === "site")) {
+    if (kind === "site" && !project) return privateJson({ choices: [], count: 0 });
+    const { data, error } = await client.rpc("get_hr_workforce_references", { p_kind: kind, p_ids: selected ? [selected] : null, p_query: query, p_project_id: project, p_offset: (page - 1) * 20, p_limit: 20 });
+    if (error) return privateJson({ message: "Choices could not be loaded. Try again." }, { status: 503 });
+    return privateJson({ choices: data.map(row => ({ value: row.id, label: row.name, secondary: row.code ?? undefined })), count: data[0]?.total_count ?? 0 });
+  }
   if (kind !== "asset_location") {
-    if (!user.canViewLaborRates) return privateJson({ message: "Staff access required." }, { status: 403 });
+    if (kind === "profile" ? !user.canManage : !user.canViewPayroll) return privateJson({ message: "Staff access required." }, { status: 403 });
     const term = kind === "profile" ? safeAccountSearchTerm(query) : safeSearchTerm(query);
     const from = (page - 1) * 20;
     let result;

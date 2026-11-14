@@ -9,7 +9,7 @@ import { requireUser } from "@/lib/auth";
 export const metadata = { title: "Worker ID cards" };
 
 export default async function WorkerIdCardsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  if (!(await requireUser()).canManage) notFound();
+  if (!(await requireUser()).canManageEmployees) notFound();
   const params = await searchParams;
   const employee = uuidSchema.safeParse(params.employee), project = uuidSchema.safeParse(params.project);
   const data = await getWorkerIdCards({ employeeId: employee.success ? employee.data : undefined, projectId: project.success ? project.data : undefined });

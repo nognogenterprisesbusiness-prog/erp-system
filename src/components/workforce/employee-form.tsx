@@ -13,11 +13,12 @@ import type { EmployeeCategoryRow, EmployeePrivateContactRow, EmployeeRow, Profi
 
 const initialState: WorkforceActionState = { ok: false, message: "" };
 
-export function EmployeeForm({ employee, contact, categories, profiles }: {
+export function EmployeeForm({ employee, contact, categories, profiles, canLinkAccount = false }: {
   employee?: EmployeeRow;
   contact?: EmployeePrivateContactRow | null;
   categories: EmployeeCategoryRow[];
   profiles: Pick<ProfileRow, "id" | "full_name" | "email">[];
+  canLinkAccount?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveEmployeeAction, initialState);
   const dialog = useRecordDialog();
@@ -51,7 +52,7 @@ export function EmployeeForm({ employee, contact, categories, profiles }: {
       <FormField label="Last name" htmlFor="lastName" error={error("lastName")}>
         <input className={fieldControlClass} id="lastName" name="lastName" defaultValue={employee?.last_name} autoComplete="family-name" required />
       </FormField>
-      <FormField label="Contact number" htmlFor="contactNumber" hint="Private. Only Admin, Finance and this employee can see it." error={error("contactNumber")}>
+      <FormField label="Contact number" htmlFor="contactNumber" hint="Private. Only Admin, HR, Finance and this employee can see it." error={error("contactNumber")}>
         <input className={fieldControlClass} id="contactNumber" name="contactNumber" defaultValue={contact?.contact_number} inputMode="tel" autoComplete="tel" required />
       </FormField>
       <FormField label="Employment type" htmlFor="employmentType" error={error("employmentType")}>
@@ -64,15 +65,15 @@ export function EmployeeForm({ employee, contact, categories, profiles }: {
         <SelectPicker id="status" name="status" label="Employment status" defaultValue={employee?.status === "separated" ? "inactive" : employee?.status ?? "active"} options={[{ value: "active", label: "Active" }, { value: "inactive", label: "Inactive" }, { value: "on_leave", label: "On leave" }]} />
       </FormField>
     </div>
-    <details className="mt-5 rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer text-sm font-medium">Contact and account details</summary><div className="mt-4 grid gap-5 md:grid-cols-2">      <FormField label="Middle name" htmlFor="middleName" error={error("middleName")}>
+    <details className="mt-5 rounded-xl border border-slate-200 p-4"><summary className="cursor-pointer text-sm font-medium">{canLinkAccount ? "Contact and account details" : "Additional contact details"}</summary><div className="mt-4 grid gap-5 md:grid-cols-2">      <FormField label="Middle name" htmlFor="middleName" error={error("middleName")}>
         <input className={fieldControlClass} id="middleName" name="middleName" defaultValue={employee?.middle_name ?? ""} autoComplete="additional-name" />
       </FormField>
-      <FormField label="Email address" htmlFor="emailAddress" hint="Optional. Only Admin, Finance and this employee can see it." error={error("emailAddress")}>
+      <FormField label="Email address" htmlFor="emailAddress" hint="Optional. Only Admin, HR, Finance and this employee can see it." error={error("emailAddress")}>
         <input className={fieldControlClass} id="emailAddress" name="emailAddress" type="email" maxLength={320} defaultValue={contact?.email_address ?? ""} autoComplete="email" />
       </FormField>
-      <FormField label="Optional user account" htmlFor="profileId" hint="Optional. This does not give project access." error={error("profileId")}>
+      {canLinkAccount ? <FormField label="Optional user account" htmlFor="profileId" hint="Optional. This does not give project access." error={error("profileId")}>
         <><input type="hidden" name="profileId" value={profileId === "unassigned" ? "" : profileId} /><RemoteSelectPicker kind="profile" id="profileId" label="User account" value={profileId} onValueChange={setProfileId} emptyOption={{ value: "unassigned", label: "No user account" }} initialOption={profiles[0] ? { value: profiles[0].id, label: profiles[0].full_name, secondary: profiles[0].email } : undefined} /></>
-      </FormField>
+      </FormField> : <input type="hidden" name="profileId" value={employee?.profile_id ?? ""} />}
 </div></details>
     {!state.ok && state.message && <p role="alert" className="mt-5 text-sm font-medium text-red-600">{state.message}</p>}
     <RecordFormControls busy={pending} />
@@ -89,5 +90,5 @@ export function NewEmployeeForm() {
     return () => { active = false; };
   }, [attempt]);
   if (failed) return <div role="alert"><p>Employee options could not be loaded.</p><button type="button" className="mt-3 rounded-full border px-4 py-3" onClick={() => {setFailed(false);setAttempt(value=>value+1);}}>Try again</button></div>;
-  return references ? <EmployeeForm categories={references.categories} profiles={references.profiles} /> : <FieldsSkeleton label="Loading employee options" />;
+  return references ? <EmployeeForm categories={references.categories} profiles={references.profiles} canLinkAccount={references.canLinkAccount} /> : <FieldsSkeleton label="Loading employee options" />;
 }

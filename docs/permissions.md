@@ -1,6 +1,6 @@
-# Five-role permissions
+# Role permissions
 
-Current roles are `admin`, `engineer`, `foreman`, `warehouse_staff` and `finance`. Permissions require an active, onboarded account. Historical role names are not current application roles.
+Current roles are `admin`, `engineer`, `foreman`, `warehouse_staff`, `finance`, `driver` and `hr`. Driver uses the mobile app; HR uses the web workforce workspace. The table below describes the existing operational web roles; HR boundaries are listed separately below. Permissions require an active, onboarded account. Historical role names are not current application roles.
 
 | Workflow | Admin | Engineer | Foreman | Warehouse Staff | Finance |
 |---|---|---|---|---|---|
@@ -35,3 +35,7 @@ Admin records supplier quotations and optionally links an Engineer-approved proj
 Engineer/Admin can submit a site-linked receipt-only expense with amount and receipt photo. At most PHP 50,000 posts once automatically; higher totals require Admin approval. Finance can reimburse but cannot approve above the owner threshold. Inventory materials retain itemized review and stock posting. Receipt expenses never create material balances.
 
 Warehouse Staff may record valued manual stock-in at an assigned active warehouse and dispatch direct stock to an active project site linked to that warehouse. A reason is required; unrelated warehouses/sites remain denied. Assigned Engineer/Foreman accepts quantities at the destination, including partial receipts. Request-bound deliveries continue through request inspection. Stock-out and returns remain Admin controls.
+
+## HR delegation
+
+See [current role boundaries and staff tutorial plan](role-access-and-training-20261114.md). HR manages employees/departments/assignments and prepares draft payroll; Admin retains rate changes, account links, finalization and corrections. HR does not receive Finance or Inventory authority. Project reference names are returned through a narrow HR function without granting complete project access.

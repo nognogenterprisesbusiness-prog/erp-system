@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { requireManager } from "@/lib/auth";
+import { requireWorkforceManagerPage } from "@/lib/auth";
 
 export default async function NewEmployeePage() {
-  await requireManager();
+  await requireWorkforceManagerPage();
   redirect("/employees?create=1");
 }

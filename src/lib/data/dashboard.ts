@@ -2,12 +2,12 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getDashboardConsumption } from "@/lib/data/dashboard-consumption";
 
-export async function getDashboardData(options: { finance: boolean; audit: boolean; consumption: boolean }) {
+export async function getDashboardData(options: { finance: boolean; audit: boolean; consumption: boolean; requests: boolean }) {
   const supabase = await createClient();
   const [counts, recent, requestResult, monthlyResult, auditResult, consumptionTrend, totalsResult] = await Promise.all([
     supabase.rpc("get_dashboard_project_counts", {}),
     supabase.from("projects").select("id,code,name,photo_path,city_province,status,target_completion_date,created_at,updated_at").eq("status", "active").is("archived_at", null).order("created_at", { ascending: false }).limit(4),
-    supabase.from("material_requests").select("id,request_number,project_id,status,required_date,requested_at").order("requested_at", { ascending: false }).limit(4),
+    options.requests ? supabase.from("material_requests").select("id,request_number,project_id,status,required_date,requested_at").order("requested_at", { ascending: false }).limit(4) : Promise.resolve({ data: [], error: null }),
     options.finance ? supabase.rpc("get_dashboard_monthly_project_costs", { p_months: 6 }) : Promise.resolve({ data: [], error: null }),
     options.audit ? supabase.from("audit_logs").select("id,actor_id,table_name,action,created_at").order("created_at", { ascending: false }).limit(5) : Promise.resolve({ data: [], error: null }),
     options.consumption ? getDashboardConsumption() : Promise.resolve({ months: [], series: [] }),

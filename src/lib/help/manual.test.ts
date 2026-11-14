@@ -15,14 +15,16 @@ test("manual topics respect role boundaries and combine multiple roles without d
     engineer: ["requests", "sourcing", "site-purchases", "reports", "mobile"],
     foreman: ["requests", "sourcing", "reports", "mobile"],
     warehouse_staff: ["requests", "deliveries", "assets"],
+    hr: ["people", "payroll", "roles"],
   };
   for (const role of Object.keys(expected) as Exclude<AppRole, "driver">[]) {
     const ids = getManualGuides([role]).map((guide) => guide.id);
     for (const id of expected[role]) assert.ok(ids.includes(id), `${role}: ${id}`);
-    for (const shared of ["start", "projects", "inventory", "account"]) assert.ok(ids.includes(shared));
+    for (const shared of role === "hr" ? ["start", "account"] : ["start", "projects", "inventory", "account"]) assert.ok(ids.includes(shared));
     assert.ok(roleResponsibilities[role].boundary.length > 0);
     if (role !== "admin") for (const id of ["access", "corrections"]) assert.ok(!ids.includes(id));
     if (!["admin", "finance"].includes(role)) assert.ok(!ids.includes("finance") && !ids.includes("purchases"));
+    if (role === "hr") for (const id of ["projects", "inventory", "requests", "assets", "mobile"]) assert.ok(!ids.includes(id));
   }
   const combined = getManualGuides(["admin", "engineer"]);
   assert.equal(new Set(combined.map((guide) => guide.id)).size, combined.length);

@@ -11,12 +11,12 @@ import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import { requireManager } from "@/lib/auth";
+import { requireManagerPage } from "@/lib/auth";
 import { canAssignInitialRole, canManageAccount, invitableRoles, roleLabels } from "@/lib/users/access";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<{ page?: string | string[]; q?: string | string[] }> }) {
-  const actor = await requireManager();
+  const actor = await requireManagerPage();
   const params = await searchParams;
   const requestedPage = pageNumber(params.page);
   const supabase = await createClient();

@@ -20,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { RecordActionMenu } from "@/components/ui/record-action-menu";
-import { requireUser } from "@/lib/auth";
+import { requireOperationalViewer } from "@/lib/auth";
 import { getInventoryMaterials, getMaterialReferences, getInventoryOptions, getSiteConsumptionOptions } from "@/lib/data/inventory";
 import { recordPhotoUrl } from "@/lib/media/record-photo-url";
 import { RecordViewLink } from "@/components/ui/record-view-link";
@@ -42,7 +42,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const lowStock = params.low === "true";
   const page = pageNumber(params.page);
   const status = params.status === "inactive" ? "inactive" : params.status === "any" ? "all" : "active";
-  const user = await requireUser();
+  const user = await requireOperationalViewer();
   const [data, references] = await Promise.all([
     getInventoryMaterials({ query, locationId, scope: parseInventoryScope(params.scope), status, lowStock, page, includeValues: user.canViewLaborRates }),
     getMaterialReferences(),

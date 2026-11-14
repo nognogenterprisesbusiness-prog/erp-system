@@ -11,13 +11,13 @@ import { DataTableShell } from "@/components/ui/data-table-shell";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { tableHeadClass } from "@/components/ui/table-sort-heading";
-import { requireFinanceViewer } from "@/lib/auth";
+import { requirePayrollViewer } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 const money = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
 
 export default async function PayrollDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ page?: string }> }) {
-  const user = await requireFinanceViewer();
+  const user = await requirePayrollViewer();
   const { id } = await params;
   if (!uuidSchema.safeParse(id).success) notFound();
   const page = Math.max(1, Math.min(1000000, Math.trunc(Number((await searchParams).page)) || 1));
@@ -50,7 +50,7 @@ export default async function PayrollDetailPage({ params, searchParams }: { para
     <div className="mt-6"><DataTableShell empty={lines.data.length === 0 ? <EmptyState compact title="No employees in this payroll" /> : undefined} footer={<p className="text-xs text-slate-500">{lines.count ?? 0} employee{lines.count === 1 ? "" : "s"} · attendance pay comes from posted attendance{draft ? " and is recalculated when Admin finalizes" : ""}</p>}>
       <table className="w-full min-w-[860px] text-left text-sm"><thead className={tableHeadClass}><tr><th className="px-5 py-3">Employee</th><th className="px-4 py-3 text-right">Days</th><th className="px-4 py-3 text-right">Attendance pay</th><th className="px-4 py-3 text-right">Other earnings</th><th className="px-4 py-3 text-right">Deductions</th><th className="px-5 py-3 text-right">Net pay</th>{draft && <th data-record-actions className="bg-slate-50 px-5 py-3 text-right">Action</th>}</tr></thead>
         <tbody className="divide-y divide-slate-100">{lines.data.map((line) => <tr key={line.id} className="align-top">
-          <td className="px-5 py-4"><p className="font-medium text-slate-800">{line.employee_name}</p><p className="mt-1 text-xs text-slate-500">{line.employee_code} · {line.department_id ? departmentName.get(line.department_id) ?? "Department" : "No department"}</p>{line.notes && <p className="mt-2 max-w-xs whitespace-normal break-words text-xs text-slate-600">{line.notes}</p>}</td>
+          <td className="px-5 py-4"><p className="font-medium text-slate-800">{line.employee_name}</p><p className="mt-1 text-xs text-slate-500">{line.employee_code}</p><p className="mt-1 text-xs text-slate-500">Department: {line.department_id ? departmentName.get(line.department_id) ?? "Department" : "No department"}</p>{line.notes && <p className="mt-2 max-w-xs whitespace-normal break-words text-xs text-slate-600">{line.notes}</p>}</td>
           <td className="px-4 py-4 text-right tabular-nums">{line.days_worked}</td>
           <td className="px-4 py-4 text-right tabular-nums">{money.format(line.attendance_pay)}</td>
           <td className="px-4 py-4 text-right tabular-nums">{money.format(line.other_earnings)}</td>
@@ -61,11 +61,12 @@ export default async function PayrollDetailPage({ params, searchParams }: { para
     </DataTableShell><HistoryPagination path={`/payroll/${id}`} page={page} count={lines.count ?? 0} pageSize={50} /></div>
 
     {payroll.status !== "voided" && <section className="mt-6 flex flex-wrap items-center justify-between gap-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
-      <div><h2 className="text-base font-semibold">{draft ? "Review and finalize" : payroll.status === "finalized" ? "Record payment" : "Payroll complete"}</h2><p className="mt-1 max-w-xl text-sm leading-6 text-slate-500">{draft ? "Check each employee’s pay before finalizing. Attendance pay is recalculated and entries are locked when finalized." : payroll.status === "paid" ? "Payment has been recorded for this payroll." : "Record the payment date and reference after paying employees."}</p></div>
+      <div><h2 className="text-base font-semibold">{draft ? user.canManage ? "Review and finalize" : "Ready for Admin review" : payroll.status === "finalized" ? user.canViewLaborRates ? "Record payment" : "Awaiting payment" : "Payroll complete"}</h2><p className="mt-1 max-w-xl text-sm leading-6 text-slate-500">{draft ? user.canManage ? "Check each employee’s pay before finalizing. Attendance pay is recalculated and entries are locked when finalized." : "Review each entry, then ask Admin to finalize and lock the payroll." : payroll.status === "paid" ? "Payment has been recorded for this payroll." : user.canViewLaborRates ? "Record the payment date and reference after paying employees." : "Finance or Admin records the actual payment date and reference."}</p></div>
       <div className="flex flex-wrap items-center gap-3">
         {draft && user.canManage && <RecordCreateDialog size="sm" title="Finalize payroll" triggerLabel="Finalize payroll" triggerIcon={null}><FinalizePayrollForm runId={id} /></RecordCreateDialog>}
+        {payroll.status === "finalized" && !user.canViewLaborRates && <p className="text-sm text-slate-600">Finance or Admin records the payment.</p>}
         {draft && !user.canManage && <p className="text-sm text-slate-600">Ask Admin to finalize after reviewing the entries.</p>}
-        {payroll.status === "finalized" && <RecordCreateDialog title="Record payroll payment" triggerLabel="Mark as paid" triggerIcon={null}><MarkPayrollPaidForm runId={id} today={philippinesDate()} /></RecordCreateDialog>}
+        {payroll.status === "finalized" && user.canViewLaborRates && <RecordCreateDialog title="Record payroll payment" triggerLabel="Mark as paid" triggerIcon={null}><MarkPayrollPaidForm runId={id} today={philippinesDate()} /></RecordCreateDialog>}
         {user.canManage && <RecordCreateDialog size="sm" title="Void payroll" triggerVariant="outline" triggerIcon={null}><p className="mb-5 text-sm leading-6 text-slate-600">The payroll is kept in history. Voiding allows a corrected payroll for the same period.</p><VoidPayrollForm runId={id} /></RecordCreateDialog>}
       </div>
     </section>}

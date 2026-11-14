@@ -14,18 +14,21 @@ import { PageHeader } from "@/components/ui/page-header";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { requireUser } from "@/lib/auth";
 import { getEmployees, getEmployeeCategories } from "@/lib/data/workforce";
+import { pageNumber } from "@/lib/data/pagination";
 import type { EmployeeStatus } from "@/types/database";
 
 const statuses: Array<EmployeeStatus | "all"> = ["all", "active", "inactive", "on_leave", "separated"];
 export default async function EmployeesPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const user = await requireUser();
   const params = await searchParams;
   const query = typeof params.q === "string" ? params.q : "";
   const parsedCategory = uuidSchema.safeParse(params.category); const categoryId = parsedCategory.success ? parsedCategory.data : "";
   const parsedProject = uuidSchema.safeParse(params.project); const projectId = parsedProject.success ? parsedProject.data : "";
   const status = typeof params.status === "string" && statuses.includes(params.status as EmployeeStatus | "all") ? params.status as EmployeeStatus | "all" : "all";
-  const page = typeof params.page === "string" ? Math.max(1, Number(params.page) || 1) : 1;
+  const page = pageNumber(params.page);
   const resultPromise = getEmployees({ query, categoryId, projectId, status, page });
-  const [user, categories, projects] = await Promise.all([requireUser(), getEmployeeCategories(), (async()=>{
+  const [categories, projects] = await Promise.all([getEmployeeCategories(), (async()=>{
+    if (user.roles.includes("hr")) return (await import("@/lib/data/hr-references")).getHrReferences("project");
     const { createClient } = await import("@/lib/supabase/server");
     const { readAllPages } = await import("@/lib/data/read-all-pages");
     const client=await createClient();
@@ -33,14 +36,14 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   })()]);
   const pageHref = (target: number) => { const next = new URLSearchParams(); if (query) next.set("q", query); if (categoryId) next.set("category", categoryId); if (projectId) next.set("project", projectId); if (status !== "all") next.set("status", status); next.set("page", String(target)); return `/employees?${next}`; };
   return <>
-    <PageHeader eyebrow="Labor and workforce" title="Employees" description="Workers, their project assignments and labor rates." action={user.canManage && <div className="flex flex-wrap gap-2"><EmployeeTradesDialog categories={categories} initialOpen={params.manageTrades === "1"} editId={typeof params.editTrade === "string" ? params.editTrade : undefined} closeHref={pageHref(page)} /><WorkerIdCardPreview projectId={projectId || undefined} label="Print ID cards" /><RecordCreateDialog confirmDiscard title="Add employee" initialOpen={params.create === "1"} closeHref={pageHref(page)}><NewEmployeeForm /></RecordCreateDialog></div>} />
+    <PageHeader eyebrow="Labor and workforce" title="Employees" description="Workers, their project assignments and labor rates." action={user.canManageEmployees && <div className="flex flex-wrap gap-2"><EmployeeTradesDialog categories={categories} initialOpen={params.manageTrades === "1"} editId={typeof params.editTrade === "string" ? params.editTrade : undefined} closeHref={pageHref(page)} /><WorkerIdCardPreview projectId={projectId || undefined} label="Print ID cards" /><RecordCreateDialog confirmDiscard title="Add employee" initialOpen={params.create === "1"} closeHref={pageHref(page)}><NewEmployeeForm /></RecordCreateDialog></div>} />
     <ListFilterBar>
       <SearchField key={query} name="q" label="Search employees" defaultValue={query} placeholder="Search name, code, or employment type" />
       <SelectPicker name="category" label="Job / trade" defaultValue={categoryId || "all"} options={[{ value: "all", label: "All jobs / trades" }, ...categories.map((item) => ({ value: item.id, label: item.name }))]} />
       <SelectPicker name="project" label="Assigned project" defaultValue={projectId || "all"} options={[{ value: "all", label: "All assigned projects" }, ...projects.map((item) => ({ value: item.id, label: item.name }))]} />
       <SelectPicker name="status" label="Employment status" defaultValue={status} options={statuses.map((item) => ({ value: item, label: item === "all" ? "All statuses" : item.replace("_", " ") }))} />
     </ListFilterBar>
-    <Suspense key={`${query}:${categoryId}:${projectId}:${status}:${page}`} fallback={<TableSkeleton filters={0} />}><EmployeeResults resultPromise={resultPromise} canManage={user.canManage} pageHref={pageHref} /></Suspense>
+    <Suspense key={`${query}:${categoryId}:${projectId}:${status}:${page}`} fallback={<TableSkeleton filters={0} />}><EmployeeResults resultPromise={resultPromise} canManage={user.canManageEmployees} pageHref={pageHref} /></Suspense>
   </>;
 }
 

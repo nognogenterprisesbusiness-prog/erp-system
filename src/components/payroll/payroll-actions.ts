@@ -4,7 +4,7 @@ import { departmentInputSchema, payrollLineInputSchema, payrollPaymentSchema, pa
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireFinanceViewer, requireManager } from "@/lib/auth";
+import { requireFinanceViewer, requireManager, requirePayrollViewer, requireWorkforceManager } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export type PayrollActionState = { ok?: boolean; message: string; fieldErrors?: Record<string, string[] | undefined> };
@@ -21,7 +21,7 @@ function payrollError(error: { code?: string; message: string }, fallback: strin
 }
 
 export async function createPayrollAction(_: PayrollActionState, form: FormData): Promise<PayrollActionState> {
-  try { await requireFinanceViewer(); } catch { return fail("Payroll access is required."); }
+  try { await requirePayrollViewer(); } catch { return fail("Payroll access is required."); }
   const parsed = payrollRunInputSchema.safeParse({ idempotencyKey: field(form, "idempotencyKey"), departmentId: field(form, "departmentId"), periodStart: field(form, "periodStart"), periodEnd: field(form, "periodEnd"), payDate: field(form, "payDate"), notes: field(form, "notes") });
   if (!parsed.success) return fail("Review the payroll period.", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
@@ -33,7 +33,7 @@ export async function createPayrollAction(_: PayrollActionState, form: FormData)
 }
 
 export async function updatePayrollLineAction(_: PayrollActionState, form: FormData): Promise<PayrollActionState> {
-  try { await requireFinanceViewer(); } catch { return fail("Payroll access is required."); }
+  try { await requirePayrollViewer(); } catch { return fail("Payroll access is required."); }
   const parsed = payrollLineInputSchema.safeParse({ lineId: field(form, "lineId"), otherEarnings: field(form, "otherEarnings") || "0", deductions: field(form, "deductions") || "0", notes: field(form, "notes") });
   if (!parsed.success) return fail("Enter amounts up to two decimal places.", parsed.error.flatten().fieldErrors);
   const runId = uuidSchema.safeParse(field(form, "runId"));
@@ -78,7 +78,7 @@ export async function voidPayrollAction(_: PayrollActionState, form: FormData): 
 }
 
 export async function saveDepartmentAction(_: PayrollActionState, form: FormData): Promise<PayrollActionState> {
-  try { await requireManager(); } catch { return fail("Only Admin can manage departments."); }
+  try { await requireWorkforceManager(); } catch { return fail("Only Admin or HR can manage departments."); }
   const parsed = departmentInputSchema.safeParse({ id: field(form, "id"), name: field(form, "name") });
   if (!parsed.success) return fail("Enter a department name.", parsed.error.flatten().fieldErrors);
   const supabase = await createClient();
@@ -89,7 +89,7 @@ export async function saveDepartmentAction(_: PayrollActionState, form: FormData
 }
 
 export async function setEmployeeDepartmentAction(_: PayrollActionState, form: FormData): Promise<PayrollActionState> {
-  try { await requireManager(); } catch { return fail("Only Admin can change departments."); }
+  try { await requireWorkforceManager(); } catch { return fail("Only Admin or HR can change departments."); }
   const parsed = z.object({ employeeId: uuidSchema, departmentId: z.union([uuidSchema, z.literal("")]) }).safeParse({ employeeId: field(form, "employeeId"), departmentId: field(form, "departmentId") });
   if (!parsed.success) return fail("Choose a department.");
   const supabase = await createClient();

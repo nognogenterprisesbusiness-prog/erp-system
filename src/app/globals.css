@@ -21,6 +21,9 @@ body { margin: 0; font-family: var(--font-sans); }
 
 button, a, input, summary { -webkit-tap-highlight-color: transparent; }
 
+/* Closed header menus must not contribute off-screen scrollable content. */
+details[data-header-menu]:not([open]) > :not(summary) { display: none; }
+
 html:is([data-theme="dark"], [data-theme="blue"]) .erp-trend-chart {
   --chart-cyan: #22d3ee;
   --chart-amber: #fbbf24;

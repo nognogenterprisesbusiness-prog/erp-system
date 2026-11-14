@@ -1,5 +1,9 @@
 # Nognog ERP — Testing Guide
 
+## Staff roles and tutorial recording
+
+Use the [role-by-role training plan](docs/role-access-and-training-20261114.md). HR prepares employee records and draft payroll; Admin finalizes and Finance/Admin records payment. Departments do not grant permissions. Test each account separately, including direct URLs, exports and buttons that should be absent. `npm run test:web-role-access` performs read-only checks against a local production build; `npm run test:hr-permissions` checks permitted and denied commands in an isolated PostgreSQL database. Credentials are supplied through the environment, never committed.
+
 ## Live updates
 
 Use two staff accounts to check changes between users. Request decisions, stock, driver assignments, expenses and attendance update permitted screens automatically. Updates wait while a web form has unsaved changes; finish or close that form to apply them. Mobile refreshes the active screen after reconnecting. A live update does not save a draft or replace server confirmation.

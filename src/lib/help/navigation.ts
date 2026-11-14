@@ -10,6 +10,7 @@ const topicNavigation: Record<string, { title: string; group: ManualGroup }> = {
   access: { title: "Admin setup", group: "Getting started" },
   projects: { title: "Projects and documents", group: "Projects and people" },
   people: { title: "Employees and attendance", group: "Projects and people" },
+  payroll: { title: "Payroll preparation", group: "Projects and people" },
   warehouses: { title: "Warehouses", group: "Materials and inventory" },
   inventory: { title: "Materials and stock", group: "Materials and inventory" },
   requests: { title: "Requests and site delivery", group: "Materials and inventory" },
