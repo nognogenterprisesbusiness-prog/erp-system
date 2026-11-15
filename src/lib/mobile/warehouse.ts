@@ -123,11 +123,17 @@ export async function postMobileWarehouseOperation(client: Client, actor: string
     if (result.error) databaseError(result.error);
     return { id: result.data, message: "Materials released. The site can now confirm receipt." };
   }
-  const line = await client.from("purchase_order_lines").select("purchase_order_id").eq("id", input.lineId).maybeSingle();
-  if (line.error) databaseError(line.error);
-  const order = line.data ? await client.from("purchase_orders").select("warehouse_id").eq("id", line.data.purchase_order_id).maybeSingle() : { data: null, error: null };
-  if (order.error) databaseError(order.error);
-  if (order.data?.warehouse_id !== input.warehouseId) throw new MobileError(403, "This delivery belongs to another warehouse.");
+  // Warehouse staff cannot read purchase_orders/lines (prices stay with Admin and Finance), so the line is
+  // checked through the warehouse's own receiving list; the receive RPCs re-check the assignment in SQL.
+  const receivable = await client.rpc("list_mobile_warehouse_receipts", { p_warehouse_id: input.warehouseId, p_search: "", p_offset: 0, p_limit: 100 });
+  if (receivable.error) databaseError(receivable.error);
+  let receipt = receivable.data.find((item) => item.line_id === input.lineId);
+  for (let offset = 100; !receipt && receivable.data.length && offset < Number(receivable.data[0].total_count); offset += 100) {
+    const next = await client.rpc("list_mobile_warehouse_receipts", { p_warehouse_id: input.warehouseId, p_search: "", p_offset: offset, p_limit: 100 });
+    if (next.error) databaseError(next.error);
+    receipt = next.data.find((item) => item.line_id === input.lineId);
+  }
+  if (!receipt) throw new MobileError(403, "This delivery belongs to another warehouse or is already fully received.");
   if (input.action === "receive-inspected") {
     const inspection = await client.from("purchase_delivery_inspections").select("purchase_order_line_id,accepted_quantity,delivery_reference,inspected_on").eq("id", input.inspectionId).maybeSingle();
     if (inspection.error) databaseError(inspection.error);
@@ -138,7 +144,7 @@ export async function postMobileWarehouseOperation(client: Client, actor: string
     if (result.error) databaseError(result.error);
     return { id: result.data, message: "Accepted materials added to warehouse stock." };
   }
-  if (line.data?.purchase_order_id !== input.orderId) throw new MobileError(422, "Choose the correct purchase order.");
+  if (receipt.order_id !== input.orderId) throw new MobileError(422, "Choose the correct purchase order.");
   const result = await client.rpc("receive_mobile_purchase_delivery", {
     p_key: input.idempotencyKey, p_line_id: input.lineId, p_delivered: input.deliveredQuantity,
     p_accepted: input.acceptedQuantity, p_reference: input.deliveryReference, p_received_on: input.inspectedOn, p_note: input.qualityNote || null,
