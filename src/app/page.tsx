@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -23,7 +24,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <LoginForm returnPath={returnPath} />
 
 
-        <p className="mt-8 text-center text-xs text-slate-400">Authorized Nognog personnel only.</p>
+        <p className="mt-8 text-center text-sm text-slate-500">New to Nognog? <Link href="/training" className="font-semibold text-cyan-700 hover:underline">Watch the staff training videos</Link></p>
+        <p className="mt-3 text-center text-xs text-slate-400">Authorized Nognog personnel only.</p>
       </section>
     </main>
   );
