@@ -2,7 +2,7 @@
 
 import { RecordCreateDialog } from "@/components/ui/record-create-dialog";
 import { MoneyInput } from "@/components/ui/money-input";
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormField, fieldControlClass } from "@/components/ui/form-field";
@@ -88,7 +88,9 @@ export function DepartmentForm({ department }: { department?: Department }) {
 export function EmployeeDepartmentForm({ employeeId, current, departments }: { employeeId: string; current: string | null; departments: Department[] }) {
   const [state, action, pending] = useActionState(setEmployeeDepartmentAction, initial);
   const [value, setValue] = useState(current ?? "");
-  return <form action={action} className="flex flex-wrap items-end gap-2"><input type="hidden" name="employeeId" value={employeeId} /><input type="hidden" name="departmentId" value={value} />
+  // Submitted without the form `action` prop: React resets action forms after success, and the Radix select
+  // treats that reset as choosing its first value again ("No department") although the change was saved.
+  return <form onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); startTransition(() => action(data)); }} className="flex flex-wrap items-end gap-2"><input type="hidden" name="employeeId" value={employeeId} /><input type="hidden" name="departmentId" value={value} />
     <div className="w-56"><SelectPicker label="Department" value={value || "none"} onValueChange={(next) => setValue(next === "none" ? "" : next)} options={[{ value: "none", label: "No department" }, ...departments.map((item) => ({ value: item.id, label: item.name }))]} /></div>
     <Button type="submit" size="sm" variant="outline" disabled={pending || value === (current ?? "")}>{pending ? "Saving…" : "Save"}</Button>
     {state.message && <span role={state.ok ? "status" : "alert"} className={`basis-full text-xs ${state.ok ? "text-emerald-700" : "text-red-700"}`}>{state.message}</span>}

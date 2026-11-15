@@ -24,6 +24,7 @@ export function EquipmentRequestForm({ projectId, siteId, equipment, kind, initi
   return <form action={action} className="mt-4 rounded-xl border border-slate-200 bg-white p-5">
     <input type="hidden" name="projectId" value={projectId} />
     <input type="hidden" name="siteId" value={siteId} />
+    <input type="hidden" name="kind" value={kind} />
     <h2 className="text-base font-semibold text-slate-900">Request {kind}</h2>
     <div className="mt-4 grid gap-4 lg:grid-cols-[1.5fr_1fr_1.5fr_auto] lg:items-end">
       <FormField label={kind === "vehicle" ? "Vehicle" : "Equipment"} htmlFor="assetId"><SelectPicker id="assetId" name="assetId" label={kind === "vehicle" ? "Vehicle" : "Equipment"} required defaultValue={equipment.some((item) => item.asset_id === initialAssetId) ? initialAssetId : undefined} options={equipment.map((item) => ({ value: item.asset_id, label: assetChoiceLabel({ code: item.asset_code, name: item.asset_name, kind: item.asset_kind }) }))} placeholder={`Select available ${kind}`} /></FormField>

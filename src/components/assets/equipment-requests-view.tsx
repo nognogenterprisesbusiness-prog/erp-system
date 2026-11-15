@@ -73,9 +73,9 @@ export async function EquipmentRequestsView({ params, kind, canManage, canReques
   const currentStatus = status.success ? status.data : "all";
   const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   let query = supabase.from("equipment_requests")
-    .select("id,asset_id,asset_code,asset_name,project_id,project_site_id,requested_by,needed_on,expected_return_on,purpose,status,decided_by,decided_at,decision_note,source_location_id,checked_out_by,checked_out_at,returned_by,returned_at,return_note,created_at,updated_at,asset:assets!equipment_requests_asset_id_fkey!inner(asset_kind)", { count: "exact" })
+    .select("id,asset_id,asset_code,asset_name,project_id,project_site_id,requested_by,needed_on,expected_return_on,purpose,status,decided_by,decided_at,decision_note,source_location_id,checked_out_by,checked_out_at,returned_by,returned_at,return_note,created_at,updated_at,asset_kind", { count: "exact" })
     .order("created_at", { ascending: false }).order("id");
-  query = query.eq("asset.asset_kind", kind);
+  query = query.eq("asset_kind", kind);
   if (projectId) query = query.eq("project_id", projectId);
   if (requestedAsset.success) query = query.eq("asset_id", requestedAsset.data);
   const term = safeSearchTerm(search);
@@ -97,6 +97,7 @@ export async function EquipmentRequestsView({ params, kind, canManage, canReques
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const pageHref = (target: number) => { const next = new URLSearchParams(); next.set("type", kind); if (projectId) next.set("project", projectId); if (siteId) next.set("site", siteId); if (requestedAsset.success) next.set("asset", requestedAsset.data); if (currentStatus !== "all") next.set("status", currentStatus); if (search) next.set("q", search); next.set("page", String(target)); return `/requests?${next}`; };
   return <>
+    {params.submitted === "1" && <p role="status" className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">Request submitted. It is waiting for approval and is listed below.</p>}
     {requestedAsset.success && <p className="mt-3 text-sm text-slate-600">Showing requests for the scanned asset. <Link href={`/requests?type=${kind}`} className="font-semibold text-cyan-700 hover:underline">Clear asset filter</Link></p>}
     <ListFilterBar>
       <input type="hidden" name="type" value={kind} />

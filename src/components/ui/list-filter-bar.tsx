@@ -43,6 +43,13 @@ export function ListFilterBar({ className, children, viewKey, viewTitle, ...prop
       ref={form}
       aria-busy={pending}
       onSubmit={(event) => { event.preventDefault(); navigate(true); }}
+      // Searchable pickers add their own text input, and a form with two text inputs and no submit button
+      // never submits on Enter; apply the search box explicitly.
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" || event.nativeEvent.isComposing || !(event.target instanceof HTMLInputElement) || event.target.type !== "search") return;
+        event.preventDefault();
+        navigate(true);
+      }}
       onChange={(event) => {
         const target = event.target;
         if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)

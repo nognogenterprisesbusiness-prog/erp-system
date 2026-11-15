@@ -41,7 +41,7 @@ export default async function SitePurchasePage({ params, searchParams }: { param
     {data.expenseReversed && <p role="status" className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm">The project expense was reversed. The original receipt and approval remain in history; this receipt does not charge the project again.</p>}
     <section className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="rounded-xl border border-slate-200 bg-white p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle[purchase.status]}`}>{statusLabel[purchase.status]}</span><span className="text-lg font-semibold tabular-nums">{peso.format(data.total)}</span></div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyle[purchase.status]}`}>{statusLabel[purchase.status]}{purchase.status === "approved" && purchase.paid_with === "own_money" ? (purchase.reimbursed_on ? " · Reimbursed" : " · To reimburse") : ""}</span><span className="text-lg font-semibold tabular-nums">{peso.format(data.total)}</span></div>
         <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
           <div><dt className="text-xs text-slate-500">{isFuel ? "Vehicle" : isExpense ? "Purchase type" : "Store"}</dt><dd className="mt-1 font-medium">{purchase.supplier_name}</dd></div>
           <div><dt className="text-xs text-slate-500">{purchase.receipt_number_generated || isExpense ? "System reference" : "Receipt"}</dt><dd className="mt-1 font-medium">{purchase.receipt_number} · {purchase.receipt_date}</dd></div>

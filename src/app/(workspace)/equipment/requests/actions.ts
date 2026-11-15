@@ -33,9 +33,10 @@ export async function submitEquipmentRequestAction(_: EquipmentRequestActionStat
   const supabase = await createClient();
   try { await submitSiteEquipmentRequest(supabase, input); }
   catch(cause) { return failure(cause instanceof Error ? cause.message : 'The equipment request could not be saved.'); }
-  const { data: asset } = await supabase.from("assets").select("asset_kind").eq("id", input.assetId).single();
+  // Requesters may not be able to read the asset itself (e.g. kept at a warehouse); the form states its tab.
+  const kind = field(form, "kind") === "vehicle" ? "vehicle" : "equipment";
   revalidatePath("/requests");
-  redirect(`/requests?type=${asset?.asset_kind === "vehicle" ? "vehicle" : "equipment"}`);
+  redirect(`/requests?type=${kind}&project=${input.projectId}&site=${input.siteId}&submitted=1`);
 }
 
 export async function decideEquipmentRequestAction(_: EquipmentRequestActionState, form: FormData): Promise<EquipmentRequestActionState> {
